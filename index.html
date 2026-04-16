@@ -11,7 +11,7 @@
     <header id="header-container"></header>
 
     <script>
-        fetch('header.html')
+        fetch('components/header.html')
             .then(response => response.text())
             .then(data => {
                 document.getElementById('header-container').innerHTML = data;
@@ -26,6 +26,17 @@
             <button id="animationButton" class="cta-button">Click Me!</button>
         </div>
     </main>
+
+    <!-- Include footer -->
+    <footer id="footer-container"></footer>
+
+    <script>
+        fetch('components/footer.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('footer-container').innerHTML = data;
+            });
+    </script>
 
     <script src="script.js"></script>
 </body>
