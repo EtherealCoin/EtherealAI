@@ -99,6 +99,12 @@ nav a:hover {
     padding: 60px;
 }
 
+@media (max-width: 768px) {
+    .container {
+        padding: 20px;
+    }
+}
+
 h1, h2, h3 {
     font-family: 'Arial', sans-serif;
     color: #333;
@@ -132,25 +138,10 @@ p {
     background-color: #f9f9f9;
 }
 
-.feature-card {
-    display: inline-block;
-    vertical-align: top;
-    width: calc(33.33% - 20px);
-    margin: 10px;
-    text-align: center;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.feature-card h3 {
-    font-size: 1.5em;
-    margin-bottom: 10px;
-}
-
-.feature-card p {
-    font-size: 1em;
-    color: #666;
+@media (max-width: 768px) {
+    .features-section {
+        padding: 20px 0;
+    }
 }
 
 .pricing-section {
@@ -163,6 +154,13 @@ p {
     display: flex;
     justify-content: center;
     gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .pricing-section .container {
+        flex-direction: column;
+        align-items: center;
+    }
 }
 
 .pricing-card {
