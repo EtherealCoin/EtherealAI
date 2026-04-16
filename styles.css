@@ -228,7 +228,7 @@ p {
 .testimonial-card {
     display: inline-block;
     vertical-align: top;
-    width: calc(50% - 20px);
+    width: calc(33.33% - 20px);
     margin: 10px;
     text-align: center;
     padding: 20px;
