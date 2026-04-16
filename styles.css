@@ -153,6 +153,51 @@ p {
     color: #666;
 }
 
+.pricing-section {
+    width: 100%;
+    padding: 60px 0;
+    background-color: #f9f9f9;
+}
+
+.pricing-card {
+    display: inline-block;
+    vertical-align: top;
+    width: calc(33.33% - 20px);
+    margin: 10px;
+    text-align: center;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s;
+}
+
+.pricing-card:hover {
+    transform: translateY(-5px);
+}
+
+.pricing-card h3 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+}
+
+.pricing-card p {
+    font-size: 1.2em;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.pricing-card ul {
+    list-style-type: none;
+    padding: 0;
+    margin-bottom: 20px;
+}
+
+.pricing-card li {
+    font-size: 1em;
+    color: #666;
+    margin-bottom: 10px;
+}
+
 footer {
     width: 100%;
     background-color: #ffffff;
