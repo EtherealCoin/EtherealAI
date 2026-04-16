@@ -219,6 +219,34 @@ p {
     margin-bottom: 10px;
 }
 
+.testimonials-section {
+    width: 100%;
+    padding: 60px 0;
+    background-color: #f9f9f9;
+}
+
+.testimonial-card {
+    display: inline-block;
+    vertical-align: top;
+    width: calc(50% - 20px);
+    margin: 10px;
+    text-align: center;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.testimonial-card p {
+    font-size: 1em;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.testimonial-card cite {
+    font-size: 0.9em;
+    color: #666;
+}
+
 footer {
     width: 100%;
     background-color: #ffffff;
