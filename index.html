@@ -7,15 +7,26 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <nav>
-        <a href="index.html">Home</a>
-        <a href="about.html">About</a>
-    </nav>
-    <div class="container">
-        <h1>AI agent is working</h1>
-        <a href="about.html">Go to About Page</a>
-        <button id="animationButton">Click Me!</button>
-    </div>
+    <!-- Include header -->
+    <header id="header-container"></header>
+
+    <script>
+        fetch('header.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('header-container').innerHTML = data;
+            });
+    </script>
+
+    <main class="hero-section">
+        <div class="container">
+            <h1>AI Agent is working</h1>
+            <p>Welcome to our AI agent platform. Experience the future of automation today.</p>
+            <a href="about.html" class="cta-button">Learn More</a>
+            <button id="animationButton" class="cta-button">Click Me!</button>
+        </div>
+    </main>
+
     <script src="script.js"></script>
 </body>
 </html>
