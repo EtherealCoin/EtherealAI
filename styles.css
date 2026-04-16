@@ -159,20 +159,43 @@ p {
     background-color: #f9f9f9;
 }
 
+.pricing-section .container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
 .pricing-card {
-    display: inline-block;
-    vertical-align: top;
-    width: calc(33.33% - 20px);
-    margin: 10px;
+    flex: 1;
+    min-width: 300px;
     text-align: center;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s;
+    transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .pricing-card:hover {
     transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.most-popular {
+    border: 2px solid #ff6b6b;
+    position: relative;
+}
+
+.most-popular::before {
+    content: "Most Popular";
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #ff6b6b;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 3px;
+    font-size: 0.8em;
 }
 
 .pricing-card h3 {
