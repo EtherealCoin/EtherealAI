@@ -1,0 +1,24 @@
+.responsive-header {
+    width: 100%;
+    background-color: #ffffff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo img {
+    height: 50px;
+}
+
+nav {
+    display: flex;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    nav {
+        display: none;
+    }
+}
