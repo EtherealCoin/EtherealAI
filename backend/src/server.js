@@ -16,10 +16,6 @@ db.serialize(() => {
     db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT, password_hash TEXT)");
 });
 
-// Initialize SQLite database
-db.serialize(() => {
-    db.run("CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT, password_hash TEXT)");
-});
 const PORT = process.env.PORT || 3000;
 const HTTPS = false; // Set to true if using HTTPS
 
