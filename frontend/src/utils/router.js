@@ -5,7 +5,9 @@ class Router {
         // Add initial routes here
         this.setRoute('/', 'home');
         this.setRoute('/login', 'login');
+        this.setRoute('/signup', 'signup');
         this.setRoute('/about', 'about');
+        this.setRoute('/dashboard', 'dashboard');
     }
 
     setRoute(path, pageId) {
@@ -36,6 +38,12 @@ class Router {
                 container.innerHTML = html;
                 // Add any hydration logic here
             });
+    }
+
+    handleClick(e, link) {
+        e.preventDefault();
+        history.pushState({}, '', link.getAttribute('href'));
+        this.handleRoute();
     }
 }
 
