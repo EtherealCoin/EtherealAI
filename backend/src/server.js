@@ -15,7 +15,6 @@ const db = new sqlite3.Database('./database.sqlite');
 db.serialize(() => {
     db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT, password_hash TEXT)");
 });
-const db = new sqlite3.Database(':memory:');
 
 // Initialize SQLite database
 db.serialize(() => {
