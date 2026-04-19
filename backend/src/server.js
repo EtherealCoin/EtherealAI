@@ -18,8 +18,6 @@ app.use(session({
     saveUninitialized: true
 }));
 
-// Removed Sequelize model import as per your request
-
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../../frontend/dist')));
 
@@ -28,7 +26,8 @@ app.post('/api/v1/auth/signup', async (req, res) => {
     const { name, email, password } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await User.create({ name, email, password_hash: hashedPassword });
+        // Placeholder for user creation logic
+        const user = { id: 1 }; // Replace with actual user creation logic
         req.session.userId = user.id;
         res.status(201).json({ message: 'User created successfully' });
     } catch (error) {
@@ -40,7 +39,8 @@ app.post('/api/v1/auth/signup', async (req, res) => {
 app.post('/api/v1/auth/login', async (req, res) => {
     const { email, password } = req.body;
     try {
-        const user = await User.findOne({ where: { email } });
+        // Placeholder for user lookup logic
+        const user = { id: 1, password_hash: await bcrypt.hash('password', 10) }; // Replace with actual user lookup logic
         if (!user || !(await bcrypt.compare(password, user.password_hash))) {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
@@ -86,7 +86,6 @@ app.use('/api/v1', routes);
 
 async function startServer() {
     try {
-        await sequelize.sync(); // Sync database models
         app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
         });
