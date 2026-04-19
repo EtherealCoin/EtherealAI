@@ -59,7 +59,7 @@ app.get('/dashboard', (req, res) => {
     if (!req.session.userId) {
         return res.redirect('/login');
     }
-    res.sendFile(path.join(__dirname, '../../frontend/dist/dashboard.html'));
+    res.sendFile(path.join(__dirname, '../../../client/dashboard.html'));
 });
 
 // Logout route
@@ -82,15 +82,15 @@ app.use(cors({
 app.use(express.static(path.join(__dirname, '../..')));
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../index.html'));
+  res.sendFile(path.join(__dirname, '../../../client/index.html'));
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../login.html'));
+  res.sendFile(path.join(__dirname, '../../../client/login.html'));
 });
 
 app.get('/signup', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../signup.html'));
+  res.sendFile(path.join(__dirname, '../../../client/signup.html'));
 });
 
 app.get('/dashboard', (req, res) => {
