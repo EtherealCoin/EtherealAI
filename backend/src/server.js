@@ -1,14 +1,20 @@
-import express from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import routes from './routes';
-import session from 'express-session';
-import bodyParser from 'body-parser';
-import bcrypt from 'bcrypt';
-import sqlite3 from 'sqlite3';
-import path from 'path';
+const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
+const routes = require('./routes');
+const session = require('express-session');
+const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
 const app = express();
+const db = new sqlite3.Database('./database.sqlite');
+
+// Initialize SQLite database
+db.serialize(() => {
+    db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT, password_hash TEXT)");
+});
 const db = new sqlite3.Database(':memory:');
 
 // Initialize SQLite database
@@ -33,8 +39,7 @@ app.post('/api/v1/auth/signup', async (req, res) => {
     const { name, email, password } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        const stmt = db.prepare("INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)");
-        stmt.run(name, email, hashedPassword, function(err) {
+        db.run("INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)", [name, email, hashedPassword], function(err) {
             if (err) {
                 return res.status(500).json({ error: err.message });
             }
@@ -49,17 +54,13 @@ app.post('/api/v1/auth/signup', async (req, res) => {
 // Login route
 app.post('/api/v1/auth/login', async (req, res) => {
     const { email, password } = req.body;
-    try {
-        db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
-            if (err || !user || !(await bcrypt.compare(password, user.password_hash))) {
-                return res.status(401).json({ error: 'Invalid credentials' });
-            }
-            req.session.userId = user.id;
-            res.json({ message: 'Logged in successfully' });
-        });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+    db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
+        if (err || !user || !(await bcrypt.compare(password, user.password_hash))) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+        req.session.userId = user.id;
+        res.json({ message: 'Logged in successfully' });
+    });
 });
 
 // Dashboard route
