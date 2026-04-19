@@ -1,7 +1,6 @@
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
-const routes = require('./routes');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
@@ -25,9 +24,6 @@ app.use(session({
     resave: false,
     saveUninitialized: true
 }));
-
-// Serve static files from the frontend directory
-app.use(express.static(path.join(__dirname, '../../frontend/dist')));
 
 // Signup route
 app.post('/api/v1/auth/signup', async (req, res) => {
@@ -77,19 +73,31 @@ app.post('/api/v1/auth/logout', (req, res) => {
     });
 });
 
-// Security middleware
 app.use(helmet());
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    credentials: true
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
 }));
 
-// Routes
+app.use(express.static(path.join(__dirname, '../..')));
+
 app.get('/', (req, res) => {
-    res.status(200).json({ status: 'API is running' });
+  res.sendFile(path.join(__dirname, '../../index.html'));
 });
 
-app.use('/api/v1', routes);
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../login.html'));
+});
+
+app.get('/signup', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../signup.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+  if (!req.session.userId) return res.redirect('/login');
+  res.sendFile(path.join(__dirname, '../../dashboard.html'));
+});
+
 
 async function startServer() {
     try {
