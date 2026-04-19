@@ -19,6 +19,6 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2",
-    "parcel": "^3.6.0"
+    "parcel": "^2.8.7" // Updated to a valid version of Parcel
   }
 }

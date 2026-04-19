@@ -2,12 +2,10 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import routes from './routes';
-
-const express = require('express');
-const session = require('express-session');
-const bodyParser = require('body-parser');
-const bcrypt = require('bcrypt');
-const path = require('path');
+import session from 'express-session';
+import bodyParser from 'body-parser';
+import bcrypt from 'bcrypt';
+import path from 'path';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,7 +18,7 @@ app.use(session({
     saveUninitialized: true
 }));
 
-const User = require('../db/models/user');
+// Removed Sequelize model import as per your request
 
 // Serve static files from the frontend directory
 app.use(express.static(path.join(__dirname, '../../frontend/dist')));
