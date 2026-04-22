@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategy Lab</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div id="header-container"></div>
+    <main>
+        <h1>Strategy Lab</h1>
+        <form id="strategy-form">
+            <label for="strategy-name">Strategy Name:</label>
+            <input type="text" id="strategy-name" name="strategy-name" required><br>
+
+            <label for="market-symbol">Market/Symbol:</label>
+            <input type="text" id="market-symbol" name="market-symbol" required><br>
+
+            <label for="timeframe">Timeframe:</label>
+            <input type="text" id="timeframe" name="timeframe" required><br>
+
+            <label for="entry-rules">Entry Rules:</label>
+            <textarea id="entry-rules" name="entry-rules" required></textarea><br>
+
+            <label for="exit-rules">Exit Rules:</label>
+            <textarea id="exit-rules" name="exit-rules" required></textarea><br>
+
+            <label for="stop-loss">Stop Loss:</label>
+            <input type="number" id="stop-loss" name="stop-loss" step="0.01" required><br>
+
+            <label for="take-profit">Take Profit:</label>
+            <input type="number" id="take-profit" name="take-profit" step="0.01" required><br>
+
+            <button type="submit">Run Backtest</button>
+        </form>
+
+        <h2>Backtest Results</h2>
+        <div id="backtest-results">
+            <p>Total Return: 5%</p>
+            <p>Win Rate: 70%</p>
+            <p>Max Drawdown: 3%</p>
+            <p>Number of Trades: 10</p>
+        </div>
+
+        <h2>Paper Trading Ledger</h2>
+        <table id="paper-trading-ledger">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Symbol</th>
+                    <th>Side</th>
+                    <th>Size</th>
+                    <th>Entry</th>
+                    <th>Exit</th>
+                    <th>PnL</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>2026-04-21 10:00</td>
+                    <td>AAPL</td>
+                    <td>Buy</td>
+                    <td>10</td>
+                    <td>150.00</td>
+                    <td>155.00</td>
+                    <td>+50.00</td>
+                </tr>
+                <tr>
+                    <td>2026-04-21 11:00</td>
+                    <td>AAPL</td>
+                    <td>Sell</td>
+                    <td>10</td>
+                    <td>155.00</td>
+                    <td>153.00</td>
+                    <td>-20.00</td>
+                </tr>
+            </tbody>
+        </table>
+    </main>
+    <div id="footer-container"></div>
+    <script src="/js/header.js"></script>
+    <script src="/js/footer.js"></script>
+</body>
+</html>
