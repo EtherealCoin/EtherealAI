@@ -64,6 +64,7 @@ function registerEtherealRoutes(app, options) {
     checkDatabase,
     checkOllama,
     checkLocalModelProviders,
+    buildLiveExecutionHandoff,
     getDevServerStatus,
     parseDevServerRun,
     parseDevServerLog,
@@ -325,6 +326,7 @@ function registerEtherealRoutes(app, options) {
     dbAll,
     readSecretProviderCapabilities,
     getExchangeAdapterScaffolds,
+    buildLiveExecutionHandoff,
     selects,
     parsers
   });

@@ -88,6 +88,39 @@
                 <label for="contract-risk-notes">Risk Notes</label>
                 <textarea id="contract-risk-notes" name="riskNotes" rows="3"></textarea>
 
+                <section class="inline-tool-panel" aria-label="Token creation options">
+                    <h3>Token Creation Options</h3>
+                    <div class="checkbox-grid" id="token-feature-options">
+                        <label><input type="checkbox" value="passive income reward model"> Passive income / rewards model</label>
+                        <label><input type="checkbox" value="staking vault"> Staking vault</label>
+                        <label><input type="checkbox" value="reflection or fee routing"> Reflections / fee routing</label>
+                        <label><input type="checkbox" value="treasury allocation and runway policy"> Treasury policy</label>
+                        <label><input type="checkbox" value="DAO governance with capped voting boosts"> DAO governance</label>
+                        <label><input type="checkbox" value="NFT utility upgrades for profitability and access tiers"> NFT utility upgrades</label>
+                        <label><input type="checkbox" value="vesting, lockups, and team allocation controls"> Vesting / lockups</label>
+                        <label><input type="checkbox" value="anti-whale and anti-bot controls"> Anti-whale / anti-bot</label>
+                        <label><input type="checkbox" value="cross-chain bridge and liquidity route plan"> Cross-chain routes</label>
+                        <label><input type="checkbox" value="top 200 market cap rebalancing bot use case"> Top-200 rebalance bot</label>
+                        <label><input type="checkbox" value="arbitrage-aware strategy design"> Arbitrage layer</label>
+                        <label><input type="checkbox" value="dapp dashboard and holder utility modules"> Dapp dashboard</label>
+                        <label><input type="checkbox" value="node or validator profitability research"> Node profitability</label>
+                        <label><input type="checkbox" value="CoinMarketCap and CoinGecko listing evidence packet"> Listing evidence packet</label>
+                        <label><input type="checkbox" value="Discord, Telegram, YouTube, Medium, X launch bundle"> Social launch bundle</label>
+                        <label><input type="checkbox" value="website, roadmap, logo, and whitepaper generation"> Website + whitepaper bundle</label>
+                    </div>
+
+                    <label for="nft-utility-notes">NFT Utility Notes</label>
+                    <textarea id="nft-utility-notes" rows="2" maxlength="1000" placeholder="Example: NFT tiers upgrade yield caps, access, fee discounts, governance boosts, or dapp modules."></textarea>
+
+                    <label for="token-ecosystem-notes">Ecosystem Notes</label>
+                    <textarea id="token-ecosystem-notes" rows="2" maxlength="1000" placeholder="Example: passive income token, launch community, website+dapp, CMC/CG evidence, cross-chain rebalance bot."></textarea>
+
+                    <div class="button-row">
+                        <button id="apply-token-options" type="button">Apply Token Options To Spec</button>
+                        <button id="select-low-fee-token-options" type="button">Select Low-Fee Launch Defaults</button>
+                    </div>
+                </section>
+
                 <button type="submit">Save Spec</button>
             </form>
         </section>
@@ -326,6 +359,62 @@
             `;
         }
 
+        function getSelectedTokenOptions() {
+            return Array.from(document.querySelectorAll('#token-feature-options input:checked'))
+                .map(input => input.value);
+        }
+
+        function applyTokenOptionsToSpec() {
+            const features = document.getElementById('contract-features');
+            const riskNotes = document.getElementById('contract-risk-notes');
+            const network = document.getElementById('contract-network');
+            const nftNotes = document.getElementById('nft-utility-notes').value.trim();
+            const ecosystemNotes = document.getElementById('token-ecosystem-notes').value.trim();
+            const selected = getSelectedTokenOptions();
+            const structuredSpec = [
+                'Token creation profile:',
+                selected.length ? `- Feature modules: ${selected.join('; ')}` : '- Feature modules: owner will define custom modules',
+                nftNotes ? `- NFT utility notes: ${nftNotes}` : '- NFT utility notes: none yet',
+                ecosystemNotes ? `- Ecosystem notes: ${ecosystemNotes}` : '- Ecosystem notes: none yet',
+                `- Target blockchain: ${network.value || 'base'}`,
+                '- Required local outputs: token spec, NFT utility model, logo brief, website outline, roadmap, whitepaper, social launch drafts, listing evidence packet, and no-live-execution review.',
+                '- Explicit boundaries: no wallet private keys, no deployment broadcast, no external posting, no live trading.'
+            ].join('\n');
+            const existingFeatures = features.value.trim();
+            features.value = existingFeatures
+                ? `${existingFeatures}\n\n${structuredSpec}`
+                : structuredSpec;
+            const riskSpec = [
+                'Risk controls:',
+                '- Avoid guaranteed-profit language.',
+                '- Cap NFT/holder boosts so tokenomics cannot be drained.',
+                '- Require owner review before deployment, listing submission, external posting, or live trading.',
+                '- Model fees, slippage, taxes, bridge risk, and exchange liquidity before any strategy is considered live.'
+            ].join('\n');
+            const existingRisk = riskNotes.value.trim();
+            riskNotes.value = existingRisk
+                ? `${existingRisk}\n\n${riskSpec}`
+                : riskSpec;
+        }
+
+        function selectLowFeeTokenDefaults() {
+            const defaultValues = new Set([
+                'passive income reward model',
+                'NFT utility upgrades for profitability and access tiers',
+                'cross-chain bridge and liquidity route plan',
+                'top 200 market cap rebalancing bot use case',
+                'arbitrage-aware strategy design',
+                'CoinMarketCap and CoinGecko listing evidence packet',
+                'Discord, Telegram, YouTube, Medium, X launch bundle',
+                'website, roadmap, logo, and whitepaper generation'
+            ]);
+            document.getElementById('contract-network').value = 'base';
+            document.querySelectorAll('#token-feature-options input').forEach(input => {
+                input.checked = defaultValues.has(input.value);
+            });
+            document.getElementById('token-ecosystem-notes').value = 'Low-fee Base/Polygon/BNB/Avalanche/Solana launch path with website, whitepaper, social growth, listing evidence, NFT utility upgrades, and paper-only arbitrage strategy planning.';
+        }
+
         function renderEcosystemBlueprint(blueprint = {}) {
             const website = blueprint.website || {};
             const whitepaper = blueprint.whitepaper || {};
@@ -509,6 +598,8 @@
         });
 
         document.getElementById('load-ecosystem-catalog').addEventListener('click', loadEcosystemCatalog);
+        document.getElementById('apply-token-options').addEventListener('click', applyTokenOptionsToSpec);
+        document.getElementById('select-low-fee-token-options').addEventListener('click', selectLowFeeTokenDefaults);
 
         window.addEventListener('hashchange', openArtifactFromHash);
 

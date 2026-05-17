@@ -74,6 +74,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/exchange-metadata.js',
     'app/server/src/lib/local-model-routing.js',
     'app/server/src/lib/local-model-runtime.js',
+    'app/server/src/lib/live-execution-handoff.js',
     'app/server/src/lib/mlx-lifecycle.js',
     'app/server/src/lib/multi-agent-coordination.js',
     'app/server/src/lib/owner-acceptance.js',
@@ -1236,6 +1237,7 @@ function checkRouteRegistrationModule() {
     || !serverSource.includes('const ROUTE_SELECTS = {')
     || !serverSource.includes('const ROW_LOOKUP_SELECTS = {')
     || !serverSource.includes('const ROUTE_PARSERS = {')
+    || !serverSource.includes("require('./lib/live-execution-handoff')")
     || !serverSource.includes('buildCompanySetupPlan')
     || !serverSource.includes('normalizeCompanyDnsTargetInput')
     || !serverSource.includes('parseCompanyDnsTarget')
@@ -5273,6 +5275,12 @@ function checkDashboardMvpReadinessUi() {
     || !html.includes('Full Live Blockers')
     || !html.includes('gate(s) still intentionally blocked')
     || !html.includes('Review live execution gate before enabling.')
+    || !html.includes('Full E2E Handoff')
+    || !html.includes('id="live-handoff-summary"')
+    || !html.includes('id="live-handoff-key-gates"')
+    || !html.includes('function renderLiveExecutionHandoff(handoff = {})')
+    || !html.includes('/api/v1/live-execution-handoff')
+    || !html.includes('keys stay outside EtherealAI')
     || !html.includes('Multi-Agent Coordination')
     || !html.includes('id="multi-agent-form"')
     || !html.includes('id="multi-agent-registry"')
@@ -5557,6 +5565,12 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('private keys are not accepted')
     || !solidity.includes('draft, test, and audit before any future deploy phase')
     || !solidity.includes('Token Ecosystem Studio')
+    || !solidity.includes('Token Creation Options')
+    || !solidity.includes('Passive income / rewards model')
+    || !solidity.includes('NFT utility upgrades')
+    || !solidity.includes('Top-200 rebalance bot')
+    || !solidity.includes('Apply Token Options To Spec')
+    || !solidity.includes('Select Low-Fee Launch Defaults')
     || !solidity.includes('Target Blockchain')
     || !solidity.includes('Solana')
     || !solidity.includes('Polygon')
@@ -7142,6 +7156,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/api/v1/automation-safety-summary' && route.file === 'app/server/src/routes/automation-safety.js')
     || !inventory.routes.some(route => route.path === '/api/v1/automation-safety-history' && route.file === 'app/server/src/routes/automation-safety.js')
     || !inventory.routes.some(route => route.path === '/api/v1/launch-readiness-summary' && route.file === 'app/server/src/routes/automation-safety.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/live-execution-handoff' && route.file === 'app/server/src/routes/automation-safety.js')
     || !inventory.routes.some(route => route.path === '/api/v1/local-model/generate' && route.file === 'app/server/src/routes/local-models.js')
     || !inventory.routes.some(route => route.path === '/api/v1/local-model/route' && route.file === 'app/server/src/routes/local-models.js')
     || !inventory.routes.some(route => route.path === '/api/v1/local-model/benchmark' && route.file === 'app/server/src/routes/local-models.js')
@@ -7370,6 +7385,20 @@ async function runServerApiChecks() {
     || !Array.isArray(launchReadiness.body.summary?.capabilities?.adapterScaffolds)
   ) {
     fail('launch readiness summary did not return blocked monitor-only gates');
+  }
+
+  const liveHandoff = await fetchJson(`${baseUrl}/api/v1/live-execution-handoff`, { headers: authHeaders });
+
+  if (
+    liveHandoff.body.handoff?.status !== 'owner_key_gated'
+    || liveHandoff.body.handoff?.liveExecutionEnabled !== false
+    || liveHandoff.body.handoff?.actualFullLiveEndToEndPercent !== 72
+    || !Number.isFinite(Number(liveHandoff.body.handoff?.softwareHandoffCompletionPercent))
+    || !liveHandoff.body.handoff?.ownerKeyGates?.some(gate => gate.id === 'exchange_api_key_reference')
+    || !liveHandoff.body.handoff?.ownerKeyGates?.some(gate => gate.id === 'wallet_or_deployment_key_reference')
+    || !liveHandoff.body.handoff?.softwareStages?.some(stage => stage.id === 'live_order_endpoint' && stage.status === 'blocked_by_design')
+  ) {
+    fail('live execution handoff did not expose owner-key-gated full E2E state');
   }
 
   const secretProviderCapabilities = await fetchJson(`${baseUrl}/api/v1/local-secret-provider-capabilities`, { headers: authHeaders });

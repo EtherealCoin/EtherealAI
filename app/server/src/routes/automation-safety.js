@@ -4,6 +4,7 @@ function registerAutomationSafetyRoutes(app, {
   dbAll,
   readSecretProviderCapabilities,
   getExchangeAdapterScaffolds,
+  buildLiveExecutionHandoff,
   selects,
   parsers
 }) {
@@ -100,6 +101,46 @@ function registerAutomationSafetyRoutes(app, {
             killSwitchAffectedBotPlans: recentKillSwitchAffectedBotPlans.map(parsers.parseBotAutomationPlan)
           }
         }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/live-execution-handoff', requireAuth, async (req, res) => {
+    try {
+      const secretProviderCapabilities = readSecretProviderCapabilities();
+      const adapterScaffolds = getExchangeAdapterScaffolds();
+      const [
+        exchangeConnectors,
+        riskProfiles,
+        activeKillSwitches,
+        paperRuns,
+        goLiveCommandReviews
+      ] = await Promise.all([
+        dbGet("SELECT COUNT(*) AS count FROM exchange_connectors WHERE status != 'archived'"),
+        dbGet("SELECT COUNT(*) AS count FROM risk_profiles WHERE status != 'archived'"),
+        dbGet("SELECT COUNT(*) AS count FROM risk_profiles WHERE kill_switch_enabled = 1 AND status != 'archived'"),
+        dbGet("SELECT COUNT(*) AS count FROM bot_automation_runs WHERE mode = 'paper'"),
+        dbGet(
+          `SELECT COUNT(*) AS count
+           FROM bot_live_enablement_reviews
+           WHERE review_json LIKE '%ownerCommand%'`
+        )
+      ]);
+
+      res.json({
+        handoff: buildLiveExecutionHandoff({
+          secretProviderCapabilities,
+          adapterScaffolds,
+          counts: {
+            exchangeConnectors: exchangeConnectors.count,
+            riskProfiles: riskProfiles.count,
+            activeKillSwitches: activeKillSwitches.count,
+            paperRuns: paperRuns.count,
+            goLiveCommandReviews: goLiveCommandReviews.count
+          }
+        })
       });
     } catch (error) {
       res.status(500).json({ error: error.message });

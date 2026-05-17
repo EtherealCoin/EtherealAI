@@ -94,6 +94,9 @@ const {
   createLocalModelRuntime
 } = require('./lib/local-model-runtime');
 const {
+  buildLiveExecutionHandoff
+} = require('./lib/live-execution-handoff');
+const {
   createMlxLifecycleRuntime
 } = require('./lib/mlx-lifecycle');
 const {
@@ -631,6 +634,7 @@ registerEtherealRoutes(app, {
   checkDatabase,
   checkOllama,
   checkLocalModelProviders,
+  buildLiveExecutionHandoff,
   getDevServerStatus,
   parseDevServerRun,
   parseDevServerLog,

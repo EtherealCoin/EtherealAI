@@ -544,6 +544,18 @@ footer {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.inline-tool-panel {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+}
+
+.inline-tool-panel h3 {
+    margin: 0;
+}
+
 .task-list {
     display: grid;
     gap: 12px;

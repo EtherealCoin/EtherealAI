@@ -57,6 +57,7 @@ function categorizeRoutePath(routePath) {
   if (
     routePath.startsWith('/api/v1/automation-safety')
     || routePath.startsWith('/api/v1/launch-readiness')
+    || routePath.startsWith('/api/v1/live-execution-handoff')
   ) {
     return {
       category: 'Automation Safety',

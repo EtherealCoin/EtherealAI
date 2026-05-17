@@ -53,6 +53,16 @@
         </section>
 
         <section class="model-panel">
+            <h2>Full E2E Handoff</h2>
+            <div class="button-row">
+                <button id="refresh-live-handoff" type="button">Refresh Handoff</button>
+            </div>
+            <div id="live-handoff-summary" class="artifact-grid">Loading full E2E handoff...</div>
+            <div id="live-handoff-stages" class="task-list">Loading handoff stages...</div>
+            <div id="live-handoff-key-gates" class="task-list">Loading owner key gates...</div>
+        </section>
+
+        <section class="model-panel">
             <h2>Model Roles</h2>
             <div id="model-roles" class="role-list">
                 <p>Loading model assignments...</p>
@@ -607,6 +617,74 @@
             }
         }
 
+        function renderLiveExecutionHandoff(handoff = {}) {
+            const summary = [
+                {
+                    label: 'Software Handoff',
+                    value: `${handoff.softwareHandoffCompletionPercent ?? 0}%`,
+                    note: handoff.status || 'owner_key_gated'
+                },
+                {
+                    label: 'Full Live E2E',
+                    value: `${handoff.actualFullLiveEndToEndPercent ?? 72}%`,
+                    note: 'actual live execution remains disabled'
+                },
+                {
+                    label: 'Owner Key Gates',
+                    value: `${(handoff.ownerKeyGates || []).length}`,
+                    note: 'keys stay outside EtherealAI'
+                },
+                {
+                    label: 'Live Execution',
+                    value: handoff.liveExecutionEnabled ? 'Enabled' : 'Disabled',
+                    note: handoff.liveExecution?.note || 'no live endpoint'
+                }
+            ];
+
+            document.getElementById('live-handoff-summary').innerHTML = summary.map(item => `
+                <div class="artifact-stat">
+                    <strong>${escapeHtml(item.label)}</strong>
+                    <span>${escapeHtml(item.value)}</span>
+                    <span>${escapeHtml(item.note)}</span>
+                </div>
+            `).join('');
+            document.getElementById('live-handoff-stages').innerHTML = (handoff.softwareStages || []).map(stage => `
+                <article class="task-card">
+                    <div>
+                        <h3>${escapeHtml(stage.label)}</h3>
+                        <p>${escapeHtml(stage.evidence)} · ${escapeHtml(stage.ownerAction)}</p>
+                    </div>
+                    <span>${escapeHtml(stage.status)}</span>
+                </article>
+            `).join('');
+            document.getElementById('live-handoff-key-gates').innerHTML = (handoff.ownerKeyGates || []).map(gate => `
+                <article class="task-card">
+                    <div>
+                        <h3>${escapeHtml(gate.label)}</h3>
+                        <p>${escapeHtml(gate.details)}</p>
+                    </div>
+                    <span>${escapeHtml(gate.status)}</span>
+                </article>
+            `).join('');
+        }
+
+        async function loadLiveExecutionHandoff() {
+            try {
+                const response = await fetch('/api/v1/live-execution-handoff');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load full E2E handoff');
+                }
+
+                renderLiveExecutionHandoff(data.handoff || {});
+            } catch (error) {
+                document.getElementById('live-handoff-summary').textContent = error.message;
+                document.getElementById('live-handoff-stages').textContent = 'Full E2E handoff unavailable.';
+                document.getElementById('live-handoff-key-gates').textContent = 'Owner key gates unavailable.';
+            }
+        }
+
         let latestSystemMemory = null;
 
         function renderOwnerProofSurfaces(ownerEvidence = {}, ownerAcceptance = {}) {
@@ -1142,6 +1220,7 @@
         document.getElementById('refresh-company-identity').addEventListener('click', loadCompanyIdentity);
         document.getElementById('refresh-dev-server').addEventListener('click', loadDevServerStatus);
         document.getElementById('refresh-mvp-readiness').addEventListener('click', loadMvpReadiness);
+        document.getElementById('refresh-live-handoff').addEventListener('click', loadLiveExecutionHandoff);
         document.getElementById('refresh-mlx-lifecycle').addEventListener('click', loadMlxLifecycleStatus);
         document.getElementById('refresh-multi-agent').addEventListener('click', loadMultiAgentRegistry);
         document.getElementById('refresh-multi-agent-runs').addEventListener('click', loadMultiAgentRuns);
@@ -1185,6 +1264,7 @@
         loadHealth();
         loadDevServerStatus();
         loadMvpReadiness();
+        loadLiveExecutionHandoff();
         loadSystemMemory();
         loadCompanyIdentity();
         loadMlxLifecycleStatus();
