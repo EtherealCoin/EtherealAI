@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "generatedBy": "EtherealAI local company identity manifest",
+  "localOnly": true,
+  "externalAccountCreationEnabled": false,
+  "purchaseEnabled": false,
+  "company": {
+    "legalName": "Ethereal Digital",
+    "platformName": "EtherealAI",
+    "primaryDomain": "etherealdigital.ai",
+    "dnsProvider": "Cloudflare",
+    "registrar": "Cloudflare",
+    "status": "owner_configured"
+  },
+  "owner": {
+    "name": "Patrick",
+    "role": "CEO",
+    "email": "patrick@etherealdigital.ai"
+  },
+  "tokenIdentity": {
+    "name": "EtherealAI",
+    "preferredWebsiteDomain": "etherealdigital.ai",
+    "status": "identity_reserved",
+    "notes": "Owner reported the first token will use EtherealAI as the token name and website identity. Deployment and external publishing remain blocked."
+  },
+  "email": {
+    "provider": "Cloudflare",
+    "primaryMailbox": "patrick@etherealdigital.ai",
+    "status": "owner_configured",
+    "sendReceiveStatus": "owner_reported_not_app_verified",
+    "notes": "Cloudflare email setup was owner-reported. EtherealAI does not store Cloudflare credentials or call Cloudflare APIs."
+  },
+  "dnsObservation": {
+    "observedAt": "2026-05-17T10:46:32Z",
+    "method": "local dig query from EtherealAI workspace",
+    "records": {
+      "A": [],
+      "AAAA": [],
+      "MX": [],
+      "TXT": [],
+      "NS": [],
+      "CNAME": []
+    },
+    "status": "no_public_records_observed_from_this_machine",
+    "notes": "If the domain was just created, DNS delegation and Cloudflare Email Routing records may still be propagating or not configured yet."
+  },
+  "blockedActions": [
+    "no Cloudflare API token storage",
+    "no DNS record mutation",
+    "no external account creation",
+    "no domain purchase",
+    "no email sending automation",
+    "no token deployment"
+  ]
+}

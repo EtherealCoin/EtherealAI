@@ -1,0 +1,415 @@
+# EtherealAI Project Handoff
+
+Date: 2026-05-16
+
+## Project Identity And Location
+
+Official project name: `EtherealAI`
+
+Formal descriptive name: `Ethereal Local AI Developer`
+
+The project folder is:
+
+`/Users/ethereal/test-ai-project`
+
+VS Code also shows this as the recently opened project folder.
+
+## Safety Backup
+
+A backup archive was created here:
+
+`/Users/ethereal/Documents/Codex/2026-05-09/can-you-access-my-chat-history/test-ai-project-backup-2026-05-09.tar.gz`
+
+This backup excludes `node_modules`, because dependencies can be reinstalled from `package.json` and `package-lock.json`.
+
+## Current Goal
+
+Build EtherealAI into a fully operational local AI/LLM app. Current project appears to be a Node/Express app with authentication, SQLite, and static HTML pages.
+
+Current rough completion estimate:
+
+- Owner-test local MVP: 100% after the local owner acceptance record; 99% before owner acceptance in a fresh database.
+- Local paper-automation end-to-end path: about 95% complete.
+- Full live end-to-end path: about 72% complete because credential loading, live exchange adapters, live order endpoint, external posting, deployment, and executable go-live acceptance are intentionally blocked.
+
+## Current Owner-Test Snapshot
+
+- `/dashboard` shows MVP readiness, the completion ledger explaining why MVP/local paper/full live percentages are gated, owner acceptance pending status, local paper automation readiness, full-live blockers, System Memory export, and `Owner evidence included · owner acceptance pending · live disabled`.
+- `/owner-proof-packet` uses `/api/v1/owner-proof-packet` to aggregate owner-test gate status, owner acceptance pending status, readiness, the completion ledger, owner proof surfaces, export surfaces, route safety, the bot automation capability path, the monitor-only paper automation runbook, full-live blockers, a SHA-256 packet checksum, and the authenticated verification command into one local JSON-downloadable packet.
+- `/api/v1/owner-acceptance` and `/owner-proof-packet` can record a local-only owner acceptance record after manual testing; the proof packet page also shows recent local acceptance records from the protected API. The record is evidence only and keeps `liveExecution.enabled`, `orderEndpointEnabled`, and `goLiveAllowed` false.
+- Owner acceptance remains `pending_owner_review`; the local MVP gate is ready, and the last MVP percent is reserved for manual owner testing/acceptance rather than live execution.
+- `/mvp-test-pass` shows Bot Automation Smoke, the completion ledger, Owner Evidence Manifest, the Owner Evidence Review Checklist, local JSON export, the manifest `sha256` checksum prefix, and the current local owner acceptance record state.
+- `/server-route-inventory` includes safety profiles for bot automation, automation safety, exchange metadata, order intents, Social Ops, and Solidity Lab, plus Owner Proof Coverage counts, owner acceptance pending status, and local acceptance record count from System Memory.
+- `/strategy-lab#bot-automation` includes an automated bot capability path backed by `/api/v1/bot-automation-capability-path`; it shows active paper automation capability, latest paper-run evidence, and future live automation blockers while keeping live execution disabled.
+- `/api/v1/system-memory` includes `ownerEvidence`, `ownerAcceptance`, `botAutomationCapabilityPath`, owner proof surfaces for the owner proof packet, dashboard readiness, MVP test pass, route inventory, Strategy Lab, Social Ops, and Solidity Lab, export-surface references, full-live blocker IDs, and external-surface boundaries for Social Ops and Solidity Lab.
+- Social Ops remains local draft-only: no public posting endpoint and no social network API calls.
+- Solidity Lab remains local scaffold/review only: no mainnet/testnet broadcast and no wallet private-key acceptance.
+- Solidity Lab now includes a local Token Ecosystem Studio backed by `/api/v1/solidity-ecosystem/catalog` and `/api/v1/solidity-contracts/:id/ecosystem-blueprint`. It plans token/NFT utility, website sections, whitepaper templates, logo briefs, Discord/Telegram/YouTube/Medium/X/docs campaigns, CoinMarketCap/CoinGecko readiness, chain-builder options, node research, and cross-chain arbitrage architecture without deploying, posting, handling wallet keys, or placing trades.
+- Token creation is now multi-chain in planning mode. Solidity Lab has a Target Blockchain field with Base, Polygon, BNB Chain, Avalanche, Solana, Arbitrum, Optimism, Ethereum, Fantom/Sonic, TRON, Sui, Aptos, Cosmos SDK/IBC, Polkadot/Substrate, NEAR, Bitcoin L2, and custom-chain options. The ecosystem blueprint distinguishes EVM/Solidity, Solana SPL/Token-2022, Cosmos/CosmWasm, Substrate/ink, NEAR, Move chains, TRON, Bitcoin L2, and custom-chain implementation lanes.
+- Current verification command:
+
+```bash
+ETHEREALAI_VERIFY_SERVER=1 \
+ETHEREALAI_BASE_URL=http://127.0.0.1:3000 \
+ETHEREALAI_TEST_EMAIL='<owner-login>' \
+ETHEREALAI_TEST_PASSWORD='<owner-password>' \
+npm test
+```
+
+## Latest Build Additions
+
+- Automatic local-model routing now supports `auto`, choosing planner, coder, or autocomplete from prompt intent.
+- Local model runtime now supports provider-aware routing. The default provider remains Ollama, an optional MLX/OpenAI-compatible lane is configured at `http://127.0.0.1:8080/v1`, and `/api/v1/local-model/benchmark` plus the Dashboard benchmark panel can compare role-default, Ollama, and MLX responses.
+- The app-level coder role in `config/local-models.json` now targets `qwen3.6:35b-a3b` with `think:false`. `qwen3.6:35b-a3b` and fallback `qwen3-coder-next:latest` have both been pulled into Ollama on this Mac.
+- Local model cleanup removed unused Ollama models `qwen2.5-coder:32b`, `qwen2.5-coder:7b`, and `qwen:latest`. Current Ollama inventory is `qwen3.6:35b-a3b`, `qwen3-coder-next:latest`, `deepseek-r1:70b`, and `llama3:latest`.
+- MLX-LM is installed and `mlx-community/Qwen3-Coder-Next-4bit` was downloaded. EtherealAI now has managed MLX lifecycle endpoints and a Dashboard panel for status/start/stop. The start path unloads configured Ollama models before launching MLX for memory isolation. Current managed MLX command uses port `8080`, `max-tokens 512`, and `temp 0`.
+- Dashboard has a Memory Snapshot panel backed by `/api/v1/system-memory`.
+- Strategy Lab backtests and paper replays now include market-regime tagging.
+- Paper replays now include risk gates for drawdown, loss streak, and sample size.
+- Exchange connector records, draft order intents, Solidity Lab, and Social Ops have local-only tables, APIs, and pages.
+- Secret-shaped fields such as API keys, private keys, and tokens are rejected by connector, order-intent, Solidity, and social-draft endpoints.
+- Writer model role added for social/content drafting, using installed `llama3:latest`.
+- Solidity Lab can now scaffold a local Hardhat-style workspace and run a template review.
+- Solidity Lab can now generate a local token ecosystem blueprint for saved specs, including website/whitepaper/roadmap, logo brief, NFT utility, social/community plan, listing-readiness checklist, chain options, multi-chain token standard/build plans, node profitability research model, and cross-chain arbitrage design boundaries.
+- Social Ops can generate local AI drafts and advisory review flags.
+- Strategy Lab parser now supports MACD cross/histogram rules and Bollinger Band upper/lower rules.
+- Artifact Browser now includes exchange connectors, order intents, Solidity contracts, and social posts.
+- Strategy Lab now has local risk profiles for paper/live limits, including max order value, max position value, max daily loss, max open trades, and kill-switch state.
+- Draft order intents can be reviewed against a selected risk profile. Passing and failing risk reviews are stored in the order-intent payload.
+- Risk profiles now appear in the Artifact Browser and `/api/v1/system-memory` snapshot.
+- Candle backtests and paper replays now create decision logs that record wait, enter, hold, and exit decisions with rule reasons and candle context.
+- Decision logs have API lookup, Strategy Lab UI, Artifact Browser inclusion, and `/api/v1/system-memory` recovery.
+- Dashboard Dev Server Runs now includes refresh controls and persisted dev-server log notes.
+- Strategy Lab now has research-only optimization sweeps for fees, slippage, stop-loss, and take-profit values. Sweeps rank combinations and are stored locally.
+- Optimization sweeps appear in Strategy Lab, the Creator Artifact Browser, and `/api/v1/system-memory`.
+- Strategy Lab now has research-only split tests that compare in-sample and out-of-sample windows and report return/drawdown drift.
+- Split tests appear in Strategy Lab, the Creator Artifact Browser, and `/api/v1/system-memory`.
+- Strategy Lab now has research-only rolling walk-forward tests for repeated train/test windows across an imported candle set.
+- Walk-forward tests appear in Strategy Lab, the Creator Artifact Browser, and `/api/v1/system-memory`.
+- Market data imports now support labels, notes, review/archive status, quality scores, filtered lookup, paginated import lists, paginated candle previews, background import jobs, streaming CSV file uploads, import-job cancellation, failed-job retry controls, failed-source discard, and safe archived-import deletion.
+- Market-data providers and scheduled dataset refresh jobs are now implemented with local mock provider generation, manual run, active/paused schedules, automatic due-run polling, refresh-run records, Strategy Lab controls, Artifact Browser links, and `/api/v1/system-memory` recovery.
+- Public OHLCV provider adapters now support Coinbase public candles, Binance public klines, and Kraken public OHLC without storing secrets. Public refreshes queue normal import jobs and flow into the same candle-quality and backtest pipeline.
+- Provider health checks are available at `POST /api/v1/market-data/providers/:id/health-check` and through Strategy Lab `Health Check` buttons.
+- Strategy Lab refresh schedules now expose editable interval and lookback inputs with a per-row `Save` action backed by `PATCH /api/v1/market-data/refresh-schedules/:id`.
+- Refresh schedules now have history and archive-only cleanup endpoints. Cleanup keeps the newest schedule imports active and archives older unused imports without deleting candle rows.
+- Strategy Lab Bot Automation Readiness now shows a local automated-bot capability path backed by `/api/v1/bot-automation-capability-path`, separating current paper automation from future live automation blockers.
+- Owner Proof Packet and System Memory now include the automated bot capability path, so the owner proof export carries the same paper-automation-ready and future-live-blocked state as Strategy Lab.
+- Owner Proof Packet now includes a monitor-only Paper Automation Runbook with owner steps to review ready paper plans, activate or review paper schedules, inspect the latest paper run, export local evidence, record local MVP acceptance, and keep live actions blocked.
+- Dashboard, MVP Test Pass, and Owner Proof Packet now show a Completion Ledger explaining that MVP `99%` waits on owner acceptance, local paper `95%` waits on active paper schedule review, and full live `72%` is capped by intentionally blocked live-execution gates.
+- MVP Test Pass now exports a local owner evidence manifest JSON snapshot with a `sha256` checksum.
+- MVP Test Pass now shows an Owner Acceptance Record panel backed by `/api/v1/owner-acceptance`, so the owner can see whether final local MVP acceptance has been recorded without leaving the test-pass page.
+- Owner Proof Packet added at `/owner-proof-packet` and `/api/v1/owner-proof-packet` with a local JSON export for owner-test gate status, owner acceptance pending status, recent local acceptance records, readiness, proof surfaces, route safety, blocked live gates, and a SHA-256 packet checksum.
+- Dashboard System Memory export now includes owner-evidence references, owner acceptance pending status, and external-surface boundaries.
+- Home, authenticated work pages, Social Ops, and Solidity Lab now show explicit proof/local-only status cues.
+- Route Inventory marks Social Ops as `local_drafts_no_external_posting` and Solidity Lab as `local_scaffold_no_deployment`.
+- Route Inventory now cross-checks Owner Proof Coverage, owner acceptance pending status, and local acceptance record count from System Memory beside route safety counts.
+
+## Important Files
+
+- `/Users/ethereal/test-ai-project/package.json`
+  - Project metadata and scripts.
+  - Current scripts:
+    - `npm start` runs `node app/server/src/server.js`
+    - `npm run dev` runs `nodemon app/server/src/server.js`
+
+- `/Users/ethereal/test-ai-project/backend/src/server.js`
+  - Older Express server path. Keep it for reference for now, but it is no longer the main entry point.
+
+- `/Users/ethereal/test-ai-project/app/server/src/server.js`
+  - Main server file.
+  - Serves files from `app/client`.
+  - Provides authentication, logout, model-role, and health endpoints.
+  - Provides protected local model generation and benchmark endpoints at `/api/v1/local-model/generate` and `/api/v1/local-model/benchmark`.
+  - Provides protected Creator Agent endpoints under `/api/v1/creator/tasks`.
+  - Provides Creator next-step automation at `/api/v1/creator/tasks/:id/advance`.
+  - Provides Creator starter project scaffolding at `/api/v1/creator/tasks/:id/scaffold`.
+  - Provides approved workspace, Git status/checkpoint, command request, and safe command run endpoints.
+  - Provides workspace file browsing and approved file proposal apply endpoints.
+  - Provides local-model file proposal generation at `/api/v1/creator/tasks/:id/file-proposals/generate`.
+  - Provides a project-wide artifact browser API at `/api/v1/artifacts`.
+  - Provides dev-server runtime tracking and logs at `/api/v1/dev-server/status` and `/api/v1/dev-server/logs`.
+  - Provides cross-strategy backtest exploration at `/api/v1/backtests`.
+  - Provides single backtest lookup at `/api/v1/backtests/:id`.
+  - Provides strategy optimization sweeps at `/api/v1/optimization-sweeps` and `/api/v1/strategies/:id/optimization-sweeps`.
+  - Provides strategy split tests at `/api/v1/split-tests` and `/api/v1/strategies/:id/split-tests`.
+  - Provides strategy walk-forward tests at `/api/v1/walk-forward-tests` and `/api/v1/strategies/:id/walk-forward-tests`.
+  - Provides trading decision log lookup at `/api/v1/decision-logs`.
+  - Provides single market import lookup at `/api/v1/market-data/imports/:id`.
+  - Provides paginated market import lists at `/api/v1/market-data/imports?limit=25&offset=0`.
+  - Provides paginated candle previews at `/api/v1/market-data/imports/:id/candles?limit=500&offset=0`.
+  - Provides background market-data import jobs at `/api/v1/market-data/import-jobs`.
+  - Provides streaming CSV file import jobs at `POST /api/v1/market-data/import-jobs/upload`.
+  - Provides market-data import job cancellation at `POST /api/v1/market-data/import-jobs/:id/cancel`.
+  - Provides failed market-data import retry at `POST /api/v1/market-data/import-jobs/:id/retry`.
+  - Provides failed import source discard at `POST /api/v1/market-data/import-jobs/:id/discard-source`.
+  - Provides market import labeling/status management at `PATCH /api/v1/market-data/imports/:id`.
+  - Provides archived import cleanup at `DELETE /api/v1/market-data/imports/:id`.
+  - Provides market-data provider records at `/api/v1/market-data/providers`.
+  - Provides provider connectivity checks at `POST /api/v1/market-data/providers/:id/health-check`.
+  - Provides scheduled market-data refresh jobs at `/api/v1/market-data/refresh-schedules`.
+  - Provides refresh schedule history at `/api/v1/market-data/refresh-schedules/:id/history`.
+  - Provides archive-only refresh duplicate cleanup at `POST /api/v1/market-data/refresh-schedules/:id/cleanup`.
+  - Provides refresh-run history at `/api/v1/market-data/refresh-runs`.
+  - Provides risk profile endpoints at `/api/v1/risk-profiles`.
+  - Provides draft order-intent risk review through `/api/v1/order-intents`.
+  - Provides Strategy Lab strategy, placeholder backtest, and market-data import endpoints.
+
+- `/Users/ethereal/test-ai-project/app/client/`
+  - Newer frontend folder with `index.html`, `login.html`, `signup.html`, `dashboard.html`, `creator.html`, `styles.css`, `strategy-lab.html`, `solidity-lab.html`, and `social-ops.html`.
+
+- `/Users/ethereal/test-ai-project/config/local-models.json`
+  - Local model role/provider config for planner, coder, writer, and autocomplete models.
+  - Default provider is Ollama; optional MLX/OpenAI-compatible provider is configured for benchmark testing before promotion.
+  - Current coder target is `qwen3.6:35b-a3b` with `think:false`.
+  - Current autocomplete target is also `qwen3.6:35b-a3b` with `think:false` so Qwen 2.5 models are no longer required.
+  - Fallback/heavy comparison coder is `qwen3-coder-next:latest`.
+  - Tested MLX coding model is `mlx-community/Qwen3-Coder-Next-4bit`.
+  - MLX lifecycle is configured under `providers.mlx.lifecycle` and is exposed by `/api/v1/local-model/mlx-lifecycle`.
+
+- `/Users/ethereal/test-ai-project/LOCAL_AI_BUILD_PLAN.md`
+  - Roadmap for the local-first AI creator system.
+
+- `/Users/ethereal/test-ai-project/.aider.chat.history.md`
+  - Saved coding-assistant history. This contains useful project context and the most recent failed edit attempt.
+
+- `/Users/ethereal/test-ai-project/database.sqlite`
+  - Local SQLite database.
+
+## Git Status Summary
+
+The repo has existing commits and uncommitted changes. Do not reset or discard anything.
+
+Tracked files currently changed:
+
+- `app/server/src/server.js`
+- `backend/src/server.js`
+- `components/header.html`
+- `package.json`
+
+Tracked files deleted from the old root layout:
+
+- `dashboard.html`
+- `index.html`
+- `login.html`
+- `signup.html`
+- `styles.css`
+
+New files/folders include:
+
+- `app/client/dashboard.html`
+- `app/client/login.html`
+- `app/client/signup.html`
+- `app/client/styles.css`
+- `app/client/index.html`
+- `app/client/creator.html`
+- `app/client/strategy-lab.html`
+- `database.sqlite`
+- `node_modules/`
+- `package-lock.json`
+
+## Current Baseline
+
+The project is still in the middle of a folder refactor, but the runnable baseline has been stabilized.
+
+Old frontend files were deleted from the project root and moved into `app/client`. `package.json` now starts the newer server at `app/server/src/server.js`.
+
+The broken nested `/strategy-lab` route has been fixed and moved to its own top-level route.
+
+The dashboard now calls `/api/v1/health` and shows:
+
+- Server status.
+- SQLite status.
+- Ollama/local model status.
+- Model role assignments.
+
+Verified locally:
+
+- Home page returns `200 OK`.
+- Login page returns `200 OK`.
+- Signup endpoint returns `201 Created`.
+- Login endpoint returns `200 OK`.
+- Dashboard returns `200 OK` after login.
+- Strategy Lab returns `200 OK` after login.
+- `/api/v1/health` returns Ollama and model role state after login.
+- `/api/v1/local-model/generate` successfully called `qwen2.5-coder:7b` and returned `local model ok`.
+- Creator Agent page returns `200 OK` after login.
+- `/api/v1/creator/tasks` returns saved Creator Agent plans after login.
+- Test Creator Agent task `#1` was created with an audit event.
+- Approved workspace `Creator Agent Sandbox` was created at `workspaces/creator-agent-sandbox`.
+- Implementation checklist was created for Creator task `#1`.
+- Checkpoint record `#1` was saved from Git status.
+- Command requests `#1` and `#2` were recorded for `git status`.
+- Safe command run `#2` executed `git status` successfully with exit code `0`.
+- File proposal `#1` created, approved, and applied `README.md` inside `workspaces/creator-agent-sandbox`.
+- Workspace file browsing and file readback verified for `README.md`.
+- Strategy Lab now saves strategies to SQLite.
+- Strategy `#1` and placeholder backtest `#1` were created and read back successfully before the real engine was added.
+- Market data import stubs now save manual OHLCV CSV uploads to SQLite.
+- Market data import `#1` was verified with two BTC/USDT `1h` candles and read back successfully.
+- Placeholder backtests have been replaced by `candle_backtest_v1`, a first real candle-based research engine.
+- Candle backtest `#2` was verified against import `#1` using stop loss, take profit, fees, and slippage.
+- Strategy `#2` and candle backtest `#3` verified supported plain-English `green candle` entry and `red candle` exit parsing.
+- Strategy Lab now supports RSI threshold rules such as `RSI 5 below 30` and `RSI 5 above 70`.
+- Strategy `#3` and candle backtest `#4` verified RSI parsing with no warnings and produced a real trade/metrics result.
+- Market data imports now store summary metadata in `summary_json`, including first/last timestamp, close/high/low range, total volume, duplicate timestamps, out-of-order rows, gap count, invalid candle shapes, and warnings.
+- Market data import `#4` verified summary warnings with ETH/USDT `1h` data: duplicate timestamp, out-of-order/overlap, and likely timeframe gap.
+- Strategy Lab now has a CSV file picker that reads local CSV files in the browser, fills the import textarea, and shows row count and file size before import.
+- Server JSON body limit was raised to `25mb` for larger local CSV research imports.
+- Market data import `#5` verified the updated import flow with SOL/USDT `1h` data and a clean summary.
+- Strategy Lab now renders a backtest comparison table for each selected strategy, showing run ID, mode, import ID, return, drawdown, win rate, trade count, and created time.
+- Strategy `#1` detail verified it still returns historical backtests for comparison.
+- Owner policy config added at `config/automation-policy.json`.
+- Owner policy API verified and auto-approve file proposals is enabled.
+- File proposal `#2` started approved under owner policy and applied successfully.
+- Creator task detail now includes command run history.
+- Creator Agent can now ask a local model to draft a file proposal for an approved workspace.
+- File proposal `#3` was generated by `qwen2.5-coder:7b`, auto-approved under owner policy, applied, and read back as `workspaces/creator-agent-sandbox/AI_CODER_SMOKE.md`.
+- Creator Agent can now ask a local model to draft a multi-file proposal batch.
+- Multi-file proposals `#4` and `#5` were generated by `qwen2.5-coder:7b`, auto-approved under owner policy, applied, and read back as `BATCH_SMOKE_OVERVIEW.md` and `docs/BATCH_SMOKE_STEPS.md`.
+- Creator UI now includes an `Apply All Approved` control for applying approved proposal batches from the selected task proposal list.
+- Owner-mode low-risk command auto-run is now implemented.
+- Command request `#3` for `git status` auto-ran immediately under owner policy and saved command run `#3` with exit code `0`.
+- Trusted command prefixes now live in `config/automation-policy.json` and are editable from the Creator UI.
+- `node --version` was added through the policy API, then command request `#4` auto-ran and saved command run `#4` with output `v25.9.0`.
+- Creator Agent now has project check command templates for Git status, Git diff, server syntax check, Node version, npm test, and npm build.
+- Command template `server-syntax` auto-ran `node --check app/server/src/server.js` as command request `#5` and saved command run `#5` with exit code `0`.
+- Creator Agent can now generate task checklist items with a local model at `/api/v1/creator/tasks/:id/checklist/generate`.
+- Qwen `qwen2.5-coder:7b` generated checklist items `#12` through `#15` for Creator task `#1`.
+- Multi-file proposal batches now append linked checklist items automatically.
+- Proposal `#6` generated `CHECKLIST_LINK_SMOKE.md`, appended checklist items `#16` through `#18`, was applied, then `server-syntax` command run `#6` passed and those checklist items were marked done.
+- Creator task detail now includes `fileProposals` alongside checklist, checkpoints, command requests, command runs, and events.
+- Creator UI now has a Task Activity panel showing checklist progress, proposal status counts, command run pass counts, checkpoint counts, and the latest activity timeline.
+- Project-wide artifact browser API `/api/v1/artifacts` is now working.
+- `/api/v1/artifacts` currently reports: 1 Creator task, 6 file proposals, 6 command runs, 1 checkpoint, 6 backtests, and 6 market-data imports.
+- Creator UI now has an Artifact Browser panel showing global counts plus recent file proposals, command runs, checkpoints, backtests, and market imports.
+- Creator UI Artifact Browser now has type filtering, text search, checkpoint rows, and JSON export of the filtered artifact set.
+- Artifact browser API now supports server-side type filtering, text search, `limit`, `offset`, total counts, and deep-link hrefs.
+- Fresh server restart and health check verified on 2026-05-10 with SQLite and Ollama reachable.
+- Strategy Lab rule parsing now supports simple multi-condition `and` rules.
+- Strategy `#4` and candle backtest `#5` verified `2 consecutive green candles and volume above 2x 3 candle average` entry parsing plus `2 consecutive red candles` exit parsing with no warnings.
+- Strategy `#5` and candle backtest `#6` verified moving-average crossover parsing such as `2 SMA crosses above 3 SMA` plus previous-low breakdown exit parsing with no warnings.
+- Dev-server runs are now recorded in SQLite in `dev_server_runs`.
+- `/api/v1/dev-server/status` verified the current local server as `npm start`, PID `15769`, port `3000`, status `running`.
+- Dashboard now shows a Dev Server status card with the command and uptime.
+- Dashboard now shows recent dev-server run history from `/api/v1/dev-server/status`.
+- Creator page script was syntax-checked after artifact filter/export changes.
+- Strategy Lab now has a Backtest Explorer that compares runs across strategies, shows summary stats, filters by symbol, and links directly to focused backtests.
+- Strategy Lab now opens artifact hashes such as `/strategy-lab#artifact=backtest:6` and `/strategy-lab#artifact=market-import:6`.
+- `/api/v1/backtests` verified all-backtest summary and AVAX/USDT symbol filtering.
+- Creator Agent now has `Run Next Safe Step`, backed by `/api/v1/creator/tasks/:id/advance`.
+- The advance endpoint can create a checklist, create a checkpoint, apply approved proposals, request verification, or tell the UI it is ready for a file proposal.
+- Creator task `#1` advance check verified the current state as `ready_for_file_proposal`.
+- Creator scaffold endpoint created workspace `#2` at `workspaces/task-1-build-creator-agent-execution-controls`.
+- Scaffold proposals `#7`, `#8`, and `#9` were created as approved files for `README.md`, `package.json`, and `src/index.js`.
+- Creator next-step automation applied scaffold proposals `#7` through `#9` and auto-ran command run `#7`, `node --check app/server/src/server.js`, exit code `0`.
+- Strategy Lab market import filters, import pagination controls, and candle preview pagination were browser-verified. Import `#6` previews as `Import #6: 1-8 of 8`.
+- Background market-data import jobs are implemented with queued/running/completed status, row progress, chunked candle inserts, startup recovery handling, and a Strategy Lab job panel.
+- Background import job `#1` verified a LINK/USDT `1h` CSV, completed with `4/4` rows, created market import `#7`, and previewed as `Import #7: 1-4 of 4`.
+- Streaming CSV uploads now save files under ignored `market-data-uploads/`, queue a background job, parse line-by-line from disk, then remove the source file after processing.
+- Streaming upload job `#2` verified `stream-upload-smoke.csv`, completed with `5/5` rows, created market import `#8`, cleaned the upload folder, and previewed as `Import #8: 1-5 of 5`.
+- Strategy `#8` verified matching import selectors across paginated market imports. Backtest, sweep, split test, walk-forward, and paper replay controls all selected import `#8` for `UNI/USDT 1h`.
+- Import job cancellation now works for queued/running jobs from the API and Strategy Lab job panel. Large streaming job `#4` was canceled while running, its source upload was deleted, import `#10` was archived, and partial candle rows were cleaned up.
+- Failed import jobs now retain local source files/text for retry, expose `retry_available`, and show a `Retry Job` button in Strategy Lab. Job `#5` verified the API and UI retry path, incrementing retry count to `2` while keeping partial imports free of candle rows.
+- Failed import source discard is implemented and verified on job `#5`; after discard, retry buttons disappear and retained source files are removed.
+- Archived import deletion is implemented with dependency checks and verified by deleting cleanup imports `#10` through `#13`.
+- Market-data provider `#1` verified a local mock provider. Manual refresh schedule `#1` generated DOGE/USDT import job `#6` and import `#14` with 12 candles and quality `100`.
+- Active refresh schedule `#2` auto-ran through the scheduler, generated SHIB/USDT import job `#7`, and created import `#15` with 6 candles and quality `100`.
+- Market providers, refresh schedules, and refresh runs now appear in `/api/v1/artifacts`, `/api/v1/system-memory`, and Strategy Lab artifact deep links such as `/strategy-lab#artifact=refresh-run:2`.
+- Coinbase public provider `#2` and paused schedule `#3` were verified with manual refreshes. The pagination-aware path queued import job `#9`, created market import `#17`, and stored 5 live BTC-USD `1h` candles with quality `100`.
+- Provider health checks were API-verified for local mock provider `#1` and Coinbase public provider `#2`, then browser-verified through Strategy Lab's `Health Check` button.
+- Schedule edit controls were browser-verified on paused Coinbase schedule `#3`; lookback was saved as 6 candles through the Strategy Lab `Save` button.
+- Schedule history for Coinbase schedule `#3` reports 2 runs, 2 imports, 1 active import, and 1 archived import. Cleanup kept import `#17` active and archived older duplicate import `#16`; Strategy Lab `History` and `Cleanup` buttons were browser-verified.
+- Kraken public provider `#3` was created and health-checked against BTC/USD `1h` candles. It returned 3 candles with quality `100`, and Strategy Lab shows both the `Kraken Public` provider option and saved provider row.
+
+## Slowdown Cause To Check
+
+`node_modules/` was not listed in `.gitignore`, so Git/VS Code/assistant tools may scan thousands of dependency files.
+
+This has now been added:
+
+```gitignore
+node_modules/
+.parcel-cache/
+dist/
+.env
+.env.*
+*.sqlite
+```
+
+Keep `.aider*` ignored as it already is.
+
+## Suggested Next Steps
+
+1. In VS Code, use `File > Save All`.
+2. Do not close VS Code until all tabs are saved.
+3. Restart Continue or VS Code so the updated `~/.continue/config.yaml` model roles load.
+4. Run the app with `npm start` or `npm run dev`.
+5. Open `http://localhost:3000`.
+6. Test:
+   - `/`
+   - `/login`
+   - `/signup`
+   - `/dashboard`
+   - `/creator`
+   - `/strategy-lab`
+   - `/api/v1/health`
+   - `/api/v1/dev-server/status`
+   - `/api/v1/workspaces`
+   - `/api/v1/git/status`
+   - `/api/v1/creator/tasks/1`
+   - `/api/v1/creator/tasks/1/advance`
+   - `/api/v1/creator/tasks/1/scaffold`
+   - `/api/v1/creator/tasks/1/checklist/generate`
+   - `/api/v1/creator/tasks/1/file-proposals/generate`
+   - `/api/v1/creator/tasks/1/file-proposals/generate-batch`
+   - `/api/v1/artifacts`
+   - `/api/v1/command-requests`
+   - `/api/v1/command-templates`
+   - `/api/v1/policy`
+   - `/api/v1/market-data/imports`
+   - `/api/v1/market-data/import-jobs`
+   - `/api/v1/market-data/import-jobs/1`
+   - `/api/v1/market-data/providers`
+   - `/api/v1/market-data/providers/1`
+   - `POST /api/v1/market-data/providers/1/health-check`
+   - `/api/v1/market-data/refresh-schedules`
+   - `/api/v1/market-data/refresh-schedules/2`
+   - `/api/v1/market-data/refresh-schedules/3/history`
+   - `POST /api/v1/market-data/refresh-schedules/3/cleanup`
+   - `/api/v1/market-data/refresh-runs`
+   - `/api/v1/market-data/refresh-runs/2`
+   - `POST /api/v1/market-data/import-jobs/upload`
+   - `POST /api/v1/market-data/import-jobs/4/cancel`
+   - `POST /api/v1/market-data/import-jobs/5/retry`
+   - `POST /api/v1/market-data/import-jobs/5/discard-source`
+   - `DELETE /api/v1/market-data/imports/10`
+   - `/api/v1/market-data/imports/6`
+   - `/api/v1/market-data/imports/4/candles`
+   - `/api/v1/market-data/imports/5/candles`
+   - `/api/v1/backtests`
+   - `/api/v1/backtests/6`
+   - `/api/v1/market-data/imports/6/candles`
+   - `/api/v1/strategies/5`
+   - `/api/v1/strategies/4`
+   - `/api/v1/strategies/3`
+   - `/api/v1/strategies/2`
+7. Continue from `LOCAL_AI_BUILD_PLAN.md`.
+
+## Prompt For A New Chat
+
+Use this prompt in a new ChatGPT/Codex session:
+
+```text
+I am not a coder. Please help me continue building EtherealAI without losing work.
+
+Project folder:
+/Users/ethereal/test-ai-project
+
+First, inspect the files and Git status. Do not reset, delete, or discard anything. EtherealAI is now running from app/server/src/server.js with protected app/client pages, including /dashboard, /owner-proof-packet, /mvp-test-pass, /strategy-lab, /creator, /server-route-inventory, /solidity-lab, and /social-ops. node_modules is ignored in .gitignore. Read ONBOARD_MEMORY.md, PROJECT_HANDOFF.md, MVP_OWNER_TEST_PASS.md, and LOCAL_AI_BUILD_PLAN.md before adding major features.
+
+Please:
+1. Save/preserve the current work.
+2. Run the app and verify the current baseline.
+3. Continue building the local-first AI creator system from LOCAL_AI_BUILD_PLAN.md.
+4. Explain what changed in plain English.
+```

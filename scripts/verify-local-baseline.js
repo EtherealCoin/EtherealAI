@@ -1,0 +1,7572 @@
+const fs = require('fs');
+const path = require('path');
+const { spawnSync } = require('child_process');
+
+const projectRoot = path.join(__dirname, '..');
+
+function pass(message) {
+  console.log(`[ok] ${message}`);
+}
+
+function fail(message) {
+  throw new Error(message);
+}
+
+function isOwnerAcceptanceReadyOrAccepted(ownerAcceptance = {}) {
+  const pending = ownerAcceptance.status === 'pending_owner_review'
+    && ownerAcceptance.localMvpGate === 'ready'
+    && ownerAcceptance.acceptanceRequiredForMvp100 === true;
+  const accepted = ownerAcceptance.status === 'accepted'
+    && ownerAcceptance.localMvpGate === 'accepted'
+    && ownerAcceptance.acceptanceRequiredForMvp100 === false;
+
+  return (pending || accepted)
+    && ownerAcceptance.requiredArtifacts?.length === 3
+    && ownerAcceptance.liveMode === 'blocked';
+}
+
+function runNodeSyntaxCheck() {
+  const files = [
+    'app/server/src/server.js',
+    'app/server/src/routes/artifacts.js',
+    'app/server/src/routes/auth.js',
+    'app/server/src/routes/automation-safety.js',
+    'app/server/src/routes/bot-automation.js',
+    'app/server/src/routes/commands.js',
+    'app/server/src/routes/company-identity.js',
+    'app/server/src/routes/creator.js',
+    'app/server/src/routes/dev-server.js',
+    'app/server/src/routes/exchange-metadata.js',
+    'app/server/src/routes/file-proposals.js',
+    'app/server/src/routes/health.js',
+    'app/server/src/routes/local-models.js',
+    'app/server/src/routes/market-data.js',
+    'app/server/src/routes/multi-agent.js',
+    'app/server/src/routes/order-intents.js',
+    'app/server/src/routes/owner-acceptance.js',
+    'app/server/src/routes/owner-proof-packet.js',
+    'app/server/src/routes/pages.js',
+    'app/server/src/routes/readiness.js',
+    'app/server/src/routes/risk-profiles.js',
+    'app/server/src/routes/route-inventory.js',
+    'app/server/src/routes/social-ops.js',
+    'app/server/src/routes/solidity-lab.js',
+    'app/server/src/routes/strategy-research.js',
+    'app/server/src/routes/system-config.js',
+    'app/server/src/routes/system-memory.js',
+    'app/server/src/routes/workspaces.js',
+    'app/server/src/lib/bot-automation.js',
+    'app/server/src/lib/command-safety.js',
+    'app/server/src/lib/command-runtime.js',
+    'app/server/src/lib/company-identity.js',
+    'app/server/src/lib/agent-record-actions.js',
+    'app/server/src/lib/checklist-actions.js',
+    'app/server/src/lib/process-runtime.js',
+    'app/server/src/lib/server-paths.js',
+    'app/server/src/lib/request-helpers.js',
+    'app/server/src/lib/server-startup.js',
+    'app/server/src/lib/app-middleware.js',
+    'app/server/src/lib/route-registration.js',
+    'app/server/src/lib/sqlite-runtime.js',
+    'app/server/src/lib/database-schema.js',
+    'app/server/src/lib/db-selects.js',
+    'app/server/src/lib/db-row-lookups.js',
+    'app/server/src/lib/exchange-metadata.js',
+    'app/server/src/lib/local-model-routing.js',
+    'app/server/src/lib/local-model-runtime.js',
+    'app/server/src/lib/mlx-lifecycle.js',
+    'app/server/src/lib/multi-agent-coordination.js',
+    'app/server/src/lib/owner-acceptance.js',
+    'app/server/src/lib/owner-evidence.js',
+    'app/server/src/lib/owner-proof-packet.js',
+    'app/server/src/lib/readiness.js',
+    'app/server/src/lib/system-config-runtime.js',
+    'app/server/src/lib/risk-safety.js',
+    'app/server/src/lib/risk-profile-actions.js',
+    'app/server/src/lib/secret-safety.js',
+    'app/server/src/lib/social-ops.js',
+    'app/server/src/lib/solidity-lab.js',
+    'app/server/src/lib/token-ecosystem.js',
+    'app/server/src/lib/strategy-research.js',
+    'app/server/src/lib/strategy-decision-logs.js',
+    'app/server/src/lib/bot-automation-actions.js',
+    'app/server/src/lib/bot-automation-schedules.js',
+    'app/server/src/lib/strategy-math.js',
+    'app/server/src/lib/strategy-signals.js',
+    'app/server/src/lib/strategy-engine.js',
+    'app/server/src/lib/market-data.js',
+    'app/server/src/lib/market-import-files.js',
+    'app/server/src/lib/market-import-jobs.js',
+    'app/server/src/lib/market-import-dependencies.js',
+    'app/server/src/lib/market-refresh-schedules.js',
+    'app/server/src/lib/dev-server.js',
+    'app/server/src/lib/artifact-rows.js',
+    'app/server/src/lib/creator-records.js',
+    'app/server/src/lib/workspace-files.js',
+    'app/server/src/lib/creator-prompts.js',
+    'app/server/src/lib/creator-scaffold.js',
+    'app/server/src/lib/route-inventory.js'
+  ];
+
+  for (const file of files) {
+    const result = spawnSync(process.execPath, ['--check', file], {
+      cwd: projectRoot,
+      encoding: 'utf8'
+    });
+
+    if (result.status !== 0) {
+      process.stdout.write(result.stdout || '');
+      process.stderr.write(result.stderr || '');
+      fail(`${file} syntax check failed`);
+    }
+  }
+
+  pass(`node syntax checks (${files.length})`);
+}
+
+async function checkExchangeAdapterScaffoldModule() {
+  const {
+    createDisabledExchangeAdapter,
+    getExchangeAdapterScaffolds
+  } = require(path.join(projectRoot, 'app/server/src/exchange-adapter-scaffolds'));
+  const scaffolds = getExchangeAdapterScaffolds();
+
+  if (
+    !scaffolds.some(scaffold => scaffold.exchangeName === 'binance')
+    || scaffolds.some(scaffold => scaffold.implemented !== false || scaffold.networkCallsEnabled !== false)
+  ) {
+    fail('disabled exchange adapter scaffolds did not expose disabled scaffold metadata');
+  }
+
+  const adapter = createDisabledExchangeAdapter('binance');
+
+  try {
+    await adapter.placeOrder({});
+    fail('disabled exchange adapter placeOrder did not throw');
+  } catch (error) {
+    if (
+      error.code !== 'EXCHANGE_ADAPTER_DISABLED'
+      || error.details?.networkCallsEnabled !== false
+      || error.details?.liveExecutionEnabled !== false
+    ) {
+      fail('disabled exchange adapter did not throw the expected disabled error');
+    }
+  }
+
+  pass('disabled exchange adapter scaffold module');
+}
+
+function checkOwnerEvidenceModule() {
+  const { buildOwnerEvidenceSnapshot } = require(path.join(projectRoot, 'app/server/src/lib/owner-evidence'));
+  const ownerEvidence = buildOwnerEvidenceSnapshot();
+
+  if (
+    ownerEvidence.status !== 'ready_for_owner_testing'
+    || ownerEvidence.localOnly !== true
+    || ownerEvidence.liveExecutionEnabled !== false
+    || ownerEvidence.routeBoundary !== 'monitor_only_no_live_orders'
+    || ownerEvidence.proofSurfaces?.length !== 7
+    || ownerEvidence.exportSurfaces?.length !== 3
+    || ownerEvidence.fullLiveBlockers?.length !== 4
+    || !ownerEvidence.proofSurfaces.some(surface => surface.id === 'owner_proof_packet' && surface.location === '/owner-proof-packet')
+    || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'social-ops' && boundary.externalPostingEnabled === false)
+    || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'solidity-lab' && boundary.deploymentEnabled === false)
+  ) {
+    fail('owner evidence module did not expose the expected local-only proof contract');
+  }
+
+  pass('owner evidence module');
+}
+
+function checkOwnerAcceptanceModule() {
+  const {
+    buildOwnerAcceptanceRecordPayload,
+    buildOwnerAcceptanceSummary,
+    normalizeOwnerAcceptanceRecordInput,
+    parseOwnerAcceptanceRecord
+  } = require(path.join(projectRoot, 'app/server/src/lib/owner-acceptance'));
+  const readySummary = buildOwnerAcceptanceSummary({ readyForOwnerTesting: true });
+  const reviewSummary = buildOwnerAcceptanceSummary({ readyForOwnerTesting: false });
+  const input = normalizeOwnerAcceptanceRecordInput({
+    manualTestCompleted: true,
+    proofPacketReviewed: true,
+    liveExecutionAcknowledgedDisabled: true,
+    proofPacketChecksum: 'a'.repeat(64),
+    note: ' fixture acceptance note '
+  });
+  const blockedInput = normalizeOwnerAcceptanceRecordInput({
+    manualTestCompleted: true
+  });
+  const record = parseOwnerAcceptanceRecord({
+    id: 77,
+    user_id: 5,
+    status: 'accepted',
+    note: 'fixture',
+    proof_packet_checksum: 'b'.repeat(64),
+    local_only: 1,
+    live_execution_enabled: 0,
+    acceptance_json: JSON.stringify({ liveExecution: { enabled: false } }),
+    created_at: '2026-05-16 12:00:00'
+  });
+  const payload = buildOwnerAcceptanceRecordPayload({
+    input,
+    ownerAcceptance: readySummary
+  });
+  const acceptedSummary = buildOwnerAcceptanceSummary({
+    readyForOwnerTesting: true,
+    latestRecord: record
+  });
+
+  if (
+    readySummary.status !== 'pending_owner_review'
+    || readySummary.localMvpGate !== 'ready'
+    || readySummary.acceptanceRequiredForMvp100 !== true
+    || readySummary.liveMode !== 'blocked'
+    || readySummary.requiredArtifacts?.length !== 3
+    || !readySummary.requiredArtifacts.some(artifact => artifact.id === 'owner_proof_packet' && artifact.location === '/owner-proof-packet')
+    || reviewSummary.status !== 'needs_local_review'
+    || reviewSummary.localMvpGate !== 'review'
+    || input.valid !== true
+    || input.note !== 'fixture acceptance note'
+    || input.proofPacketChecksum !== 'a'.repeat(64)
+    || blockedInput.valid !== false
+    || !blockedInput.missingChecks.includes('proofPacketReviewed')
+    || record.localOnly !== true
+    || record.liveExecutionEnabled !== false
+    || record.acceptance.liveExecution.enabled !== false
+    || payload.liveExecution.enabled !== false
+    || payload.liveExecution.goLiveAllowed !== false
+    || acceptedSummary.status !== 'accepted'
+    || acceptedSummary.localMvpGate !== 'accepted'
+    || acceptedSummary.acceptanceRequiredForMvp100 !== false
+  ) {
+    fail('owner acceptance module did not expose the expected manual-review gate');
+  }
+
+  pass('owner acceptance module');
+}
+
+function checkOwnerProofPacketModule() {
+  const {
+    addOwnerProofPacketChecksum,
+    buildPaperAutomationRunbook,
+    buildOwnerAcceptanceSummary,
+    buildOwnerProofPacket,
+    getOwnerProofPacketChecksumSource
+  } = require(path.join(projectRoot, 'app/server/src/lib/owner-proof-packet'));
+  const { buildOwnerEvidenceSnapshot } = require(path.join(projectRoot, 'app/server/src/lib/owner-evidence'));
+  const packet = addOwnerProofPacketChecksum(buildOwnerProofPacket({
+    readiness: {
+      mvpStatus: 'ready_for_owner_testing',
+      mvpCompletionPercent: 99,
+      localEndToEndCompletionPercent: 95,
+      endToEndCompletionPercent: 72,
+      automationModes: {
+        live: {
+          goLiveCommandExecution: false
+        }
+      },
+      liveExecution: {
+        enabled: false,
+        orderEndpointEnabled: false,
+        goLiveAllowed: false
+      },
+      totals: {
+        mvpBlockingItems: 0,
+        endToEndBlockingItems: 1
+      },
+      checklist: [
+        {
+          id: 'live_order_endpoint_enabled',
+          item: 'Live order endpoint is enabled',
+          evidence: 'No live order endpoint exists.',
+          nextStep: 'Keep blocked until live phase.'
+        }
+      ],
+      endToEndBlockingItems: ['live_order_endpoint_enabled'],
+      completionLedger: {
+        status: 'waiting_for_owner_acceptance',
+        percentages: {
+          mvp: { current: 99, next: 100 },
+          localPaperEndToEnd: { current: 95, next: 97 },
+          fullLiveEndToEnd: { current: 72, next: null }
+        },
+        gates: [
+          {
+            id: 'owner_acceptance_recorded',
+            status: 'pending_owner'
+          },
+          {
+            id: 'live_order_endpoint_enabled',
+            status: 'blocked_by_design'
+          }
+        ]
+      }
+    },
+    ownerEvidence: buildOwnerEvidenceSnapshot(),
+    routeInventory: {
+      totalRoutes: 2,
+      protectedRoutes: 2,
+      safetyCriticalModules: 1,
+      modules: [
+        {
+          moduleId: 'bot-automation',
+          category: 'Bot Automation',
+          routeCount: 1,
+          safetyProfile: {
+            level: 'safety_critical',
+            boundary: 'monitor_only_no_live_orders',
+            liveExecutionEnabled: false
+          }
+        }
+      ]
+    },
+    botAutomationCapabilityPath: {
+      status: 'paper_automation_ready',
+      localOnly: true,
+      paperAutomation: {
+        enabled: true,
+        canRunAutomatically: false,
+        scheduleWorkerEnabled: true,
+        routeBoundary: 'monitor_only_no_live_orders',
+        counts: {
+          readyPaperPlans: 1,
+          activeSchedules: 0,
+          pausedSchedules: 0,
+          paperPlans: 1
+        },
+        latestRun: null
+      },
+      futureLiveAutomation: {
+        enabled: false,
+        goLiveAllowed: false,
+        liveExecutionEnabled: false,
+        liveOrderEndpointEnabled: false,
+        blockedGates: [
+          'credential_loader_implemented',
+          'live_order_adapter_implemented',
+          'live_order_endpoint_enabled',
+          'owner_go_live_command_accepted'
+        ]
+      }
+    },
+    generatedAt: '2026-05-16T00:00:00.000Z'
+  }));
+
+  if (
+    packet.localOnly !== true
+    || packet.liveExecutionEnabled !== false
+    || packet.ownerTestSummary?.readyForOwnerTesting !== true
+    || packet.ownerTestSummary?.localMvpBlockers !== 0
+    || packet.ownerTestSummary?.proofSurfaceCount !== 7
+    || !isOwnerAcceptanceReadyOrAccepted(packet.ownerAcceptance)
+    || buildOwnerAcceptanceSummary({ readyForOwnerTesting: false }).status !== 'needs_local_review'
+    || packet.status.mvpCompletionPercent !== 99
+    || packet.status.botAutomationStatus !== 'paper_automation_ready'
+    || packet.completionLedger?.percentages?.mvp?.current !== 99
+    || !packet.completionLedger?.gates?.some(gate => gate.id === 'live_order_endpoint_enabled' && gate.status === 'blocked_by_design')
+    || packet.botAutomationCapabilityPath?.paperAutomation?.enabled !== true
+    || packet.botAutomationCapabilityPath?.futureLiveAutomation?.enabled !== false
+    || !packet.botAutomationCapabilityPath?.futureLiveAutomation?.blockedGates?.includes('live_order_endpoint_enabled')
+    || packet.paperAutomationRunbook?.localOnly !== true
+    || packet.paperAutomationRunbook?.liveExecutionEnabled !== false
+    || packet.paperAutomationRunbook?.routeBoundary !== 'monitor_only_no_live_orders'
+    || !packet.paperAutomationRunbook?.steps?.some(step => step.id === 'activate_or_review_paper_schedule')
+    || !packet.paperAutomationRunbook?.blockedLiveActions?.some(action => action.id === 'live_order_endpoint_enabled')
+    || buildPaperAutomationRunbook(packet.botAutomationCapabilityPath).ownerMode !== 'activate_ready_paper_schedule'
+    || packet.proofSurfaces.length !== 7
+    || packet.exportSurfaces.length !== 3
+    || packet.fullLiveBlockers.length !== 1
+    || packet.fullLiveBlockers[0].id !== 'live_order_endpoint_enabled'
+    || packet.routeSafety.modules.length !== 1
+    || packet.checksum?.algorithm !== 'sha256'
+    || packet.checksum?.source !== 'ownerProofPacket.withoutChecksum'
+    || !/^[a-f0-9]{64}$/.test(packet.checksum?.value || '')
+    || getOwnerProofPacketChecksumSource(packet).includes('"checksum"')
+  ) {
+    fail('owner proof packet module did not expose a checksummed local-only packet');
+  }
+
+  pass('owner proof packet module');
+}
+
+function checkCommandSafetyModule() {
+  const {
+    sanitizeTrustedCommandPrefixes,
+    splitCommandForExec
+  } = require(path.join(projectRoot, 'app/server/src/lib/command-safety'));
+  const prefixes = sanitizeTrustedCommandPrefixes([' npm   test ', 'git status', 'npm test']);
+  const parsed = splitCommandForExec('npm test -- --runInBand');
+
+  if (prefixes.length !== 2 || prefixes[0] !== 'npm test' || prefixes[1] !== 'git status') {
+    fail('command safety module did not normalize and deduplicate trusted prefixes');
+  }
+
+  if (parsed.bin !== 'npm' || parsed.args.join(' ') !== 'test -- --runInBand') {
+    fail('command safety module did not split safe command arguments');
+  }
+
+  try {
+    sanitizeTrustedCommandPrefixes(['rm']);
+    fail('command safety module allowed hard-blocked trusted prefix');
+  } catch (error) {
+    if (!/hard-blocked/.test(error.message)) {
+      throw error;
+    }
+  }
+
+  try {
+    splitCommandForExec('npm test; rm -rf /');
+    fail('command safety module allowed shell control characters');
+  } catch (error) {
+    if (!/Shell control characters/.test(error.message)) {
+      throw error;
+    }
+  }
+
+  pass('command safety module');
+}
+
+async function checkCommandRuntimeModule() {
+  const {
+    COMMAND_TEMPLATES,
+    createCommandRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/command-runtime'));
+  const projectFixtureRoot = '/tmp/etherealai-project';
+  const dbRuns = [];
+  const execCalls = [];
+  const agentEvents = [];
+  const runtime = createCommandRuntime({
+    path,
+    projectRoot: projectFixtureRoot,
+    readAutomationPolicy: () => ({
+      localAutomation: {
+        trustedCommandPrefixes: ['npm test', 'git status', 'node --check'],
+        autoRunLowRiskCommands: true
+      }
+    }),
+    async getWorkspace(id) {
+      return {
+        id,
+        path: path.join(projectFixtureRoot, 'workspaces/demo')
+      };
+    },
+    async execFileCapture(bin, args, options) {
+      execCalls.push({ bin, args, options });
+      return {
+        exitCode: bin === 'npm' ? 0 : 1,
+        stdout: 'fixture stdout',
+        stderr: '',
+        error: ''
+      };
+    },
+    async dbRun(query, params) {
+      dbRuns.push({ query, params });
+
+      if (query.includes('INSERT INTO command_requests')) {
+        return { lastID: 77 };
+      }
+
+      if (query.includes('INSERT INTO command_runs')) {
+        return { lastID: 88 };
+      }
+
+      return { changes: 1 };
+    },
+    async dbGet(query, params) {
+      if (query.includes('command_requests')) {
+        return {
+          id: params[0],
+          task_id: 76,
+          workspace_id: null,
+          command: 'npm test',
+          status: 'review_ready'
+        };
+      }
+
+      return {
+        id: params[0],
+        status: 'executed',
+        stdout: 'fixture stdout'
+      };
+    },
+    async saveAgentEvent(taskId, eventType, message, metadata) {
+      agentEvents.push({ taskId, eventType, message, metadata });
+    }
+  });
+  const allowedReview = runtime.isCommandAllowed('npm test -- --runInBand');
+  const blockedReview = runtime.isCommandAllowed('rm -rf /');
+  const parsed = runtime.parseSafeCommand('npm test');
+  const npmTemplate = runtime.getCommandTemplate('npm-test');
+  const serializedTemplate = runtime.serializeCommandTemplate(npmTemplate);
+  const commandRun = await runtime.executeCommandRequest({
+    id: 70,
+    task_id: 71,
+    workspace_id: null,
+    command: 'npm test'
+  });
+  const workspaceRun = await runtime.executeCommandRequest({
+    id: 72,
+    task_id: null,
+    workspace_id: 73,
+    command: 'node --check src/index.js'
+  });
+  const createdRequest = await runtime.createCommandRequestRecord({
+    taskId: 76,
+    workspaceId: null,
+    command: 'npm test'
+  });
+  const outsideRuntime = createCommandRuntime({
+    path,
+    projectRoot: projectFixtureRoot,
+    readAutomationPolicy: () => ({
+      localAutomation: {
+        trustedCommandPrefixes: ['node --check']
+      }
+    }),
+    async getWorkspace() {
+      return {
+        path: '/tmp/outside-project'
+      };
+    },
+    async execFileCapture() {
+      fail('command runtime executed an outside workspace command');
+    },
+    async dbRun() {},
+    async dbGet() {},
+    async saveAgentEvent() {}
+  });
+  let outsideWorkspaceError = '';
+
+  try {
+    await outsideRuntime.executeCommandRequest({
+      id: 74,
+      workspace_id: 75,
+      command: 'node --check src/index.js'
+    });
+    fail('command runtime allowed execution outside the project boundary');
+  } catch (error) {
+    outsideWorkspaceError = error.message;
+  }
+
+  if (
+    !COMMAND_TEMPLATES.some(template => template.id === 'workspace-node-syntax')
+    || runtime.commandTemplates.length !== COMMAND_TEMPLATES.length
+    || allowedReview.allowed !== true
+    || blockedReview.allowed !== false
+    || !/hard-blocked/.test(blockedReview.reason)
+    || parsed.bin !== 'npm'
+    || parsed.args.join(' ') !== 'test'
+    || serializedTemplate.allowed !== true
+    || commandRun.id !== 88
+    || workspaceRun.id !== 88
+    || createdRequest.autoRan !== true
+    || createdRequest.commandRequest.id !== 77
+    || createdRequest.commandRun.id !== 88
+    || execCalls[0].options.cwd !== projectFixtureRoot
+    || !execCalls[1].options.cwd.endsWith('/workspaces/demo')
+    || dbRuns.filter(run => run.query.includes('INSERT INTO command_requests')).length !== 1
+    || dbRuns.filter(run => run.query.includes('INSERT INTO command_runs')).length !== 3
+    || !agentEvents.some(event => event.eventType === 'command.executed' && event.metadata.commandRunId === 88)
+    || !agentEvents.some(event => event.eventType === 'command.requested' && event.metadata.commandRequestId === 77)
+    || !/outside the approved project boundary/.test(outsideWorkspaceError)
+  ) {
+    fail('command runtime module did not preserve safe command/template execution behavior');
+  }
+
+  pass('command runtime module');
+}
+
+async function checkAgentRecordActionsModule() {
+  const {
+    createAgentRecordActionsRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/agent-record-actions'));
+  const {
+    parseFileProposal
+  } = require(path.join(projectRoot, 'app/server/src/lib/creator-records'));
+  const {
+    resolveWorkspacePath
+  } = require(path.join(projectRoot, 'app/server/src/lib/workspace-files'));
+  const fixtureRoot = path.join(projectRoot, 'workspaces');
+  fs.mkdirSync(fixtureRoot, { recursive: true });
+  const workspacePath = fs.mkdtempSync(path.join(fixtureRoot, 'agent-record-actions-'));
+  const dbRuns = [];
+  const gitStatus = {
+    branch: 'main',
+    clean: true,
+    status: '',
+    lastCommit: 'abc123 fixture',
+    checkedAt: '2026-05-14T00:00:00.000Z'
+  };
+  let nextProposalId = 300;
+  const runtime = createAgentRecordActionsRuntime({
+    fs,
+    path,
+    dbRun: async (query, params) => {
+      dbRuns.push({ query, params });
+
+      if (query.includes('INSERT INTO file_write_proposals')) {
+        nextProposalId += 1;
+        return { lastID: nextProposalId };
+      }
+
+      if (query.includes('INSERT INTO checkpoint_records')) {
+        return { lastID: 91 };
+      }
+
+      return { changes: 1 };
+    },
+    dbGet: async (query, params) => {
+      if (query.includes('file_write_proposals')) {
+        return {
+          id: params[0],
+          task_id: 81,
+          workspace_id: 82,
+          relative_path: 'src/app.js',
+          action: 'create',
+          current_content: '',
+          proposed_content: 'console.log("fixture");\n',
+          status: 'applied',
+          applied_at: '2026-05-14T00:00:00.000Z',
+          created_at: '2026-05-14T00:00:00.000Z',
+          updated_at: '2026-05-14T00:00:00.000Z'
+        };
+      }
+
+      if (query.includes('checkpoint_records')) {
+        return {
+          id: params[0],
+          task_id: 81,
+          note: 'fixture checkpoint',
+          git_status: JSON.stringify(gitStatus),
+          created_at: '2026-05-14T00:00:00.000Z'
+        };
+      }
+
+      return null;
+    },
+    getWorkspace: async id => ({
+      id,
+      path: workspacePath
+    }),
+    resolveWorkspacePath,
+    parseFileProposal,
+    getGitStatusSnapshot: async () => gitStatus
+  });
+  let missingProposalError = '';
+  let pendingProposalError = '';
+
+  try {
+    await runtime.applyFileProposalRecord(null);
+    fail('agent record actions module allowed a missing file proposal');
+  } catch (error) {
+    missingProposalError = error.message;
+  }
+
+  try {
+    await runtime.applyFileProposalRecord({
+      id: 80,
+      status: 'pending'
+    });
+    fail('agent record actions module allowed an unapproved file proposal');
+  } catch (error) {
+    pendingProposalError = error.message;
+  }
+
+  const applied = await runtime.applyFileProposalRecord({
+    id: 80,
+    task_id: 81,
+    workspace_id: 82,
+    relative_path: 'src/app.js',
+    proposed_content: 'console.log("fixture");\n',
+    status: 'approved'
+  });
+  const checkpoint = await runtime.createCheckpointRecord(81, 'fixture checkpoint');
+  const proposalIds = await runtime.createFileProposalRecords({
+    taskId: 81,
+    workspaceId: 82,
+    initialStatus: 'pending',
+    files: [
+      {
+        safePath: 'src/one.js',
+        currentContent: '',
+        proposedContent: 'one'
+      },
+      {
+        safePath: 'src/two.js',
+        currentContent: 'old',
+        proposedContent: 'two'
+      }
+    ]
+  });
+  await runtime.saveAgentEvent(81, 'fixture.event', 'Fixture event', { ok: true });
+  const writtenFile = fs.readFileSync(path.join(workspacePath, 'src/app.js'), 'utf8');
+
+  try {
+    if (
+      !/File proposal not found/.test(missingProposalError)
+      || !/approved/.test(pendingProposalError)
+      || applied.status !== 'applied'
+      || proposalIds.join(',') !== '301,302'
+      || writtenFile !== 'console.log("fixture");\n'
+      || checkpoint.git_status.clean !== true
+      || !dbRuns.some(run => run.query.includes('UPDATE file_write_proposals') && run.params[0] === 80)
+      || dbRuns.filter(run => run.query.includes('INSERT INTO file_write_proposals')).length !== 2
+      || !dbRuns.some(run => run.query.includes('INSERT INTO file_write_proposals') && run.params[2] === 'src/two.js' && run.params[6] === 'pending')
+      || !dbRuns.some(run => run.query.includes('INSERT INTO checkpoint_records') && run.params[0] === 81)
+      || !dbRuns.some(run => run.query.includes('INSERT INTO agent_events') && run.params[1] === 'fixture.event' && JSON.parse(run.params[3]).ok === true)
+      || !dbRuns.some(run => run.query.includes('INSERT INTO agent_events') && run.params[1] === 'file.proposal.applied')
+      || !dbRuns.some(run => run.query.includes('INSERT INTO agent_events') && run.params[1] === 'checkpoint.recorded')
+    ) {
+      fail('agent record actions module did not preserve proposal/checkpoint/event behavior');
+    }
+  } finally {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+
+  pass('agent record actions module');
+}
+
+async function checkChecklistActionsModule() {
+  const {
+    createChecklistActionsRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/checklist-actions'));
+  const {
+    parseChecklistItem
+  } = require(path.join(projectRoot, 'app/server/src/lib/creator-records'));
+  const rowsByTask = new Map();
+  const dbRuns = [];
+  const events = [];
+  let nextId = 1;
+  const runtime = createChecklistActionsRuntime({
+    async dbAll(query, params) {
+      const taskId = Number(params[0]);
+      const rows = rowsByTask.get(taskId) || [];
+
+      if (query.includes('SELECT label')) {
+        return rows.map(row => ({ label: row.label }));
+      }
+
+      return rows
+        .slice()
+        .sort((a, b) => a.position - b.position);
+    },
+    async dbGet(query, params) {
+      const taskId = Number(params[0]);
+      const rows = rowsByTask.get(taskId) || [];
+      const maxPosition = rows.reduce((max, row) => Math.max(max, row.position), 0);
+
+      return { maxPosition };
+    },
+    async dbRun(query, params) {
+      dbRuns.push({ query, params });
+
+      if (query.includes('INSERT INTO task_checklist_items')) {
+        const [taskId, label, position] = params;
+        const rows = rowsByTask.get(Number(taskId)) || [];
+        rows.push({
+          id: nextId,
+          task_id: taskId,
+          label,
+          status: 'pending',
+          position,
+          created_at: '2026-05-14T00:00:00.000Z',
+          updated_at: '2026-05-14T00:00:00.000Z'
+        });
+        nextId += 1;
+        rowsByTask.set(Number(taskId), rows);
+      }
+
+      return { changes: 1 };
+    },
+    parseChecklistItem,
+    async saveAgentEvent(taskId, eventType, message, metadata) {
+      events.push({ taskId, eventType, message, metadata });
+    }
+  });
+  const created = await runtime.createChecklistForTask({
+    id: 101,
+    plan: {
+      phases: ['Build fixture', 'Verify fixture']
+    }
+  });
+  const existing = await runtime.createChecklistForTask({
+    id: 101,
+    plan: {
+      phases: ['Should not insert again']
+    }
+  });
+  const appended = await runtime.appendChecklistItems(
+    101,
+    ['Add direct test', 'add direct test', '  ', 'Check browser smoke'],
+    'checklist.generated',
+    { model: 'fixture-model' }
+  );
+  const unchanged = await runtime.appendChecklistItems(101, [], 'checklist.generated');
+
+  if (
+    created.length !== 8
+    || existing.length !== created.length
+    || appended.length !== 10
+    || unchanged.length !== appended.length
+    || dbRuns.filter(run => run.query.includes('INSERT INTO task_checklist_items')).length !== 10
+    || !events.some(event => event.eventType === 'checklist.created' && event.metadata.itemCount === 8)
+    || !events.some(event => event.eventType === 'checklist.generated' && event.metadata.itemCount === 2 && event.metadata.model === 'fixture-model')
+    || appended[8].label !== 'Add direct test'
+    || appended[9].label !== 'Check browser smoke'
+  ) {
+    fail('checklist actions module did not preserve checklist creation/append behavior');
+  }
+
+  pass('checklist actions module');
+}
+
+async function checkProcessRuntimeModule() {
+  const {
+    createProcessRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/process-runtime'));
+  const calls = [];
+  const runtime = createProcessRuntime({
+    projectRoot: '/tmp/project-root',
+    execFile(command, args, options, callback) {
+      calls.push({ command, args, options });
+
+      if (command === 'bad-command') {
+        callback({ code: 7, message: 'command failed' }, 'ignored stdout\n', 'bad stderr\n');
+        return;
+      }
+
+      if (command === 'git' && args[0] === 'rev-parse') {
+        callback(null, 'main\n', '');
+        return;
+      }
+
+      if (command === 'git' && args[0] === 'status') {
+        callback(null, '', '');
+        return;
+      }
+
+      if (command === 'git' && args[0] === 'log') {
+        callback(null, 'abc123 fixture commit\n', '');
+        return;
+      }
+
+      callback(null, 'trimmed output\n', '');
+    }
+  });
+  const text = await runtime.execFileText('echo', ['fixture']);
+  const capture = await runtime.execFileCapture('bad-command', []);
+  const gitStatus = await runtime.getGitStatusSnapshot();
+
+  if (
+    text !== 'trimmed output'
+    || calls[0].options.cwd !== '/tmp/project-root'
+    || calls[0].options.timeout !== 10000
+    || capture.exitCode !== 7
+    || capture.stderr !== 'bad stderr'
+    || gitStatus.branch !== 'main'
+    || gitStatus.clean !== true
+    || gitStatus.lastCommit !== 'abc123 fixture commit'
+  ) {
+    fail('process runtime module did not preserve command/Git helper behavior');
+  }
+
+  pass('process runtime module');
+}
+
+function checkServerPathsModule() {
+  const {
+    createServerPaths
+  } = require(path.join(projectRoot, 'app/server/src/lib/server-paths'));
+  const paths = createServerPaths({
+    path,
+    serverDirname: '/tmp/etherealai-project/app/server/src',
+    ownerHome: '/Users/fixture'
+  });
+
+  if (
+    paths.projectRoot !== '/tmp/etherealai-project'
+    || paths.clientDir !== '/tmp/etherealai-project/app/client'
+    || paths.dbPath !== '/tmp/etherealai-project/database.sqlite'
+    || paths.modelConfigPath !== '/tmp/etherealai-project/config/local-models.json'
+    || paths.automationPolicyPath !== '/tmp/etherealai-project/config/automation-policy.json'
+    || paths.secretProviderCapabilitiesPath !== '/tmp/etherealai-project/config/local-secret-providers.json'
+    || paths.companyIdentityPath !== '/tmp/etherealai-project/config/company-identity.json'
+    || paths.onboardMemoryPath !== '/tmp/etherealai-project/ONBOARD_MEMORY.md'
+    || paths.onboardMemoryCopyPaths[0] !== '/Users/fixture/Desktop/EtherealAI_ONBOARD_MEMORY copy.md'
+    || paths.onboardMemoryCopyPaths[1] !== '/Users/fixture/Desktop/Layer 1/EtherealAI/EtherealAI_ONBOARD_MEMORY.md'
+    || paths.workspacesDir !== '/tmp/etherealai-project/workspaces'
+    || paths.marketImportUploadDir !== '/tmp/etherealai-project/market-data-uploads'
+  ) {
+    fail('server paths module did not preserve project path construction');
+  }
+
+  pass('server paths module');
+}
+
+function checkRequestHelpersModule() {
+  const {
+    requireAuth,
+    createRequestError
+  } = require(path.join(projectRoot, 'app/server/src/lib/request-helpers'));
+  let nextCalled = false;
+  const deniedPayloads = [];
+
+  requireAuth({
+    session: {}
+  }, {
+    status(statusCode) {
+      return {
+        json(payload) {
+          deniedPayloads.push({ statusCode, payload });
+        }
+      };
+    }
+  }, () => {
+    fail('request helpers called next for unauthenticated request');
+  });
+  requireAuth({
+    session: {
+      userId: 1
+    }
+  }, {}, () => {
+    nextCalled = true;
+  });
+  const error = createRequestError('fixture error', 409, {
+    code: 'fixture_conflict'
+  });
+
+  if (
+    deniedPayloads.length !== 1
+    || deniedPayloads[0].statusCode !== 401
+    || deniedPayloads[0].payload.error !== 'Authentication required'
+    || nextCalled !== true
+    || error.message !== 'fixture error'
+    || error.statusCode !== 409
+    || error.code !== 'fixture_conflict'
+  ) {
+    fail('request helpers module did not preserve auth/error behavior');
+  }
+
+  pass('request helpers module');
+}
+
+async function checkServerStartupModule() {
+  const {
+    startEtherealServer
+  } = require(path.join(projectRoot, 'app/server/src/lib/server-startup'));
+  const logs = [];
+  const errors = [];
+  const timers = [];
+  const calls = [];
+  const server = startEtherealServer({
+    app: {
+      listen(port, callback) {
+        calls.push({ type: 'listen', port });
+        callback();
+        return { listening: true, port };
+      }
+    },
+    port: 3123,
+    async recordDevServerStart() {
+      calls.push({ type: 'record-start' });
+    },
+    async updateDevServerHeartbeat() {
+      calls.push({ type: 'heartbeat' });
+    },
+    scheduleMarketImportWorker() {
+      calls.push({ type: 'market-import' });
+    },
+    scheduleMarketRefreshWorker() {
+      calls.push({ type: 'market-refresh' });
+    },
+    scheduleBotAutomationWorker() {
+      calls.push({ type: 'bot-automation' });
+    },
+    marketRefreshPollMs: 60000,
+    botAutomationSchedulePollMs: 120000,
+    setIntervalFn(callback, delay) {
+      const timer = {
+        callback,
+        delay,
+        unrefCount: 0,
+        unref() {
+          this.unrefCount += 1;
+        }
+      };
+      timers.push(timer);
+      return timer;
+    },
+    logger: {
+      log(message) {
+        logs.push(message);
+      },
+      error(message) {
+        errors.push(message);
+      }
+    }
+  });
+
+  timers[0].callback();
+  timers[1].callback();
+  timers[2].callback();
+  await Promise.resolve();
+
+  if (
+    server.listening !== true
+    || !logs.includes('Server running on port 3123')
+    || calls[0].type !== 'listen'
+    || calls[0].port !== 3123
+    || !calls.some(call => call.type === 'record-start')
+    || calls.filter(call => call.type === 'market-import').length !== 1
+    || calls.filter(call => call.type === 'market-refresh').length !== 2
+    || calls.filter(call => call.type === 'bot-automation').length !== 2
+    || calls.filter(call => call.type === 'heartbeat').length !== 1
+    || timers.map(timer => timer.delay).join(',') !== '30000,60000,120000'
+    || !timers.every(timer => timer.unrefCount === 1)
+    || errors.length !== 0
+  ) {
+    fail('server startup module did not preserve listen/timer behavior');
+  }
+
+  pass('server startup module');
+}
+
+function checkAppMiddlewareModule() {
+  const {
+    configureAppMiddleware
+  } = require(path.join(projectRoot, 'app/server/src/lib/app-middleware'));
+  const uses = [];
+  const staticCalls = [];
+  const app = {
+    use(...args) {
+      uses.push(args);
+    }
+  };
+  const fakeExpress = {
+    static(dir) {
+      staticCalls.push(dir);
+      return { type: 'static', dir };
+    }
+  };
+
+  configureAppMiddleware(app, {
+    express: fakeExpress,
+    bodyParser: {
+      json(options) {
+        return { type: 'json', options };
+      }
+    },
+    session(options) {
+      return { type: 'session', options };
+    },
+    helmet(options) {
+      return { type: 'helmet', options };
+    },
+    cors(options) {
+      return { type: 'cors', options };
+    },
+    path,
+    projectRoot: '/tmp/etherealai-project',
+    clientDir: '/tmp/etherealai-project/app/client',
+    frontendUrl: 'http://127.0.0.1:3000',
+    sessionSecret: 'fixture-secret'
+  });
+
+  if (
+    uses.length !== 8
+    || uses[0][0].type !== 'json'
+    || uses[0][0].options.limit !== '25mb'
+    || uses[1][0].type !== 'session'
+    || uses[1][0].options.secret !== 'fixture-secret'
+    || uses[1][0].options.resave !== false
+    || uses[1][0].options.saveUninitialized !== false
+    || uses[2][0].type !== 'helmet'
+    || uses[2][0].options.contentSecurityPolicy !== false
+    || uses[3][0].type !== 'cors'
+    || uses[3][0].options.origin !== 'http://127.0.0.1:3000'
+    || uses[3][0].options.credentials !== true
+    || uses[4][0].dir !== '/tmp/etherealai-project/app/client'
+    || uses[5][0] !== '/components'
+    || uses[5][1].dir !== '/tmp/etherealai-project/components'
+    || uses[6][0] !== '/styles'
+    || uses[6][1].dir !== '/tmp/etherealai-project/styles'
+    || uses[7][0] !== '/js'
+    || uses[7][1].dir !== '/tmp/etherealai-project/js'
+    || staticCalls.length !== 4
+  ) {
+    fail('app middleware module did not preserve middleware/static setup behavior');
+  }
+
+  pass('app middleware module');
+}
+
+async function checkAuthRoutesModule() {
+  const bcrypt = require('bcrypt');
+  const {
+    normalizeAuthIdentifier,
+    normalizeAuthPassword,
+    registerAuthRoutes
+  } = require(path.join(projectRoot, 'app/server/src/routes/auth'));
+  const source = fs.readFileSync(
+    path.join(projectRoot, 'app/server/src/routes/auth.js'),
+    'utf8'
+  );
+  const routes = {};
+  const getCalls = [];
+  const passwordHash = await bcrypt.hash('fixture-password-123', 4);
+  const app = {
+    post(routePath, handler) {
+      routes[`POST ${routePath}`] = handler;
+    },
+    get(routePath, handler) {
+      routes[`GET ${routePath}`] = handler;
+    }
+  };
+  const db = {
+    get(sql, params, callback) {
+      getCalls.push({ sql, params });
+      callback(null, {
+        id: 1,
+        email: 'patrick@etherealAI',
+        password_hash: passwordHash
+      });
+    },
+    run() {
+      throw new Error('auth login test should not write');
+    }
+  };
+
+  registerAuthRoutes(app, { db });
+
+  const loginResult = await new Promise(resolve => {
+    const req = {
+      body: {
+        email: ' patrick@etherealai ',
+        password: 'fixture-password-123'
+      },
+      session: {}
+    };
+    const res = {
+      statusCode: 200,
+      status(code) {
+        this.statusCode = code;
+        return this;
+      },
+      json(body) {
+        resolve({
+          statusCode: this.statusCode,
+          body,
+          userId: req.session.userId
+        });
+      }
+    };
+
+    routes['POST /api/v1/auth/login'](req, res);
+  });
+
+  if (
+    normalizeAuthIdentifier(' patrick@etherealAI ') !== 'patrick@etherealAI'
+    || normalizeAuthPassword('fixture-password-123') !== 'fixture-password-123'
+    || normalizeAuthPassword(null) !== ''
+    || !source.includes('lower(email) = lower(?)')
+    || !source.includes('normalizeAuthIdentifier(req.body?.email)')
+    || getCalls.length !== 1
+    || !/lower\(email\) = lower\(\?\)/.test(getCalls[0].sql)
+    || getCalls[0].params[0] !== 'patrick@etherealai'
+    || loginResult.statusCode !== 200
+    || loginResult.userId !== 1
+    || loginResult.body.message !== 'Logged in successfully'
+  ) {
+    fail('auth route module did not preserve trimmed case-insensitive owner login behavior');
+  }
+
+  pass('auth route module');
+}
+
+function checkRouteRegistrationModule() {
+  const routeRegistrationSource = fs.readFileSync(
+    path.join(projectRoot, 'app/server/src/lib/route-registration.js'),
+    'utf8'
+  );
+  const serverSource = fs.readFileSync(
+    path.join(projectRoot, 'app/server/src/server.js'),
+    'utf8'
+  );
+  const expectedRouteRegistrars = [
+    'registerAuthRoutes',
+    'registerSystemConfigRoutes',
+    'registerCompanyIdentityRoutes',
+    'registerHealthRoutes',
+    'registerReadinessRoutes',
+    'registerRouteInventoryRoutes',
+    'registerOwnerAcceptanceRoutes',
+    'registerDevServerRoutes',
+    'registerSystemMemoryRoutes',
+    'registerAutomationSafetyRoutes',
+    'registerArtifactRoutes',
+    'registerLocalModelRoutes',
+    'registerMultiAgentRoutes',
+    'registerCreatorRoutes',
+    'registerWorkspaceRoutes',
+    'registerFileProposalRoutes',
+    'registerStrategyResearchRoutes',
+    'registerExchangeMetadataRoutes',
+    'registerMarketDataRoutes',
+    'registerRiskProfileRoutes',
+    'registerOrderIntentRoutes',
+    'registerSocialOpsRoutes',
+    'registerBotAutomationRoutes',
+    'registerSolidityLabRoutes',
+    'registerCommandRoutes',
+    'registerPageRoutes'
+  ];
+
+  if (
+    !routeRegistrationSource.includes('function registerEtherealRoutes')
+    || !routeRegistrationSource.includes("require('../routes/owner-acceptance')")
+    || !routeRegistrationSource.includes("require('../routes/company-identity')")
+    || !routeRegistrationSource.includes("require('../routes/bot-automation')")
+    || !routeRegistrationSource.includes("require('../routes/multi-agent')")
+    || !routeRegistrationSource.includes("require('../routes/strategy-research')")
+    || !routeRegistrationSource.includes("require('../routes/pages')")
+    || !expectedRouteRegistrars.every(name => routeRegistrationSource.includes(`${name}(app`))
+    || !serverSource.includes("require('./lib/route-registration')")
+    || !serverSource.includes('registerEtherealRoutes(app,')
+    || !serverSource.includes('const ROUTE_SELECTS = {')
+    || !serverSource.includes('const ROW_LOOKUP_SELECTS = {')
+    || !serverSource.includes('const ROUTE_PARSERS = {')
+    || !serverSource.includes('buildCompanySetupPlan')
+    || !serverSource.includes('normalizeCompanyDnsTargetInput')
+    || !serverSource.includes('parseCompanyDnsTarget')
+    || !serverSource.includes('selects: ROW_LOOKUP_SELECTS')
+    || !serverSource.includes('selects: ROUTE_SELECTS')
+    || !serverSource.includes('parsers: ROUTE_PARSERS')
+    || serverSource.includes("require('./routes/")
+  ) {
+    fail('route registration module did not preserve centralized route wiring');
+  }
+
+  pass('route registration module');
+}
+
+async function checkSqliteRuntimeModule() {
+  const {
+    createSqliteRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/sqlite-runtime'));
+  const calls = [];
+  let healthFails = false;
+  const runtime = createSqliteRuntime({
+    run(sql, params, callback) {
+      calls.push({ method: 'run', sql, params });
+      callback.call({ lastID: 123, changes: 2 }, null);
+    },
+    all(sql, params, callback) {
+      calls.push({ method: 'all', sql, params });
+      callback(null, [{ id: 1 }, { id: 2 }]);
+    },
+    get(sql, params, callback) {
+      if (typeof params === 'function') {
+        calls.push({ method: 'get-health', sql });
+        params(healthFails ? new Error('database offline') : null, { ok: 1 });
+        return;
+      }
+
+      calls.push({ method: 'get', sql, params });
+      callback(null, { id: params[0] });
+    }
+  });
+  const runResult = await runtime.dbRun('INSERT fixture', ['a']);
+  const allResult = await runtime.dbAll('SELECT all fixture', [1]);
+  const getResult = await runtime.dbGet('SELECT one fixture', [7]);
+  const healthy = await runtime.checkDatabase();
+  healthFails = true;
+  const unhealthy = await runtime.checkDatabase();
+
+  if (
+    runResult.lastID !== 123
+    || runResult.changes !== 2
+    || allResult.length !== 2
+    || getResult.id !== 7
+    || healthy.ok !== true
+    || healthy.message !== 'SQLite is reachable'
+    || unhealthy.ok !== false
+    || unhealthy.message !== 'database offline'
+    || !calls.some(call => call.method === 'run' && call.params[0] === 'a')
+    || !calls.some(call => call.method === 'all' && call.params[0] === 1)
+    || !calls.some(call => call.method === 'get' && call.params[0] === 7)
+    || calls.filter(call => call.method === 'get-health').length !== 2
+  ) {
+    fail('sqlite runtime module did not preserve promise wrapper/health behavior');
+  }
+
+  pass('sqlite runtime module');
+}
+
+function checkDatabaseSchemaModule() {
+  const {
+    initializeDatabase
+  } = require(path.join(projectRoot, 'app/server/src/lib/database-schema'));
+  const runCalls = [];
+  let serializeCount = 0;
+
+  initializeDatabase({
+    serialize(callback) {
+      serializeCount += 1;
+      callback();
+    },
+    run(sql, callback) {
+      runCalls.push({ sql, hasCallback: typeof callback === 'function' });
+    }
+  });
+
+  const statements = runCalls.map(call => call.sql);
+  const createTableStatements = statements.filter(statement => /CREATE TABLE IF NOT EXISTS/.test(statement));
+  const alterStatements = statements.filter(statement => /^ALTER TABLE/.test(statement));
+
+  if (
+    serializeCount !== 1
+    || createTableStatements.length < 30
+    || alterStatements.length < 10
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS users'))
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS bot_automation_plans'))
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS bot_automation_schedules'))
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS multi_agent_coordination_runs'))
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS multi_agent_contributions'))
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS company_dns_targets'))
+    || !statements.some(statement => statement.includes('external_mutation_enabled INTEGER NOT NULL DEFAULT 0'))
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS owner_acceptance_records'))
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS market_data_import_jobs'))
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS dev_server_logs'))
+    || !statements.some(statement => statement.includes('ALTER TABLE market_data_refresh_schedules ADD COLUMN backfill_start_at TEXT'))
+    || !statements.some(statement => statement.includes('ALTER TABLE market_data_import_jobs ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0'))
+    || !runCalls.some(call => call.sql.includes('ALTER TABLE exchange_connectors ADD COLUMN secret_reference_id INTEGER') && call.hasCallback)
+  ) {
+    fail('database schema module did not preserve schema bootstrap statements');
+  }
+
+  pass('database schema module');
+}
+
+function checkDbSelectsModule() {
+  const selects = require(path.join(projectRoot, 'app/server/src/lib/db-selects'));
+  const expectedKeys = [
+    'EXCHANGE_CONNECTOR_SELECT',
+    'EXCHANGE_CONNECTOR_READINESS_EVENT_SELECT',
+    'EXCHANGE_ADAPTER_CONTRACT_EVENT_SELECT',
+    'BOT_AUTOMATION_PLAN_SELECT',
+    'BOT_AUTOMATION_RUN_SELECT',
+    'BOT_LIVE_READINESS_EVENT_SELECT',
+    'BOT_LIVE_ENABLEMENT_REVIEW_SELECT',
+    'BOT_AUTOMATION_SCHEDULE_SELECT'
+  ];
+
+  if (
+    !expectedKeys.every(key => typeof selects[key] === 'string' && selects[key].includes('SELECT'))
+    || !selects.EXCHANGE_CONNECTOR_SELECT.includes('local_secret_references')
+    || !selects.BOT_AUTOMATION_PLAN_SELECT.includes('LEFT JOIN risk_profiles')
+    || !selects.BOT_AUTOMATION_RUN_SELECT.includes('market_data_imports.label AS market_import_label')
+    || !selects.BOT_LIVE_READINESS_EVENT_SELECT.includes('bot_live_readiness_events')
+    || !selects.BOT_LIVE_ENABLEMENT_REVIEW_SELECT.includes('bot_live_enablement_reviews')
+    || !selects.BOT_AUTOMATION_SCHEDULE_SELECT.includes('bot_automation_schedules')
+  ) {
+    fail('db selects module did not preserve shared SELECT fragments');
+  }
+
+  pass('db selects module');
+}
+
+async function checkDbRowLookupsModule() {
+  const {
+    createDbRowLookupRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/db-row-lookups'));
+  const calls = [];
+  const runtime = createDbRowLookupRuntime({
+    async dbGet(query, params) {
+      calls.push({ query, params });
+      return { query, params };
+    },
+    selects: {
+      exchangeConnector: 'SELECT exchange_connectors.* FROM exchange_connectors',
+      exchangeConnectorReadinessEvent: 'SELECT exchange_connector_readiness_events.* FROM exchange_connector_readiness_events',
+      exchangeAdapterContractEvent: 'SELECT exchange_adapter_contract_events.* FROM exchange_adapter_contract_events',
+      botAutomationPlan: 'SELECT bot_automation_plans.* FROM bot_automation_plans',
+      botAutomationSchedule: 'SELECT bot_automation_schedules.* FROM bot_automation_schedules',
+      botAutomationRun: 'SELECT bot_automation_runs.* FROM bot_automation_runs',
+      botLiveReadinessEvent: 'SELECT bot_live_readiness_events.* FROM bot_live_readiness_events',
+      botLiveEnablementReview: 'SELECT bot_live_enablement_reviews.* FROM bot_live_enablement_reviews'
+    }
+  });
+  const cases = [
+    ['getExchangeConnectorRow', 51, 'WHERE exchange_connectors.id = ?'],
+    ['getExchangeConnectorReadinessEventRow', 52, 'WHERE exchange_connector_readiness_events.id = ?'],
+    ['getExchangeAdapterContractEventRow', 53, 'WHERE exchange_adapter_contract_events.id = ?'],
+    ['getBotAutomationPlanRow', 54, 'WHERE bot_automation_plans.id = ?'],
+    ['getBotAutomationScheduleRow', 55, 'WHERE bot_automation_schedules.id = ?'],
+    ['getBotAutomationRunRow', 56, 'WHERE bot_automation_runs.id = ?'],
+    ['getBotLiveReadinessEventRow', 57, 'WHERE bot_live_readiness_events.id = ?'],
+    ['getBotLiveEnablementReviewRow', 58, 'WHERE bot_live_enablement_reviews.id = ?']
+  ];
+
+  for (const [methodName, id, whereClause] of cases) {
+    const row = await runtime[methodName](id);
+
+    if (
+      row.params.length !== 1
+      || row.params[0] !== id
+      || !row.query.includes(whereClause)
+    ) {
+      fail(`db row lookup ${methodName} did not preserve its select/where behavior`);
+    }
+  }
+
+  if (calls.length !== cases.length) {
+    fail('db row lookup module did not call dbGet once per lookup');
+  }
+
+  pass('db row lookup module');
+}
+
+function checkReadinessModule() {
+  const {
+    summarizeJsonManifest,
+    buildLocalLaunchVerificationStatus,
+    buildMvpReadinessChecklist
+  } = require(path.join(projectRoot, 'app/server/src/lib/readiness'));
+  const automationSummary = summarizeJsonManifest('automation_policy', {
+    localAutomation: {
+      trustedCommandPrefixes: ['npm test', 'git status'],
+      allowAutonomousFileWrites: true,
+      allowAutonomousCommandRuns: false
+    }
+  });
+  const launchReadiness = buildLocalLaunchVerificationStatus({
+    readSecretProviderCapabilities: () => ({
+      secretValuesAccepted: false,
+      databaseStoresSecretValues: false,
+      credentialLoadingImplemented: false,
+      liveExecution: { enabled: false },
+      providers: [
+        {
+          secretValuesAccepted: false,
+          databaseStoresSecretValues: false,
+          credentialLoadingImplemented: false
+        }
+      ]
+    }),
+    getExchangeAdapterScaffolds: () => [
+      {
+        implemented: false,
+        networkCallsEnabled: false,
+        credentialLoadingEnabled: false,
+        liveExecution: { enabled: false }
+      }
+    ]
+  });
+  const counts = {
+    creatorTasks: 0,
+    workspaces: 0,
+    fileWriteProposals: 0,
+    tradingStrategies: 0,
+    backtestRuns: 0,
+    optimizationSweeps: 0,
+    splitTests: 0,
+    walkForwardTests: 0,
+    marketDataImports: 0,
+    marketDataImportJobs: 0,
+    marketDataProviders: 0,
+    marketDataRefreshSchedules: 0,
+    botAutomationPlans: 0,
+    botAutomationRuns: 0,
+    botAutomationSchedules: 0,
+    botAutomationActiveSchedules: 0
+  };
+  const readiness = buildMvpReadinessChecklist({
+    database: { ok: true, message: 'ok' },
+    manifests: [{ ok: true }, { ok: true }, { ok: true }],
+    memory: { ok: true, presentFiles: 3, expectedFiles: 3, uniqueHashes: 1 },
+    launchReadiness,
+    counts,
+    port: 3000,
+    pid: 123,
+    uptimeSeconds: 45
+  });
+
+  if (
+    automationSummary.trustedCommandPrefixes !== 2
+    || automationSummary.autonomousFileWrites !== true
+    || automationSummary.autonomousCommandRuns !== false
+  ) {
+    fail('readiness module did not summarize automation policy manifests');
+  }
+
+  if (
+    launchReadiness.launchStatus !== 'blocked'
+    || launchReadiness.liveExecution?.enabled !== false
+    || launchReadiness.capabilities?.secretProvidersMetadataOnly !== true
+    || launchReadiness.capabilities?.adapterScaffoldsDisabled !== true
+  ) {
+    fail('readiness module did not preserve blocked live-launch status');
+  }
+
+  if (
+    readiness.mvpStatus !== 'ready_for_owner_testing'
+    || readiness.automationModes?.paper?.canRunAutomatically !== true
+    || readiness.automationModes?.paper?.reviewExportsEnabled !== true
+    || readiness.automationModes?.paper?.dossierHistoryCsvExport !== true
+    || readiness.automationModes?.live?.enabled !== false
+    || readiness.liveExecution?.goLiveAllowed !== false
+    || readiness.localEndToEndCompletionPercent !== 95
+    || readiness.completionLedger?.percentages?.mvp?.current !== 99
+    || readiness.completionLedger?.percentages?.mvp?.next !== 100
+    || readiness.completionLedger?.percentages?.localPaperEndToEnd?.current !== 95
+    || readiness.completionLedger?.percentages?.fullLiveEndToEnd?.current !== 72
+    || !readiness.completionLedger?.gates?.some(gate => gate.id === 'owner_acceptance_recorded' && gate.status === 'pending_owner')
+    || !readiness.completionLedger?.gates?.some(gate => gate.id === 'active_paper_schedule_reviewed' && gate.status === 'pending_owner')
+    || !readiness.completionLedger?.gates?.some(gate => gate.id === 'live_order_endpoint_enabled' && gate.status === 'blocked_by_design')
+    || readiness.botAutomationOwnerWorkflow?.monitorOnly !== true
+    || readiness.botAutomationOwnerWorkflow?.exports?.dossierHistoryCsv !== true
+    || readiness.botAutomationOwnerWorkflow?.routeSafetyProfile?.boundary !== 'monitor_only_no_live_orders'
+    || readiness.botAutomationOwnerWorkflow?.routeSafetyProfile?.liveExecutionEnabled !== false
+    || !readiness.botAutomationOwnerWorkflow?.checks?.some(check => check.id === 'dossier_exports' && check.status === 'ready')
+    || readiness.ownerEvidenceManifest?.localOnly !== true
+    || readiness.ownerEvidenceManifest?.liveExecutionEnabled !== false
+    || readiness.ownerEvidenceManifest?.checksum?.algorithm !== 'sha256'
+    || !/^[a-f0-9]{64}$/.test(readiness.ownerEvidenceManifest?.checksum?.value || '')
+    || readiness.ownerEvidenceManifest?.checksum?.source !== 'ownerEvidenceManifest.artifacts'
+    || !readiness.ownerEvidenceManifest?.artifacts?.some(item => item.id === 'bot_safety_dossier' && item.format === 'json/csv')
+    || !isOwnerAcceptanceReadyOrAccepted(readiness.ownerAcceptance)
+    || !readiness.endToEndBlockingItems.includes('live_order_endpoint_enabled')
+    || !readiness.checklist.some(item => item.id === 'bot_automation_review_exports' && item.status === 'ready' && item.mvpRequired === true)
+    || !readiness.checklist.some(item => item.id === 'local_runtime' && item.evidence.includes('Port 3000'))
+  ) {
+    fail('readiness module did not build the expected MVP/live-blocked checklist');
+  }
+
+  pass('readiness module');
+}
+
+function checkLocalModelRoutingModule() {
+  const {
+    countPromptHits,
+    chooseModelRoleForPrompt
+  } = require(path.join(projectRoot, 'app/server/src/lib/local-model-routing'));
+  const modelConfig = {
+    roles: {
+      planner: { model: 'planner' },
+      coder: { model: 'coder' },
+      writer: { model: 'writer' },
+      autocomplete: { model: 'autocomplete' }
+    }
+  };
+  const coderRouting = chooseModelRoleForPrompt('Fix this API endpoint and add a test.', 'auto', modelConfig);
+  const writerRouting = chooseModelRoleForPrompt('Draft a social announcement thread.', 'auto', modelConfig);
+  const autocompleteRouting = chooseModelRoleForPrompt('complete this inline snippet', 'auto', modelConfig);
+  const manualRouting = chooseModelRoleForPrompt('anything', 'coder', modelConfig);
+  let invalidRoleMessage = '';
+
+  try {
+    chooseModelRoleForPrompt('anything', 'not-a-role', modelConfig);
+    fail('local model routing allowed an invalid manual role');
+  } catch (error) {
+    invalidRoleMessage = error.message;
+  }
+
+  if (
+    countPromptHits('code code coding', ['code']) !== 2
+    || coderRouting.role !== 'coder'
+    || writerRouting.role !== 'writer'
+    || autocompleteRouting.role !== 'autocomplete'
+    || manualRouting.mode !== 'manual'
+    || manualRouting.role !== 'coder'
+    || !invalidRoleMessage.includes('Unknown model role')
+  ) {
+    fail('local model routing module did not preserve role scoring behavior');
+  }
+
+  pass('local model routing module');
+}
+
+async function checkLocalModelRuntimeModule() {
+  const {
+    chooseModelRoleForPrompt
+  } = require(path.join(projectRoot, 'app/server/src/lib/local-model-routing'));
+  const {
+    createLocalModelRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/local-model-runtime'));
+  const modelConfig = {
+    provider: {
+      name: 'ollama',
+      type: 'ollama',
+      baseUrl: 'http://localhost:11434'
+    },
+    providers: {
+      ollama: {
+        name: 'ollama',
+        type: 'ollama',
+        baseUrl: 'http://localhost:11434'
+      },
+      mlx: {
+        name: 'mlx',
+        type: 'openai_compatible',
+        baseUrl: 'http://localhost:8080/v1',
+        optional: true
+      }
+    },
+    roles: {
+      coder: {
+        provider: 'ollama',
+        model: 'coder-model',
+        temperature: 0.2,
+        think: false
+      },
+      planner: {
+        provider: 'ollama',
+        model: 'planner-model',
+        temperature: 0.3
+      }
+    }
+  };
+  const fetchCalls = [];
+  const timers = [];
+  const clearedTimers = [];
+  const runtime = createLocalModelRuntime({
+    readModelConfig: () => modelConfig,
+    chooseModelRoleForPrompt,
+    env: {
+      OLLAMA_BASE_URL: 'http://fixture-ollama'
+    },
+    setTimeoutFn(callback, delay) {
+      const token = { callback, delay };
+      timers.push(token);
+      return token;
+    },
+    clearTimeoutFn(token) {
+      clearedTimers.push(token);
+    },
+    fetchImpl: async (url, options = {}) => {
+      fetchCalls.push({ url, options });
+
+      if (url.endsWith('/api/tags')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            models: [
+              { name: 'coder-model' },
+              { name: 'planner-model' }
+            ]
+          })
+        };
+      }
+
+      if (url.endsWith('/api/generate')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            response: 'fixture response',
+            done: true
+          })
+        };
+      }
+
+      if (url.endsWith('/models')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: [
+              { id: 'mlx-coder-model' }
+            ]
+          })
+        };
+      }
+
+      if (url.endsWith('/chat/completions')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            choices: [
+              {
+                message: {
+                  content: 'mlx fixture response'
+                }
+              }
+            ]
+          })
+        };
+      }
+
+      throw new Error(`unexpected fetch url ${url}`);
+    }
+  });
+  const health = await runtime.checkOllama(modelConfig);
+  const generated = await runtime.generateWithLocalModel('coder', 'Fix this API and add a test.');
+  const providerHealth = await runtime.checkLocalModelProviders(modelConfig);
+  const mlxGenerated = await runtime.generateWithLocalModel('coder', 'Fix this API and add a test.', {
+    provider: 'mlx',
+    model: 'mlx-coder-model',
+    maxTokens: 64
+  });
+  const benchmark = await runtime.benchmarkLocalModel({
+    role: 'coder',
+    prompt: 'Benchmark this route.',
+    provider: 'mlx',
+    model: 'mlx-coder-model',
+    maxTokens: 64,
+    timeoutMs: 30000
+  });
+  const generateBody = JSON.parse(fetchCalls.find(call => call.url.endsWith('/api/generate')).options.body);
+  const chatBody = JSON.parse(fetchCalls.find(call => call.url.endsWith('/chat/completions')).options.body);
+  const failingRuntime = createLocalModelRuntime({
+    readModelConfig: () => modelConfig,
+    chooseModelRoleForPrompt: () => ({ role: 'missing' }),
+    fetchImpl: async () => {
+      fail('local model runtime fetched for a missing role');
+    }
+  });
+  let missingRoleError = '';
+
+  try {
+    await failingRuntime.generateWithLocalModel('missing', 'anything');
+    fail('local model runtime allowed a missing role');
+  } catch (error) {
+    missingRoleError = error.message;
+  }
+
+  if (
+    health.ok !== true
+    || health.baseUrl !== 'http://fixture-ollama'
+    || health.installedModels.join(',') !== 'coder-model,planner-model'
+    || generated.role !== 'coder'
+    || generated.provider !== 'ollama'
+    || generated.model !== 'coder-model'
+    || generated.response !== 'fixture response'
+    || generated.done !== true
+    || providerHealth.ok !== true
+    || providerHealth.providers.length !== 2
+    || !providerHealth.providers.some(provider => provider.provider === 'mlx' && provider.installedModels.join(',') === 'mlx-coder-model')
+    || mlxGenerated.provider !== 'mlx'
+    || mlxGenerated.providerType !== 'openai_compatible'
+    || mlxGenerated.model !== 'mlx-coder-model'
+    || mlxGenerated.response !== 'mlx fixture response'
+    || benchmark.ok !== true
+    || benchmark.provider !== 'mlx'
+    || typeof benchmark.benchmark?.durationMs !== 'number'
+    || generateBody.model !== 'coder-model'
+    || generateBody.stream !== false
+    || generateBody.think !== false
+    || generateBody.options.temperature !== 0.2
+    || generateBody.options.num_predict !== undefined
+    || chatBody.model !== 'mlx-coder-model'
+    || chatBody.max_tokens !== 64
+    || chatBody.messages?.[0]?.content !== 'Fix this API and add a test.'
+    || !timers.some(timer => timer.delay === 2000)
+    || !timers.some(timer => timer.delay === 120000)
+    || !timers.some(timer => timer.delay === 30000)
+    || clearedTimers.length !== timers.length
+    || !/Unknown model role/.test(missingRoleError)
+  ) {
+    fail('local model runtime module did not preserve provider health/generation behavior');
+  }
+
+  pass('local model runtime module');
+}
+
+async function checkMlxLifecycleModule() {
+  const { EventEmitter } = require('events');
+  const {
+    createMlxLifecycleRuntime,
+    normalizeMlxLifecycleConfig,
+    parseOllamaPs
+  } = require(path.join(projectRoot, 'app/server/src/lib/mlx-lifecycle'));
+  const modelConfig = {
+    providers: {
+      mlx: {
+        name: 'mlx',
+        type: 'openai_compatible',
+        baseUrl: 'http://localhost:9090/v1',
+        optional: true,
+        lifecycle: {
+          command: '/tmp/mlx_lm.server',
+          host: '127.0.0.1',
+          port: 9090,
+          model: 'fixture-mlx-model',
+          maxTokens: 256,
+          temperature: 0,
+          startupTimeoutMs: 5000,
+          memoryIsolation: {
+            unloadOllamaBeforeStart: true,
+            unloadOllamaModels: ['qwen3.6:35b-a3b', 'deepseek-r1:70b']
+          }
+        }
+      }
+    }
+  };
+  const config = normalizeMlxLifecycleConfig(modelConfig, {});
+  const execCalls = [];
+  const spawnCalls = [];
+  let mlxSpawned = false;
+  const runtime = createMlxLifecycleRuntime({
+    readModelConfig: () => modelConfig,
+    setTimeoutFn(callback) {
+      callback();
+      return { immediate: true };
+    },
+    clearTimeoutFn() {},
+    fetchImpl: async (url) => ({
+      ok: mlxSpawned,
+      status: mlxSpawned ? 200 : 503,
+      json: async () => (mlxSpawned
+        ? { data: [{ id: 'fixture-mlx-model' }] }
+        : { error: 'offline' })
+    }),
+    execFileCapture: async (command, args) => {
+      execCalls.push({ command, args });
+
+      if (args[0] === 'ps') {
+        return {
+          exitCode: 0,
+          stdout: 'NAME ID SIZE PROCESSOR CONTEXT UNTIL\nqwen3.6:35b-a3b abc 34 GB 100% GPU 262144 4 minutes\nllama3:latest def 5 GB 100% GPU 4096 4 minutes',
+          stderr: '',
+          error: null
+        };
+      }
+
+      return {
+        exitCode: 0,
+        stdout: `stopped ${args[1]}`,
+        stderr: '',
+        error: null
+      };
+    },
+    spawn: (command, args) => {
+      spawnCalls.push({ command, args });
+      mlxSpawned = true;
+      const child = new EventEmitter();
+      child.stdout = new EventEmitter();
+      child.stderr = new EventEmitter();
+      child.pid = 4242;
+      child.exitCode = null;
+      child.signalCode = null;
+      child.kill = signal => {
+        child.signalCode = signal;
+        child.exitCode = 0;
+        child.emit('exit', 0, signal);
+      };
+      return child;
+    }
+  });
+  const parsedPs = parseOllamaPs('NAME ID SIZE\nqwen3.6:35b-a3b abc 34 GB\n');
+  const initial = await runtime.getStatus();
+  const started = await runtime.start({ unloadOllama: true });
+  const stopped = await runtime.stop();
+
+  if (
+    config.model !== 'fixture-mlx-model'
+    || config.port !== 9090
+    || config.args.join(' ') !== '--host 127.0.0.1 --port 9090 --model fixture-mlx-model --max-tokens 256 --temp 0'
+    || parsedPs.join(',') !== 'qwen3.6:35b-a3b'
+    || initial.status !== 'stopped'
+    || initial.memoryIsolation.conflictingLoadedModels.join(',') !== 'qwen3.6:35b-a3b'
+    || started.ok !== true
+    || started.action !== 'started'
+    || started.status.status !== 'running'
+    || started.unloadResults.length !== 1
+    || spawnCalls[0].command !== '/tmp/mlx_lm.server'
+    || !execCalls.some(call => call.command === 'ollama' && call.args.join(' ') === 'stop qwen3.6:35b-a3b')
+    || stopped.action !== 'stopped'
+  ) {
+    fail('MLX lifecycle module did not preserve managed start/stop/status and memory isolation behavior');
+  }
+
+  pass('MLX lifecycle module');
+}
+
+function checkMultiAgentCoordinationModule() {
+  const {
+    buildAgentPrompt,
+    buildCoordinationSummary,
+    buildHermesBenchmarkPlan,
+    buildPlanOnlyContribution,
+    getAgentRegistry,
+    normalizeExecutionMode,
+    normalizeProviderMode,
+    normalizeSelectedAgents,
+    parseMultiAgentRun,
+    parseMultiAgentContribution
+  } = require(path.join(projectRoot, 'app/server/src/lib/multi-agent-coordination'));
+  const modelConfig = {
+    defaultProvider: 'ollama',
+    providers: {
+      mlx: {
+        lifecycle: {
+          model: 'fixture-mlx-model'
+        }
+      }
+    },
+    roles: {
+      planner: {
+        provider: 'ollama',
+        model: 'deepseek-r1:70b',
+        temperature: 0.6
+      },
+      coder: {
+        provider: 'ollama',
+        model: 'qwen3.6:35b-a3b',
+        think: false
+      },
+      writer: {
+        provider: 'ollama',
+        model: 'llama3:latest'
+      }
+    }
+  };
+  const registry = getAgentRegistry(modelConfig);
+  const selected = normalizeSelectedAgents(['coding', 'solidity', 'not-real', 'coding']);
+  const fallbackSelected = normalizeSelectedAgents([]);
+  const codingAgent = registry.find(agent => agent.id === 'coding');
+  const prompt = buildAgentPrompt({
+    agent: codingAgent,
+    objective: 'Add multi-agent coordination',
+    context: 'Preserve live gates',
+    registry,
+    providerMode: 'mlx_fast_lane'
+  });
+  const planned = buildPlanOnlyContribution({
+    agent: codingAgent,
+    objective: 'Add multi-agent coordination',
+    context: 'Preserve live gates',
+    registry,
+    providerMode: 'mlx_fast_lane',
+    modelConfig
+  });
+  const summary = buildCoordinationSummary({
+    selectedAgentIds: selected,
+    executionMode: 'plan_only',
+    providerMode: 'mlx_fast_lane'
+  });
+  const hermes = buildHermesBenchmarkPlan({ modelConfig });
+  const parsedRun = parseMultiAgentRun({
+    id: 1,
+    objective: 'fixture',
+    context: 'context',
+    status: 'planned',
+    execution_mode: 'plan_only',
+    provider_mode: 'role_default',
+    selected_agents_json: '["planner"]',
+    safety_gates_json: '[{"id":"local_only_execution"}]',
+    summary_json: '{"localOnly":true}',
+    created_at: '2026-05-17 00:00:00'
+  });
+  const parsedContribution = parseMultiAgentContribution({
+    id: 2,
+    run_id: 1,
+    agent_id: 'planner',
+    agent_label: 'Planner Agent',
+    model_role: 'planner',
+    provider: 'ollama',
+    model: 'deepseek-r1:70b',
+    status: 'planned',
+    prompt: 'prompt',
+    response: 'response',
+    duration_ms: 1,
+    error: null,
+    created_at: '2026-05-17 00:00:00'
+  });
+
+  if (
+    registry.length < 9
+    || !registry.some(agent => agent.id === 'planner' && agent.model === 'deepseek-r1:70b')
+    || !registry.some(agent => agent.id === 'coding' && agent.model === 'qwen3.6:35b-a3b')
+    || !registry.some(agent => agent.id === 'social' && agent.modelRole === 'writer')
+    || selected.join(',') !== 'coding,solidity'
+    || fallbackSelected.length < 9
+    || normalizeExecutionMode('local_model_draft') !== 'local_model_draft'
+    || normalizeExecutionMode('bad') !== 'plan_only'
+    || normalizeProviderMode('mlx_fast_lane') !== 'mlx_fast_lane'
+    || normalizeProviderMode('bad') !== 'role_default'
+    || !prompt.includes('No live trading')
+    || !prompt.includes('Do not request secrets')
+    || planned.provider !== 'mlx'
+    || planned.model !== 'fixture-mlx-model'
+    || planned.status !== 'planned'
+    || summary.localOnly !== true
+    || summary.liveExecutionEnabled !== false
+    || summary.hermesBypassAllowed !== false
+    || hermes.status !== 'owner_review_required'
+    || hermes.enabled !== false
+    || hermes.bypassAllowed !== false
+    || !hermes.blockedUntilOwnerApproves.includes('install Hermes Agent')
+    || parsedRun.selected_agents[0] !== 'planner'
+    || parsedRun.summary.localOnly !== true
+    || parsedContribution.agent_id !== 'planner'
+  ) {
+    fail('multi-agent coordination module did not preserve registry, Hermes gate, and local-only behavior');
+  }
+
+  pass('multi-agent coordination module');
+}
+
+function checkSecretSafetyModule() {
+  const {
+    EXCHANGE_CONNECTOR_MODES,
+    findSensitiveFields,
+    findLikelySecretValues,
+    assertNoInlineSecretPayload,
+    sanitizeLocalSecretReferenceInput,
+    sanitizeExchangeConnectorInput
+  } = require(path.join(projectRoot, 'app/server/src/lib/secret-safety'));
+  const sensitiveFields = findSensitiveFields({
+    apiKey: 'metadata should be rejected by field name',
+    secretReferenceId: 12,
+    nested: {
+      private_key: 'field name should be rejected'
+    }
+  });
+  const likelySecretValues = findLikelySecretValues({
+    referenceName: `sk-${'c'.repeat(40)}`
+  });
+  const secretReference = sanitizeLocalSecretReferenceInput({
+    label: 'Binance Paper Reference',
+    providerType: 'macos_keychain',
+    referenceName: 'ethereal/binance-paper',
+    scope: 'exchange_connector',
+    status: 'configured',
+    notes: 'Metadata only.'
+  });
+  const connector = sanitizeExchangeConnectorInput({
+    exchangeName: 'Binance',
+    label: 'Binance Read Only',
+    mode: 'read_only',
+    status: 'configured',
+    secretReferenceId: '12',
+    settings: {
+      marketDataOnly: true,
+      secretReferenceLabel: 'Allowed metadata label'
+    }
+  });
+
+  if (
+    !sensitiveFields.includes('apiKey')
+    || !sensitiveFields.includes('nested.private_key')
+    || sensitiveFields.includes('secretReferenceId')
+  ) {
+    fail('secret safety module did not detect sensitive fields with metadata allowlist');
+  }
+
+  if (!likelySecretValues.includes('referenceName')) {
+    fail('secret safety module did not detect likely inline secret values');
+  }
+
+  try {
+    assertNoInlineSecretPayload({ token: `sk-${'d'.repeat(40)}` }, 'No inline secrets');
+    fail('secret safety module allowed inline secret payload');
+  } catch (error) {
+    if (
+      error.statusCode !== 400
+      || !error.sensitiveFields?.includes('token')
+      || !error.likelySecretValues?.includes('token')
+    ) {
+      throw error;
+    }
+  }
+
+  if (
+    secretReference.providerType !== 'macos_keychain'
+    || secretReference.status !== 'configured'
+    || connector.exchangeName !== 'binance'
+    || connector.secretReferenceId !== 12
+    || !EXCHANGE_CONNECTOR_MODES.has(connector.mode)
+  ) {
+    fail('secret safety module did not sanitize secret reference and connector metadata');
+  }
+
+  pass('secret safety module');
+}
+
+function checkSystemConfigRuntimeModule() {
+  const {
+    DEFAULT_SAFE_COMMAND_PREFIXES,
+    sanitizeTrustedCommandPrefixes
+  } = require(path.join(projectRoot, 'app/server/src/lib/command-safety'));
+  const {
+    LOCAL_SECRET_PROVIDER_TYPES,
+    LOCAL_SECRET_SCOPES
+  } = require(path.join(projectRoot, 'app/server/src/lib/secret-safety'));
+  const {
+    createSystemConfigRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/system-config-runtime'));
+  const fixtureRoot = path.join(projectRoot, 'workspaces');
+  fs.mkdirSync(fixtureRoot, { recursive: true });
+  const configDir = fs.mkdtempSync(path.join(fixtureRoot, 'system-config-runtime-'));
+  const modelConfigPath = path.join(configDir, 'local-models.json');
+  const automationPolicyPath = path.join(configDir, 'automation-policy.json');
+  const secretProviderCapabilitiesPath = path.join(configDir, 'local-secret-providers.json');
+
+  try {
+    fs.writeFileSync(modelConfigPath, JSON.stringify({
+      provider: {
+        baseUrl: 'http://localhost:11434'
+      },
+      roles: {
+        planner: 'fixture-planner'
+      }
+    }), 'utf8');
+    fs.writeFileSync(automationPolicyPath, JSON.stringify({
+      mode: 'guided',
+      localAutomation: {
+        autoApproveFileProposals: false,
+        autoRunLowRiskCommands: false
+      }
+    }), 'utf8');
+    fs.writeFileSync(secretProviderCapabilitiesPath, JSON.stringify({
+      version: 2,
+      generatedBy: 'fixture',
+      providers: [
+        {
+          providerType: 'macos_keychain',
+          label: 'Keychain',
+          status: 'planned',
+          allowedScopes: ['exchange_connector', 'bad_scope'],
+          ownerSetup: ['create item'],
+          readinessChecks: ['configured'],
+          futureAdapterRequirements: ['load locally']
+        },
+        {
+          providerType: 'bad_provider',
+          label: 'Bad'
+        }
+      ]
+    }), 'utf8');
+
+    const runtime = createSystemConfigRuntime({
+      fs,
+      modelConfigPath,
+      automationPolicyPath,
+      secretProviderCapabilitiesPath,
+      defaultSafeCommandPrefixes: DEFAULT_SAFE_COMMAND_PREFIXES,
+      sanitizeTrustedCommandPrefixes,
+      localSecretProviderTypes: LOCAL_SECRET_PROVIDER_TYPES,
+      localSecretScopes: LOCAL_SECRET_SCOPES
+    });
+    const modelConfig = runtime.readModelConfig();
+    const policy = runtime.readAutomationPolicy();
+    const sanitized = runtime.sanitizeAutomationPolicyUpdate({
+      mode: 'owner',
+      autoApproveFileProposals: true,
+      autoRunLowRiskCommands: true,
+      trustedCommandPrefixes: ['npm test', 'git status']
+    });
+    runtime.writeAutomationPolicy(sanitized);
+    const writtenPolicy = fs.readFileSync(automationPolicyPath, 'utf8');
+    const capabilities = runtime.readSecretProviderCapabilities();
+
+    if (
+      modelConfig.roles.planner !== 'fixture-planner'
+      || policy.localAutomation.trustedCommandPrefixes !== DEFAULT_SAFE_COMMAND_PREFIXES
+      || sanitized.mode !== 'owner'
+      || sanitized.localAutomation.autoApproveFileProposals !== true
+      || sanitized.localAutomation.autoRunLowRiskCommands !== true
+      || sanitized.localAutomation.trustedCommandPrefixes.join(',') !== 'npm test,git status'
+      || !writtenPolicy.endsWith('\n')
+      || capabilities.secretValuesAccepted !== false
+      || capabilities.liveExecution.goLiveAllowed !== false
+      || capabilities.allowedProviderTypes.join(',') !== 'macos_keychain'
+      || capabilities.providers.length !== 1
+      || capabilities.providers[0].allowedScopes.join(',') !== 'exchange_connector'
+      || capabilities.providers[0].credentialLoadingImplemented !== false
+    ) {
+      fail('system config runtime module did not preserve config/policy/capability behavior');
+    }
+  } finally {
+    fs.rmSync(configDir, { recursive: true, force: true });
+  }
+
+  pass('system config runtime module');
+}
+
+function checkCompanyIdentityModule() {
+  const {
+    buildCompanyIdentityChecklist,
+    buildCompanySetupPlan,
+    normalizeCompanyDnsTargetInput,
+    parseCompanyDnsTarget,
+    normalizeCompanyIdentity
+  } = require(path.join(projectRoot, 'app/server/src/lib/company-identity'));
+  const identity = normalizeCompanyIdentity({
+    company: {
+      legalName: 'Ethereal Digital',
+      platformName: 'EtherealAI',
+      primaryDomain: 'EtherealDigital.AI',
+      dnsProvider: 'Cloudflare',
+      registrar: 'Cloudflare',
+      status: 'owner_configured'
+    },
+    owner: {
+      name: 'Patrick',
+      role: 'CEO',
+      email: 'Patrick@EtherealDigital.AI'
+    },
+    tokenIdentity: {
+      name: 'EtherealAI',
+      preferredWebsiteDomain: 'EtherealDigital.AI',
+      status: 'identity_reserved'
+    },
+    email: {
+      provider: 'Cloudflare',
+      primaryMailbox: 'Patrick@EtherealDigital.AI',
+      status: 'owner_configured'
+    },
+    dnsObservation: {
+      records: {
+        A: [],
+        MX: []
+      }
+    }
+  });
+  const checklist = buildCompanyIdentityChecklist(identity);
+  const dnsTarget = normalizeCompanyDnsTargetInput({
+    recordType: 'TXT',
+    host: '_dmarc',
+    value: 'v=DMARC1; p=none;',
+    purpose: 'dmarc',
+    status: 'planned',
+    notes: 'owner will add manually in Cloudflare'
+  }, identity);
+  const parsedDnsTarget = parseCompanyDnsTarget({
+    id: 12,
+    user_id: 1,
+    domain: dnsTarget.domain,
+    record_type: dnsTarget.recordType,
+    host: dnsTarget.host,
+    value: dnsTarget.value,
+    purpose: dnsTarget.purpose,
+    status: dnsTarget.status,
+    notes: dnsTarget.notes,
+    local_only: 1,
+    external_mutation_enabled: 0,
+    created_at: '2026-05-17 10:00:00',
+    updated_at: '2026-05-17 10:00:00'
+  });
+  const setupPlan = buildCompanySetupPlan(identity, [parsedDnsTarget]);
+
+  if (
+    identity.localOnly !== true
+    || identity.externalAccountCreationEnabled !== false
+    || identity.purchaseEnabled !== false
+    || identity.company.primaryDomain !== 'etherealdigital.ai'
+    || identity.owner.email !== 'patrick@etherealdigital.ai'
+    || identity.tokenIdentity.name !== 'EtherealAI'
+    || !checklist.some(item => item.id === 'company_domain_recorded' && item.status === 'ready')
+    || !checklist.some(item => item.id === 'ceo_email_recorded' && item.status === 'ready')
+    || !checklist.some(item => item.id === 'dns_delegation_visible' && item.status === 'needs_propagation_or_setup')
+    || !checklist.some(item => item.id === 'external_actions_blocked' && item.status === 'ready')
+    || dnsTarget.domain !== 'etherealdigital.ai'
+    || dnsTarget.recordType !== 'TXT'
+    || dnsTarget.externalMutationEnabled !== false
+    || parsedDnsTarget.localOnly !== true
+    || parsedDnsTarget.externalMutationEnabled !== false
+    || setupPlan.localOnly !== true
+    || setupPlan.externalMutationEnabled !== false
+    || setupPlan.summary.totalTargets !== 1
+    || !setupPlan.recommendedManualSteps.some(step => step.id === 'email_dns_targets' && step.status === 'tracked')
+  ) {
+    fail('company identity module did not preserve local-only Cloudflare domain/email identity behavior');
+  }
+
+  let rejectedSecret = false;
+  try {
+    normalizeCompanyDnsTargetInput({
+      recordType: 'TXT',
+      host: '@',
+      value: 'cloudflare token secret',
+      purpose: 'domain_verification'
+    }, identity);
+  } catch (error) {
+    rejectedSecret = /must not contain/.test(error.message);
+  }
+
+  if (!rejectedSecret) {
+    fail('company identity DNS target input did not reject secret-like values');
+  }
+
+  pass('company identity module');
+}
+
+function checkExchangeMetadataModule() {
+  const {
+    EXCHANGE_ADAPTER_CONTRACT_EXCHANGES,
+    parseExchangeConnector,
+    parseLocalSecretReference,
+    parseExchangeConnectorReadinessEvent,
+    parseExchangeAdapterContractEvent,
+    createExchangeAdapterContractSpec,
+    evaluateExchangeConnectorReadiness,
+    evaluateExchangeAdapterContract
+  } = require(path.join(projectRoot, 'app/server/src/lib/exchange-metadata'));
+  const parsedConnector = parseExchangeConnector({
+    id: 7,
+    secret_reference_id: 11,
+    exchange_name: 'binance',
+    label: 'Binance Read Only',
+    mode: 'read_only',
+    status: 'configured',
+    settings_json: '{"marketDataOnly":true}',
+    secret_storage_note: 'No secrets stored in SQLite.',
+    secret_reference_label: 'Binance Keychain Reference',
+    secret_reference_status: 'configured',
+    secret_reference_provider_type: 'macos_keychain',
+    secret_reference_name: 'ethereal/binance-readonly',
+    secret_reference_scope: 'exchange_connector',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  });
+  const parsedSecretReference = parseLocalSecretReference({
+    id: 11,
+    user_id: 1,
+    label: 'Binance Keychain Reference',
+    provider_type: 'macos_keychain',
+    reference_name: 'ethereal/binance-readonly',
+    scope: 'exchange_connector',
+    status: 'configured',
+    notes: 'metadata only',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  });
+  const parsedReadinessEvent = parseExchangeConnectorReadinessEvent({
+    id: 12,
+    connector_id: 7,
+    user_id: 1,
+    status: 'blocked',
+    readiness_json: '{"liveExecution":{"enabled":false}}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    connector_label: 'Binance Read Only',
+    exchange_name: 'binance',
+    connector_mode: 'read_only',
+    connector_status: 'configured'
+  });
+  const parsedContractEvent = parseExchangeAdapterContractEvent({
+    id: 13,
+    connector_id: 7,
+    user_id: 1,
+    status: 'blocked',
+    contract_json: '{"liveExecution":{"orderEndpointEnabled":false}}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    connector_label: 'Binance Read Only',
+    exchange_name: 'binance',
+    connector_mode: 'read_only',
+    connector_status: 'configured'
+  });
+  const connector = {
+    id: 7,
+    label: 'Binance Read Only',
+    exchange_name: 'binance',
+    mode: 'read_only',
+    status: 'configured',
+    settings: { marketDataOnly: true },
+    secret_reference_id: 11,
+    secret_storage_note: 'No secrets stored in SQLite.'
+  };
+  const secretReference = {
+    id: 11,
+    label: 'Binance Keychain Reference',
+    provider_type: 'macos_keychain',
+    reference_name: 'ethereal/binance-readonly',
+    scope: 'exchange_connector',
+    status: 'configured'
+  };
+  const readiness = evaluateExchangeConnectorReadiness({ connector, secretReference });
+  const unsafeReadiness = evaluateExchangeConnectorReadiness({
+    connector: {
+      ...connector,
+      settings: { apiKey: 'inline-value' }
+    },
+    secretReference
+  });
+  const spec = createExchangeAdapterContractSpec('binance');
+  const customSpec = createExchangeAdapterContractSpec('unknown-exchange');
+  const contract = evaluateExchangeAdapterContract({ connector });
+
+  if (!EXCHANGE_ADAPTER_CONTRACT_EXCHANGES.has('binance') || customSpec.exchangeName !== 'custom') {
+    fail('exchange metadata module did not expose expected exchange contract registry');
+  }
+
+  if (
+    parsedConnector.settings?.marketDataOnly !== true
+    || parsedConnector.secret_reference_name !== 'ethereal/binance-readonly'
+    || parsedSecretReference.reference_name !== 'ethereal/binance-readonly'
+    || parsedReadinessEvent.readiness?.liveExecution?.enabled !== false
+    || parsedContractEvent.contract?.liveExecution?.orderEndpointEnabled !== false
+  ) {
+    fail('exchange metadata module did not parse connector/secret/event rows');
+  }
+
+  if (
+    readiness.liveExecution?.enabled !== false
+    || readiness.secretHandling?.secretsStoredInDatabase !== false
+    || !readiness.blockingFailures.includes('live_order_adapter_implemented')
+  ) {
+    fail('exchange metadata module did not keep connector readiness live-disabled');
+  }
+
+  if (!unsafeReadiness.failures.includes('connector_settings_no_sensitive_fields')) {
+    fail('exchange metadata module did not flag sensitive connector settings');
+  }
+
+  if (
+    spec.exchangeName !== 'binance'
+    || spec.liveExecution?.enabled !== false
+    || !spec.requiredMethods.some(method => method.name === 'placeOrder' && method.implemented === false)
+  ) {
+    fail('exchange metadata module did not build disabled exchange adapter contract spec');
+  }
+
+  if (
+    contract.status !== 'blocked'
+    || contract.liveExecution?.orderEndpointEnabled !== false
+    || !contract.blockingFailures.includes('live_order_endpoint_enabled')
+  ) {
+    fail('exchange metadata module did not keep adapter contract evaluation blocked');
+  }
+
+  pass('exchange metadata module');
+}
+
+function checkStrategyResearchModule() {
+  const {
+    parseStrategy,
+    parseBacktest,
+    parsePaperSession,
+    parseOptimizationSweep,
+    parseSplitTest,
+    parseWalkForwardTest,
+    parseDecisionLog
+  } = require(path.join(projectRoot, 'app/server/src/lib/strategy-research'));
+  const strategy = parseStrategy({
+    id: 21,
+    name: 'Breakout Fixture',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    entry_rules: 'Close crosses above resistance.',
+    exit_rules: 'Close below trailing average.',
+    stop_loss: 2,
+    take_profit: 5,
+    risk_notes: 'fixture',
+    status: 'research',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  });
+  const backtest = parseBacktest({
+    id: 22,
+    strategy_id: 21,
+    status: 'completed',
+    result_json: '{"summary":{"totalReturnPercent":12.5}}',
+    created_at: '2026-05-14T00:00:00.000Z'
+  });
+  const paperSession = parsePaperSession({
+    id: 23,
+    strategy_id: 21,
+    market_data_import_id: 24,
+    name: 'Paper Fixture',
+    mode: 'replay',
+    status: 'completed',
+    initial_capital: 10000,
+    current_equity: 10400,
+    result_json: '{"riskGate":{"status":"passed"}}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z',
+    strategy_name: 'Breakout Fixture',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h'
+  });
+  const sweep = parseOptimizationSweep({
+    id: 25,
+    strategy_id: 21,
+    market_data_import_id: 24,
+    name: 'Sweep Fixture',
+    status: 'completed',
+    result_json: '{"best":{"stopLoss":2}}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z',
+    strategy_name: 'Breakout Fixture',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h'
+  });
+  const splitTest = parseSplitTest({
+    id: 26,
+    strategy_id: 21,
+    market_data_import_id: 24,
+    name: 'Split Fixture',
+    status: 'completed',
+    result_json: '{"segments":[{"name":"train"}]}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z',
+    strategy_name: 'Breakout Fixture',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h'
+  });
+  const walkForward = parseWalkForwardTest({
+    id: 27,
+    strategy_id: 21,
+    market_data_import_id: 24,
+    name: 'Walk Fixture',
+    status: 'completed',
+    result_json: '{"windows":[{"index":1}]}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z',
+    strategy_name: 'Breakout Fixture',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h'
+  });
+  const decisionLog = parseDecisionLog({
+    id: 28,
+    strategy_id: 21,
+    backtest_id: 22,
+    paper_session_id: 23,
+    market_data_import_id: 24,
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    candle_timestamp: '2026-05-14T00:00:00.000Z',
+    candle_index: 4,
+    decision: 'enter_long',
+    reason: 'fixture signal',
+    price: 50000,
+    payload_json: '{"signal":"breakout"}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    strategy_name: 'Breakout Fixture'
+  });
+
+  if (
+    strategy.market_symbol !== 'BTC-USD'
+    || backtest.result?.summary?.totalReturnPercent !== 12.5
+    || paperSession.result?.riskGate?.status !== 'passed'
+    || sweep.result?.best?.stopLoss !== 2
+    || splitTest.result?.segments?.[0]?.name !== 'train'
+    || walkForward.result?.windows?.[0]?.index !== 1
+    || decisionLog.payload?.signal !== 'breakout'
+  ) {
+    fail('strategy research module did not parse strategy/backtest/research rows');
+  }
+
+  pass('strategy research module');
+}
+
+async function checkStrategyDecisionLogRuntimeModule() {
+  const {
+    createStrategyDecisionLogRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/strategy-decision-logs'));
+  const dbRuns = [];
+  const runtime = createStrategyDecisionLogRuntime({
+    async dbRun(query, params) {
+      dbRuns.push({ query, params });
+      return { changes: 1 };
+    }
+  });
+  await runtime.insertDecisionLogs({
+    strategy: {
+      id: 21
+    },
+    marketImport: {
+      id: 24,
+      market_symbol: 'BTC-USD',
+      timeframe: '1h'
+    },
+    backtestId: 22,
+    paperSessionId: 23,
+    decisions: [
+      {
+        timestamp: '2026-05-14T00:00:00.000Z',
+        candleIndex: 4,
+        decision: 'enter_long',
+        reason: 'fixture signal',
+        price: 50000,
+        confidence: 0.8
+      },
+      {
+        timestamp: '2026-05-14T01:00:00.000Z',
+        candleIndex: 5,
+        decision: 'hold',
+        reason: 'fixture hold'
+      }
+    ]
+  });
+
+  if (
+    dbRuns.length !== 2
+    || !dbRuns.every(run => run.query.includes('INSERT INTO trading_decision_logs'))
+    || dbRuns[0].params[0] !== 21
+    || dbRuns[0].params[1] !== 22
+    || dbRuns[0].params[2] !== 23
+    || dbRuns[0].params[3] !== 24
+    || dbRuns[0].params[4] !== 'BTC-USD'
+    || dbRuns[0].params[5] !== '1h'
+    || dbRuns[0].params[6] !== '2026-05-14T00:00:00.000Z'
+    || dbRuns[0].params[7] !== 4
+    || dbRuns[0].params[8] !== 'enter_long'
+    || dbRuns[0].params[9] !== 'fixture signal'
+    || dbRuns[0].params[10] !== 50000
+    || JSON.parse(dbRuns[0].params[11]).confidence !== 0.8
+    || dbRuns[1].params[10] !== null
+  ) {
+    fail('strategy decision log runtime did not preserve insert payload behavior');
+  }
+
+  pass('strategy decision log runtime module');
+}
+
+function checkStrategyMathModule() {
+  const {
+    roundNumber,
+    getBacktestNumber,
+    parseSweepNumberList,
+    calculateMaxDrawdownPercent,
+    average
+  } = require(path.join(projectRoot, 'app/server/src/lib/strategy-math'));
+  const sweep = parseSweepNumberList('0.1, 0.2 0.2\nbad 5', [1], {
+    min: 0,
+    max: 1,
+    limit: 3
+  });
+
+  if (
+    roundNumber(1.23456, 2) !== 1.23
+    || roundNumber(Infinity) !== null
+    || getBacktestNumber('5', 1, 2) !== 5
+    || getBacktestNumber('1', 9, 2) !== 9
+    || sweep.length !== 2
+    || sweep[0] !== 0.1
+    || sweep[1] !== 0.2
+    || calculateMaxDrawdownPercent([100, 120, 90, 130]) !== 25
+    || average([2, 4, 6]) !== 4
+    || average([]) !== 0
+  ) {
+    fail('strategy math module did not preserve numeric helper behavior');
+  }
+
+  pass('strategy math module');
+}
+
+function checkStrategySignalsModule() {
+  const {
+    findPeriodNearAverage,
+    findLookbackPeriod,
+    findIndicatorPeriod,
+    findThresholdForDirection,
+    findSmallCount,
+    findVolumeAveragePeriod,
+    findVolumeMultiplier,
+    findVolumeBelowMultiplier,
+    findWickMultiplier,
+    parseAverageCrossRule,
+    movingAverage,
+    buildEmaSeries,
+    buildVwapSeries,
+    buildRsiSeries,
+    buildMacdSeries,
+    standardDeviation,
+    bollingerBands,
+    parseSignalRule,
+    createSignalEvaluator
+  } = require(path.join(projectRoot, 'app/server/src/lib/strategy-signals'));
+  const candles = [
+    { open: 10, high: 12, low: 9, close: 10, volume: 100 },
+    { open: 10, high: 12, low: 10, close: 11, volume: 110 },
+    { open: 11, high: 13, low: 11, close: 12, volume: 120 },
+    { open: 12, high: 14, low: 12, close: 13, volume: 200 },
+    { open: 13, high: 15, low: 13, close: 14, volume: 210 },
+    { open: 14, high: 16, low: 14, close: 15, volume: 220 }
+  ];
+  const evaluatorCandles = [
+    { open: 10, high: 12, low: 9, close: 11, volume: 100 },
+    { open: 11, high: 12, low: 9, close: 10, volume: 100 },
+    { open: 10, high: 13, low: 10, close: 12, volume: 100 }
+  ];
+  const averageCross = parseAverageCrossRule('10 ema crosses above 20 ema');
+  const combinedRule = parseSignalRule('rsi crosses above 60 and volume above 2x average', 'entry');
+  const evaluator = createSignalEvaluator({
+    entry_rules: 'green candle',
+    exit_rules: 'red candle'
+  }, evaluatorCandles);
+  const ema = buildEmaSeries(candles, 3);
+  const vwap = buildVwapSeries(candles);
+  const rsi = buildRsiSeries(candles, 2);
+  const macd = buildMacdSeries(candles, 2, 3, 2);
+  const bands = bollingerBands(candles, 2, 3, 2);
+
+  if (
+    findPeriodNearAverage('sma 21 crossover') !== 21
+    || findLookbackPeriod('breakout above previous high') !== 1
+    || findIndicatorPeriod('rsi 9 below 30', 'rsi', 14) !== 9
+    || findThresholdForDirection('above 61.5', 'above', 70) !== 61.5
+    || findSmallCount('three green candles') !== 3
+    || findVolumeAveragePeriod('volume above 30 average') !== 30
+    || findVolumeMultiplier('volume 2x average') !== 2
+    || findVolumeBelowMultiplier('volume 25% below average') !== 0.75
+    || findWickMultiplier('wick ratio > 2') !== 2
+    || averageCross.kind !== 'average_cross_above'
+    || averageCross.fastPeriod !== 10
+    || averageCross.slowPeriod !== 20
+    || movingAverage(candles, 2, 3) !== 11
+    || ema[2] !== 11
+    || Math.round(vwap[0] * 100) / 100 !== 10.33
+    || rsi[2] !== 100
+    || macd.macd.length !== candles.length
+    || Math.round(standardDeviation([2, 4, 6]) * 100) / 100 !== 1.63
+    || bands.middle !== 11
+    || combinedRule.kind !== 'all_conditions'
+    || combinedRule.rules.length !== 2
+    || evaluator.entryRule.kind !== 'green_candle'
+    || evaluator.exitRule.kind !== 'red_candle'
+    || evaluator.shouldEnterAtOpen(1) !== true
+    || evaluator.shouldExitAtOpen(2) !== true
+  ) {
+    fail('strategy signals module did not preserve signal parsing/evaluator behavior');
+  }
+
+  pass('strategy signals module');
+}
+
+function checkStrategyEngineModule() {
+  const {
+    runCandleBacktest,
+    evaluatePaperRiskGate,
+    createPaperReplayPayload,
+    createPaperBotAutomationRunPayload,
+    createOptimizationSweepPayload,
+    createSplitTestPayload,
+    createWalkForwardPayload
+  } = require(path.join(projectRoot, 'app/server/src/lib/strategy-engine'));
+  const strategy = {
+    id: 41,
+    name: 'Green Red Fixture',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    entry_rules: 'green candle',
+    exit_rules: 'red candle',
+    stop_loss: 0,
+    take_profit: 0
+  };
+  const marketImport = {
+    id: 42,
+    market_symbol: 'BTC-USD',
+    timeframe: '1h'
+  };
+  const candles = Array.from({ length: 30 }, (_, index) => {
+    const open = 100 + index;
+    const isRed = index % 4 === 2;
+    const close = isRed ? open - 1 : open + 2;
+
+    return {
+      timestamp: new Date(Date.UTC(2026, 4, 14, index)).toISOString(),
+      open,
+      high: Math.max(open, close) + 1,
+      low: Math.min(open, close) - 1,
+      close,
+      volume: 1000 + (index * 10)
+    };
+  });
+  const backtest = runCandleBacktest(strategy, candles, marketImport, {
+    initialCapital: 10000,
+    feePercent: 0,
+    slippagePercent: 0
+  });
+  const riskGate = evaluatePaperRiskGate(backtest, {
+    maxDrawdownPercent: 100,
+    maxLossStreak: 99,
+    minTradeCount: 1
+  });
+  const paper = createPaperReplayPayload(strategy, marketImport, backtest, {
+    maxDrawdownPercent: 100,
+    maxLossStreak: 99,
+    minTradeCount: 1
+  });
+  const botRun = createPaperBotAutomationRunPayload(
+    {
+      id: 43,
+      name: 'Fixture Paper Bot',
+      mode: 'paper',
+      status: 'active'
+    },
+    strategy,
+    {
+      id: 44,
+      name: 'Fixture Risk',
+      mode: 'paper',
+      status: 'active',
+      kill_switch_enabled: 1,
+      max_order_value: 100,
+      max_position_value: 200,
+      max_daily_loss: 10,
+      max_open_trades: 1
+    },
+    marketImport,
+    candles,
+    {
+      status: 'ready_for_paper',
+      blockingFailures: []
+    },
+    { positionOpen: false }
+  );
+  const sweep = createOptimizationSweepPayload(strategy, candles, marketImport, {
+    initialCapital: 10000,
+    feePercents: [0],
+    slippagePercents: [0],
+    stopLossPercents: [0],
+    takeProfitPercents: [0]
+  });
+  const split = createSplitTestPayload(strategy, candles, marketImport, {
+    trainPercent: 60,
+    feePercent: 0,
+    slippagePercent: 0
+  });
+  const walk = createWalkForwardPayload(strategy, candles, marketImport, {
+    trainCandles: 10,
+    testCandles: 5,
+    stepCandles: 5,
+    feePercent: 0,
+    slippagePercent: 0
+  });
+  let shortCandleError = '';
+
+  try {
+    runCandleBacktest(strategy, candles.slice(0, 1), marketImport);
+    fail('strategy engine allowed a one-candle backtest');
+  } catch (error) {
+    shortCandleError = error.message;
+  }
+
+  if (
+    backtest.mode !== 'candle_backtest_v1'
+    || backtest.data.candleCount !== candles.length
+    || backtest.parsedRules.entry.kind !== 'green_candle'
+    || backtest.parsedRules.exit.kind !== 'red_candle'
+    || backtest.metrics.tradeCount < 1
+    || Object.prototype.hasOwnProperty.call(backtest, 'liveExecution')
+    || riskGate.status !== 'passed'
+    || paper.mode !== 'historical_replay_v1'
+    || !paper.warning.includes('does not place live orders')
+    || paper.riskGate.status !== 'passed'
+    || botRun.mode !== 'paper_bot_decision_cycle_v1'
+    || botRun.liveExecution.enabled !== false
+    || !['enter', 'wait'].includes(botRun.decision.action)
+    || sweep.mode !== 'optimization_sweep_v1'
+    || sweep.searchSpace.totalRunCount !== 1
+    || sweep.runs.length !== 1
+    || split.mode !== 'split_test_v1'
+    || split.data.inSampleCount < 2
+    || split.data.outOfSampleCount < 2
+    || walk.mode !== 'walk_forward_test_v1'
+    || walk.summary.windowCount < 1
+    || !/At least two candles/.test(shortCandleError)
+  ) {
+    fail('strategy engine module did not preserve research-only backtest and paper payload behavior');
+  }
+
+  pass('strategy engine module');
+}
+
+async function checkMarketDataModule() {
+  const {
+    getProviderCandleLimit,
+    parseMarketDataProvider,
+    parseMarketDataRefreshSchedule,
+    parseMarketDataRefreshRun,
+    parseMarketImport,
+    parseMarketImportJob,
+    timeframeToMs,
+    addMinutesToIso,
+    normalizeScheduleStatus,
+    normalizeOptionalIsoDate,
+    clampScheduleCandleCount,
+    createBackfillWindow,
+    filterCandlesByBackfillWindow,
+    generateSyntheticOhlcvCsv,
+    candlesToOhlcvCsv,
+    dedupeSortAndLimitCandles,
+    parseOhlcvCsv,
+    parseOhlcvCsvLine,
+    createStreamingMarketDataSummaryTracker,
+    classifyMarketRegime,
+    createMarketDataSummary,
+    normalizeBinanceSymbol,
+    normalizeCoinbaseProduct,
+    normalizeKrakenPair,
+    toBinanceInterval,
+    toCoinbaseGranularity,
+    toKrakenInterval,
+    getProviderHealthDefaults,
+    PUBLIC_MARKET_DATA_FETCH_TIMEOUT_MS,
+    fetchJsonWithTimeout,
+    fetchProviderOhlcvCsv
+  } = require(path.join(projectRoot, 'app/server/src/lib/market-data'));
+  const provider = parseMarketDataProvider({
+    id: 31,
+    user_id: 1,
+    provider_name: 'kraken',
+    label: 'Kraken Public',
+    provider_type: 'kraken_public',
+    status: 'active',
+    settings_json: '{"pairOverride":"XBT/USD"}',
+    secret_storage_note: 'metadata only',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  });
+  const schedule = parseMarketDataRefreshSchedule({
+    id: 32,
+    user_id: 1,
+    provider_id: 31,
+    label: 'BTC Kraken hourly',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    lookback_candles: 1000,
+    backfill_start_at: '2026-05-01T00:00:00.000Z',
+    backfill_end_at: '2026-05-14T00:00:00.000Z',
+    interval_minutes: 60,
+    status: 'active',
+    last_run_at: null,
+    next_run_at: '2026-05-14T01:00:00.000Z',
+    last_run_id: null,
+    last_import_job_id: null,
+    last_error: null,
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z',
+    provider_label: 'Kraken Public',
+    provider_name: 'kraken',
+    provider_type: 'kraken_public'
+  });
+  const refreshRun = parseMarketDataRefreshRun({
+    id: 33,
+    user_id: 1,
+    schedule_id: 32,
+    provider_id: 31,
+    import_job_id: 34,
+    status: 'completed',
+    trigger_type: 'manual',
+    message: 'fixture',
+    payload_json: '{"returnedCandles":720}',
+    started_at: '2026-05-14T00:00:00.000Z',
+    completed_at: '2026-05-14T00:00:01.000Z',
+    created_at: '2026-05-14T00:00:00.000Z',
+    schedule_label: 'BTC Kraken hourly',
+    provider_label: 'Kraken Public'
+  });
+  const marketImport = parseMarketImport({
+    id: 35,
+    user_id: 1,
+    label: null,
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    source: 'csv',
+    status: 'ready',
+    quality_score: null,
+    summary_json: '{"duplicateTimestamps":1,"outOfOrderRows":1,"gapCount":1,"invalidShapeRows":1}',
+    created_at: '2026-05-14T00:00:00.000Z'
+  });
+  const importJob = parseMarketImportJob({
+    id: 36,
+    user_id: 1,
+    import_id: 35,
+    label: null,
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    source: 'csv_upload',
+    status: 'failed',
+    total_rows: 200,
+    processed_rows: 50,
+    cancel_requested: 0,
+    cancel_requested_at: null,
+    retry_count: 1,
+    retried_at: '2026-05-14T00:00:00.000Z',
+    source_payload: '{"source":"fixture"}',
+    source_file_path: null,
+    quality_score: null,
+    notes: 'fixture',
+    error: 'fixture failure',
+    source_file_name: 'candles.csv',
+    upload_bytes: 128,
+    summary_json: '{"qualityScore":88}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z',
+    completed_at: null
+  });
+  const backfillWindow = createBackfillWindow('2026-05-14T00:00:00.000Z', '2026-05-14T02:00:00.000Z');
+  const filteredCandles = filterCandlesByBackfillWindow([
+    { timestamp: '2026-05-13T23:00:00.000Z', open: 1, high: 2, low: 1, close: 2, volume: 10 },
+    { timestamp: '2026-05-14T01:00:00.000Z', open: 2, high: 3, low: 2, close: 3, volume: 20 },
+    { timestamp: 'bad timestamp', open: 3, high: 4, low: 3, close: 4, volume: 30 }
+  ], backfillWindow);
+  const syntheticCsv = generateSyntheticOhlcvCsv({
+    marketSymbol: 'BTC-USD',
+    timeframe: '1h',
+    candleCount: 3,
+    startAt: '2026-05-14T00:00:00.000Z',
+    endAt: '2026-05-14T02:00:00.000Z'
+  });
+  const candleCsv = candlesToOhlcvCsv([
+    { timestamp: '2026-05-14T01:00:00.000Z', open: 2, high: 3, low: 2, close: 3, volume: 20 },
+    { timestamp: '2026-05-14T00:00:00.000Z', open: 1, high: 2, low: 1, close: 2, volume: 10 }
+  ]);
+  const deduped = dedupeSortAndLimitCandles([
+    { timestamp: '2026-05-14T00:00:00.000Z', close: 1 },
+    { timestamp: '2026-05-14T00:00:00.000Z', close: 2 },
+    { timestamp: '2026-05-14T01:00:00.000Z', close: 3 }
+  ], 2);
+  const parsedCandles = parseOhlcvCsv([
+    'timestamp,open,high,low,close,volume',
+    '2026-05-14T00:00:00.000Z,100,105,99,104,1000',
+    '2026-05-14T01:00:00.000Z,104,110,103,109,1300',
+    '2026-05-14T03:00:00.000Z,109,111,108,110,900'
+  ].join('\n'));
+  const parsedLine = parseOhlcvCsvLine('2026-05-14T04:00:00.000Z,110,112,109,111,950', 4);
+  const tracker = createStreamingMarketDataSummaryTracker('1h');
+  parsedCandles.forEach(candle => tracker.add(candle));
+  const streamingSummary = tracker.finish();
+  const regime = classifyMarketRegime(parsedCandles);
+  const summary = createMarketDataSummary(parsedCandles, '1h');
+  let fetchReceivedAbortSignal = false;
+  const fetchedJson = await fetchJsonWithTimeout('https://example.test/ok', {
+    timeoutMs: 1000,
+    fetchImpl: async (url, options = {}) => {
+      fetchReceivedAbortSignal = Boolean(options.signal);
+      return {
+        ok: true,
+        json: async () => ({ ok: true, url })
+      };
+    }
+  });
+  let httpErrorMessage = '';
+  try {
+    await fetchJsonWithTimeout('https://example.test/fail', {
+      timeoutMs: 1000,
+      fetchImpl: async () => ({
+        ok: false,
+        status: 503,
+        statusText: 'Service Unavailable',
+        json: async () => ({})
+      })
+    });
+    fail('market data fetch helper allowed a failed HTTP response');
+  } catch (error) {
+    httpErrorMessage = error.message;
+  }
+  const localProviderResult = await fetchProviderOhlcvCsv({
+    provider_type: 'local_mock',
+    settings_json: '{}',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    lookback_candles: 3,
+    backfill_start_at: '2026-05-14T00:00:00.000Z',
+    backfill_end_at: '2026-05-14T02:00:00.000Z'
+  });
+  let ccxtErrorMessage = '';
+  try {
+    await fetchProviderOhlcvCsv({
+      provider_type: 'ccxt_planned',
+      settings_json: '{}',
+      market_symbol: 'BTC-USD',
+      timeframe: '1h',
+      lookback_candles: 3
+    });
+    fail('market data provider fetch allowed planned CCXT execution');
+  } catch (error) {
+    ccxtErrorMessage = error.message;
+  }
+
+  if (
+    getProviderCandleLimit('kraken_public') !== 720
+    || provider.settings?.pairOverride !== 'XBT/USD'
+    || provider.provider_candle_limit !== 720
+    || schedule.provider_candle_limit !== 720
+    || refreshRun.payload?.returnedCandles !== 720
+    || marketImport.label !== 'BTC-USD 1h import'
+    || marketImport.quality_score !== 60
+    || importJob.progress_percent !== 25
+    || importJob.retry_available !== true
+    || importJob.source_retained !== true
+    || importJob.quality_score !== 88
+    || timeframeToMs('2h') !== 7200000
+    || addMinutesToIso(30, new Date('2026-05-14T00:00:00.000Z')) !== '2026-05-14T00:30:00.000Z'
+    || normalizeScheduleStatus('paused') !== 'paused'
+    || normalizeScheduleStatus('unknown', 'disabled') !== 'disabled'
+    || normalizeOptionalIsoDate('2026-05-14T00:00:00.000Z') !== '2026-05-14T00:00:00.000Z'
+    || clampScheduleCandleCount(9999, 'kraken_public') !== 720
+    || filteredCandles.length !== 1
+    || !syntheticCsv.startsWith('timestamp,open,high,low,close,volume')
+    || syntheticCsv.split('\n').length !== 4
+    || !candleCsv.includes('2026-05-14T00:00:00.000Z,1,2,1,2,10')
+    || deduped[0].close !== 2
+    || deduped[1].close !== 3
+    || parsedCandles.length !== 3
+    || parsedLine.close !== 111
+    || streamingSummary.gapCount !== 1
+    || streamingSummary.qualityScore !== 95
+    || regime.trend !== 'bullish'
+    || summary.candleCount !== 3
+    || summary.gapCount !== 1
+    || summary.qualityScore !== 95
+    || normalizeBinanceSymbol('btc/usdt') !== 'BTCUSDT'
+    || normalizeCoinbaseProduct('btc/usd') !== 'BTC-USD'
+    || normalizeKrakenPair('BTC/USD') !== 'XBTUSD'
+    || normalizeKrakenPair('ETH/USD', { krakenPair: 'eth/usd' }) !== 'ETHUSD'
+    || toBinanceInterval('1h') !== '1h'
+    || toCoinbaseGranularity('1h') !== 3600
+    || toKrakenInterval('1h') !== 60
+    || getProviderHealthDefaults({ provider_type: 'coinbase_public', settings_json: '{}' }).marketSymbol !== 'BTC-USD'
+    || getProviderHealthDefaults({ provider_type: 'local_mock', settings_json: '{"defaultMarketSymbol":"ETH/USDT"}' }).marketSymbol !== 'ETH/USDT'
+    || PUBLIC_MARKET_DATA_FETCH_TIMEOUT_MS !== 20000
+    || fetchedJson.ok !== true
+    || fetchedJson.url !== 'https://example.test/ok'
+    || fetchReceivedAbortSignal !== true
+    || !httpErrorMessage.includes('HTTP 503 Service Unavailable')
+    || localProviderResult.source !== 'scheduled_local_mock'
+    || localProviderResult.csvText.split('\n').length !== 4
+    || !ccxtErrorMessage.includes('ccxt package is not wired')
+  ) {
+    fail('market data module did not parse provider/import rows');
+  }
+
+  pass('market data module');
+}
+
+async function checkMarketImportFilesModule() {
+  const { pipeline } = require('stream/promises');
+  const {
+    createMarketImportFileRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/market-import-files'));
+  const fixtureRoot = path.join(projectRoot, 'workspaces');
+  fs.mkdirSync(fixtureRoot, { recursive: true });
+  const uploadDir = fs.mkdtempSync(path.join(fixtureRoot, 'market-import-files-'));
+  let ensureCount = 0;
+  const loggedErrors = [];
+  const runtime = createMarketImportFileRuntime({
+    fs,
+    path,
+    pipeline,
+    uploadDir,
+    maxUploadBytes: 10,
+    crypto: {
+      randomUUID: () => 'fixture-uuid'
+    },
+    ensureUploadDir() {
+      ensureCount += 1;
+      fs.mkdirSync(uploadDir, { recursive: true });
+    },
+    logger: {
+      error(message) {
+        loggedErrors.push(message);
+      }
+    }
+  });
+
+  try {
+    const destinationPath = runtime.createMarketImportUploadPath(7, 'candles.txt');
+    const bytes = await runtime.saveMarketImportUpload((async function* uploadFixture() {
+      yield Buffer.from('12345');
+    }()), destinationPath);
+    const resolved = runtime.resolveMarketImportUploadPath(destinationPath);
+    let unsafePathError = '';
+    let tooLargeError = '';
+    let emptyUploadError = '';
+
+    try {
+      runtime.resolveMarketImportUploadPath(path.join(uploadDir, '../outside.csv'));
+      fail('market import files module allowed an unsafe source path');
+    } catch (error) {
+      unsafePathError = error.message;
+    }
+
+    try {
+      await runtime.saveMarketImportUpload((async function* tooLargeUpload() {
+        yield Buffer.from('12345678901');
+      }()), path.join(uploadDir, 'too-large.csv'));
+      fail('market import files module allowed an oversized upload');
+    } catch (error) {
+      tooLargeError = error.message;
+    }
+
+    try {
+      await runtime.saveMarketImportUpload((async function* emptyUpload() {})(), path.join(uploadDir, 'empty.csv'));
+      fail('market import files module allowed an empty upload');
+    } catch (error) {
+      emptyUploadError = error.message;
+    }
+
+    await runtime.deleteMarketImportSourceFile(destinationPath);
+    await runtime.deleteMarketImportSourceFile(destinationPath);
+
+    if (
+      ensureCount !== 1
+      || !destinationPath.endsWith('.csv')
+      || !destinationPath.includes('user-7')
+      || bytes !== 5
+      || resolved !== path.resolve(destinationPath)
+      || fs.existsSync(destinationPath)
+      || fs.existsSync(path.join(uploadDir, 'too-large.csv'))
+      || fs.existsSync(path.join(uploadDir, 'empty.csv'))
+      || !unsafePathError.includes('market-data upload folder')
+      || !tooLargeError.includes('too large')
+      || !emptyUploadError.includes('empty')
+      || loggedErrors.length !== 0
+    ) {
+      fail('market import files module did not preserve upload path/file behavior');
+    }
+  } finally {
+    fs.rmSync(uploadDir, { recursive: true, force: true });
+  }
+
+  pass('market import files module');
+}
+
+async function checkMarketImportJobRuntimeModule() {
+  const {
+    createMarketImportJobRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/market-import-jobs'));
+  const {
+    parseOhlcvCsv,
+    parseOhlcvCsvLine,
+    createMarketDataSummary,
+    createStreamingMarketDataSummaryTracker
+  } = require(path.join(projectRoot, 'app/server/src/lib/market-data'));
+  const jobs = new Map([
+    [42, {
+      id: 42,
+      label: ' BTC import fixture ',
+      market_symbol: ' btc-usd ',
+      timeframe: '1h',
+      source_payload: [
+        'timestamp,open,high,low,close,volume',
+        '2026-05-14T00:00:00.000Z,100,105,99,104,1000',
+        '2026-05-14T01:00:00.000Z,104,110,103,109,1300',
+        '2026-05-14T02:00:00.000Z,109,111,108,110,900'
+      ].join('\n'),
+      source_file_path: null,
+      status: 'queued',
+      cancel_requested: 0,
+      notes: '  fixture notes  ',
+      import_id: null
+    }],
+    [43, {
+      id: 43,
+      label: 'Cancel fixture',
+      market_symbol: 'ETH-USD',
+      timeframe: '1h',
+      source_payload: null,
+      source_file_path: '/tmp/cancel-fixture.csv',
+      status: 'canceling',
+      cancel_requested: 1,
+      notes: '',
+      import_id: 901
+    }]
+  ]);
+  const dbRuns = [];
+  const deletedFiles = [];
+  let nextImportId = 900;
+  const runtime = createMarketImportJobRuntime({
+    fs,
+    dbGet: async (query, params = []) => {
+      if (query.includes('WHERE status IN')) {
+        return null;
+      }
+
+      if (query.includes('SELECT status, cancel_requested')) {
+        if (Number(params[0]) === 44) {
+          return { status: 'canceling', cancel_requested: 1 };
+        }
+
+        return { status: 'running', cancel_requested: 0 };
+      }
+
+      if (query.includes('SELECT import_id FROM market_data_import_jobs')) {
+        return { import_id: nextImportId };
+      }
+
+      if (query.includes('SELECT * FROM market_data_import_jobs WHERE id = ?')) {
+        return jobs.get(Number(params[0])) || null;
+      }
+
+      return null;
+    },
+    dbRun: async (query, params = []) => {
+      dbRuns.push({ query, params });
+
+      if (query.includes('INSERT INTO market_data_imports')) {
+        nextImportId += 1;
+        return { lastID: nextImportId };
+      }
+
+      return { changes: 1 };
+    },
+    parseOhlcvCsv,
+    parseOhlcvCsvLine,
+    createMarketDataSummary,
+    createStreamingMarketDataSummaryTracker,
+    resolveMarketImportUploadPath: filePath => filePath,
+    deleteMarketImportSourceFile: async filePath => {
+      deletedFiles.push(filePath);
+    },
+    chunkSize: 2,
+    setImmediateFn: callback => callback()
+  });
+
+  await runtime.processMarketDataImportJob(42);
+  await runtime.processMarketDataImportJob(43);
+  let canceledError = '';
+
+  try {
+    await runtime.throwIfMarketImportCanceled(44);
+    fail('market import job runtime allowed canceled import state');
+  } catch (error) {
+    canceledError = error.message;
+  }
+
+  const scheduledCallbacks = [];
+  const scheduledRuntime = createMarketImportJobRuntime({
+    fs,
+    dbGet: async query => (query.includes('WHERE status IN') ? null : {}),
+    dbRun: async () => ({ changes: 1 }),
+    parseOhlcvCsv,
+    parseOhlcvCsvLine,
+    createMarketDataSummary,
+    createStreamingMarketDataSummaryTracker,
+    resolveMarketImportUploadPath: filePath => filePath,
+    deleteMarketImportSourceFile: async () => {},
+    setImmediateFn(callback) {
+      scheduledCallbacks.push(callback);
+    }
+  });
+
+  scheduledRuntime.scheduleMarketImportWorker();
+  scheduledRuntime.scheduleMarketImportWorker();
+  await scheduledCallbacks[0]();
+
+  const importInsert = dbRuns.find(run => run.query.includes('INSERT INTO market_data_imports'));
+  const importFinalUpdate = dbRuns.find(run => run.query.includes("SET candle_count = ?, status = 'imported'"));
+  const completedJobUpdate = dbRuns.find(run => run.query.includes("SET status = 'completed'"));
+  const progressUpdates = dbRuns.filter(run => run.query.includes('SET processed_rows = ?'));
+  const candleInserts = dbRuns.filter(run => run.query.includes('INSERT INTO market_candles'));
+  const cancelJobUpdate = dbRuns.find(run => run.query.includes("SET status = 'canceled'"));
+
+  if (
+    !importInsert
+    || importInsert.params[0] !== 'BTC import fixture'
+    || importInsert.params[1] !== 'BTC-USD'
+    || importInsert.params[2] !== '1h'
+    || importInsert.params[3] !== 'manual_csv_background'
+    || importInsert.params[7] !== 'fixture notes'
+    || candleInserts.length !== 3
+    || progressUpdates.map(run => run.params[0]).join(',') !== '2,3'
+    || !importFinalUpdate
+    || importFinalUpdate.params[0] !== 3
+    || JSON.parse(importFinalUpdate.params[2]).candleCount !== 3
+    || importFinalUpdate.params[3] !== nextImportId
+    || !completedJobUpdate
+    || completedJobUpdate.params[0] !== 3
+    || completedJobUpdate.params[1] !== 3
+    || completedJobUpdate.params[4] !== 42
+    || !cancelJobUpdate
+    || deletedFiles[0] !== '/tmp/cancel-fixture.csv'
+    || !dbRuns.some(run => run.query.includes('DELETE FROM market_candles WHERE import_id = ?') && run.params[0] === 901)
+    || !/Import canceled by owner/.test(canceledError)
+    || scheduledCallbacks.length !== 1
+  ) {
+    fail('market import job runtime did not preserve queue/import/cancel behavior');
+  }
+
+  pass('market import job runtime module');
+}
+
+async function checkMarketImportDependenciesModule() {
+  const {
+    createMarketImportDependencyRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/market-import-dependencies'));
+  const calls = [];
+  const counts = [1, 2, 0, '3', null];
+  const runtime = createMarketImportDependencyRuntime({
+    async dbGet(query, params) {
+      calls.push({ query, params });
+      return { count: counts[calls.length - 1] };
+    }
+  });
+  const count = await runtime.getMarketImportDependencyCount(41);
+  const expectedTables = [
+    'paper_trading_sessions',
+    'strategy_optimization_sweeps',
+    'strategy_split_tests',
+    'strategy_walk_forward_tests',
+    'trading_decision_logs'
+  ];
+
+  if (
+    count !== 6
+    || calls.length !== expectedTables.length
+    || !expectedTables.every(table => calls.some(call => call.query.includes(table) && call.params[0] === 41))
+  ) {
+    fail('market import dependencies module did not preserve dependency count behavior');
+  }
+
+  pass('market import dependencies module');
+}
+
+async function checkMarketRefreshScheduleRuntimeModule() {
+  const {
+    createMarketRefreshScheduleRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/market-refresh-schedules'));
+  const {
+    clampScheduleCandleCount,
+    getProviderCandleLimit,
+    addMinutesToIso,
+    parseMarketDataRefreshRun
+  } = require(path.join(projectRoot, 'app/server/src/lib/market-data'));
+  const schedules = new Map([
+    [21, {
+      id: 21,
+      user_id: 1,
+      provider_id: 31,
+      label: 'BTC refresh',
+      market_symbol: 'BTC-USD',
+      timeframe: '1h',
+      lookback_candles: 25,
+      backfill_start_at: null,
+      backfill_end_at: null,
+      interval_minutes: 60,
+      status: 'active',
+      provider_label: 'Local Mock',
+      provider_name: 'local',
+      provider_type: 'local_mock',
+      provider_status: 'active',
+      settings_json: '{}'
+    }],
+    [22, {
+      id: 22,
+      user_id: 1,
+      provider_id: 31,
+      label: 'Disabled refresh',
+      market_symbol: 'BTC-USD',
+      timeframe: '1h',
+      lookback_candles: 25,
+      interval_minutes: 60,
+      status: 'disabled',
+      provider_label: 'Local Mock',
+      provider_name: 'local',
+      provider_type: 'local_mock',
+      provider_status: 'active',
+      settings_json: '{}'
+    }],
+    [23, {
+      id: 23,
+      user_id: 1,
+      provider_id: 32,
+      label: 'Inactive provider refresh',
+      market_symbol: 'BTC-USD',
+      timeframe: '1h',
+      lookback_candles: 25,
+      interval_minutes: 60,
+      status: 'active',
+      provider_label: 'Inactive',
+      provider_name: 'inactive',
+      provider_type: 'local_mock',
+      provider_status: 'disabled',
+      settings_json: '{}'
+    }],
+    [24, {
+      id: 24,
+      user_id: 1,
+      provider_id: 31,
+      label: 'Failing refresh',
+      market_symbol: 'BTC-USD',
+      timeframe: '1h',
+      lookback_candles: 25,
+      interval_minutes: 60,
+      status: 'active',
+      provider_label: 'Local Mock',
+      provider_name: 'local',
+      provider_type: 'local_mock',
+      provider_status: 'active',
+      settings_json: '{}'
+    }]
+  ]);
+  const updates = [];
+  const fetches = [];
+  const logErrors = [];
+  const immediateCallbacks = [];
+  let importWorkerCount = 0;
+  let nextRunId = 500;
+  let nextImportJobId = 700;
+  let dueRows = [];
+  const runtime = createMarketRefreshScheduleRuntime({
+    async dbGet(query, params = []) {
+      if (query.includes('market_data_refresh_runs.*')) {
+        const runId = Number(params[0]);
+
+        return {
+          id: runId,
+          user_id: 1,
+          schedule_id: 21,
+          provider_id: 31,
+          import_job_id: nextImportJobId,
+          status: 'queued_import',
+          trigger_type: 'manual',
+          message: `Queued market-data import job #${nextImportJobId}.`,
+          payload_json: '{"source":"local_mock"}',
+          started_at: '2026-05-14T00:00:00.000Z',
+          completed_at: '2026-05-14T00:00:01.000Z',
+          created_at: '2026-05-14T00:00:00.000Z',
+          schedule_label: 'BTC refresh',
+          provider_label: 'Local Mock'
+        };
+      }
+
+      if (query.includes('JOIN market_data_providers')) {
+        return schedules.get(Number(params[0])) || null;
+      }
+
+      return null;
+    },
+    async dbAll(query) {
+      updates.push({ query, params: [] });
+      return dueRows;
+    },
+    async dbRun(query, params = []) {
+      updates.push({ query, params });
+
+      if (query.includes('INSERT INTO market_data_refresh_runs')) {
+        nextRunId += 1;
+        return { lastID: nextRunId };
+      }
+
+      if (query.includes('INSERT INTO market_data_import_jobs')) {
+        nextImportJobId += 1;
+        return { lastID: nextImportJobId };
+      }
+
+      return { changes: 1 };
+    },
+    async fetchProviderOhlcvCsv(schedule) {
+      fetches.push(schedule.id);
+
+      if (schedule.id === 24) {
+        throw new Error('provider fetch failed');
+      }
+
+      return {
+        source: 'local_mock',
+        csvText: 'timestamp,open,high,low,close,volume\n2026-05-14T00:00:00.000Z,1,2,1,2,10'
+      };
+    },
+    clampScheduleCandleCount,
+    getProviderCandleLimit,
+    addMinutesToIso,
+    parseMarketDataRefreshRun,
+    scheduleMarketImportWorker() {
+      importWorkerCount += 1;
+    },
+    setImmediateFn(callback) {
+      immediateCallbacks.push(callback);
+    },
+    logger: {
+      error(message) {
+        logErrors.push(message);
+      }
+    }
+  });
+  const success = await runtime.runMarketDataRefreshSchedule(21, 'manual');
+  let disabledError = '';
+  let inactiveProviderError = '';
+  let fetchError = '';
+
+  try {
+    await runtime.runMarketDataRefreshSchedule(22, 'scheduled');
+    fail('market refresh schedule runtime allowed disabled scheduled refresh');
+  } catch (error) {
+    disabledError = error.message;
+  }
+
+  try {
+    await runtime.runMarketDataRefreshSchedule(23, 'manual');
+    fail('market refresh schedule runtime allowed inactive provider');
+  } catch (error) {
+    inactiveProviderError = error.message;
+  }
+
+  try {
+    await runtime.runMarketDataRefreshSchedule(24, 'manual');
+    fail('market refresh schedule runtime swallowed provider fetch failure');
+  } catch (error) {
+    fetchError = error.message;
+  }
+
+  dueRows = [{ id: 21 }, { id: 24 }];
+  await runtime.processDueMarketDataRefreshSchedules();
+  dueRows = [];
+  runtime.scheduleMarketRefreshWorker();
+  runtime.scheduleMarketRefreshWorker();
+  await immediateCallbacks[0]();
+  runtime.scheduleMarketRefreshWorker();
+
+  if (
+    success.status !== 'queued_import'
+    || success.provider_label !== 'Local Mock'
+    || !fetches.includes(21)
+    || !fetches.includes(24)
+    || importWorkerCount < 2
+    || !/not active/.test(disabledError)
+    || !/provider is not active/.test(inactiveProviderError)
+    || !/provider fetch failed/.test(fetchError)
+    || !updates.some(update => update.query.includes('INSERT INTO market_data_refresh_runs') && update.params[4] === 'manual')
+    || !updates.some(update => update.query.includes('INSERT INTO market_data_import_jobs') && update.params[4] === 'local_mock')
+    || !updates.some(update => update.query.includes("SET status = 'queued_import'"))
+    || !updates.some(update => update.query.includes("SET status = 'failed'") && update.params[0] === 'provider fetch failed')
+    || !updates.some(update => update.query.includes('FROM market_data_refresh_schedules') && update.query.includes("status = 'active'"))
+    || !logErrors.some(message => message.includes('Market data refresh schedule #24 failed'))
+    || immediateCallbacks.length !== 2
+  ) {
+    fail('market refresh schedule runtime did not preserve refresh/worker behavior');
+  }
+
+  pass('market refresh schedule runtime module');
+}
+
+async function checkDevServerModule() {
+  const {
+    createDevServerRuntime,
+    parseDevServerRun,
+    parseDevServerLog
+  } = require(path.join(projectRoot, 'app/server/src/lib/dev-server'));
+  const run = parseDevServerRun({
+    id: 41,
+    pid: 12345,
+    port: 3000,
+    command: 'npm start',
+    status: 'running',
+    started_at: '2026-05-14T00:00:00.000Z',
+    heartbeat_at: '2026-05-14T00:01:00.000Z',
+    ended_at: null,
+    note: 'fixture'
+  });
+  const log = parseDevServerLog({
+    id: 42,
+    run_id: 41,
+    level: 'info',
+    message: 'fixture log',
+    metadata_json: '{"pid":12345}',
+    created_at: '2026-05-14T00:01:00.000Z'
+  });
+  const dbRuns = [];
+  const runtime = createDevServerRuntime({
+    path,
+    projectRoot: '/tmp/etherealai-project',
+    serverFile: '/tmp/etherealai-project/app/server/src/server.js',
+    port: 3000,
+    startedAt: '2026-05-14T00:00:00.000Z',
+    pid: 12345,
+    env: {
+      npm_lifecycle_event: 'start',
+      NODE_ENV: 'test'
+    },
+    uptimeSeconds: () => 12,
+    parseRun: parseDevServerRun,
+    parseLog: parseDevServerLog,
+    async dbRun(query, params) {
+      dbRuns.push({ query, params });
+
+      if (query.includes('INSERT INTO dev_server_runs')) {
+        return { lastID: 501 };
+      }
+
+      return { changes: 1 };
+    },
+    async dbGet() {
+      return {
+        id: 501,
+        pid: 12345,
+        port: 3000,
+        command: 'npm start',
+        status: 'running',
+        started_at: '2026-05-14T00:00:00.000Z',
+        heartbeat_at: '2026-05-14T00:01:00.000Z',
+        ended_at: null,
+        note: 'fixture'
+      };
+    },
+    async dbAll(query) {
+      if (query.includes('dev_server_logs')) {
+        return [
+          {
+            id: 601,
+            run_id: 501,
+            level: 'info',
+            message: 'fixture status log',
+            metadata_json: '{"ok":true}',
+            created_at: '2026-05-14T00:01:00.000Z'
+          }
+        ];
+      }
+
+      return [
+        {
+          id: 501,
+          pid: 12345,
+          port: 3000,
+          command: 'npm start',
+          status: 'running',
+          started_at: '2026-05-14T00:00:00.000Z',
+          heartbeat_at: '2026-05-14T00:01:00.000Z',
+          ended_at: null,
+          note: 'fixture'
+        }
+      ];
+    }
+  });
+  const command = runtime.getDevServerCommand();
+  await runtime.recordDevServerStart();
+  await runtime.updateDevServerHeartbeat();
+  await runtime.recordDevServerLog('warn'.repeat(20), 'manual log', { ok: true });
+  const status = await runtime.getDevServerStatus();
+
+  if (
+    run.pid !== 12345
+    || run.port !== 3000
+    || log.metadata?.pid !== 12345
+    || log.message !== 'fixture log'
+    || command !== 'npm start'
+    || status.current.runId !== 501
+    || status.current.environment !== 'test'
+    || status.current.uptimeSeconds !== 12
+    || status.latestRun.id !== 501
+    || status.recentLogs[0].metadata.ok !== true
+    || !dbRuns.some(item => item.query.includes("SET status = 'stale'"))
+    || !dbRuns.some(item => item.query.includes('INSERT INTO dev_server_runs') && item.params[0] === 12345)
+    || !dbRuns.some(item => item.query.includes('INSERT INTO dev_server_logs') && item.params[0] === 501)
+    || !dbRuns.some(item => item.query.includes('UPDATE dev_server_runs') && item.params[1] === 501)
+  ) {
+    fail('dev server module did not parse run/log rows');
+  }
+
+  pass('dev server module');
+}
+
+function checkCreatorRecordsModule() {
+  const {
+    parseFileProposal,
+    parseTask,
+    parseChecklistItem
+  } = require(path.join(projectRoot, 'app/server/src/lib/creator-records'));
+  const proposal = parseFileProposal({
+    id: 51,
+    task_id: 52,
+    workspace_id: 53,
+    relative_path: 'src/index.js',
+    action: 'upsert',
+    current_content: 'old',
+    proposed_content: 'new',
+    status: 'pending',
+    applied_at: null,
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  });
+  const task = parseTask({
+    id: 52,
+    title: 'Creator fixture',
+    category: 'app',
+    request: 'fixture',
+    status: 'planned',
+    plan_json: '{"phases":["inspect"]}',
+    model_role: 'planner',
+    model_name: 'local',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  });
+  const checklistItem = parseChecklistItem({
+    id: 54,
+    task_id: 52,
+    label: 'Inspect files',
+    status: 'done',
+    position: 1,
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  });
+
+  if (
+    proposal.proposed_content !== 'new'
+    || task.plan?.phases?.[0] !== 'inspect'
+    || task.plan_json !== undefined
+    || checklistItem.status !== 'done'
+  ) {
+    fail('creator records module did not parse file proposal/task/checklist rows');
+  }
+
+  pass('creator records module');
+}
+
+async function checkWorkspaceFilesModule() {
+  const {
+    safeRelativePath,
+    resolveWorkspacePath,
+    listWorkspaceEntries,
+    readWorkspaceFile,
+    collectWorkspaceContext,
+    createWorkspaceRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/workspace-files'));
+  const fixtureRoot = path.join(projectRoot, 'workspaces');
+  fs.mkdirSync(fixtureRoot, { recursive: true });
+  const workspacePath = fs.mkdtempSync(path.join(fixtureRoot, 'module-fixture-'));
+  const workspace = { path: workspacePath };
+
+  try {
+    fs.mkdirSync(path.join(workspacePath, 'src'));
+    fs.writeFileSync(path.join(workspacePath, 'README.md'), '# Fixture\n');
+    fs.writeFileSync(path.join(workspacePath, 'src/index.js'), 'console.log("fixture");\n');
+
+    const safePath = safeRelativePath('src/../README.md');
+    const resolved = resolveWorkspacePath(workspace, 'src/index.js');
+    const listing = listWorkspaceEntries(workspace, '');
+    const file = readWorkspaceFile(workspace, 'src/index.js');
+    const context = collectWorkspaceContext(workspace, { maxFiles: 3, maxTotalBytes: 2000 });
+    const runtimeWorkspacesDir = path.join(workspacePath, 'runtime-workspaces');
+    const runtime = createWorkspaceRuntime({
+      fs,
+      workspacesDir: runtimeWorkspacesDir,
+      async dbGet(query, params) {
+        if (params[0] === 7) {
+          return {
+            id: 7,
+            name: 'Runtime Workspace',
+            path: workspacePath,
+            status: 'active'
+          };
+        }
+
+        return null;
+      }
+    });
+    runtime.ensureWorkspacesDir();
+    const runtimeWorkspace = await runtime.getWorkspace(7);
+    let missingWorkspaceError = '';
+
+    try {
+      safeRelativePath('../outside.js');
+      fail('workspace files module allowed unsafe relative path');
+    } catch (error) {
+      if (!/approved workspace/.test(error.message)) {
+        throw error;
+      }
+    }
+
+    try {
+      await runtime.getWorkspace(8);
+      fail('workspace files runtime allowed a missing workspace');
+    } catch (error) {
+      missingWorkspaceError = error.message;
+    }
+
+    if (
+      safePath !== 'README.md'
+      || resolved.relativePath !== 'src/index.js'
+      || !listing.entries.some(entry => entry.name === 'src' && entry.type === 'directory')
+      || file.content !== 'console.log("fixture");\n'
+      || context.fileCount < 2
+      || !context.text.includes('README.md')
+      || !context.text.includes('src/index.js')
+      || !fs.existsSync(runtimeWorkspacesDir)
+      || runtimeWorkspace.id !== 7
+      || !/Workspace not found/.test(missingWorkspaceError)
+    ) {
+      fail('workspace files module did not preserve workspace file behavior');
+    }
+  } finally {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+
+  pass('workspace files module');
+}
+
+function checkCreatorPromptsModule() {
+  const {
+    createStarterPlan,
+    buildCreatorPlanningPrompt,
+    buildFileProposalPrompt,
+    buildMultiFileProposalPrompt,
+    buildWorkspaceEditPrompt,
+    normalizeWorkspaceEditPayload,
+    extractGeneratedFileContent,
+    parseJsonFromModelResponse,
+    normalizeGeneratedFiles,
+    buildChecklistPrompt,
+    normalizeGeneratedChecklist
+  } = require(path.join(projectRoot, 'app/server/src/lib/creator-prompts'));
+  const task = {
+    title: 'Creator prompt fixture',
+    category: 'app',
+    request: 'Build a local tool.',
+    plan: {
+      phases: ['inspect', 'edit']
+    }
+  };
+  const workspace = {
+    name: 'Fixture Workspace',
+    path: '/tmp/fixture-workspace'
+  };
+  const starterPlan = createStarterPlan(task);
+  const planningPrompt = buildCreatorPlanningPrompt(task);
+  const filePrompt = buildFileProposalPrompt({
+    task,
+    workspace,
+    relativePath: 'src/index.js',
+    instruction: 'Update greeting.',
+    currentContent: null,
+    workspaceContext: { text: '--- README.md ---\nFixture' }
+  });
+  const multiPrompt = buildMultiFileProposalPrompt({
+    task,
+    workspace,
+    instruction: 'Create files.',
+    maxFiles: 2,
+    workspaceContext: { text: 'context' }
+  });
+  const editPrompt = buildWorkspaceEditPrompt({
+    task,
+    workspace,
+    goal: 'Improve UI.',
+    maxFiles: 2,
+    workspaceContext: { text: 'context' }
+  });
+  const extracted = extractGeneratedFileContent('```js\nconsole.log("ok");\n```');
+  const parsedJson = parseJsonFromModelResponse('```json\n{"files":[{"relativePath":"src/index.js","content":"ok"}]}\n```');
+  const generatedFiles = normalizeGeneratedFiles(parsedJson, 2);
+  const editPayload = normalizeWorkspaceEditPayload({
+    summary: 'Updated UI',
+    verification: 'npm test',
+    files: generatedFiles
+  }, 2);
+  const checklistPrompt = buildChecklistPrompt({ task, instruction: 'Next steps.', maxItems: 2 });
+  const checklist = normalizeGeneratedChecklist({
+    items: [' Inspect files ', { label: 'Run checks' }]
+  }, 2);
+
+  if (
+    starterPlan.type !== 'starter-plan'
+    || !planningPrompt.includes('Safety gates before execution')
+    || !filePrompt.includes('Target relative path: src/index.js')
+    || !multiPrompt.includes('Create no more than 2 files.')
+    || !editPrompt.includes('Workspace edit goal:')
+    || extracted !== 'console.log("ok");'
+    || generatedFiles[0].relativePath !== 'src/index.js'
+    || editPayload.summary !== 'Updated UI'
+    || !checklistPrompt.includes('Required JSON schema:')
+    || checklist.length !== 2
+    || checklist[0] !== 'Inspect files'
+  ) {
+    fail('creator prompts module did not preserve prompt/normalization behavior');
+  }
+
+  pass('creator prompts module');
+}
+
+function checkCreatorScaffoldModule() {
+  const {
+    slugify,
+    getScaffoldFilesForTask,
+    prepareGeneratedProposalFiles
+  } = require(path.join(projectRoot, 'app/server/src/lib/creator-scaffold'));
+  const fixtureRoot = path.join(projectRoot, 'workspaces');
+  fs.mkdirSync(fixtureRoot, { recursive: true });
+  const workspacePath = fs.mkdtempSync(path.join(fixtureRoot, 'creator-scaffold-fixture-'));
+  const workspace = { path: workspacePath };
+
+  try {
+    fs.mkdirSync(path.join(workspacePath, 'src'));
+    fs.writeFileSync(path.join(workspacePath, 'src/index.js'), 'old content\n');
+
+    const generalFiles = getScaffoldFilesForTask({
+      title: 'My Local Tool!',
+      category: 'general',
+      request: 'Build it locally.'
+    });
+    const tradingFiles = getScaffoldFilesForTask({
+      title: 'Trade Research',
+      category: 'trading',
+      request: 'Research only.'
+    });
+    const proposalFiles = prepareGeneratedProposalFiles(workspace, [
+      { relativePath: 'src/index.js', content: 'new content\n' },
+      { relativePath: 'README.md', content: '# New\n' }
+    ]);
+
+    try {
+      prepareGeneratedProposalFiles(workspace, [
+        { relativePath: 'README.md', content: 'one' },
+        { relativePath: './README.md', content: 'two' }
+      ]);
+      fail('creator scaffold module allowed duplicate proposal paths');
+    } catch (error) {
+      if (!/Duplicate generated file path/.test(error.message)) {
+        throw error;
+      }
+    }
+
+    try {
+      prepareGeneratedProposalFiles(workspace, [
+        { relativePath: '../outside.md', content: 'unsafe' }
+      ]);
+      fail('creator scaffold module allowed unsafe proposal path');
+    } catch (error) {
+      if (!/approved workspace/.test(error.message)) {
+        throw error;
+      }
+    }
+
+    if (
+      slugify(' My Local Tool! ') !== 'my-local-tool'
+      || !generalFiles.some(file => file.relativePath === 'package.json' && file.content.includes('"name": "my-local-tool"'))
+      || !tradingFiles.some(file => file.relativePath === 'src/backtest.js')
+      || proposalFiles[0].safePath !== 'src/index.js'
+      || proposalFiles[0].currentContent !== 'old content\n'
+      || proposalFiles[1].currentContent !== null
+      || proposalFiles[1].proposedContent !== '# New\n'
+    ) {
+      fail('creator scaffold module did not preserve scaffold/proposal preparation behavior');
+    }
+  } finally {
+    fs.rmSync(workspacePath, { recursive: true, force: true });
+  }
+
+  pass('creator scaffold module');
+}
+
+function checkArtifactRowsModule() {
+  const {
+    ARTIFACT_TYPES,
+    normalizeArtifactType,
+    createArtifactRow,
+    filterArtifactRows
+  } = require(path.join(projectRoot, 'app/server/src/lib/artifact-rows'));
+  const taskRow = createArtifactRow('task', {
+    id: 61,
+    title: 'Build local tool',
+    category: 'app',
+    status: 'planned',
+    created_at: '2026-05-14T00:00:00.000Z'
+  });
+  const liveReviewRow = createArtifactRow('bot live enablement review', {
+    id: 62,
+    plan_id: 63,
+    plan_name: 'Paper bot',
+    status: 'blocked',
+    created_at: '2026-05-14T00:00:00.000Z'
+  });
+  const marketImportRow = createArtifactRow('market import', {
+    id: 64,
+    label: 'BTC hourly',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    summary: { candleCount: 100, qualityScore: 95 },
+    candle_count: 100,
+    quality_score: 95,
+    created_at: '2026-05-14T00:00:00.000Z'
+  });
+  const filtered = filterArtifactRows([
+    taskRow,
+    liveReviewRow,
+    marketImportRow
+  ], 'paper bot');
+
+  if (
+    !ARTIFACT_TYPES.has('bot live enablement review')
+    || normalizeArtifactType(' BOT LIVE ENABLEMENT REVIEW ') !== 'bot live enablement review'
+    || normalizeArtifactType('not-real') !== 'all'
+    || taskRow.href !== '/creator#artifact=task:61'
+    || !taskRow.detail.includes('planned')
+    || liveReviewRow.href !== '/strategy-lab#artifact=bot-live-enablement-review:62'
+    || !liveReviewRow.detail.includes('live disabled')
+    || marketImportRow.href !== '/strategy-lab#artifact=market-import:64'
+    || !marketImportRow.detail.includes('quality 95')
+    || filtered.length !== 1
+    || filtered[0].id !== 62
+  ) {
+    fail('artifact rows module did not preserve artifact type/row/filter behavior');
+  }
+
+  pass('artifact rows module');
+}
+
+function checkSocialOpsModule() {
+  const {
+    parseSocialPost,
+    reviewSocialContent
+  } = require(path.join(projectRoot, 'app/server/src/lib/social-ops'));
+  const parsed = parseSocialPost({
+    id: 3,
+    platform: 'x',
+    account_label: 'EtherealAI',
+    content: 'Local-only build update.',
+    status: 'draft',
+    scheduled_for: null,
+    metadata_json: '{"review":{"status":"clean"}}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  });
+  const cleanReview = reviewSocialContent('Local research build update with no performance claim.');
+  const flaggedReview = reviewSocialContent('Guaranteed 100x profits, buy now. Not financial advice.');
+
+  if (parsed.metadata?.review?.status !== 'clean' || parsed.platform !== 'x') {
+    fail('social ops module did not parse social post metadata');
+  }
+
+  if (cleanReview.status !== 'clean' || cleanReview.flags.length !== 0) {
+    fail('social ops module flagged clean social content');
+  }
+
+  if (
+    flaggedReview.status !== 'review'
+    || !flaggedReview.flags.some(flag => flag.id === 'investment_advice')
+    || !flaggedReview.flags.some(flag => flag.id === 'performance_claim')
+  ) {
+    fail('social ops module did not flag risky social content');
+  }
+
+  pass('social ops module');
+}
+
+function checkRiskSafetyModule() {
+  const {
+    RISK_PROFILE_AUDIT_FIELDS,
+    getPositiveNumber,
+    parseRiskProfile,
+    parseRiskProfileAuditEvent,
+    parseOrderIntent,
+    getRiskProfileChangedFields,
+    evaluateOrderIntentRisk
+  } = require(path.join(projectRoot, 'app/server/src/lib/risk-safety'));
+  const parsedProfile = parseRiskProfile({
+    id: 2,
+    name: 'Parser Fixture',
+    mode: 'paper',
+    max_order_value: 100,
+    max_position_value: 250,
+    max_daily_loss: 40,
+    max_open_trades: 3,
+    kill_switch_enabled: 1,
+    status: 'active',
+    notes: 'fixture',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  });
+  const parsedAuditEvent = parseRiskProfileAuditEvent({
+    id: 8,
+    risk_profile_id: 2,
+    user_id: 1,
+    event_type: 'updated',
+    summary: 'Fixture update',
+    before_json: '{"max_daily_loss":40}',
+    after_json: '{"max_daily_loss":20}',
+    metadata_json: '{"changedFields":["max_daily_loss"]}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    risk_profile_name: 'Parser Fixture'
+  });
+  const parsedIntent = parseOrderIntent({
+    id: 10,
+    connector_id: 3,
+    risk_profile_id: 2,
+    strategy_id: 4,
+    paper_session_id: 5,
+    market_symbol: 'BTC-USD',
+    side: 'buy',
+    order_type: 'limit',
+    quantity: 1.5,
+    limit_price: 65000,
+    status: 'draft',
+    reason: 'fixture',
+    payload_json: '{"mode":"draft_intent_v1"}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z',
+    connector_label: 'Paper',
+    exchange_name: 'binance',
+    risk_profile_name: 'Parser Fixture',
+    strategy_name: 'Breakout'
+  });
+  const beforeProfile = {
+    name: 'Conservative',
+    mode: 'paper',
+    status: 'active',
+    max_order_value: 100,
+    max_position_value: 300,
+    max_daily_loss: 50,
+    max_open_trades: 2,
+    kill_switch_enabled: false,
+    notes: ''
+  };
+  const afterProfile = {
+    ...beforeProfile,
+    max_daily_loss: 25,
+    kill_switch_enabled: true
+  };
+  const riskReview = evaluateOrderIntentRisk({
+    id: 4,
+    name: 'Conservative',
+    mode: 'paper',
+    status: 'active',
+    max_order_value: 100,
+    max_position_value: 300,
+    max_daily_loss: 50,
+    max_open_trades: 2,
+    kill_switch_enabled: false
+  }, {
+    quantity: 2,
+    limitPrice: 40,
+    currentOpenTrades: 1,
+    currentDailyLoss: 10
+  });
+  const blockedReview = evaluateOrderIntentRisk({
+    id: 5,
+    name: 'Emergency Stop',
+    mode: 'paper',
+    status: 'active',
+    max_order_value: 100,
+    max_position_value: 300,
+    max_daily_loss: 50,
+    max_open_trades: 2,
+    kill_switch_enabled: true
+  }, {
+    quantity: 5,
+    limitPrice: 40,
+    currentOpenTrades: 2,
+    currentDailyLoss: 75
+  });
+
+  if (
+    parsedProfile.kill_switch_enabled !== true
+    || parsedAuditEvent.metadata?.changedFields?.[0] !== 'max_daily_loss'
+    || parsedIntent.payload?.mode !== 'draft_intent_v1'
+  ) {
+    fail('risk safety module did not parse risk/order rows');
+  }
+
+  if (
+    getPositiveNumber('12.5', 0) !== 12.5
+    || getPositiveNumber('-1', 7) !== 7
+    || getPositiveNumber('bad', 9) !== 9
+  ) {
+    fail('risk safety module did not normalize positive numbers');
+  }
+
+  if (
+    !RISK_PROFILE_AUDIT_FIELDS.includes('kill_switch_enabled')
+    || getRiskProfileChangedFields(beforeProfile, afterProfile).join(',') !== 'max_daily_loss,kill_switch_enabled'
+  ) {
+    fail('risk safety module did not compute risk profile changed fields');
+  }
+
+  if (
+    riskReview.status !== 'pass'
+    || riskReview.estimatedNotionalValue !== 80
+    || riskReview.failures.length !== 0
+  ) {
+    fail('risk safety module did not pass a valid draft order risk review');
+  }
+
+  if (
+    blockedReview.status !== 'review'
+    || !blockedReview.failures.includes('kill_switch')
+    || !blockedReview.failures.includes('max_order_value')
+    || !blockedReview.failures.includes('max_daily_loss')
+    || !blockedReview.failures.includes('max_open_trades')
+  ) {
+    fail('risk safety module did not flag draft order risk failures');
+  }
+
+  pass('risk safety module');
+}
+
+async function checkRiskProfileActionsModule() {
+  const {
+    createRiskProfileActionsRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/risk-profile-actions'));
+  const {
+    parseBotAutomationPlan
+  } = require(path.join(projectRoot, 'app/server/src/lib/bot-automation'));
+  const dbRuns = [];
+  const dbAllCalls = [];
+  const readinessContexts = [];
+  const readiness = {
+    status: 'ready_for_paper',
+    liveExecution: {
+      enabled: false
+    },
+    blockingFailures: []
+  };
+  const planRow = {
+    id: 301,
+    strategy_id: 21,
+    paper_session_id: 31,
+    risk_profile_id: 77,
+    connector_id: 41,
+    name: 'Risk-linked Paper Bot',
+    mode: 'paper',
+    status: 'needs_review',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    readiness_json: '{}',
+    notes: 'fixture',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z',
+    strategy_name: 'Breakout',
+    paper_session_name: 'Replay',
+    risk_profile_name: 'Conservative',
+    connector_label: 'Paper',
+    exchange_name: 'binance',
+    connector_mode: 'paper',
+    connector_status: 'configured'
+  };
+  const runtime = createRiskProfileActionsRuntime({
+    async dbAll(query, params) {
+      dbAllCalls.push({ query, params });
+      return [planRow];
+    },
+    async dbRun(query, params) {
+      dbRuns.push({ query, params });
+      return { changes: 1 };
+    },
+    parseBotAutomationPlan,
+    async loadBotAutomationReadinessContext(strategyId, riskProfileId, paperSessionId, connectorId) {
+      readinessContexts.push({ strategyId, riskProfileId, paperSessionId, connectorId });
+      return {
+        strategy: { id: strategyId, market_symbol: 'BTC-USD', timeframe: '1h' },
+        riskProfile: { id: riskProfileId, status: 'active', mode: 'paper' },
+        paperSession: { id: paperSessionId, strategy_id: strategyId },
+        connector: { id: connectorId, mode: 'paper', status: 'configured' }
+      };
+    },
+    evaluateBotAutomationReadiness(context) {
+      if (context.mode !== 'paper' || context.strategy.id !== 21 || context.riskProfile.id !== 77) {
+        fail('risk profile actions module passed the wrong readiness context');
+      }
+
+      return readiness;
+    },
+    async getBotAutomationPlanRow(id) {
+      return {
+        ...planRow,
+        id,
+        status: readiness.status,
+        readiness_json: JSON.stringify(readiness)
+      };
+    },
+    botAutomationPlanSelect: 'SELECT bot_automation_plans.* FROM bot_automation_plans'
+  });
+
+  await runtime.saveRiskProfileAuditEvent({
+    riskProfileId: 77,
+    userId: 9,
+    eventType: 'updated',
+    summary: 'Fixture risk profile update',
+    beforeProfile: { max_daily_loss: 50 },
+    afterProfile: { max_daily_loss: 25 },
+    metadata: { changedFields: ['max_daily_loss'] }
+  });
+  const updatedPlans = await runtime.refreshBotPlansForRiskProfile(77);
+  const auditInsert = dbRuns.find(run => run.query.includes('INSERT INTO risk_profile_audit_events'));
+  const planUpdate = dbRuns.find(run => run.query.includes('UPDATE bot_automation_plans'));
+
+  if (
+    !auditInsert
+    || auditInsert.params[0] !== 77
+    || auditInsert.params[1] !== 9
+    || auditInsert.params[2] !== 'updated'
+    || JSON.parse(auditInsert.params[4]).max_daily_loss !== 50
+    || JSON.parse(auditInsert.params[5]).max_daily_loss !== 25
+    || JSON.parse(auditInsert.params[6]).changedFields[0] !== 'max_daily_loss'
+  ) {
+    fail('risk profile actions module did not persist audit event JSON');
+  }
+
+  if (
+    dbAllCalls.length !== 1
+    || !dbAllCalls[0].query.includes('bot_automation_plans.risk_profile_id = ?')
+    || !dbAllCalls[0].query.includes("bot_automation_plans.status != 'archived'")
+    || dbAllCalls[0].params[0] !== 77
+    || readinessContexts[0].strategyId !== 21
+    || readinessContexts[0].riskProfileId !== 77
+    || readinessContexts[0].paperSessionId !== 31
+    || readinessContexts[0].connectorId !== 41
+    || !planUpdate
+    || planUpdate.params[0] !== 'ready_for_paper'
+    || JSON.parse(planUpdate.params[1]).liveExecution.enabled !== false
+    || planUpdate.params[2] !== 301
+    || updatedPlans.length !== 1
+    || updatedPlans[0].status !== 'ready_for_paper'
+    || updatedPlans[0].readiness.liveExecution.enabled !== false
+  ) {
+    fail('risk profile actions module did not refresh linked bot plan readiness');
+  }
+
+  pass('risk profile actions module');
+}
+
+function checkSolidityLabModule() {
+  const {
+    parseSolidityContractSpec,
+    buildSolidityStarter,
+    reviewSoliditySource
+  } = require(path.join(projectRoot, 'app/server/src/lib/solidity-lab'));
+  const {
+    buildTokenEcosystemCatalog,
+    buildTokenEcosystemBlueprint,
+    buildMultiChainTokenBuildPlan
+  } = require(path.join(projectRoot, 'app/server/src/lib/token-ecosystem'));
+  const spec = parseSolidityContractSpec({
+    id: 9,
+    name: 'Local Token',
+    contract_type: 'erc20',
+    network: 'local',
+    solidity_version: '0.8.24',
+    features: 'mint initial supply',
+    risk_notes: 'Draft only.',
+    status: 'draft',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  });
+  const source = buildSolidityStarter(spec);
+  const review = reviewSoliditySource(spec, source);
+  const catalog = buildTokenEcosystemCatalog();
+  const blueprint = buildTokenEcosystemBlueprint({
+    ...spec,
+    network: 'solana',
+    features: 'passive income NFT upgrade cross-chain arbitrage Discord Telegram YouTube Medium website whitepaper node economics',
+    risk_notes: 'Draft only. No live deploy.'
+  });
+  const polygonBuildPlan = buildMultiChainTokenBuildPlan({
+    ...spec,
+    network: 'polygon'
+  });
+
+  if (spec.contract_type !== 'erc20' || spec.name !== 'Local Token') {
+    fail('solidity lab module did not parse contract spec rows');
+  }
+
+  if (!source.includes('contract LocalToken is ERC20, Ownable') || !source.includes('Draft only')) {
+    fail('solidity lab module did not generate expected ERC20 starter source');
+  }
+
+  if (
+    review.status !== 'pass'
+    || !review.checks.some(check => check.id === 'erc20_import' && check.passed === true)
+    || !/Compile, test, static analysis, and audit/.test(review.note)
+  ) {
+    fail('solidity lab module did not preserve template review behavior');
+  }
+
+  if (
+    catalog.chains?.length < 10
+    || !catalog.recommendedLowFeeChains?.some(chain => chain.id === 'base')
+    || !catalog.recommendedLowFeeChains?.some(chain => chain.id === 'polygon')
+    || !catalog.recommendedLowFeeChains?.some(chain => chain.id === 'bnb-chain')
+    || !catalog.recommendedLowFeeChains?.some(chain => chain.id === 'avalanche')
+    || !catalog.recommendedLowFeeChains?.some(chain => chain.id === 'solana')
+    || !catalog.socialChannels?.some(channel => channel.id === 'discord')
+    || !catalog.socialChannels?.some(channel => channel.id === 'medium')
+    || !catalog.listingSources?.some(sourceItem => sourceItem.platform === 'CoinMarketCap')
+    || !catalog.listingSources?.some(sourceItem => sourceItem.platform === 'CoinGecko')
+    || blueprint.status !== 'local_blueprint_only'
+    || blueprint.safetyBoundary?.deploymentEnabled !== false
+    || blueprint.safetyBoundary?.externalPostingEnabled !== false
+    || blueprint.safetyBoundary?.liveTradingEnabled !== false
+    || blueprint.multiChainTokenBuild?.selectedChain?.id !== 'solana'
+    || blueprint.multiChainTokenBuild?.standardPlan?.implementationLane !== 'solana_spl'
+    || !blueprint.multiChainTokenBuild?.blockedActions?.includes('no wallet/private-key collection')
+    || polygonBuildPlan.selectedChain?.id !== 'polygon'
+    || polygonBuildPlan.standardPlan?.implementationLane !== 'evm_solidity'
+    || !/OpenZeppelin/.test(polygonBuildPlan.standardPlan?.starterScaffold || '')
+    || blueprint.featureFlags?.passiveIncome !== true
+    || blueprint.featureFlags?.nftUtility !== true
+    || blueprint.featureFlags?.crossChain !== true
+    || blueprint.featureFlags?.nodeEconomics !== true
+    || !blueprint.website?.pages?.some(page => page.id === 'dapp')
+    || !blueprint.whitepaper?.draft?.tokenMechanics?.length
+    || !blueprint.logo?.prompts?.length
+    || !blueprint.listingReadiness?.checklist?.some(item => item.id === 'no_spam_no_bribes')
+    || !blueprint.crossChainArbitrage?.requiredSafetyGates?.includes('no wallet private keys in EtherealAI')
+  ) {
+    fail('token ecosystem blueprint did not preserve local-only token/social/listing/node/arbitrage planning behavior');
+  }
+
+  pass('solidity lab module');
+}
+
+function checkBotAutomationModule() {
+  const {
+    getPaperRiskGateStatus,
+    evaluateBotAutomationReadiness,
+    evaluateBotLiveReadiness,
+    parseOwnerGoLiveCommand,
+    createBotLiveEnablementReviewPayload,
+    buildBotAutomationCapabilityPath,
+    parseBotAutomationPlan,
+    parseBotAutomationRun,
+    parseBotLiveReadinessEvent,
+    parseBotLiveEnablementReview,
+    parseBotAutomationSchedule
+  } = require(path.join(projectRoot, 'app/server/src/lib/bot-automation'));
+  const plan = parseBotAutomationPlan({
+    id: 1,
+    strategy_id: 2,
+    paper_session_id: 3,
+    risk_profile_id: 4,
+    connector_id: 5,
+    name: 'Paper Bot',
+    mode: 'paper',
+    status: 'ready_for_paper',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    readiness_json: '{"status":"ready_for_paper","liveExecution":{"enabled":false}}',
+    notes: 'fixture',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z',
+    strategy_name: 'Breakout',
+    paper_session_name: 'Replay',
+    risk_profile_name: 'Conservative',
+    connector_label: 'Paper',
+    exchange_name: 'binance',
+    connector_mode: 'paper',
+    connector_status: 'configured'
+  });
+  const run = parseBotAutomationRun({
+    id: 6,
+    plan_id: 1,
+    strategy_id: 2,
+    market_data_import_id: 7,
+    mode: 'paper',
+    status: 'completed',
+    decision: 'hold',
+    result_json: '{"decision":"hold"}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    plan_name: 'Paper Bot',
+    strategy_name: 'Breakout',
+    market_import_label: 'BTC import'
+  });
+  const readinessEvent = parseBotLiveReadinessEvent({
+    id: 8,
+    plan_id: 1,
+    user_id: 1,
+    status: 'blocked',
+    readiness_json: '{"liveExecution":{"enabled":false}}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    plan_name: 'Paper Bot',
+    strategy_id: 2,
+    strategy_name: 'Breakout',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h'
+  });
+  const review = parseBotLiveEnablementReview({
+    id: 9,
+    plan_id: 1,
+    user_id: 1,
+    status: 'blocked',
+    review_json: '{"liveExecution":{"goLiveAllowed":false}}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z',
+    plan_name: 'Paper Bot',
+    strategy_id: 2,
+    strategy_name: 'Breakout',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h'
+  });
+  const schedule = parseBotAutomationSchedule({
+    id: 10,
+    plan_id: 1,
+    interval_minutes: 15,
+    status: 'active',
+    settings_json: '{"positionOpen":false}',
+    last_run_id: 6,
+    last_run_at: '2026-05-14T00:00:00.000Z',
+    next_run_at: '2026-05-14T00:15:00.000Z',
+    last_error: null,
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z',
+    plan_name: 'Paper Bot',
+    strategy_id: 2,
+    strategy_name: 'Breakout',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h'
+  });
+  const strategy = { id: 2, market_symbol: 'BTC-USD', timeframe: '1h' };
+  const riskProfile = {
+    id: 4,
+    status: 'active',
+    mode: 'live_disabled',
+    max_order_value: 100,
+    max_position_value: 500,
+    max_daily_loss: 50,
+    max_open_trades: 2,
+    kill_switch_enabled: false
+  };
+  const paperSession = {
+    id: 3,
+    strategy_id: 2,
+    result: {
+      riskGate: {
+        status: 'passed'
+      }
+    }
+  };
+  const connector = {
+    id: 5,
+    label: 'Paper Connector',
+    exchange_name: 'binance',
+    mode: 'live_disabled',
+    status: 'configured',
+    settings: {
+      sandbox: true
+    },
+    secret_storage_note: 'metadata only',
+    secret_reference_id: 11,
+    secret_reference_status: 'configured',
+    secret_reference_provider_type: 'macos_keychain',
+    secret_reference_scope: 'exchange_connector'
+  };
+  const paperReadiness = evaluateBotAutomationReadiness({
+    strategy,
+    riskProfile,
+    paperSession,
+    mode: 'paper'
+  });
+  const liveReadiness = evaluateBotLiveReadiness({
+    plan,
+    strategy,
+    riskProfile,
+    paperSession,
+    connector
+  });
+  const ownerCommand = parseOwnerGoLiveCommand('The final bot is ready to go live and execute automatically.');
+  const blockedReviewPayload = createBotLiveEnablementReviewPayload({
+    plan,
+    readiness: liveReadiness
+  });
+  const capabilityPath = buildBotAutomationCapabilityPath({
+    plans: [plan],
+    runs: [run],
+    schedules: [schedule]
+  });
+
+  if (
+    plan.readiness?.liveExecution?.enabled !== false
+    || run.result?.decision !== 'hold'
+    || readinessEvent.readiness?.liveExecution?.enabled !== false
+    || review.review?.liveExecution?.goLiveAllowed !== false
+    || schedule.settings?.positionOpen !== false
+  ) {
+    fail('bot automation module did not parse bot JSON payloads');
+  }
+
+  if (
+    getPaperRiskGateStatus(paperSession) !== 'passed'
+    || paperReadiness.status !== 'ready_for_paper'
+    || paperReadiness.liveExecution.enabled !== false
+    || liveReadiness.status !== 'blocked'
+    || liveReadiness.liveExecution.enabled !== false
+    || !liveReadiness.blockingFailures.includes('owner_go_live_confirmation')
+    || !ownerCommand.recognized
+    || ownerCommand.acceptedForExecution !== false
+    || ownerCommand.liveExecution.goLiveAllowed !== false
+    || blockedReviewPayload.liveExecution.goLiveAllowed !== false
+    || !blockedReviewPayload.blockingFailures.includes('credential_validation_not_implemented')
+    || capabilityPath.status !== 'paper_automation_active'
+    || capabilityPath.paperAutomation.canRunAutomatically !== true
+    || capabilityPath.paperAutomation.counts.readyPaperPlans !== 1
+    || capabilityPath.paperAutomation.latestRun.id !== 6
+    || capabilityPath.futureLiveAutomation.enabled !== false
+    || capabilityPath.futureLiveAutomation.goLiveAllowed !== false
+    || !capabilityPath.futureLiveAutomation.blockedGates.includes('live_order_endpoint_enabled')
+  ) {
+    fail('bot automation module did not preserve readiness/go-live safety behavior');
+  }
+
+  pass('bot automation module');
+}
+
+async function checkBotAutomationActionsRuntimeModule() {
+  const {
+    createBotAutomationActionsRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/bot-automation-actions'));
+  const {
+    parseStrategy,
+    parsePaperSession
+  } = require(path.join(projectRoot, 'app/server/src/lib/strategy-research'));
+  const {
+    parseRiskProfile
+  } = require(path.join(projectRoot, 'app/server/src/lib/risk-safety'));
+  const {
+    parseExchangeConnector
+  } = require(path.join(projectRoot, 'app/server/src/lib/exchange-metadata'));
+  const {
+    evaluateBotAutomationReadiness,
+    parseBotAutomationPlan,
+    parseBotAutomationRun
+  } = require(path.join(projectRoot, 'app/server/src/lib/bot-automation'));
+  const dbRuns = [];
+  const dbAllCalls = [];
+  const payloadCalls = [];
+  const strategyRow = {
+    id: 21,
+    name: 'Breakout',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    entry_rules: 'close > open',
+    exit_rules: 'close < open',
+    stop_loss: 2,
+    take_profit: 4,
+    risk_notes: 'fixture',
+    status: 'research',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  };
+  const riskProfileRow = {
+    id: 31,
+    name: 'Paper Risk',
+    mode: 'paper',
+    max_order_value: 100,
+    max_position_value: 500,
+    max_daily_loss: 50,
+    max_open_trades: 2,
+    kill_switch_enabled: 0,
+    status: 'active',
+    notes: 'fixture',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  };
+  const paperSessionRow = {
+    id: 41,
+    strategy_id: 21,
+    market_data_import_id: 71,
+    name: 'Replay',
+    mode: 'paper',
+    status: 'completed',
+    initial_capital: 10000,
+    current_equity: 10100,
+    result_json: '{"riskGate":{"status":"passed"}}',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z',
+    strategy_name: 'Breakout',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h'
+  };
+  const connectorRow = {
+    id: 51,
+    secret_reference_id: null,
+    exchange_name: 'binance',
+    label: 'Paper Connector',
+    mode: 'paper',
+    status: 'configured',
+    settings_json: '{"sandbox":true}',
+    secret_storage_note: 'metadata only',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  };
+  const planRow = {
+    id: 61,
+    strategy_id: 21,
+    paper_session_id: 41,
+    risk_profile_id: 31,
+    connector_id: 51,
+    name: 'Paper Bot',
+    mode: 'paper',
+    status: 'ready_for_paper',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    readiness_json: '{"status":"ready_for_paper"}',
+    notes: 'fixture',
+    created_at: '2026-05-14T00:00:00.000Z',
+    updated_at: '2026-05-14T00:00:00.000Z'
+  };
+  const marketImportRow = {
+    id: 71,
+    label: 'BTC import',
+    market_symbol: 'BTC-USD',
+    timeframe: '1h',
+    source: 'fixture',
+    candle_count: 2,
+    status: 'imported',
+    quality_score: 100,
+    notes: 'fixture',
+    summary_json: '{}',
+    created_at: '2026-05-14T00:00:00.000Z'
+  };
+  const candles = [
+    { timestamp: '2026-05-14T00:00:00.000Z', open: 100, high: 105, low: 99, close: 104, volume: 1000 },
+    { timestamp: '2026-05-14T01:00:00.000Z', open: 104, high: 110, low: 103, close: 109, volume: 1300 }
+  ];
+  const runtime = createBotAutomationActionsRuntime({
+    async dbGet(query, params = []) {
+      if (query.includes('paper_trading_sessions')) {
+        return paperSessionRow;
+      }
+
+      if (query.includes('trading_strategies')) {
+        return strategyRow;
+      }
+
+      if (query.includes('risk_profiles')) {
+        return riskProfileRow;
+      }
+
+      if (query.includes('market_data_imports')) {
+        return marketImportRow;
+      }
+
+      return null;
+    },
+    async dbAll(query, params = []) {
+      dbAllCalls.push({ query, params });
+      return candles;
+    },
+    async dbRun(query, params = []) {
+      dbRuns.push({ query, params });
+
+      if (query.includes('INSERT INTO bot_automation_runs')) {
+        return { lastID: 81 };
+      }
+
+      return { changes: 1 };
+    },
+    parseStrategy,
+    parseRiskProfile,
+    parsePaperSession,
+    parseExchangeConnector,
+    parseBotAutomationPlan,
+    parseBotAutomationRun,
+    async getExchangeConnectorRow(id) {
+      return { ...connectorRow, id };
+    },
+    async getBotAutomationPlanRow(id) {
+      return { ...planRow, id };
+    },
+    async getBotAutomationRunRow(id) {
+      return {
+        id,
+        plan_id: 61,
+        strategy_id: 21,
+        market_data_import_id: 71,
+        mode: 'paper',
+        status: 'completed',
+        decision: 'hold',
+        result_json: '{"decision":{"action":"hold"}}',
+        created_at: '2026-05-14T00:00:00.000Z',
+        plan_name: 'Paper Bot',
+        strategy_name: 'Breakout',
+        market_import_label: 'BTC import'
+      };
+    },
+    evaluateBotAutomationReadiness,
+    createPaperBotAutomationRunPayload(plan, strategy, riskProfile, marketImport, candleRows, readiness, settings) {
+      payloadCalls.push({ plan, strategy, riskProfile, marketImport, candleRows, readiness, settings });
+      return {
+        decision: {
+          action: 'hold'
+        },
+        readiness,
+        settings
+      };
+    },
+    createRequestError(message, statusCode = 400, details = {}) {
+      const error = new Error(message);
+      error.statusCode = statusCode;
+      Object.assign(error, details);
+      return error;
+    }
+  });
+  const context = await runtime.loadBotAutomationReadinessContext(21, 31, 41, 51);
+  const run = await runtime.createBotAutomationPaperRun(61, {
+    marketDataImportId: 71,
+    positionOpen: true
+  });
+  const insertRun = dbRuns.find(item => item.query.includes('INSERT INTO bot_automation_runs'));
+
+  if (
+    context.strategy.id !== 21
+    || context.riskProfile.id !== 31
+    || context.paperSession.result.riskGate.status !== 'passed'
+    || context.connector.settings.sandbox !== true
+    || dbAllCalls.length !== 1
+    || dbAllCalls[0].params[0] !== 71
+    || payloadCalls.length !== 1
+    || payloadCalls[0].settings.positionOpen !== true
+    || payloadCalls[0].candleRows.length !== 2
+    || payloadCalls[0].readiness.status !== 'ready_for_paper'
+    || !insertRun
+    || insertRun.params[0] !== 61
+    || insertRun.params[1] !== 21
+    || insertRun.params[2] !== 71
+    || insertRun.params[3] !== 'paper'
+    || insertRun.params[4] !== 'completed'
+    || insertRun.params[5] !== 'hold'
+    || JSON.parse(insertRun.params[6]).settings.positionOpen !== true
+    || run.id !== 81
+    || run.result.decision.action !== 'hold'
+  ) {
+    fail('bot automation actions runtime did not preserve paper run behavior');
+  }
+
+  pass('bot automation actions runtime module');
+}
+
+async function checkBotAutomationScheduleRuntimeModule() {
+  const {
+    getNextBotAutomationRunAt,
+    createBotAutomationScheduleRuntime
+  } = require(path.join(projectRoot, 'app/server/src/lib/bot-automation-schedules'));
+  const {
+    parseBotAutomationSchedule
+  } = require(path.join(projectRoot, 'app/server/src/lib/bot-automation'));
+  const scheduleRows = new Map([
+    [10, {
+      id: 10,
+      plan_id: 1,
+      interval_minutes: 15,
+      status: 'active',
+      settings_json: '{"positionOpen":false}',
+      created_at: '2026-05-14T00:00:00.000Z',
+      updated_at: '2026-05-14T00:00:00.000Z'
+    }],
+    [11, {
+      id: 11,
+      plan_id: 2,
+      interval_minutes: 30,
+      status: 'paused',
+      settings_json: '{}',
+      created_at: '2026-05-14T00:00:00.000Z',
+      updated_at: '2026-05-14T00:00:00.000Z'
+    }],
+    [12, {
+      id: 12,
+      plan_id: 3,
+      interval_minutes: 5,
+      status: 'active',
+      settings_json: '{"fail":true}',
+      created_at: '2026-05-14T00:00:00.000Z',
+      updated_at: '2026-05-14T00:00:00.000Z'
+    }]
+  ]);
+  const updates = [];
+  const paperRuns = [];
+  const dbAllQueries = [];
+  const logErrors = [];
+  const timers = [];
+  let unrefCount = 0;
+  let dueRows = [];
+  const runtime = createBotAutomationScheduleRuntime({
+    async dbAll(query) {
+      dbAllQueries.push(query);
+      return dueRows;
+    },
+    async dbRun(query, params) {
+      updates.push({ query, params });
+      return { changes: 1 };
+    },
+    parseBotAutomationSchedule,
+    async getBotAutomationScheduleRow(id) {
+      return scheduleRows.get(Number(id)) || null;
+    },
+    async createBotAutomationPaperRun(planId, settings) {
+      paperRuns.push({ planId, settings });
+
+      if (settings.fail) {
+        throw new Error('paper fixture failure');
+      }
+
+      return { id: 900 + Number(planId) };
+    },
+    createRequestError(message, statusCode = 400) {
+      const error = new Error(message);
+      error.statusCode = statusCode;
+      return error;
+    },
+    botAutomationScheduleSelect: 'SELECT bot_automation_schedules.* FROM bot_automation_schedules',
+    setTimeoutFn(callback, delay) {
+      timers.push({ callback, delay });
+      return {
+        unref() {
+          unrefCount += 1;
+        }
+      };
+    },
+    workerDelayMs: 25,
+    logger: {
+      error(message) {
+        logErrors.push(message);
+      }
+    }
+  });
+  const nextRunAt = getNextBotAutomationRunAt(15, new Date('2026-05-14T00:00:00.000Z'));
+  const success = await runtime.runBotAutomationSchedule(10);
+  let pausedError = '';
+  let failureError = '';
+
+  try {
+    await runtime.runBotAutomationSchedule(11);
+    fail('bot automation schedule runtime allowed an inactive schedule without force');
+  } catch (error) {
+    pausedError = error.message;
+  }
+
+  const forced = await runtime.runBotAutomationSchedule(11, { force: true });
+
+  try {
+    await runtime.runBotAutomationSchedule(12);
+    fail('bot automation schedule runtime swallowed paper run failure');
+  } catch (error) {
+    failureError = error.message;
+  }
+
+  dueRows = [{ id: 10 }, { id: 12 }];
+  await runtime.runDueBotAutomationSchedules();
+  dueRows = [];
+  runtime.scheduleBotAutomationWorker();
+  runtime.scheduleBotAutomationWorker();
+  await timers[0].callback();
+  runtime.scheduleBotAutomationWorker();
+
+  if (
+    nextRunAt !== '2026-05-14T00:15:00.000Z'
+    || success.run.id !== 901
+    || forced.run.id !== 902
+    || !paperRuns.some(run => run.planId === 1 && run.settings.positionOpen === false)
+    || !/Only active/.test(pausedError)
+    || !/paper fixture failure/.test(failureError)
+    || !updates.some(update => update.params[0] === 901 && update.params[2] === 10)
+    || !updates.some(update => update.params[0] === 'paper fixture failure' && update.params[2] === 12)
+    || !dbAllQueries.some(query => query.includes("bot_automation_schedules.status = 'active'"))
+    || !logErrors.some(message => message.includes('Bot automation schedule #12 failed'))
+    || timers.length !== 2
+    || timers[0].delay !== 25
+    || unrefCount !== 2
+  ) {
+    fail('bot automation schedule runtime did not preserve schedule/worker behavior');
+  }
+
+  pass('bot automation schedule runtime module');
+}
+
+function checkInlineScripts(relativePath) {
+  const html = fs.readFileSync(path.join(projectRoot, relativePath), 'utf8');
+  const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => match[1]);
+
+  for (const script of scripts) {
+    new Function(script);
+  }
+
+  pass(`${relativePath} inline scripts (${scripts.length})`);
+}
+
+function checkStrategyLabSafetyDossierExportUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
+
+  if (
+    !html.includes('id="bot-safety-dossier-download"')
+    || !html.includes('Download Dossier JSON')
+    || !html.includes('id="bot-safety-dossier-history-download"')
+    || !html.includes('Download Dossier History CSV')
+    || !html.includes('let latestBotSafetyDossier = null;')
+    || !html.includes('function downloadBotSafetyDossier()')
+    || !html.includes('function downloadBotSafetyDossierHistoryCsv()')
+    || !html.includes('etherealai-bot-safety-dossier-plan-')
+    || !html.includes('etherealai-bot-safety-dossier-history-plan-')
+    || !html.includes("document.getElementById('bot-safety-dossier-download').addEventListener('click', downloadBotSafetyDossier)")
+    || !html.includes("document.getElementById('bot-safety-dossier-history-download').addEventListener('click', downloadBotSafetyDossierHistoryCsv)")
+    || !html.includes('id="bot-automation-summary"')
+    || !html.includes('function renderBotAutomationSummary()')
+    || !html.includes('id="bot-automation-capability-path"')
+    || !html.includes('function renderBotAutomationCapabilityPath(capabilityPath = {})')
+    || !html.includes('function loadBotAutomationCapabilityPath()')
+    || !html.includes("fetch('/api/v1/bot-automation-capability-path')")
+    || !html.includes('Automated Paper Path')
+    || !html.includes('Ready Paper Plans')
+    || !html.includes('Active Paper Schedules')
+    || !html.includes('Future Live Automation')
+    || !html.includes('Live Blocked Gates')
+    || !html.includes('activate a ready paper schedule to automate')
+    || !html.includes('no live order endpoint')
+    || !html.includes('execution blocked')
+    || !html.includes('Latest Run')
+    || !html.includes('<strong>Route Boundary</strong>')
+    || !html.includes('monitor_only_no_live_orders · live route disabled')
+    || !html.includes('<strong>Generated</strong>')
+    || !html.includes('<strong>Execution Note</strong>')
+    || !html.includes('<strong>Status Summary</strong>')
+    || !html.includes('<strong>Owner Action</strong>')
+    || !html.includes('<strong>Live Boundary</strong>')
+    || !html.includes('statusExplanation')
+    || !html.includes('function buildBotSafetyDossierHistoryRows(payload = {})')
+    || !html.includes('<th>Dossier History</th>')
+    || !html.includes('<th>Evidence</th>')
+    || !html.includes('No dossier history yet.')
+    || !html.includes('Live execution disabled: no credential loading, no live order endpoint, and no exchange order placement.')
+    || !html.includes('Monitor-only. No live execution enabled.')
+    || !html.includes('id="bot-plan-filter-form"')
+    || !html.includes('id="bot-plan-filter-mode"')
+    || !html.includes('id="bot-plan-filter-status"')
+    || !html.includes('id="bot-plan-filter-count"')
+    || !html.includes('id="bot-plan-filter-download"')
+    || !html.includes('id="bot-plan-filter-download-csv"')
+    || !html.includes('function filterBotPlans(plans = [])')
+    || !html.includes('function updateBotPlanFilterCount(visibleCount = 0, totalCount = 0)')
+    || !html.includes("document.getElementById('bot-plan-filter-form').addEventListener('submit'")
+    || !html.includes('id="bot-run-filter-form"')
+    || !html.includes('id="bot-run-filter-decision"')
+    || !html.includes('id="bot-run-filter-status"')
+    || !html.includes('id="bot-run-filter-count"')
+    || !html.includes('id="bot-run-filter-download"')
+    || !html.includes('id="bot-run-filter-download-csv"')
+    || !html.includes('function filterBotRuns(runs = [])')
+    || !html.includes('function updateBotRunFilterCount(visibleCount = 0, totalCount = 0)')
+    || !html.includes("document.getElementById('bot-run-filter-form').addEventListener('submit'")
+    || !html.includes('id="bot-schedule-filter-text"')
+    || !html.includes('id="bot-schedule-filter-count"')
+    || !html.includes('id="bot-schedule-filter-download"')
+    || !html.includes('id="bot-schedule-filter-download-csv"')
+    || !html.includes('function filterBotSchedules(schedules = [])')
+    || !html.includes('function updateBotScheduleFilterCount(visibleCount = 0, totalCount = 0)')
+    || !html.includes('function downloadJsonSnapshot(payload, filenamePrefix, emptyMessage)')
+    || !html.includes('function csvValue(value)')
+    || !html.includes('function downloadCsvSnapshot(rows, columns, filenamePrefix, emptyMessage)')
+    || !html.includes('etherealai-filtered-bot-plans')
+    || !html.includes('etherealai-filtered-paper-runs')
+    || !html.includes('etherealai-filtered-paper-schedules')
+    || !html.includes('Download Plans CSV')
+    || !html.includes('Download Runs CSV')
+    || !html.includes('Download Schedules CSV')
+  ) {
+    fail('Strategy Lab safety dossier/export/filter UI is missing expected controls or wiring');
+  }
+
+  pass('Strategy Lab safety dossier export/filter UI');
+}
+
+function checkMvpTestPassOwnerWorkflowUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/mvp-test-pass.html'), 'utf8');
+
+  if (
+    !html.includes('Bot automation review exports')
+    || !html.includes('Owner evidence review')
+    || !html.includes('Bot Automation Smoke')
+    || !html.includes('Owner Evidence Manifest')
+    || !html.includes('Owner Acceptance')
+    || !html.includes('formatOwnerAcceptanceStatus')
+    || !html.includes('Pending Review')
+    || !html.includes('manual owner review remains')
+    || !html.includes('id="bot-workflow-smoke-cards"')
+    || !html.includes('id="bot-workflow-smoke-table"')
+    || !html.includes('id="owner-evidence-cards"')
+    || !html.includes('id="owner-evidence-table"')
+    || !html.includes('id="owner-evidence-download"')
+    || !html.includes('id="owner-evidence-export-status"')
+    || !html.includes('id="owner-evidence-review-checklist"')
+    || !html.includes('Owner Acceptance Record')
+    || !html.includes('Completion Ledger')
+    || !html.includes('id="completion-ledger-cards"')
+    || !html.includes('id="completion-ledger-gates"')
+    || !html.includes('function renderCompletionLedger(ledger = {})')
+    || !html.includes('Why MVP is 99%')
+    || !html.includes('Why Local Paper is 95%')
+    || !html.includes('Why Full Live is 72%')
+    || !html.includes('id="owner-acceptance-record-status"')
+    || !html.includes('id="owner-acceptance-record-cards"')
+    || !html.includes('id="owner-acceptance-record-list"')
+    || !html.includes('latestOwnerAcceptanceRecordState')
+    || !html.includes('function renderOwnerAcceptanceRecordState(state = {})')
+    || !html.includes("fetch('/api/v1/owner-acceptance')")
+    || !html.includes('No local owner acceptance record yet; record it from the proof packet after manual testing.')
+    || !html.includes('No local owner acceptance records yet')
+    || !html.includes('Record Local MVP Acceptance from /owner-proof-packet')
+    || !html.includes('Acceptance Records')
+    || !html.includes('acceptance required for 100%')
+    || !html.includes('Download Evidence Manifest JSON')
+    || !html.includes('Owner Evidence Review Checklist')
+    || !html.includes('Owner Evidence Review Checklist lists local proof rows, checksum marker, and confirms live execution remains blocked.')
+    || !html.includes('function renderBotWorkflowSmoke(workflow = {})')
+    || !html.includes('function renderOwnerEvidenceManifest(manifest = {})')
+    || !html.includes('let latestOwnerEvidenceManifest = null;')
+    || !html.includes('function downloadOwnerEvidenceManifest()')
+    || !html.includes('etherealai-owner-evidence-manifest-')
+    || !html.includes('evidence item(s) ready for local JSON export')
+    || !html.includes('Prepared owner evidence manifest JSON · sha256')
+    || !html.includes("document.getElementById('owner-evidence-download').addEventListener('click', downloadOwnerEvidenceManifest)")
+    || !html.includes('Manifest Status')
+    || !html.includes('Manifest Checksum')
+    || !html.includes('Evidence Items')
+    || !html.includes('No owner evidence manifest loaded.')
+    || !html.includes('Review Item')
+    || !html.includes('Confirm checksum marker')
+    || !html.includes('Confirm live execution remains blocked')
+    || !html.includes('Manifest artifact list has a local integrity marker.')
+    || !html.includes('No live order endpoint or live exchange placement is enabled.')
+    || !html.includes('No owner evidence review checklist loaded.')
+    || !html.includes('Dossier Evidence')
+    || !html.includes('Route Boundary')
+    || !html.includes('routeSafetyProfile')
+    || !html.includes('live route disabled')
+    || !html.includes('JSON and history CSV')
+    || !html.includes('No bot workflow smoke checks loaded.')
+    || !html.includes('Plan, paper-run, schedule, dossier JSON, and dossier history CSV exports use loaded local data')
+    || !html.includes('Dossier view shows monitor-only live execution blocked')
+    || !html.includes('Local MVP acceptance record')
+    || !html.includes('After manual testing, use Record Local MVP Acceptance; it records local evidence only and keeps live execution disabled.')
+    || !html.includes('Bot Review Exports')
+    || !html.includes('reviewExportsEnabled')
+    || !html.includes('dossierHistoryCsvExport')
+    || !html.includes('filters, dossier, history CSV')
+  ) {
+    fail('MVP test pass page is missing bot automation review/export owner-test coverage');
+  }
+
+  pass('MVP test pass bot automation owner workflow UI');
+}
+
+function checkDashboardMvpReadinessUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+
+  if (
+    !html.includes('MVP Readiness')
+    || !html.includes('Completion Ledger')
+    || !html.includes('id="dashboard-mvp-readiness"')
+    || !html.includes('id="dashboard-completion-ledger"')
+    || !html.includes('function renderCompletionLedger(ledger = {})')
+    || !html.includes('Why MVP is 99%')
+    || !html.includes('Why Local Paper is 95%')
+    || !html.includes('Why Full Live is 72%')
+    || !html.includes('id="memory-export-status"')
+    || !html.includes('Export System Memory JSON')
+    || !html.includes('Memory snapshot loading...')
+    || !html.includes('Owner evidence included · owner acceptance ${data.snapshot.ownerAcceptance.status ===')
+    || !html.includes("'recorded' : 'pending'")
+    || !html.includes('etherealai-system-memory-owner-evidence-')
+    || !html.includes('Prepared system memory JSON · ownerEvidence included.')
+    || !html.includes('id="owner-proof-surfaces"')
+    || !html.includes('function renderOwnerProofSurfaces(ownerEvidence = {}, ownerAcceptance = {})')
+    || !html.includes('Owner Proof Surfaces')
+    || !html.includes('local proof surface(s) documented in System Memory')
+    || !html.includes('Owner Acceptance:')
+    || !html.includes('Owner acceptance')
+    || !html.includes('completionReason')
+    || !html.includes('renderOwnerProofSurfaces(data.snapshot?.ownerEvidence || {}, data.snapshot?.ownerAcceptance || {})')
+    || !html.includes('No owner proof surfaces reported in System Memory.')
+    || !html.includes('Owner proof surfaces unavailable.')
+    || !html.includes('ownerEvidenceManifest')
+    || !html.includes('ownerAcceptance')
+    || !html.includes('Owner Acceptance')
+    || !html.includes('formatOwnerAcceptanceStatus')
+    || !html.includes('Pending Review')
+    || !html.includes('manual owner review remains')
+    || !html.includes('Evidence Manifest')
+    || !html.includes('Evidence Checksum')
+    || !html.includes('local proof point(s)')
+    || !html.includes('checksum.value.slice(0, 12)')
+    || !html.includes('routeSafetyProfile')
+    || !html.includes('Route Boundary')
+    || !html.includes('monitor_only_no_live_orders')
+    || !html.includes('live route disabled')
+    || !html.includes('checklistById')
+    || !html.includes('endToEndBlockingItems')
+    || !html.includes('dashboard-live-blockers')
+    || !html.includes('Full Live Blockers')
+    || !html.includes('gate(s) still intentionally blocked')
+    || !html.includes('Review live execution gate before enabling.')
+    || !html.includes('Multi-Agent Coordination')
+    || !html.includes('id="multi-agent-form"')
+    || !html.includes('id="multi-agent-registry"')
+    || !html.includes('id="multi-agent-selector"')
+    || !html.includes('id="multi-agent-runs"')
+    || !html.includes('Hermes Benchmark Lane')
+    || !html.includes('MLX Fast Lane')
+    || !html.includes('/api/v1/multi-agent/registry')
+    || !html.includes('/api/v1/multi-agent/runs')
+    || !html.includes('function renderMultiAgentRegistry(data = {})')
+    || !html.includes('function renderMultiAgentRuns(runs = [])')
+    || !html.includes('loadMultiAgentRegistry()')
+    || !html.includes('loadMultiAgentRuns()')
+    || !html.includes('Company Identity')
+    || !html.includes('id="company-identity-summary"')
+    || !html.includes('id="company-identity-checklist"')
+    || !html.includes('Domain/Email Setup Center')
+    || !html.includes('id="company-dns-target-form"')
+    || !html.includes('id="company-dns-targets"')
+    || !html.includes('function renderCompanyIdentity(data = {})')
+    || !html.includes('function renderCompanyDnsTargets(data = {})')
+    || !html.includes('/api/v1/company-identity')
+    || !html.includes('/api/v1/company-identity/dns-targets')
+    || !html.includes('etherealdigital.ai')
+    || !html.includes('patrick@etherealdigital.ai')
+    || !styles.includes('.owner-proof-surfaces')
+    || !styles.includes('.owner-proof-surface-list')
+    || !styles.includes('.checkbox-grid')
+  ) {
+    fail('dashboard MVP readiness panel is missing owner evidence manifest summary coverage');
+  }
+
+  pass('dashboard MVP readiness owner evidence summary UI');
+}
+
+function checkOwnerProofPacketUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/owner-proof-packet.html'), 'utf8');
+  const route = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/owner-proof-packet.js'), 'utf8');
+  const acceptanceRoute = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/owner-acceptance.js'), 'utf8');
+  const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
+  const systemMemory = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/system-memory.js'), 'utf8');
+  const ownerEvidence = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/owner-evidence.js'), 'utf8');
+  const ownerPacket = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/owner-proof-packet.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+
+  if (
+    !pages.includes("app.get('/owner-proof-packet', requirePageAuth")
+    || !route.includes("app.get('/api/v1/owner-proof-packet', requireAuth")
+    || !acceptanceRoute.includes("app.get('/api/v1/owner-acceptance', requireAuth")
+    || !acceptanceRoute.includes("app.post('/api/v1/owner-acceptance', requireAuth")
+    || !acceptanceRoute.includes('liveExecution')
+    || !acceptanceRoute.includes('goLiveAllowed: false')
+    || !route.includes('buildBotAutomationCapabilityPath')
+    || !systemMemory.includes('buildBotAutomationCapabilityPath')
+    || !route.includes('addOwnerProofPacketChecksum(buildOwnerProofPacket')
+    || !systemMemory.includes('buildOwnerEvidenceSnapshot()')
+    || !systemMemory.includes('buildOwnerAcceptanceSummary')
+    || !ownerEvidence.includes("id: 'owner_proof_packet'")
+    || !ownerEvidence.includes("location: '/owner-proof-packet'")
+    || !ownerPacket.includes("source: 'ownerProofPacket.withoutChecksum'")
+    || !ownerPacket.includes('botAutomationCapabilityPath')
+    || !ownerPacket.includes('completionLedger')
+    || !ownerPacket.includes('buildPaperAutomationRunbook')
+    || !ownerPacket.includes('Review ready paper plans')
+    || !ownerPacket.includes('Activate a ready paper schedule')
+    || !ownerPacket.includes('Export local evidence')
+    || !ownerPacket.includes('Record local MVP acceptance')
+    || !html.includes('Owner Proof Packet')
+    || !html.includes('Download Proof Packet JSON')
+    || !html.includes('Owner Test Gate')
+    || !html.includes('Completion Ledger')
+    || !html.includes('id="owner-completion-ledger-cards"')
+    || !html.includes('id="owner-completion-ledger-gates"')
+    || !html.includes('completionLedger')
+    || !html.includes('Why MVP is 99%')
+    || !html.includes('Why Local Paper is 95%')
+    || !html.includes('Why Full Live is 72%')
+    || !html.includes('Owner Acceptance')
+    || !html.includes('Bot Automation Path')
+    || !html.includes('id="owner-bot-automation-path"')
+    || !html.includes('botAutomationCapabilityPath')
+    || !html.includes('Automated Paper Path')
+    || !html.includes('Ready Paper Plans')
+    || !html.includes('Active Paper Schedules')
+    || !html.includes('Future Live Automation')
+    || !html.includes('Live Blocked Gates')
+    || !html.includes('Paper Automation Runbook')
+    || !html.includes('id="owner-paper-automation-runbook"')
+    || !html.includes('paperAutomationRunbook')
+    || !html.includes('Blocked live action')
+    || !html.includes('Local MVP Blockers')
+    || !html.includes('ownerTestSummary')
+    || !html.includes('ownerAcceptance')
+    || !html.includes('id="owner-proof-packet-status"')
+    || !html.includes('id="owner-proof-status"')
+    || !html.includes('id="owner-proof-surface-list"')
+    || !html.includes('id="owner-acceptance-summary"')
+    || !html.includes('id="owner-acceptance-history"')
+    || !html.includes('id="owner-acceptance-form"')
+    || !html.includes('id="owner-acceptance-test-completed"')
+    || !html.includes('id="owner-acceptance-packet-reviewed"')
+    || !html.includes('id="owner-acceptance-live-disabled"')
+    || !html.includes('id="record-owner-acceptance"')
+    || !html.includes('Record Local MVP Acceptance')
+    || !html.includes('latestAcceptanceRecord')
+    || !html.includes('Local acceptance record #${latestAcceptanceRecord.id}')
+    || !html.includes('latestOwnerAcceptanceState')
+    || !html.includes('function renderOwnerAcceptanceHistory(state)')
+    || !html.includes("fetchJson('/api/v1/owner-acceptance')")
+    || !html.includes('No local owner acceptance records yet.')
+    || !html.includes('refreshOwnerProofPacket')
+    || !html.includes("fetch('/api/v1/owner-acceptance'")
+    || !html.includes('Recorded local MVP acceptance #${data.record.id} · live disabled.')
+    || !html.includes('id="owner-export-surface-list"')
+    || !html.includes('id="owner-live-blocker-list"')
+    || !html.includes('id="owner-route-safety-summary"')
+    || !html.includes('formatOwnerAcceptanceStatus')
+    || !html.includes('Pending Review')
+    || !html.includes("fetchJson('/api/v1/owner-proof-packet')")
+    || !html.includes('Packet Checksum')
+    || !html.includes('fullLiveBlockers')
+    || !html.includes('routeSafety')
+    || !html.includes('etherealai-owner-proof-packet-')
+    || !html.includes('Prepared owner proof packet JSON · sha256 ${checksumPrefix} · live disabled.')
+    || !html.includes('Ready · ${latestOwnerProofPacket.proofSurfaces.length} proof surface(s) · sha256 ${checksumPrefix} · live disabled.')
+    || !html.includes('class="auth-proof-banner"')
+    || !html.includes('proof packet is local JSON only')
+    || !html.includes('no live order endpoint')
+    || !html.includes('ETHEREALAI_VERIFY_SERVER=1')
+    || !styles.includes('.owner-proof-command')
+  ) {
+    fail('owner proof packet page is missing local proof aggregation/export coverage');
+  }
+
+  pass('owner proof packet local evidence export UI');
+}
+
+function checkHomeLocalProofUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/index.html'), 'utf8');
+  const header = fs.readFileSync(path.join(projectRoot, 'components/header.html'), 'utf8');
+  const footer = fs.readFileSync(path.join(projectRoot, 'components/footer.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+  const headerStyles = fs.readFileSync(path.join(projectRoot, 'styles/components/header.css'), 'utf8');
+
+  if (
+    !html.includes('EtherealAI Local Builder')
+    || !html.includes('Owner-test-ready local AI builder')
+    || !html.includes('Open Dashboard')
+    || !html.includes('Open Proof Packet')
+    || !html.includes('Open MVP Test Pass')
+    || !html.includes('Local proof status')
+    || !html.includes('MVP Ready')
+    || !html.includes('99%')
+    || !html.includes('Local Paper Automation')
+    || !html.includes('95%')
+    || !html.includes('Full Live End-to-End')
+    || !html.includes('72%')
+    || !html.includes('4 live gates blocked')
+    || !html.includes('Live Execution')
+    || !html.includes('Disabled')
+    || !html.includes('no live order endpoint')
+    || !html.includes('Owner Evidence Manifest')
+    || !html.includes('Review local proof rows, checksum marker, and live-blocked checklist.')
+    || !html.includes('Owner Proof Packet')
+    || !html.includes('Download one local JSON packet with readiness, proof surfaces, route safety, and blocked live gates.')
+    || !html.includes('monitor-only bot workflows')
+    || !html.includes('safety module boundaries')
+    || !header.includes('MVP 99% · Local E2E 95% · Live disabled')
+    || !header.includes('/owner-proof-packet')
+    || !header.includes('/mvp-test-pass')
+    || !header.includes('/server-route-inventory')
+    || !footer.includes('Local Proof')
+    || !footer.includes('MVP 99%, local paper automation 95%, full live end-to-end 72%, and live execution disabled.')
+    || !footer.includes('Owner proof packet')
+    || !footer.includes('Owner evidence manifest')
+    || !footer.includes('no live order endpoint enabled')
+    || !styles.includes('.home-proof-grid')
+    || !styles.includes('.home-workflow-grid')
+    || !styles.includes('.home-workflow-card')
+    || !styles.includes('.header-proof-strip')
+    || !styles.includes('.footer-content')
+    || !headerStyles.includes('.header-proof-strip')
+  ) {
+    fail('home page is missing local proof status and owner workflow gateway');
+  }
+
+  pass('home local proof status UI');
+}
+
+function checkAuthenticatedProofBanners() {
+  const proofPages = [
+    'app/client/creator.html',
+    'app/client/strategy-lab.html',
+    'app/client/solidity-lab.html',
+    'app/client/social-ops.html',
+    'app/client/server-route-inventory.html'
+  ];
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+
+  for (const page of proofPages) {
+    const html = fs.readFileSync(path.join(projectRoot, page), 'utf8');
+
+    if (
+      !html.includes('class="auth-proof-banner"')
+      || !html.includes('MVP 99% · Local E2E 95%')
+      || !html.includes('Live execution disabled')
+      || !html.includes('/owner-proof-packet')
+      || !html.includes('Proof packet')
+      || !html.includes('/mvp-test-pass')
+      || !html.includes('Owner evidence')
+      || !html.includes('/dashboard')
+    ) {
+      fail(`${page} is missing the authenticated proof/status banner`);
+    }
+  }
+
+  if (
+    !styles.includes('.auth-proof-banner')
+    || !styles.includes('border-left: 4px solid #2563eb')
+    || !styles.includes('.auth-proof-banner a')
+  ) {
+    fail('authenticated proof/status banner styles are missing');
+  }
+
+  pass('authenticated proof/status banners');
+}
+
+function checkRouteInventoryOwnerProofUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/server-route-inventory.html'), 'utf8');
+
+  if (
+    !html.includes('Owner Proof Coverage')
+    || !html.includes('id="owner-proof-coverage"')
+    || !html.includes('function renderProofCoverage(ownerEvidence = {}, ownerAcceptance = {}, ownerAcceptanceRecords = [])')
+    || !html.includes('ownerAcceptance')
+    || !html.includes('Owner Acceptance')
+    || !html.includes('Acceptance Records')
+    || !html.includes('latestOwnerAcceptanceRecord')
+    || !html.includes('latest local record #${latestOwnerAcceptanceRecord.id}')
+    || !html.includes('no local acceptance record yet')
+    || !html.includes('formatOwnerAcceptanceStatus')
+    || !html.includes('Pending Review')
+    || !html.includes('manual owner review remains')
+    || !html.includes('memoryData.snapshot?.recent?.ownerAcceptanceRecords || []')
+    || !html.includes("fetch('/api/v1/system-memory')")
+    || !html.includes('proofSurfaces')
+    || !html.includes('exportSurfaces')
+    || !html.includes('fullLiveBlockers')
+    || !html.includes('routeBoundary')
+    || !html.includes('owner proof packet cross-check')
+    || !html.includes('live execution disabled')
+    || !html.includes('JSON/CSV local evidence')
+  ) {
+    fail('route inventory page is missing owner proof coverage cross-check UI');
+  }
+
+  pass('route inventory owner proof coverage UI');
+}
+
+function checkLocalOnlySurfaceCues() {
+  const social = fs.readFileSync(path.join(projectRoot, 'app/client/social-ops.html'), 'utf8');
+  const solidity = fs.readFileSync(path.join(projectRoot, 'app/client/solidity-lab.html'), 'utf8');
+
+  if (
+    !social.includes('Local-Only Safety')
+    || !social.includes('Public Posting')
+    || !social.includes('drafts stay local')
+    || !social.includes('External Connectors')
+    || !social.includes('no social network API calls')
+    || !social.includes('Owner Review')
+    || !social.includes('save drafts before any future posting phase')
+  ) {
+    fail('Social Ops is missing local-only safety cues');
+  }
+
+  if (
+    !solidity.includes('Deployment Boundary')
+    || !solidity.includes('Deployment')
+    || !solidity.includes('Local Only')
+    || !solidity.includes('no mainnet or testnet broadcast')
+    || !solidity.includes('Wallet Secrets')
+    || !solidity.includes('private keys are not accepted')
+    || !solidity.includes('draft, test, and audit before any future deploy phase')
+    || !solidity.includes('Token Ecosystem Studio')
+    || !solidity.includes('Target Blockchain')
+    || !solidity.includes('Solana')
+    || !solidity.includes('Polygon')
+    || !solidity.includes('BNB Chain')
+    || !solidity.includes('Avalanche')
+    || !solidity.includes('Base')
+    || !solidity.includes('Custom / Any Other Blockchain')
+    || !solidity.includes('Multi-Chain Token Builder')
+    || !solidity.includes('Website Creation Center')
+    || !solidity.includes('Whitepaper Generator')
+    || !solidity.includes('Chain Builder And Node Research')
+    || !solidity.includes('Listing Readiness')
+    || !solidity.includes('Cross-Chain Arbitrage Design')
+    || !solidity.includes('Discord, Telegram, YouTube, Medium, X, docs')
+    || !solidity.includes('no deploy, no wallet keys, no external posting')
+  ) {
+    fail('Solidity Lab is missing local-only deployment boundary cues');
+  }
+
+  pass('local-only external surface cues');
+}
+
+function checkMvpOwnerTestPassDoc() {
+  const doc = fs.readFileSync(path.join(projectRoot, 'MVP_OWNER_TEST_PASS.md'), 'utf8');
+
+  if (
+    !doc.includes('local end-to-end completion is `95%`')
+    || !doc.includes('Completion Ledger explains why MVP is 99%, why Local Paper is 95%, and why Full Live is 72%.')
+    || !doc.includes('Completion Ledger shows owner acceptance recorded moves MVP from `99%` to `100%`')
+    || !doc.includes('Completion Ledger is present in the proof packet and lists owner acceptance, active paper schedule review, and blocked live gates.')
+    || !doc.includes('MVP Readiness shows Owner Acceptance as `Pending Review`.')
+    || !doc.includes('System Memory export shows owner evidence included, owner acceptance pending, and live disabled')
+    || !doc.includes('Bot Automation Smoke shows monitor-only workflow status')
+    || !doc.includes('Owner Evidence Manifest lists local proof points')
+    || !doc.includes('Download Evidence Manifest JSON')
+    || !doc.includes('Owner Evidence Review Checklist lists local proof rows, checksum marker, and confirms live execution remains blocked.')
+    || !doc.includes('Owner Acceptance Record shows the current local acceptance state, zero records before final owner acceptance, and live execution disabled.')
+    || !doc.includes('Open `/owner-proof-packet`')
+    || !doc.includes('Download Proof Packet JSON')
+    || !doc.includes('Owner Test Gate shows `Ready` and Local MVP Blockers shows `0`.')
+    || !doc.includes('Owner Acceptance shows `Pending Review`; this is expected until manual owner testing records final acceptance.')
+    || !doc.includes('`Record Local MVP Acceptance` remains disabled until the local test pass, proof-packet review, and live-disabled acknowledgement boxes are checked.')
+    || !doc.includes('`Download Proof Packet JSON` is enabled after `/api/v1/owner-proof-packet` loads.')
+    || !doc.includes('Packet Checksum shows a SHA-256 prefix and the downloaded JSON includes the full checksum.')
+    || !doc.includes('Proof Surfaces include owner proof packet, dashboard readiness, MVP Test Pass, route inventory, Strategy Lab, Social Ops, and Solidity Lab.')
+    || !doc.includes('Bot Automation Path shows Automated Paper Path, Ready Paper Plans, Active Paper Schedules, Future Live Automation blocked, Live Blocked Gates, and no live order endpoint.')
+    || !doc.includes('Paper Automation Runbook lists the monitor-only owner steps')
+    || !doc.includes('route boundary `monitor_only_no_live_orders`')
+    || !doc.includes('Confirm Automated Paper Path shows current paper automation state and Future Live Automation remains blocked.')
+    || !doc.includes('Export the safety dossier JSON and dossier history CSV')
+    || !doc.includes('## Monitor-Only Bot Workflow')
+    || !doc.includes('Automated Paper Path panel backed by `/api/v1/bot-automation-capability-path`')
+    || !doc.includes('Owner Proof Packet includes a Paper Automation Runbook for monitor-only owner testing')
+    || !doc.includes('MVP Test Pass can export the owner evidence manifest as a local JSON snapshot.')
+    || !doc.includes('`sha256` checksum for its artifact list')
+    || !doc.includes('Owner Evidence Review Checklist that maps each proof point to its source and owner check')
+    || !doc.includes('no live exchange adapter, no live order endpoint, and no exchange order placement')
+    || !doc.includes('Test Solidity Lab locally')
+    || !doc.includes('Deployment Boundary shows local-only deployment, wallet secrets blocked, and no mainnet or testnet broadcast')
+    || !doc.includes('Test Social Ops locally')
+    || !doc.includes('Local-Only Safety shows public posting disabled, no social network API calls, and owner review required')
+    || !doc.includes('Record local MVP acceptance only after the manual pass is complete.')
+    || !doc.includes('Use `Record Local MVP Acceptance`.')
+    || !doc.includes('the record is saved locally and live execution remains disabled')
+    || !doc.includes('Local paper-automation end-to-end completion: about `95%`')
+    || !doc.includes('Full live end-to-end completion: about `72%`')
+    || !doc.includes('The Completion Ledger explains these caps in the app.')
+    || !doc.includes('## Full Live Blockers')
+    || !doc.includes('Full live end-to-end completion remains about `72%` because these 4 gates are intentionally blocked')
+    || !doc.includes('Runtime credential loader is implemented')
+    || !doc.includes('Live exchange order adapters are implemented')
+    || !doc.includes('Live order endpoint is enabled')
+    || !doc.includes('Owner go-live command can execute')
+    || !doc.includes('future work must add local-only loading with no secret logging')
+    || !doc.includes('future work must replace disabled scaffolds with reviewed exchange-specific adapters')
+  ) {
+    fail('MVP owner test pass doc is missing monitor-only bot workflow guidance');
+  }
+
+  pass('MVP owner test pass doc');
+}
+
+function checkProjectHandoffDoc() {
+  const doc = fs.readFileSync(path.join(projectRoot, 'PROJECT_HANDOFF.md'), 'utf8');
+
+  if (
+    !doc.includes('Date: 2026-05-16')
+    || !(
+      doc.includes('Owner-test local MVP: about 99% complete.')
+      || doc.includes('Owner-test local MVP: 100% after the local owner acceptance record; 99% before owner acceptance in a fresh database.')
+    )
+    || !doc.includes('Local paper-automation end-to-end path: about 95% complete.')
+    || !doc.includes('Full live end-to-end path: about 72% complete')
+    || !doc.includes('## Current Owner-Test Snapshot')
+    || !doc.includes('Owner evidence included · owner acceptance pending · live disabled')
+    || !doc.includes('the completion ledger explaining why MVP/local paper/full live percentages are gated')
+    || !doc.includes('owner-test gate status')
+    || !doc.includes('owner acceptance pending status')
+    || !doc.includes('the bot automation capability path')
+    || !doc.includes('the monitor-only paper automation runbook')
+    || !doc.includes('/api/v1/owner-acceptance')
+    || !doc.includes('can record a local-only owner acceptance record after manual testing')
+    || !doc.includes('Owner acceptance remains `pending_owner_review`')
+    || !doc.includes('/owner-proof-packet')
+    || !doc.includes('/api/v1/owner-proof-packet')
+    || !doc.includes('local JSON-downloadable packet')
+    || !doc.includes('SHA-256 packet checksum')
+    || !doc.includes('Owner Evidence Review Checklist')
+    || !doc.includes('manifest `sha256` checksum prefix')
+    || !doc.includes('the completion ledger')
+    || !doc.includes('current local owner acceptance record state')
+    || !doc.includes('Owner Acceptance Record panel backed by `/api/v1/owner-acceptance`')
+    || !doc.includes('automated bot capability path backed by `/api/v1/bot-automation-capability-path`')
+    || !doc.includes('current paper automation from future live automation blockers')
+    || !doc.includes('owner proof surfaces')
+    || !doc.includes('`ownerAcceptance`')
+    || !doc.includes('`botAutomationCapabilityPath`')
+    || !doc.includes('owner proof packet, dashboard readiness, MVP test pass, route inventory, Strategy Lab, Social Ops, and Solidity Lab')
+    || !doc.includes('Owner Proof Packet added at `/owner-proof-packet`')
+    || !doc.includes('Owner Proof Packet and System Memory now include the automated bot capability path')
+    || !doc.includes('Owner Proof Packet now includes a monitor-only Paper Automation Runbook')
+    || !doc.includes('Dashboard, MVP Test Pass, and Owner Proof Packet now show a Completion Ledger')
+    || !doc.includes('owner-test gate status, owner acceptance pending status, recent local acceptance records')
+    || !doc.includes('proof packet page also shows recent local acceptance records from the protected API')
+    || !doc.includes('Dashboard System Memory export now includes owner-evidence references, owner acceptance pending status')
+    || !doc.includes('Owner Proof Coverage counts, owner acceptance pending status, and local acceptance record count from System Memory')
+    || !doc.includes('Route Inventory now cross-checks Owner Proof Coverage, owner acceptance pending status, and local acceptance record count from System Memory')
+    || !doc.includes('external-surface boundaries for Social Ops and Solidity Lab')
+    || !doc.includes('Social Ops remains local draft-only')
+    || !doc.includes('Solidity Lab remains local scaffold/review only')
+    || !doc.includes('Solidity Lab now includes a local Token Ecosystem Studio')
+    || !doc.includes('/api/v1/solidity-ecosystem/catalog')
+    || !doc.includes('/api/v1/solidity-contracts/:id/ecosystem-blueprint')
+    || !doc.includes('token/NFT utility, website sections, whitepaper templates, logo briefs')
+    || !doc.includes('CoinMarketCap/CoinGecko readiness')
+    || !doc.includes('EtherealAI is now running from app/server/src/server.js with protected app/client pages')
+    || doc.includes('EtherealAI is mid-refactor from root-level HTML files to app/client')
+    || !doc.includes('ETHEREALAI_VERIFY_SERVER=1')
+    || !doc.includes('local_drafts_no_external_posting')
+    || !doc.includes('local_scaffold_no_deployment')
+  ) {
+    fail('project handoff doc is missing current owner-test snapshot');
+  }
+
+  pass('project handoff doc');
+}
+
+function getSetCookie(headers) {
+  if (typeof headers.getSetCookie === 'function') {
+    return headers.getSetCookie();
+  }
+
+  const cookie = headers.get('set-cookie');
+  return cookie ? [cookie] : [];
+}
+
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, options);
+  const text = await response.text();
+  let body = {};
+
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch (error) {
+      fail(`Expected JSON from ${url}, received: ${text.slice(0, 200)}`);
+    }
+  }
+
+  if (!response.ok) {
+    fail(`${url} returned HTTP ${response.status}: ${JSON.stringify(body)}`);
+  }
+
+  return {
+    body,
+    headers: response.headers
+  };
+}
+
+async function fetchJsonExpectStatus(url, options = {}, expectedStatus = 200) {
+  const response = await fetch(url, options);
+  const text = await response.text();
+  let body = {};
+
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch (error) {
+      fail(`Expected JSON from ${url}, received: ${text.slice(0, 200)}`);
+    }
+  }
+
+  if (response.status !== expectedStatus) {
+    fail(`${url} returned HTTP ${response.status}, expected ${expectedStatus}: ${JSON.stringify(body)}`);
+  }
+
+  return {
+    body,
+    headers: response.headers
+  };
+}
+
+function authJsonHeaders(cookie) {
+  return {
+    Cookie: cookie,
+    'Content-Type': 'application/json'
+  };
+}
+
+function buildVerificationCsv(baseTimestamp) {
+  const start = new Date(baseTimestamp);
+
+  return [
+    'timestamp,open,high,low,close,volume',
+    ...Array.from({ length: 8 }, (_, index) => {
+      const timestamp = new Date(start.getTime() + (index * 60 * 60 * 1000)).toISOString();
+      const open = 100 + index;
+      const close = index % 2 === 0 ? open + 2 : open - 1;
+      const high = Math.max(open, close) + 1;
+      const low = Math.min(open, close) - 1;
+      const volume = 1000 + (index * 25);
+
+      return [timestamp, open, high, low, close, volume].join(',');
+    })
+  ].join('\n');
+}
+
+async function fetchJsonForCleanup(url, options = {}) {
+  const response = await fetch(url, options);
+  const text = await response.text();
+  let body = {};
+
+  if (text) {
+    try {
+      body = JSON.parse(text);
+    } catch (error) {
+      return {
+        ok: false,
+        status: response.status,
+        body: { error: `Expected JSON, received: ${text.slice(0, 200)}` }
+      };
+    }
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    body
+  };
+}
+
+async function cleanupBotAutomationFixture(baseUrl, cookie, fixture) {
+  const errors = [];
+  const headers = authJsonHeaders(cookie);
+
+  async function archive(label, url, body) {
+    const result = await fetchJsonForCleanup(url, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(body)
+    });
+
+    if (!result.ok) {
+      errors.push(`${label} archive failed with HTTP ${result.status}: ${JSON.stringify(result.body)}`);
+    }
+  }
+
+  if (fixture.scheduleId) {
+    await archive(
+      `schedule #${fixture.scheduleId}`,
+      `${baseUrl}/api/v1/bot-automation-schedules/${fixture.scheduleId}`,
+      { status: 'archived' }
+    );
+  }
+
+  for (const planId of fixture.botPlanIds || []) {
+    await archive(
+      `bot plan #${planId}`,
+      `${baseUrl}/api/v1/bot-automation-plans/${planId}`,
+      { status: 'archived' }
+    );
+  }
+
+  if (fixture.riskProfileId) {
+    await archive(
+      `risk profile #${fixture.riskProfileId}`,
+      `${baseUrl}/api/v1/risk-profiles/${fixture.riskProfileId}`,
+      { status: 'archived', notes: 'Verification fixture archived after checks.' }
+    );
+  }
+
+  if (fixture.marketImportId) {
+    await archive(
+      `market import #${fixture.marketImportId}`,
+      `${baseUrl}/api/v1/market-data/imports/${fixture.marketImportId}`,
+      { status: 'archived' }
+    );
+  }
+
+  if (fixture.scheduleId) {
+    const result = await fetchJsonForCleanup(`${baseUrl}/api/v1/bot-automation-schedules/${fixture.scheduleId}`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!result.ok || result.body.schedule?.status !== 'archived') {
+      errors.push(`schedule #${fixture.scheduleId} cleanup status is not archived`);
+    }
+  }
+
+  if (fixture.riskProfileId) {
+    const result = await fetchJsonForCleanup(`${baseUrl}/api/v1/risk-profiles/${fixture.riskProfileId}`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!result.ok || result.body.profile?.status !== 'archived') {
+      errors.push(`risk profile #${fixture.riskProfileId} cleanup status is not archived`);
+    }
+  }
+
+  for (const planId of fixture.botPlanIds || []) {
+    const result = await fetchJsonForCleanup(`${baseUrl}/api/v1/bot-automation-plans/${planId}`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!result.ok || result.body.plan?.status !== 'archived') {
+      errors.push(`bot plan #${planId} cleanup status is not archived`);
+    }
+  }
+
+  if (fixture.marketImportId) {
+    const result = await fetchJsonForCleanup(`${baseUrl}/api/v1/market-data/imports/${fixture.marketImportId}`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!result.ok || result.body.import?.status !== 'archived') {
+      errors.push(`market import #${fixture.marketImportId} cleanup status is not archived`);
+    }
+  }
+
+  return errors;
+}
+
+async function runBotAutomationFixtureChecks(baseUrl, cookie) {
+  const now = Date.now();
+  const fixtureTag = `verify-${now}`;
+  const marketSymbol = `EAI${String(now).slice(-8)}/USDT`;
+  const timeframe = '1h';
+  const headers = authJsonHeaders(cookie);
+  const fixture = { botPlanIds: [] };
+  let primaryError = null;
+
+  try {
+    const marketImport = await fetchJson(`${baseUrl}/api/v1/market-data/imports`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        label: `Baseline fixture import ${fixtureTag}`,
+        marketSymbol,
+        timeframe,
+        notes: 'Created by scripts/verify-local-baseline.js authenticated fixture check.',
+        csvText: buildVerificationCsv(now)
+      })
+    });
+    fixture.marketImportId = marketImport.body.import.id;
+
+    const strategy = await fetchJson(`${baseUrl}/api/v1/strategies`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        name: `Baseline fixture strategy ${fixtureTag}`,
+        marketSymbol,
+        timeframe,
+        entryRules: 'green candle',
+        exitRules: 'red candle',
+        stopLoss: 5,
+        takeProfit: 8,
+        riskNotes: 'Verification fixture only. No live trading.'
+      })
+    });
+    const riskProfile = await fetchJson(`${baseUrl}/api/v1/risk-profiles`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        name: `Baseline fixture risk ${fixtureTag}`,
+        mode: 'paper',
+        maxOrderValue: 1000,
+        maxPositionValue: 2500,
+        maxDailyLoss: 500,
+        maxOpenTrades: 3,
+        killSwitchEnabled: false,
+        notes: 'Verification fixture only.'
+      })
+    });
+    fixture.riskProfileId = riskProfile.body.profile.id;
+
+    const initialRiskAudit = await fetchJson(`${baseUrl}/api/v1/risk-profiles/${riskProfile.body.profile.id}/audit-events`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!initialRiskAudit.body.events?.some(event => event.event_type === 'created')) {
+      fail('fixture risk profile did not record a create audit event');
+    }
+
+    await fetchJson(`${baseUrl}/api/v1/risk-profiles/${riskProfile.body.profile.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        name: riskProfile.body.profile.name,
+        mode: 'paper',
+        status: 'active',
+        maxOrderValue: 1000,
+        maxPositionValue: 2500,
+        maxDailyLoss: 500,
+        maxOpenTrades: 3,
+        killSwitchEnabled: false,
+        notes: 'Verification fixture audit update.'
+      })
+    });
+    const updatedRiskAudit = await fetchJson(`${baseUrl}/api/v1/risk-profiles/${riskProfile.body.profile.id}/audit-events`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!updatedRiskAudit.body.events?.some(event => event.event_type === 'updated')) {
+      fail('fixture risk profile did not record an update audit event');
+    }
+
+    const paperSession = await fetchJson(`${baseUrl}/api/v1/strategies/${strategy.body.strategy.id}/paper-sessions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        marketDataImportId: marketImport.body.import.id,
+        initialCapital: 10000,
+        feePercent: 0.1,
+        slippagePercent: 0.05,
+        maxDrawdownPercent: 100,
+        maxLossStreak: 100,
+        minTradeCount: 0,
+        name: `Baseline fixture paper ${fixtureTag}`
+      })
+    });
+
+    if (paperSession.body.session.result?.riskGate?.status !== 'passed') {
+      fail('fixture paper session did not pass its readiness risk gate');
+    }
+
+    const botPlan = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        strategyId: strategy.body.strategy.id,
+        paperSessionId: paperSession.body.session.id,
+        riskProfileId: riskProfile.body.profile.id,
+        name: `Baseline fixture bot plan ${fixtureTag}`,
+        mode: 'paper',
+        notes: 'Verification fixture only.'
+      })
+    });
+
+    if (botPlan.body.plan.readiness?.status !== 'ready_for_paper') {
+      fail(`fixture paper bot plan was not ready_for_paper: ${botPlan.body.plan.readiness?.status}`);
+    }
+    fixture.botPlanIds.push(botPlan.body.plan.id);
+
+    const editedBotPlan = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans/${botPlan.body.plan.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        name: `${botPlan.body.plan.name} edited`,
+        mode: 'paper',
+        paperSessionId: paperSession.body.session.id,
+        riskProfileId: riskProfile.body.profile.id,
+        connectorId: null,
+        notes: 'Verification fixture edit.'
+      })
+    });
+
+    if (editedBotPlan.body.plan.name !== `${botPlan.body.plan.name} edited`) {
+      fail('fixture bot plan edit did not persist the edited name');
+    }
+
+    const paperRun = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans/${botPlan.body.plan.id}/paper-runs`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ positionOpen: false })
+    });
+
+    if (paperRun.body.run.result?.liveExecution?.enabled !== false) {
+      fail('fixture paper bot run did not keep live execution disabled');
+    }
+
+    const schedule = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans/${botPlan.body.plan.id}/schedules`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        intervalMinutes: 15,
+        status: 'paused',
+        positionOpen: false
+      })
+    });
+    fixture.scheduleId = schedule.body.schedule.id;
+
+    if (schedule.body.schedule.status !== 'paused' || schedule.body.schedule.next_run_at !== null) {
+      fail('fixture schedule was not created paused with no next run time');
+    }
+
+    const botCapabilityPath = await fetchJson(`${baseUrl}/api/v1/bot-automation-capability-path`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (
+      botCapabilityPath.body.capabilityPath?.paperAutomation?.enabled !== true
+      || botCapabilityPath.body.capabilityPath?.paperAutomation?.scheduleWorkerEnabled !== true
+      || botCapabilityPath.body.capabilityPath?.paperAutomation?.routeBoundary !== 'monitor_only_no_live_orders'
+      || botCapabilityPath.body.capabilityPath?.futureLiveAutomation?.enabled !== false
+      || botCapabilityPath.body.capabilityPath?.futureLiveAutomation?.goLiveAllowed !== false
+      || !botCapabilityPath.body.capabilityPath?.futureLiveAutomation?.blockedGates?.includes('live_order_endpoint_enabled')
+      || !botCapabilityPath.body.capabilityPath?.evidence?.availableExports?.includes('bot_safety_dossier_json')
+    ) {
+      fail('bot automation capability path did not preserve paper-only/live-blocked behavior');
+    }
+
+    const scheduledRun = await fetchJson(`${baseUrl}/api/v1/bot-automation-schedules/${schedule.body.schedule.id}/run`, {
+      method: 'POST',
+      headers
+    });
+
+    if (scheduledRun.body.run.result?.liveExecution?.enabled !== false) {
+      fail('fixture scheduled paper run did not keep live execution disabled');
+    }
+
+    await fetchJson(`${baseUrl}/api/v1/bot-automation-schedules/${schedule.body.schedule.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ status: 'archived' })
+    });
+    await fetchJsonExpectStatus(`${baseUrl}/api/v1/bot-automation-schedules/${schedule.body.schedule.id}/run`, {
+      method: 'POST',
+      headers
+    }, 400);
+
+    const liveDisabledPlan = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        strategyId: strategy.body.strategy.id,
+        paperSessionId: paperSession.body.session.id,
+        riskProfileId: riskProfile.body.profile.id,
+        name: `Baseline fixture live-disabled plan ${fixtureTag}`,
+        mode: 'live_disabled',
+        notes: 'Verification fixture only.'
+      })
+    });
+
+    if (liveDisabledPlan.body.plan.readiness?.liveExecution?.enabled !== false) {
+      fail('fixture live-disabled plan reported live execution enabled');
+    }
+    fixture.botPlanIds.push(liveDisabledPlan.body.plan.id);
+
+    await fetchJsonExpectStatus(`${baseUrl}/api/v1/bot-automation-plans/${liveDisabledPlan.body.plan.id}/paper-runs`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ positionOpen: false })
+    }, 400);
+
+    const liveReadiness = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans/${liveDisabledPlan.body.plan.id}/live-readiness`, {
+      method: 'POST',
+      headers
+    });
+
+    if (
+      liveReadiness.body.readiness?.liveExecution?.enabled !== false
+      || liveReadiness.body.readiness?.liveExecution?.orderEndpointEnabled !== false
+    ) {
+      fail('live-readiness preflight reported live execution enabled');
+    }
+
+    if (!liveReadiness.body.readiness?.blockingFailures?.includes('owner_go_live_confirmation')) {
+      fail('live-readiness preflight did not require explicit owner go-live confirmation');
+    }
+
+    if (!liveReadiness.body.event?.id) {
+      fail('live-readiness preflight did not return a persisted history event');
+    }
+
+    const liveReadinessHistory = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans/${liveDisabledPlan.body.plan.id}/live-readiness-events`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!liveReadinessHistory.body.events?.some(event => String(event.id) === String(liveReadiness.body.event.id))) {
+      fail('live-readiness history did not include the persisted preflight event');
+    }
+
+    const liveReadinessEvent = await fetchJson(`${baseUrl}/api/v1/bot-live-readiness-events/${liveReadiness.body.event.id}`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (liveReadinessEvent.body.event?.readiness?.liveExecution?.enabled !== false) {
+      fail('persisted live-readiness event reported live execution enabled');
+    }
+
+    await fetchJsonExpectStatus(`${baseUrl}/api/v1/bot-automation-plans/${botPlan.body.plan.id}/live-enablement-reviews`, {
+      method: 'POST',
+      headers
+    }, 400);
+
+    const liveEnablementReview = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans/${liveDisabledPlan.body.plan.id}/live-enablement-reviews`, {
+      method: 'POST',
+      headers
+    });
+
+    if (
+      liveEnablementReview.body.review?.review?.liveExecution?.enabled !== false
+      || liveEnablementReview.body.review?.review?.liveExecution?.orderEndpointEnabled !== false
+      || liveEnablementReview.body.review?.review?.liveExecution?.goLiveAllowed !== false
+    ) {
+      fail('go-live enablement review reported live execution enabled or allowed');
+    }
+
+    if (liveEnablementReview.body.review?.review?.ownerConfirmation?.provided !== false) {
+      fail('go-live enablement review did not require missing owner confirmation');
+    }
+
+    const goLiveCommandReview = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans/${liveDisabledPlan.body.plan.id}/go-live-command`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        commandText: 'The final bot is ready to go live after testing. Execute automatically when every safety gate is actually implemented.'
+      })
+    });
+
+    if (
+      goLiveCommandReview.body.command?.recognized !== true
+      || goLiveCommandReview.body.command?.acceptedForExecution !== false
+      || goLiveCommandReview.body.review?.review?.liveExecution?.enabled !== false
+      || goLiveCommandReview.body.review?.review?.liveExecution?.goLiveAllowed !== false
+      || !goLiveCommandReview.body.review?.review?.blockingFailures?.includes('go_live_command_blocked_by_disabled_execution')
+    ) {
+      fail('go-live command parser did not recognize and safely block the owner command');
+    }
+
+    const launchReadinessAfterCommand = await fetchJson(`${baseUrl}/api/v1/launch-readiness-summary`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (
+      launchReadinessAfterCommand.body.summary?.launchStatus !== 'blocked'
+      || launchReadinessAfterCommand.body.summary?.liveExecution?.enabled !== false
+      || launchReadinessAfterCommand.body.summary?.liveExecution?.goLiveAllowed !== false
+      || !launchReadinessAfterCommand.body.summary?.blockingFailures?.includes('live_order_endpoint_enabled')
+      || !launchReadinessAfterCommand.body.summary?.recent?.goLiveCommandReviews?.some(review => (
+        String(review.id) === String(goLiveCommandReview.body.review.id)
+      ))
+    ) {
+      fail('launch readiness summary did not include the safely blocked go-live command review');
+    }
+
+    await fetchJsonExpectStatus(`${baseUrl}/api/v1/bot-automation-plans/${liveDisabledPlan.body.plan.id}/go-live-command`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        commandText: `go live sk-${'b'.repeat(40)}`
+      })
+    }, 400);
+
+    const liveEnablementHistory = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans/${liveDisabledPlan.body.plan.id}/live-enablement-reviews`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (
+      !liveEnablementHistory.body.reviews?.some(review => String(review.id) === String(liveEnablementReview.body.review.id))
+      || !liveEnablementHistory.body.reviews?.some(review => String(review.id) === String(goLiveCommandReview.body.review.id))
+    ) {
+      fail('go-live enablement history did not include the persisted review');
+    }
+
+    const safetyDossier = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans/${liveDisabledPlan.body.plan.id}/safety-dossier`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (
+      safetyDossier.body.dossier?.liveBlocked !== true
+      || safetyDossier.body.dossier?.liveExecution?.enabled !== false
+      || safetyDossier.body.dossier?.liveExecution?.goLiveAllowed !== false
+      || !safetyDossier.body.dossier?.statusExplanation?.summary
+      || !safetyDossier.body.dossier?.statusExplanation?.ownerAction
+      || !safetyDossier.body.dossier?.statusExplanation?.liveExecutionBoundary?.includes('no live order endpoint')
+      || !safetyDossier.body.dossier?.statusExplanation?.reviewChecklist?.includes('Export the safety dossier JSON for local evidence.')
+      || Number(safetyDossier.body.dossier?.counts?.liveReadinessEvents || 0) < 1
+      || Number(safetyDossier.body.dossier?.counts?.goLiveReviews || 0) < 2
+      || !safetyDossier.body.history?.liveReadinessEvents?.some(event => String(event.id) === String(liveReadiness.body.event.id))
+      || !safetyDossier.body.history?.goLiveReviews?.some(review => String(review.id) === String(goLiveCommandReview.body.review.id))
+      || !safetyDossier.body.dossier?.blockingFailures?.includes('go_live_command_blocked_by_disabled_execution')
+    ) {
+      fail('bot safety dossier did not preserve monitor-only live execution evidence');
+    }
+
+    const liveEnablementDetail = await fetchJson(`${baseUrl}/api/v1/bot-live-enablement-reviews/${liveEnablementReview.body.review.id}`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (liveEnablementDetail.body.review?.review?.liveExecution?.enabled !== false) {
+      fail('persisted go-live enablement review reported live execution enabled');
+    }
+
+    const updatedLiveEnablementReview = await fetchJson(`${baseUrl}/api/v1/bot-live-enablement-reviews/${liveEnablementReview.body.review.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        checklistItemId: 'readiness_preflight_reviewed',
+        reviewed: true,
+        note: 'Verification marked this item reviewed without enabling live execution.'
+      })
+    });
+
+    const reviewedChecklistItem = updatedLiveEnablementReview.body.review?.review?.checklist
+      ?.find(item => item.id === 'readiness_preflight_reviewed');
+
+    if (!reviewedChecklistItem?.reviewed || reviewedChecklistItem.passed !== false) {
+      fail('go-live checklist item was not marked reviewed while remaining not passed');
+    }
+
+    if (
+      updatedLiveEnablementReview.body.review?.review?.liveExecution?.enabled !== false
+      || updatedLiveEnablementReview.body.review?.review?.liveExecution?.goLiveAllowed !== false
+    ) {
+      fail('go-live checklist update enabled live execution');
+    }
+
+    const liveEnablementArtifacts = await fetchJson(`${baseUrl}/api/v1/artifacts?type=bot%20live%20enablement%20review&limit=10`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!liveEnablementArtifacts.body.rows?.some(row => String(row.id) === String(liveEnablementReview.body.review.id))) {
+      fail('bot live enablement review artifact search did not include the fixture review');
+    }
+
+    const killSwitchUpdate = await fetchJson(`${baseUrl}/api/v1/risk-profiles/${riskProfile.body.profile.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        name: riskProfile.body.profile.name,
+        mode: 'paper',
+        status: 'active',
+        maxOrderValue: 1000,
+        maxPositionValue: 2500,
+        maxDailyLoss: 500,
+        maxOpenTrades: 3,
+        killSwitchEnabled: true,
+        notes: 'Verification fixture emergency stop propagation.'
+      })
+    });
+
+    if (!killSwitchUpdate.body.linkedBotPlans?.some(plan => (
+      String(plan.id) === String(botPlan.body.plan.id)
+      && plan.readiness?.blockingFailures?.includes('kill_switch_off')
+    ))) {
+      fail('risk-profile kill switch update did not propagate blocking readiness to linked paper bot plan');
+    }
+
+    const killedPaperPlan = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans/${botPlan.body.plan.id}`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!killedPaperPlan.body.plan?.readiness?.blockingFailures?.includes('kill_switch_off')) {
+      fail('linked paper bot plan did not persist kill-switch blocking readiness');
+    }
+
+    const safetySummaryAfterKill = await fetchJson(`${baseUrl}/api/v1/automation-safety-summary`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (
+      Number(safetySummaryAfterKill.body.summary?.counts?.activeKillSwitches || 0) < 1
+      || !safetySummaryAfterKill.body.summary?.recent?.killSwitchAffectedBotPlans?.some(plan => String(plan.id) === String(botPlan.body.plan.id))
+    ) {
+      fail('automation safety summary did not report the active kill switch and affected bot plan');
+    }
+
+    const killSwitchImpact = await fetchJson(`${baseUrl}/api/v1/risk-profiles/${riskProfile.body.profile.id}/kill-switch-impact`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (
+      killSwitchImpact.body.impact?.active !== true
+      || killSwitchImpact.body.impact?.liveExecution?.enabled !== false
+      || !killSwitchImpact.body.impact?.affectedPlans?.some(plan => (
+        String(plan.id) === String(botPlan.body.plan.id)
+        && plan.readiness?.blockingFailures?.includes('kill_switch_off')
+      ))
+      || !Array.isArray(killSwitchImpact.body.impact?.auditEvents)
+    ) {
+      fail('risk-profile kill-switch impact endpoint did not report the affected blocked bot plan safely');
+    }
+
+    await fetchJson(`${baseUrl}/api/v1/bot-automation-plans/${botPlan.body.plan.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ status: 'archived' })
+    });
+    await fetchJsonExpectStatus(`${baseUrl}/api/v1/bot-automation-plans/${botPlan.body.plan.id}/paper-runs`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ positionOpen: false })
+    }, 400);
+    await fetchJsonExpectStatus(`${baseUrl}/api/v1/bot-automation-plans/${botPlan.body.plan.id}/schedules`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        intervalMinutes: 15,
+        status: 'paused',
+        positionOpen: false
+      })
+    }, 400);
+  } catch (error) {
+    primaryError = error;
+  }
+
+  const cleanupErrors = await cleanupBotAutomationFixture(baseUrl, cookie, fixture);
+
+  if (primaryError) {
+    if (cleanupErrors.length) {
+      primaryError.message = `${primaryError.message}; cleanup also failed: ${cleanupErrors.join('; ')}`;
+    }
+    throw primaryError;
+  }
+
+  if (cleanupErrors.length) {
+    fail(`fixture cleanup failed: ${cleanupErrors.join('; ')}`);
+  }
+
+  const updatedAuditFilter = await fetchJson(`${baseUrl}/api/v1/risk-profiles/${fixture.riskProfileId}/audit-events?eventType=updated`, {
+    headers: { Cookie: cookie }
+  });
+
+  if (!updatedAuditFilter.body.events?.length || updatedAuditFilter.body.events.some(event => event.event_type !== 'updated')) {
+    fail('risk-profile audit event filter did not return only updated events');
+  }
+
+  const archivedScheduleFilter = await fetchJson(`${baseUrl}/api/v1/bot-automation-schedules?status=archived`, {
+    headers: { Cookie: cookie }
+  });
+
+  if (!archivedScheduleFilter.body.schedules?.some(schedule => String(schedule.id) === String(fixture.scheduleId))) {
+    fail('archived schedule filter did not include the archived fixture schedule');
+  }
+
+  pass('self-contained bot automation/risk-audit fixture/filter/live-readiness-history/go-live-review/checklist-edit/emergency-stop/plan-management checks with cleanup');
+}
+
+async function runSecretReferenceConnectorChecks(baseUrl, cookie) {
+  const now = Date.now();
+  const fixtureTag = `secret-connector-${now}`;
+  const headers = authJsonHeaders(cookie);
+  const fixture = { adapterMatrixConnectorIds: [] };
+  let primaryError = null;
+
+  async function cleanup() {
+    const errors = [];
+    const connectorIds = Array.from(new Set([
+      fixture.connectorId,
+      ...(fixture.adapterMatrixConnectorIds || [])
+    ].filter(Boolean)));
+
+    for (const connectorId of connectorIds) {
+      const result = await fetchJsonForCleanup(`${baseUrl}/api/v1/exchange-connectors/${connectorId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ status: 'archived' })
+      });
+
+      if (!result.ok) {
+        errors.push(`connector #${connectorId} archive failed with HTTP ${result.status}: ${JSON.stringify(result.body)}`);
+      }
+    }
+
+    if (fixture.secretReferenceId) {
+      const result = await fetchJsonForCleanup(`${baseUrl}/api/v1/local-secret-references/${fixture.secretReferenceId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ status: 'disabled', notes: 'Verification fixture disabled after checks.' })
+      });
+
+      if (!result.ok) {
+        errors.push(`secret reference #${fixture.secretReferenceId} disable failed with HTTP ${result.status}: ${JSON.stringify(result.body)}`);
+      }
+    }
+
+    return errors;
+  }
+
+  try {
+    const secretReference = await fetchJson(`${baseUrl}/api/v1/local-secret-references`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        label: `Baseline fixture secret ref ${fixtureTag}`,
+        providerType: 'macos_keychain',
+        referenceName: `ethereal/verification/${fixtureTag}`,
+        scope: 'exchange_connector',
+        status: 'configured',
+        notes: 'Metadata-only verification fixture. No secret value.'
+      })
+    });
+    fixture.secretReferenceId = secretReference.body.reference.id;
+
+    await fetchJsonExpectStatus(`${baseUrl}/api/v1/local-secret-references/${fixture.secretReferenceId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        notes: `sk-${'b'.repeat(40)}`
+      })
+    }, 400);
+
+    await fetchJsonExpectStatus(`${baseUrl}/api/v1/exchange-connectors`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        exchangeName: 'binance',
+        label: `Bad inline connector ${fixtureTag}`,
+        mode: 'read_only',
+        status: 'configured',
+        secretReferenceId: fixture.secretReferenceId,
+        settings: {
+          apiKey: `sk-${'c'.repeat(40)}`
+        }
+      })
+    }, 400);
+
+    const connector = await fetchJson(`${baseUrl}/api/v1/exchange-connectors`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        exchangeName: 'binance',
+        label: `Baseline fixture connector ${fixtureTag}`,
+        mode: 'live_disabled',
+        status: 'configured',
+        secretReferenceId: fixture.secretReferenceId,
+        settings: {
+          sandbox: true,
+          permissions: 'read_only'
+        }
+      })
+    });
+    fixture.connectorId = connector.body.connector.id;
+
+    if (connector.body.connector.secret_reference_id !== fixture.secretReferenceId) {
+      fail('exchange connector did not retain its local secret reference ID');
+    }
+
+    const readiness = await fetchJson(`${baseUrl}/api/v1/exchange-connectors/${fixture.connectorId}/readiness`, {
+      method: 'POST',
+      headers
+    });
+
+    if (
+      readiness.body.readiness?.liveExecution?.enabled !== false
+      || readiness.body.readiness?.liveExecution?.orderEndpointEnabled !== false
+    ) {
+      fail('exchange connector readiness reported live execution enabled');
+    }
+
+    if (!readiness.body.readiness?.blockingFailures?.includes('live_order_adapter_implemented')) {
+      fail('exchange connector readiness did not block on missing live order adapter');
+    }
+
+    if (!readiness.body.event?.id) {
+      fail('exchange connector readiness did not return a persisted event');
+    }
+    fixture.readinessEventId = readiness.body.event.id;
+
+    const readinessHistory = await fetchJson(`${baseUrl}/api/v1/exchange-connectors/${fixture.connectorId}/readiness-events`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!readinessHistory.body.events?.some(event => String(event.id) === String(fixture.readinessEventId))) {
+      fail('exchange connector readiness history did not include the persisted event');
+    }
+
+    const blockedReadinessHistory = await fetchJson(`${baseUrl}/api/v1/exchange-connectors/${fixture.connectorId}/readiness-events?status=blocked`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (
+      !blockedReadinessHistory.body.events?.some(event => String(event.id) === String(fixture.readinessEventId))
+      || blockedReadinessHistory.body.events.some(event => event.status !== 'blocked')
+    ) {
+      fail('exchange connector readiness status filter did not return only blocked events including the fixture');
+    }
+
+    const readinessEvent = await fetchJson(`${baseUrl}/api/v1/exchange-connector-readiness-events/${fixture.readinessEventId}`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (readinessEvent.body.event?.readiness?.liveExecution?.enabled !== false) {
+      fail('persisted exchange connector readiness event reported live execution enabled');
+    }
+
+    const adapterContracts = await fetchJson(`${baseUrl}/api/v1/exchange-adapter-contracts`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (
+      adapterContracts.body.implemented !== false
+      || !adapterContracts.body.contracts?.some(contract => contract.exchangeName === 'binance' && contract.liveExecution?.enabled === false)
+    ) {
+      fail('exchange adapter contract list did not return disabled shape-only contracts');
+    }
+    const adapterScaffolds = await fetchJson(`${baseUrl}/api/v1/exchange-adapter-scaffolds`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (
+      adapterScaffolds.body.implemented !== false
+      || adapterScaffolds.body.networkCallsEnabled !== false
+      || adapterScaffolds.body.liveExecution?.enabled !== false
+      || !adapterScaffolds.body.scaffolds?.some(scaffold => (
+        scaffold.exchangeName === 'binance'
+        && scaffold.methodContracts?.some(method => method.name === 'placeOrder' && method.implemented === false)
+        && scaffold.safetyContract?.throwsOnUse === true
+      ))
+    ) {
+      fail('exchange adapter scaffolds did not return disabled module shapes');
+    }
+
+    const binanceScaffold = await fetchJson(`${baseUrl}/api/v1/exchange-adapter-scaffolds/binance`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (
+      binanceScaffold.body.scaffold?.exchangeName !== 'binance'
+      || binanceScaffold.body.scaffold?.liveExecution?.enabled !== false
+      || binanceScaffold.body.scaffold?.credentialLoadingEnabled !== false
+    ) {
+      fail('single exchange adapter scaffold endpoint did not return disabled Binance scaffold');
+    }
+    const binanceContract = adapterContracts.body.contracts?.find(contract => contract.exchangeName === 'binance');
+
+    if (
+      !binanceContract?.exchangeRequirements?.marketMetadataRequirements?.includes('PRICE_FILTER parsed')
+      || !binanceContract?.requiredRuntimeSettings?.some(setting => setting.name === 'recvWindow' && setting.provided === false)
+      || !binanceContract?.requiredTestFixtures?.some(fixture => fixture.name === 'emergency-stop dry-run fixture' && fixture.implemented === false)
+    ) {
+      fail('exchange adapter contract list did not include expanded disabled Binance requirements');
+    }
+    const expectedContractExchanges = ['binance', 'bybit', 'coinbase', 'custom', 'hyperliquid', 'kraken', 'okx'];
+    const contractExchangeNames = new Set((adapterContracts.body.contracts || []).map(contract => contract.exchangeName));
+
+    for (const exchangeName of expectedContractExchanges) {
+      if (!contractExchangeNames.has(exchangeName)) {
+        fail(`exchange adapter contract list omitted ${exchangeName}`);
+      }
+
+      const matrixConnector = await fetchJson(`${baseUrl}/api/v1/exchange-connectors`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          exchangeName,
+          label: `Adapter matrix ${exchangeName} ${fixtureTag}`,
+          mode: 'paper',
+          status: 'planned',
+          settings: {
+            sandbox: true
+          }
+        })
+      });
+      fixture.adapterMatrixConnectorIds.push(matrixConnector.body.connector.id);
+
+      const matrixContract = await fetchJson(`${baseUrl}/api/v1/exchange-connectors/${matrixConnector.body.connector.id}/adapter-contract-check`, {
+        method: 'POST',
+        headers
+      });
+
+      if (
+        matrixContract.body.contract?.spec?.exchangeName !== exchangeName
+        || matrixContract.body.contract?.spec?.implemented !== false
+        || !Array.isArray(matrixContract.body.contract?.spec?.exchangeRequirements?.testFixtureRequirements)
+        || matrixContract.body.contract?.liveExecution?.enabled !== false
+        || !matrixContract.body.contract?.blockingFailures?.includes('exchange_specific_requirements_implemented')
+        || !matrixContract.body.event?.id
+      ) {
+        fail(`adapter contract matrix check failed for ${exchangeName}`);
+      }
+    }
+
+    const adapterContract = await fetchJson(`${baseUrl}/api/v1/exchange-connectors/${fixture.connectorId}/adapter-contract-check`, {
+      method: 'POST',
+      headers
+    });
+
+    if (
+      adapterContract.body.contract?.liveExecution?.enabled !== false
+      || adapterContract.body.contract?.spec?.implemented !== false
+      || !adapterContract.body.contract?.blockingFailures?.includes('adapter_methods_implemented')
+      || !adapterContract.body.contract?.blockingFailures?.includes('exchange_specific_requirements_implemented')
+    ) {
+      fail('exchange adapter contract check did not remain blocked and disabled');
+    }
+
+    if (!adapterContract.body.event?.id) {
+      fail('exchange adapter contract check did not return a persisted event');
+    }
+    fixture.adapterContractEventId = adapterContract.body.event.id;
+
+    const adapterContractHistory = await fetchJson(`${baseUrl}/api/v1/exchange-connectors/${fixture.connectorId}/adapter-contract-events`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!adapterContractHistory.body.events?.some(event => String(event.id) === String(fixture.adapterContractEventId))) {
+      fail('exchange adapter contract history did not include the persisted event');
+    }
+
+    const blockedAdapterContractHistory = await fetchJson(`${baseUrl}/api/v1/exchange-connectors/${fixture.connectorId}/adapter-contract-events?status=blocked`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (
+      !blockedAdapterContractHistory.body.events?.some(event => String(event.id) === String(fixture.adapterContractEventId))
+      || blockedAdapterContractHistory.body.events.some(event => event.status !== 'blocked')
+    ) {
+      fail('exchange adapter contract status filter did not return only blocked events including the fixture');
+    }
+
+    const adapterContractEvent = await fetchJson(`${baseUrl}/api/v1/exchange-adapter-contract-events/${fixture.adapterContractEventId}`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (adapterContractEvent.body.event?.contract?.liveExecution?.enabled !== false) {
+      fail('persisted exchange adapter contract event reported live execution enabled');
+    }
+
+    const secretArtifacts = await fetchJson(`${baseUrl}/api/v1/artifacts?type=local%20secret%20reference&limit=10`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!secretArtifacts.body.rows?.some(row => String(row.id) === String(fixture.secretReferenceId))) {
+      fail('local secret reference artifact search did not include the fixture reference');
+    }
+
+    const readinessArtifacts = await fetchJson(`${baseUrl}/api/v1/artifacts?type=exchange%20connector%20readiness%20event&limit=10`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!readinessArtifacts.body.rows?.some(row => String(row.id) === String(fixture.readinessEventId))) {
+      fail('exchange connector readiness artifact search did not include the fixture event');
+    }
+
+    const adapterArtifacts = await fetchJson(`${baseUrl}/api/v1/artifacts?type=exchange%20adapter%20contract%20event&limit=10`, {
+      headers: { Cookie: cookie }
+    });
+
+    if (!adapterArtifacts.body.rows?.some(row => String(row.id) === String(fixture.adapterContractEventId))) {
+      fail('exchange adapter contract artifact search did not include the fixture event');
+    }
+  } catch (error) {
+    primaryError = error;
+  }
+
+  const cleanupErrors = await cleanup();
+
+  if (primaryError) {
+    if (cleanupErrors.length) {
+      primaryError.message = `${primaryError.message}; cleanup also failed: ${cleanupErrors.join('; ')}`;
+    }
+    throw primaryError;
+  }
+
+  if (cleanupErrors.length) {
+    fail(`secret connector fixture cleanup failed: ${cleanupErrors.join('; ')}`);
+  }
+
+  pass('secret-reference edit/connector readiness/adapter-contract filter fixture checks with cleanup');
+}
+
+async function runServerApiChecks() {
+  if (process.env.ETHEREALAI_VERIFY_SERVER !== '1') {
+    console.log('[skip] authenticated API checks (set ETHEREALAI_VERIFY_SERVER=1)');
+    return;
+  }
+
+  const email = process.env.ETHEREALAI_TEST_EMAIL;
+  const password = process.env.ETHEREALAI_TEST_PASSWORD;
+
+  if (!email || !password) {
+    fail('ETHEREALAI_TEST_EMAIL and ETHEREALAI_TEST_PASSWORD are required for API checks');
+  }
+
+  const baseUrl = process.env.ETHEREALAI_BASE_URL || 'http://localhost:3000';
+  const login = await fetchJson(`${baseUrl}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ email, password })
+  });
+  const cookie = getSetCookie(login.headers)
+    .map(value => value.split(';')[0])
+    .join('; ');
+
+  if (!cookie) {
+    fail('login did not return a session cookie');
+  }
+
+  const authHeaders = { Cookie: cookie };
+  const health = await fetchJson(`${baseUrl}/api/v1/health`, { headers: authHeaders });
+
+  if (!health.body?.ok || !health.body?.database?.ok) {
+    fail('health endpoint did not report an OK server/database state');
+  }
+
+  const mvpTestPassPage = await fetch(`${baseUrl}/mvp-test-pass`, { headers: authHeaders });
+  const mvpTestPassHtml = await mvpTestPassPage.text();
+
+  if (!mvpTestPassPage.ok || !mvpTestPassHtml.includes('MVP Test Pass')) {
+    fail('MVP test pass page did not load for an authenticated user');
+  }
+
+  const dashboardPage = await fetch(`${baseUrl}/dashboard`, { headers: authHeaders });
+  const dashboardHtml = await dashboardPage.text();
+
+  if (
+    !dashboardPage.ok
+    || !dashboardHtml.includes('MVP Readiness')
+    || !dashboardHtml.includes('MLX Lifecycle')
+    || !dashboardHtml.includes('/api/v1/local-model/mlx-lifecycle/start')
+    || !dashboardHtml.includes('Unload Ollama Before Start')
+  ) {
+    fail('dashboard did not expose the MVP readiness panel for an authenticated user');
+  }
+
+  const mlxLifecycle = await fetchJson(`${baseUrl}/api/v1/local-model/mlx-lifecycle`, { headers: authHeaders });
+
+  if (
+    !['running', 'starting', 'stopped'].includes(mlxLifecycle.body?.status)
+    || mlxLifecycle.body?.provider !== 'mlx'
+    || mlxLifecycle.body?.memoryIsolation?.enabled !== true
+    || !Array.isArray(mlxLifecycle.body?.memoryIsolation?.unloadOllamaModels)
+    || !mlxLifecycle.body?.memoryIsolation?.unloadOllamaModels?.includes('qwen3.6:35b-a3b')
+    || !mlxLifecycle.body?.command?.args?.includes('mlx-community/Qwen3-Coder-Next-4bit')
+  ) {
+    fail('MLX lifecycle API did not expose managed status and memory isolation controls');
+  }
+
+  const ownerProofPacketPage = await fetch(`${baseUrl}/owner-proof-packet`, { headers: authHeaders });
+  const ownerProofPacketHtml = await ownerProofPacketPage.text();
+
+  if (
+    !ownerProofPacketPage.ok
+    || !ownerProofPacketHtml.includes('Owner Proof Packet')
+    || !ownerProofPacketHtml.includes('Download Proof Packet JSON')
+    || !ownerProofPacketHtml.includes('Completion Ledger')
+    || !ownerProofPacketHtml.includes('Bot Automation Path')
+    || !ownerProofPacketHtml.includes('Paper Automation Runbook')
+    || !ownerProofPacketHtml.includes('proof packet is local JSON only')
+  ) {
+    fail('owner proof packet page did not load for an authenticated user');
+  }
+
+  const ownerProofPacket = await fetchJson(`${baseUrl}/api/v1/owner-proof-packet`, { headers: authHeaders });
+
+  if (
+    ownerProofPacket.body.packet?.localOnly !== true
+    || ownerProofPacket.body.packet?.liveExecutionEnabled !== false
+    || ownerProofPacket.body.packet?.ownerTestSummary?.readyForOwnerTesting !== true
+    || ownerProofPacket.body.packet?.ownerTestSummary?.localMvpBlockers !== 0
+    || ownerProofPacket.body.packet?.ownerTestSummary?.proofSurfaceCount !== 7
+    || !isOwnerAcceptanceReadyOrAccepted(ownerProofPacket.body.packet?.ownerAcceptance)
+    || ownerProofPacket.body.packet?.status?.mvpStatus !== 'ready_for_owner_testing'
+    || ownerProofPacket.body.packet?.completionLedger?.percentages?.mvp?.current < 99
+    || !ownerProofPacket.body.packet?.completionLedger?.gates?.some(gate => gate.id === 'owner_acceptance_recorded')
+    || ownerProofPacket.body.packet?.botAutomationCapabilityPath?.paperAutomation?.enabled !== true
+    || ownerProofPacket.body.packet?.botAutomationCapabilityPath?.futureLiveAutomation?.enabled !== false
+    || !ownerProofPacket.body.packet?.botAutomationCapabilityPath?.futureLiveAutomation?.blockedGates?.includes('live_order_endpoint_enabled')
+    || ownerProofPacket.body.packet?.paperAutomationRunbook?.localOnly !== true
+    || ownerProofPacket.body.packet?.paperAutomationRunbook?.liveExecutionEnabled !== false
+    || !ownerProofPacket.body.packet?.paperAutomationRunbook?.steps?.some(step => step.id === 'export_local_evidence')
+    || !ownerProofPacket.body.packet?.paperAutomationRunbook?.blockedLiveActions?.some(action => action.id === 'live_order_endpoint_enabled')
+    || ownerProofPacket.body.packet?.proofSurfaces?.length !== 7
+    || ownerProofPacket.body.packet?.exportSurfaces?.length !== 3
+    || ownerProofPacket.body.packet?.fullLiveBlockers?.length !== 4
+    || ownerProofPacket.body.packet?.routeSafety?.safetyCriticalModules < 6
+    || ownerProofPacket.body.packet?.checksum?.algorithm !== 'sha256'
+    || ownerProofPacket.body.packet?.checksum?.source !== 'ownerProofPacket.withoutChecksum'
+    || !/^[a-f0-9]{64}$/.test(ownerProofPacket.body.packet?.checksum?.value || '')
+  ) {
+    fail('owner proof packet API did not return the expected checksummed local packet');
+  }
+
+  const ownerAcceptance = await fetchJson(`${baseUrl}/api/v1/owner-acceptance`, { headers: authHeaders });
+
+  if (
+    !isOwnerAcceptanceReadyOrAccepted(ownerAcceptance.body.ownerAcceptance)
+    || ownerAcceptance.body.localOnly !== true
+    || ownerAcceptance.body.liveExecution?.enabled !== false
+    || ownerAcceptance.body.liveExecution?.orderEndpointEnabled !== false
+    || ownerAcceptance.body.liveExecution?.goLiveAllowed !== false
+    || !Array.isArray(ownerAcceptance.body.records)
+  ) {
+    fail('owner acceptance API did not return the expected local-only acceptance state');
+  }
+
+  const blockedOwnerAcceptance = await fetchJsonExpectStatus(`${baseUrl}/api/v1/owner-acceptance`, {
+    method: 'POST',
+    headers: {
+      ...authHeaders,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      manualTestCompleted: true,
+      proofPacketReviewed: false,
+      liveExecutionAcknowledgedDisabled: true
+    })
+  }, 400);
+
+  if (
+    !blockedOwnerAcceptance.body.missingChecks?.includes('proofPacketReviewed')
+    || blockedOwnerAcceptance.body.liveExecution?.enabled !== false
+    || blockedOwnerAcceptance.body.liveExecution?.goLiveAllowed !== false
+  ) {
+    fail('owner acceptance API did not block incomplete local review confirmations');
+  }
+
+  const protectedProofPages = [
+    {
+      path: '/creator',
+      requiredText: ['MVP 99% · Local E2E 95%', 'Live execution disabled', 'Proof packet', 'Owner evidence']
+    },
+    {
+      path: '/strategy-lab',
+      requiredText: ['MVP 99% · Local E2E 95%', 'Live execution disabled', 'Proof packet', 'Owner evidence']
+    },
+    {
+      path: '/solidity-lab',
+      requiredText: ['MVP 99% · Local E2E 95%', 'Proof packet', 'Deployment Boundary', 'no mainnet or testnet broadcast', 'Token Ecosystem Studio', 'Multi-Chain Token Builder', 'Listing Readiness']
+    },
+    {
+      path: '/social-ops',
+      requiredText: ['MVP 99% · Local E2E 95%', 'Proof packet', 'Local-Only Safety', 'no social network API calls']
+    },
+    {
+      path: '/server-route-inventory',
+      requiredText: ['MVP 99% · Local E2E 95%', 'Live execution disabled', 'Proof packet', 'Owner evidence']
+    }
+  ];
+
+  for (const page of protectedProofPages) {
+    const response = await fetch(`${baseUrl}${page.path}`, { headers: authHeaders });
+    const html = await response.text();
+
+    if (!response.ok || page.requiredText.some(text => !html.includes(text))) {
+      fail(`${page.path} did not expose the authenticated proof/status cues`);
+    }
+  }
+
+  const routeInventoryPage = await fetch(`${baseUrl}/server-route-inventory`, { headers: authHeaders });
+  const routeInventoryHtml = await routeInventoryPage.text();
+
+  if (
+    !routeInventoryPage.ok
+    || !routeInventoryHtml.includes('Server Route Inventory')
+    || !routeInventoryHtml.includes('Safety Modules')
+    || !routeInventoryHtml.includes('Owner Proof Coverage')
+    || !routeInventoryHtml.includes('Owner Acceptance')
+    || !routeInventoryHtml.includes("fetch('/api/v1/system-memory')")
+    || !routeInventoryHtml.includes('module.safetyProfile?.boundary')
+  ) {
+    fail('server route inventory page did not load for an authenticated user');
+  }
+
+  const ecosystemCatalog = await fetchJson(`${baseUrl}/api/v1/solidity-ecosystem/catalog`, { headers: authHeaders });
+
+  if (
+    !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'ethereum')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'solana')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'polygon')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'bnb-chain')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'avalanche')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'base')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'custom-chain')
+    || !ecosystemCatalog.body.catalog?.recommendedLowFeeChains?.some(chain => chain.id === 'solana')
+    || !ecosystemCatalog.body.catalog?.recommendedLowFeeChains?.some(chain => chain.id === 'polygon')
+    || !ecosystemCatalog.body.catalog?.socialChannels?.some(channel => channel.id === 'discord')
+    || !ecosystemCatalog.body.catalog?.socialChannels?.some(channel => channel.id === 'telegram')
+    || !ecosystemCatalog.body.catalog?.socialChannels?.some(channel => channel.id === 'youtube')
+    || !ecosystemCatalog.body.catalog?.socialChannels?.some(channel => channel.id === 'medium')
+    || !ecosystemCatalog.body.catalog?.listingSources?.some(source => source.platform === 'CoinMarketCap')
+    || !ecosystemCatalog.body.catalog?.listingSources?.some(source => source.platform === 'CoinGecko')
+    || ecosystemCatalog.body.catalog?.crossChainArbitrage?.status !== 'design_only_no_live_orders'
+    || ecosystemCatalog.body.catalog?.nodeResearch?.status !== 'research_only_no_live_market_calls'
+  ) {
+    fail('Solidity ecosystem catalog did not expose local-only chain/social/listing/node/arbitrage planning data');
+  }
+
+  const multiAgentRegistry = await fetchJson(`${baseUrl}/api/v1/multi-agent/registry`, { headers: authHeaders });
+
+  if (
+    multiAgentRegistry.body.localOnly !== true
+    || multiAgentRegistry.body.liveExecutionEnabled !== false
+    || !multiAgentRegistry.body.agents?.some(agent => agent.id === 'planner' && agent.modelRole === 'planner')
+    || !multiAgentRegistry.body.agents?.some(agent => agent.id === 'coding' && agent.modelRole === 'coder')
+    || !multiAgentRegistry.body.agents?.some(agent => agent.id === 'solidity' && agent.modelRole === 'coder')
+    || !multiAgentRegistry.body.agents?.some(agent => agent.id === 'social' && agent.modelRole === 'writer')
+    || !multiAgentRegistry.body.agents?.some(agent => agent.id === 'validator_discovery')
+    || !multiAgentRegistry.body.safetyGates?.some(gate => gate.id === 'no_live_trading' && gate.status === 'enforced')
+    || multiAgentRegistry.body.hermesBenchmarkPlan?.status !== 'owner_review_required'
+    || multiAgentRegistry.body.hermesBenchmarkPlan?.bypassAllowed !== false
+    || !multiAgentRegistry.body.hermesBenchmarkPlan?.blockedUntilOwnerApproves?.includes('install Hermes Agent')
+  ) {
+    fail('multi-agent registry did not expose local-only agent roles and blocked Hermes benchmark lane');
+  }
+
+  const multiAgentRun = await fetchJson(`${baseUrl}/api/v1/multi-agent/runs`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({
+      objective: 'Fixture: coordinate the next safe EtherealAI build step.',
+      context: 'Verifier fixture; no external actions.',
+      executionMode: 'plan_only',
+      providerMode: 'mlx_fast_lane',
+      selectedAgents: ['planner', 'coding', 'safety_compliance']
+    })
+  }, 201);
+
+  if (
+    multiAgentRun.body.run?.execution_mode !== 'plan_only'
+    || multiAgentRun.body.run?.provider_mode !== 'mlx_fast_lane'
+    || multiAgentRun.body.run?.summary?.localOnly !== true
+    || multiAgentRun.body.run?.summary?.hermesBypassAllowed !== false
+    || multiAgentRun.body.run?.contributions?.length !== 3
+    || !multiAgentRun.body.run?.contributions?.every(contribution => contribution.status === 'planned')
+    || !multiAgentRun.body.run?.contributions?.some(contribution => contribution.agent_id === 'coding' && contribution.provider === 'mlx')
+  ) {
+    fail('multi-agent plan-only run did not record local-only planned contributions');
+  }
+
+  const multiAgentRuns = await fetchJson(`${baseUrl}/api/v1/multi-agent/runs?limit=3`, { headers: authHeaders });
+
+  if (!multiAgentRuns.body.runs?.some(run => run.id === multiAgentRun.body.run.id)) {
+    fail('multi-agent runs endpoint did not return the recorded coordination run');
+  }
+
+  const companyIdentity = await fetchJson(`${baseUrl}/api/v1/company-identity`, { headers: authHeaders });
+
+  if (
+    companyIdentity.body.localOnly !== true
+    || companyIdentity.body.externalAccountCreationEnabled !== false
+    || companyIdentity.body.purchaseEnabled !== false
+    || companyIdentity.body.identity?.company?.primaryDomain !== 'etherealdigital.ai'
+    || companyIdentity.body.identity?.owner?.email !== 'patrick@etherealdigital.ai'
+    || companyIdentity.body.identity?.company?.dnsProvider !== 'Cloudflare'
+    || companyIdentity.body.identity?.tokenIdentity?.name !== 'EtherealAI'
+    || !companyIdentity.body.checklist?.some(item => item.id === 'email_dns_visible')
+    || !companyIdentity.body.checklist?.some(item => item.id === 'external_actions_blocked' && item.status === 'ready')
+  ) {
+    fail('company identity endpoint did not expose local-only Cloudflare domain/email state');
+  }
+
+  const companyDnsTargets = await fetchJson(`${baseUrl}/api/v1/company-identity/dns-targets`, { headers: authHeaders });
+
+  if (
+    companyDnsTargets.body.localOnly !== true
+    || companyDnsTargets.body.externalMutationEnabled !== false
+    || !Array.isArray(companyDnsTargets.body.targets)
+    || companyDnsTargets.body.setupPlan?.primaryDomain !== 'etherealdigital.ai'
+    || companyDnsTargets.body.setupPlan?.externalMutationEnabled !== false
+    || !companyDnsTargets.body.setupPlan?.recommendedManualSteps?.some(step => step.id === 'email_dns_targets')
+  ) {
+    fail('company DNS target endpoint did not expose local-only setup tracking state');
+  }
+
+  const localVerification = await fetchJson(`${baseUrl}/api/v1/local-verification-status`, { headers: authHeaders });
+  const localStatus = localVerification.body.status || {};
+  const localManifestIds = new Set((localStatus.manifests || []).map(manifest => manifest.id));
+  const memoryHashes = new Set((localStatus.memory?.files || []).map(file => file.sha256).filter(Boolean));
+
+  if (
+    localStatus.ok !== true
+    || localStatus.database?.ok !== true
+    || !Array.isArray(localStatus.manifests)
+    || !localStatus.manifests.every(manifest => manifest.ok === true)
+    || !localManifestIds.has('local_models')
+    || !localManifestIds.has('automation_policy')
+    || !localManifestIds.has('local_secret_providers')
+    || localStatus.memory?.synced !== true
+    || !Array.isArray(localStatus.memory?.files)
+    || localStatus.memory.files.length < 3
+    || memoryHashes.size !== 1
+    || localStatus.launchReadiness?.launchStatus !== 'blocked'
+    || localStatus.launchReadiness?.liveExecution?.enabled !== false
+    || localStatus.launchReadiness?.liveExecution?.orderEndpointEnabled !== false
+    || localStatus.launchReadiness?.liveExecution?.goLiveAllowed !== false
+    || !localStatus.launchReadiness?.requiredBlockedGates?.includes('live_order_endpoint_enabled')
+  ) {
+    fail('local verification status did not confirm synced memory, healthy local manifests, and blocked live launch state');
+  }
+
+  const mvpReadiness = await fetchJson(`${baseUrl}/api/v1/mvp-readiness-checklist`, { headers: authHeaders });
+  const readiness = mvpReadiness.body.readiness || {};
+  const checklist = readiness.checklist || [];
+  const liveEndpointChecklistItem = checklist.find(item => item.id === 'live_order_endpoint_enabled');
+  const localRuntimeChecklistItem = checklist.find(item => item.id === 'local_runtime');
+
+  if (
+    readiness.mvpStatus !== 'ready_for_owner_testing'
+    || readiness.mvpCompletionPercent < 99
+    || readiness.localEndToEndCompletionPercent < 90
+    || readiness.completionLedger?.percentages?.mvp?.current < 99
+    || readiness.completionLedger?.percentages?.localPaperEndToEnd?.current < 95
+    || readiness.completionLedger?.percentages?.fullLiveEndToEnd?.current !== 72
+    || !readiness.completionLedger?.gates?.some(gate => gate.id === 'owner_acceptance_recorded')
+    || !readiness.completionLedger?.gates?.some(gate => gate.id === 'active_paper_schedule_reviewed')
+    || !readiness.completionLedger?.gates?.some(gate => gate.id === 'live_order_endpoint_enabled' && gate.status === 'blocked_by_design')
+    || readiness.automationModes?.paper?.canRunAutomatically !== true
+    || readiness.automationModes?.paper?.reviewExportsEnabled !== true
+    || readiness.automationModes?.paper?.liveExecutionEnabled !== false
+    || readiness.automationModes?.live?.enabled !== false
+    || readiness.automationModes?.live?.goLiveCommandExecution !== false
+    || readiness.liveExecution?.enabled !== false
+    || readiness.liveExecution?.orderEndpointEnabled !== false
+    || readiness.liveExecution?.goLiveAllowed !== false
+    || readiness.localEndToEndCompletionPercent < 95
+    || readiness.automationModes?.paper?.dossierHistoryCsvExport !== true
+    || readiness.botAutomationOwnerWorkflow?.monitorOnly !== true
+    || readiness.botAutomationOwnerWorkflow?.exports?.dossierHistoryCsv !== true
+    || readiness.botAutomationOwnerWorkflow?.routeSafetyProfile?.boundary !== 'monitor_only_no_live_orders'
+    || readiness.botAutomationOwnerWorkflow?.routeSafetyProfile?.liveExecutionEnabled !== false
+    || !readiness.botAutomationOwnerWorkflow?.checks?.some(check => check.id === 'live_execution_blocked' && check.status === 'ready')
+    || readiness.ownerEvidenceManifest?.localOnly !== true
+    || readiness.ownerEvidenceManifest?.liveExecutionEnabled !== false
+    || readiness.ownerEvidenceManifest?.checksum?.algorithm !== 'sha256'
+    || !/^[a-f0-9]{64}$/.test(readiness.ownerEvidenceManifest?.checksum?.value || '')
+    || !readiness.ownerEvidenceManifest?.artifacts?.some(item => item.id === 'route_inventory_safety' && item.location === '/server-route-inventory')
+    || !readiness.ownerEvidenceManifest?.artifacts?.some(item => item.id === 'bot_table_exports' && item.format === 'json/csv')
+    || !isOwnerAcceptanceReadyOrAccepted(readiness.ownerAcceptance)
+    || readiness.totals?.mvpBlockingItems !== 0
+    || !Array.isArray(readiness.endToEndBlockingItems)
+    || !readiness.endToEndBlockingItems.includes('live_order_endpoint_enabled')
+    || localRuntimeChecklistItem?.status !== 'ready'
+    || localRuntimeChecklistItem?.evidence?.includes('Port undefined')
+    || liveEndpointChecklistItem?.status !== 'blocked'
+    || liveEndpointChecklistItem?.mvpRequired !== false
+    || !checklist.some(item => item.id === 'bot_automation_review_exports' && item.status === 'ready' && item.mvpRequired === true)
+  ) {
+    fail('MVP readiness checklist did not report owner-testable MVP status with live execution blocked');
+  }
+
+  const routeInventory = await fetchJson(`${baseUrl}/api/v1/server-route-inventory`, { headers: authHeaders });
+  const inventory = routeInventory.body.inventory || {};
+
+  if (
+    inventory.modularizationPlan?.status !== 'inventory_only_no_route_split_applied'
+    || inventory.totalRoutes < 100
+    || inventory.safetyCriticalModules < 6
+    || !Array.isArray(inventory.modules)
+    || !inventory.modules.some(module => module.moduleId === 'artifacts' && module.files?.includes('app/server/src/routes/artifacts.js'))
+    || !inventory.modules.some(module => module.moduleId === 'auth' && module.files?.includes('app/server/src/routes/auth.js'))
+    || !inventory.modules.some(module => module.moduleId === 'automation-safety' && module.files?.includes('app/server/src/routes/automation-safety.js'))
+    || !inventory.modules.some(module => module.moduleId === 'commands' && module.files?.includes('app/server/src/routes/commands.js'))
+    || !inventory.modules.some(module => module.moduleId === 'creator' && module.files?.includes('app/server/src/routes/creator.js'))
+    || !inventory.modules.some(module => module.moduleId === 'exchange-metadata' && module.files?.includes('app/server/src/routes/exchange-metadata.js'))
+    || !inventory.modules.some(module => module.moduleId === 'file-proposals' && module.files?.includes('app/server/src/routes/file-proposals.js'))
+    || !inventory.modules.some(module => module.moduleId === 'local-models' && module.files?.includes('app/server/src/routes/local-models.js'))
+    || !inventory.modules.some(module => module.moduleId === 'multi-agent' && module.files?.includes('app/server/src/routes/multi-agent.js') && module.safetyProfile?.boundary === 'local_coordination_no_external_actions')
+    || !inventory.modules.some(module => module.moduleId === 'market-data')
+    || !inventory.modules.some(module => module.moduleId === 'strategy-research' && module.files?.includes('app/server/src/routes/strategy-research.js'))
+    || !inventory.modules.some(module => module.moduleId === 'workspaces' && module.files?.includes('app/server/src/routes/workspaces.js'))
+    || !inventory.modules.some(module => module.moduleId === 'bot-automation' && module.safetyProfile?.boundary === 'monitor_only_no_live_orders' && module.safetyProfile?.liveExecutionEnabled === false)
+    || !inventory.modules.some(module => module.moduleId === 'automation-safety' && module.safetyProfile?.boundary === 'blocks_live_launch')
+    || !inventory.modules.some(module => module.moduleId === 'exchange-metadata' && module.safetyProfile?.boundary === 'metadata_only_no_credentials')
+    || !inventory.modules.some(module => module.moduleId === 'order-intents' && module.safetyProfile?.boundary === 'risk_review_no_execution')
+    || !inventory.modules.some(module => module.moduleId === 'social-ops' && module.safetyProfile?.boundary === 'local_drafts_no_external_posting' && module.safetyProfile?.externalPostingEnabled === false)
+    || !inventory.modules.some(module => module.moduleId === 'solidity-lab' && module.safetyProfile?.boundary === 'local_scaffold_no_deployment' && module.safetyProfile?.deploymentEnabled === false)
+    || !inventory.modules.some(module => module.moduleId === 'pages' && module.files?.includes('app/server/src/routes/pages.js'))
+    || !inventory.modules.some(module => module.moduleId === 'system' && module.files?.includes('app/server/src/routes/health.js'))
+    || !inventory.modules.some(module => module.moduleId === 'system' && module.files?.includes('app/server/src/routes/readiness.js'))
+    || !inventory.modules.some(module => module.moduleId === 'system' && module.files?.includes('app/server/src/routes/dev-server.js'))
+    || !inventory.modules.some(module => module.moduleId === 'system' && module.files?.includes('app/server/src/routes/route-inventory.js'))
+    || !inventory.modules.some(module => module.moduleId === 'system' && module.files?.includes('app/server/src/routes/system-config.js'))
+    || !inventory.modules.some(module => module.moduleId === 'system' && module.files?.includes('app/server/src/routes/system-memory.js'))
+    || !inventory.modules.some(module => module.moduleId === 'system' && module.files?.includes('app/server/src/routes/owner-proof-packet.js'))
+    || !inventory.modules.some(module => module.moduleId === 'system' && module.files?.includes('app/server/src/routes/owner-acceptance.js'))
+    || !Array.isArray(inventory.routes)
+    || !inventory.routes.some(route => route.path === '/api/v1/artifacts' && route.file === 'app/server/src/routes/artifacts.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/automation-safety-summary' && route.file === 'app/server/src/routes/automation-safety.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/automation-safety-history' && route.file === 'app/server/src/routes/automation-safety.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/launch-readiness-summary' && route.file === 'app/server/src/routes/automation-safety.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/local-model/generate' && route.file === 'app/server/src/routes/local-models.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/local-model/route' && route.file === 'app/server/src/routes/local-models.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/local-model/benchmark' && route.file === 'app/server/src/routes/local-models.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/local-model/mlx-lifecycle' && route.file === 'app/server/src/routes/local-models.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/local-model/mlx-lifecycle/start' && route.file === 'app/server/src/routes/local-models.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/local-model/mlx-lifecycle/stop' && route.file === 'app/server/src/routes/local-models.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/multi-agent/registry' && route.file === 'app/server/src/routes/multi-agent.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/multi-agent/runs' && route.file === 'app/server/src/routes/multi-agent.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/multi-agent/runs' && route.file === 'app/server/src/routes/multi-agent.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/creator/tasks' && route.file === 'app/server/src/routes/creator.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/creator/tasks' && route.file === 'app/server/src/routes/creator.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/creator/tasks/:id' && route.file === 'app/server/src/routes/creator.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/creator/tasks/:id/advance' && route.file === 'app/server/src/routes/creator.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/creator/tasks/:id/scaffold' && route.file === 'app/server/src/routes/creator.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/creator/tasks/:id/file-proposals/generate' && route.file === 'app/server/src/routes/creator.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/creator/tasks/:id/file-proposals/generate-batch' && route.file === 'app/server/src/routes/creator.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/creator/tasks/:id/workspace-edits/generate' && route.file === 'app/server/src/routes/creator.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/creator/tasks/:id/checklist' && route.file === 'app/server/src/routes/creator.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/creator/tasks/:id/checklist/generate' && route.file === 'app/server/src/routes/creator.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/creator/checklist/:id' && route.file === 'app/server/src/routes/creator.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/file-proposals' && route.file === 'app/server/src/routes/file-proposals.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/file-proposals' && route.file === 'app/server/src/routes/file-proposals.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/file-proposals/:id' && route.file === 'app/server/src/routes/file-proposals.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/file-proposals/:id/apply' && route.file === 'app/server/src/routes/file-proposals.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/git/status' && route.file === 'app/server/src/routes/commands.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/git/checkpoints' && route.file === 'app/server/src/routes/commands.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/command-requests' && route.file === 'app/server/src/routes/commands.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/command-requests' && route.file === 'app/server/src/routes/commands.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/command-templates' && route.file === 'app/server/src/routes/commands.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/command-templates/:id/run' && route.file === 'app/server/src/routes/commands.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/command-requests/:id/run' && route.file === 'app/server/src/routes/commands.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/strategies' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/strategies' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/strategies/:id' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/strategies/:id/backtests' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/backtests' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/backtests/:id' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/strategies/:id/optimization-sweeps' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/optimization-sweeps' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/optimization-sweeps/:id' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/strategies/:id/split-tests' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/split-tests' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/split-tests/:id' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/strategies/:id/walk-forward-tests' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/walk-forward-tests' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/walk-forward-tests/:id' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/decision-logs' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/decision-logs/:id' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/paper-sessions' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/paper-sessions/:id' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/strategies/:id/paper-sessions' && route.file === 'app/server/src/routes/strategy-research.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/local-secret-provider-capabilities' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/local-secret-references' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/local-secret-references' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/local-secret-references/:id' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/exchange-connectors' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/exchange-connectors' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/exchange-connectors/:id' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/exchange-connectors/:id/readiness' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/exchange-connectors/:id/readiness-events' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/exchange-connector-readiness-events/:id' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/exchange-adapter-contracts' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/exchange-adapter-scaffolds' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/exchange-adapter-scaffolds/:exchangeName' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/exchange-connectors/:id/adapter-contract-check' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/exchange-connectors/:id/adapter-contract-events' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/exchange-adapter-contract-events/:id' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/market-data/providers' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/market-data/providers' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/market-data/providers/:id' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/market-data/providers/:id/health-check' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/market-data/refresh-schedules' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/market-data/refresh-schedules' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/market-data/refresh-schedules/:id' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'PATCH' && route.path === '/api/v1/market-data/refresh-schedules/:id' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/market-data/refresh-schedules/:id/history' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/market-data/refresh-schedules/:id/run' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/market-data/refresh-schedules/:id/cleanup' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/market-data/refresh-runs' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/market-data/refresh-runs/:id' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/market-data/imports' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/market-data/imports' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/market-data/imports/:id' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'PATCH' && route.path === '/api/v1/market-data/imports/:id' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'DELETE' && route.path === '/api/v1/market-data/imports/:id' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/market-data/imports/:id/candles' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/market-data/import-jobs' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/market-data/import-jobs' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/market-data/import-jobs/:id' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/market-data/import-jobs/upload' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/market-data/import-jobs/:id/cancel' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/market-data/import-jobs/:id/retry' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/market-data/import-jobs/:id/discard-source' && route.file === 'app/server/src/routes/market-data.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/risk-profiles' && route.file === 'app/server/src/routes/risk-profiles.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/risk-profiles' && route.file === 'app/server/src/routes/risk-profiles.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/risk-profiles/:id' && route.file === 'app/server/src/routes/risk-profiles.js')
+    || !inventory.routes.some(route => route.method === 'PATCH' && route.path === '/api/v1/risk-profiles/:id' && route.file === 'app/server/src/routes/risk-profiles.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/risk-profiles/:id/audit-events' && route.file === 'app/server/src/routes/risk-profiles.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/risk-profiles/:id/kill-switch-impact' && route.file === 'app/server/src/routes/risk-profiles.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/risk-profile-audit-events/:id' && route.file === 'app/server/src/routes/risk-profiles.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/order-intents' && route.file === 'app/server/src/routes/order-intents.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/order-intents' && route.file === 'app/server/src/routes/order-intents.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/order-intents/:id' && route.file === 'app/server/src/routes/order-intents.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/social-posts' && route.file === 'app/server/src/routes/social-ops.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/social-posts' && route.file === 'app/server/src/routes/social-ops.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/social-posts/:id' && route.file === 'app/server/src/routes/social-ops.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/social-posts/generate' && route.file === 'app/server/src/routes/social-ops.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/solidity-contracts' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/solidity-contracts' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/solidity-contracts/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/solidity-contracts/:id/starter' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/solidity-contracts/:id/review' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/solidity-contracts/:id/ecosystem-blueprint' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/solidity-contracts/:id/scaffold' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/solidity-ecosystem/catalog' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-capability-path' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-plans' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/bot-automation-plans' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-plans/:id' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.method === 'PATCH' && route.path === '/api/v1/bot-automation-plans/:id' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/bot-automation-plans/:id/review' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/bot-automation-plans/:id/live-readiness' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/bot-automation-plans/:id/live-readiness-events' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-plans/:id/safety-dossier' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/bot-live-readiness-events/:id' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/bot-automation-plans/:id/live-enablement-reviews' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/bot-automation-plans/:id/go-live-command' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/bot-live-enablement-reviews/:id' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-runs' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/bot-automation-runs/:id' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/bot-automation-plans/:id/paper-runs' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-schedules' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-schedules/:id' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/bot-automation-plans/:id/schedules' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.method === 'PATCH' && route.path === '/api/v1/bot-automation-schedules/:id' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/bot-automation-schedules/:id/run' && route.file === 'app/server/src/routes/bot-automation.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/workspaces' && route.file === 'app/server/src/routes/workspaces.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/workspaces' && route.file === 'app/server/src/routes/workspaces.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/workspaces/:id/files' && route.file === 'app/server/src/routes/workspaces.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/workspaces/:id/files/content' && route.file === 'app/server/src/routes/workspaces.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/health' && route.file === 'app/server/src/routes/health.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/local-verification-status' && route.file === 'app/server/src/routes/readiness.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/mvp-readiness-checklist' && route.file === 'app/server/src/routes/readiness.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/dev-server/status' && route.file === 'app/server/src/routes/dev-server.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/dev-server/logs' && route.file === 'app/server/src/routes/dev-server.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/model-roles' && route.file === 'app/server/src/routes/system-config.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/policy' && route.file === 'app/server/src/routes/system-config.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/company-identity' && route.file === 'app/server/src/routes/company-identity.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/company-identity/dns-targets' && route.file === 'app/server/src/routes/company-identity.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/company-identity/dns-targets/:id' && route.file === 'app/server/src/routes/company-identity.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/system-memory' && route.file === 'app/server/src/routes/system-memory.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/owner-proof-packet' && route.file === 'app/server/src/routes/owner-proof-packet.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/owner-acceptance' && route.file === 'app/server/src/routes/owner-acceptance.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/server-route-inventory' && route.file === 'app/server/src/routes/route-inventory.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/auth/login' && route.file === 'app/server/src/routes/auth.js')
+    || !inventory.routes.some(route => route.path === '/dashboard' && route.file === 'app/server/src/routes/pages.js')
+    || !inventory.routes.some(route => route.path === '/owner-proof-packet' && route.file === 'app/server/src/routes/pages.js')
+  ) {
+    fail('server route inventory did not expose expected modularization inventory data');
+  }
+
+  const providers = await fetchJson(`${baseUrl}/api/v1/market-data/providers`, { headers: authHeaders });
+  const providerRows = providers.body.providers || [];
+
+  if (!providerRows.length || providerRows.some(provider => !Number.isFinite(Number(provider.provider_candle_limit)))) {
+    fail('providers endpoint did not include provider candle limits');
+  }
+
+  const schedules = await fetchJson(`${baseUrl}/api/v1/market-data/refresh-schedules`, { headers: authHeaders });
+  const scheduleRows = schedules.body.schedules || [];
+
+  if (scheduleRows.some(schedule => !Object.prototype.hasOwnProperty.call(schedule, 'backfill_start_at'))) {
+    fail('refresh schedules did not include backfill fields');
+  }
+
+  const botPlans = await fetchJson(`${baseUrl}/api/v1/bot-automation-plans`, { headers: authHeaders });
+  const botPlanRows = botPlans.body.plans || [];
+
+  if (botPlanRows.some(plan => plan.readiness?.liveExecution?.enabled !== false)) {
+    fail('bot automation plans must report live execution disabled');
+  }
+
+  const botRuns = await fetchJson(`${baseUrl}/api/v1/bot-automation-runs`, { headers: authHeaders });
+  const botRunRows = botRuns.body.runs || [];
+
+  if (botRunRows.some(run => run.result?.liveExecution?.enabled !== false)) {
+    fail('paper bot runs must report live execution disabled');
+  }
+
+  const botSchedules = await fetchJson(`${baseUrl}/api/v1/bot-automation-schedules`, { headers: authHeaders });
+  const botScheduleRows = botSchedules.body.schedules || [];
+
+  if (botScheduleRows.some(schedule => !['paused', 'active', 'archived'].includes(schedule.status))) {
+    fail('bot automation schedules returned an unsupported status');
+  }
+
+  const automationSafety = await fetchJson(`${baseUrl}/api/v1/automation-safety-summary`, { headers: authHeaders });
+
+  if (
+    automationSafety.body.summary?.liveExecution?.enabled !== false
+    || automationSafety.body.summary?.liveExecution?.goLiveAllowed !== false
+  ) {
+    fail('automation safety summary reported live execution enabled or go-live allowed');
+  }
+
+  const automationSafetyHistory = await fetchJson(`${baseUrl}/api/v1/automation-safety-history?days=14`, { headers: authHeaders });
+
+  if (
+    automationSafetyHistory.body.history?.liveExecution?.enabled !== false
+    || automationSafetyHistory.body.history?.liveExecution?.goLiveAllowed !== false
+    || !Array.isArray(automationSafetyHistory.body.history?.series?.adapterContractEvents)
+    || !Array.isArray(automationSafetyHistory.body.history?.series?.riskAuditEvents)
+  ) {
+    fail('automation safety history did not return disabled monitor-only series');
+  }
+
+  const launchReadiness = await fetchJson(`${baseUrl}/api/v1/launch-readiness-summary`, { headers: authHeaders });
+
+  if (
+    launchReadiness.body.summary?.launchStatus !== 'blocked'
+    || launchReadiness.body.summary?.liveExecution?.enabled !== false
+    || launchReadiness.body.summary?.liveExecution?.goLiveAllowed !== false
+    || !launchReadiness.body.summary?.blockingFailures?.includes('credential_loader_implemented')
+    || !launchReadiness.body.summary?.blockingFailures?.includes('live_order_adapter_implemented')
+    || !Array.isArray(launchReadiness.body.summary?.capabilities?.secretProviders)
+    || !Array.isArray(launchReadiness.body.summary?.capabilities?.adapterScaffolds)
+  ) {
+    fail('launch readiness summary did not return blocked monitor-only gates');
+  }
+
+  const secretProviderCapabilities = await fetchJson(`${baseUrl}/api/v1/local-secret-provider-capabilities`, { headers: authHeaders });
+
+  if (
+    secretProviderCapabilities.body.capabilities?.secretValuesAccepted !== false
+    || secretProviderCapabilities.body.capabilities?.databaseStoresSecretValues !== false
+    || secretProviderCapabilities.body.capabilities?.credentialLoadingImplemented !== false
+    || secretProviderCapabilities.body.capabilities?.liveExecution?.enabled !== false
+    || !secretProviderCapabilities.body.capabilities?.providers?.some(provider => (
+      provider.providerType === 'macos_keychain'
+      && provider.secretValuesAccepted === false
+      && provider.credentialLoadingImplemented === false
+    ))
+  ) {
+    fail('local secret-provider capabilities did not report disabled metadata-only providers');
+  }
+
+  const secretReferences = await fetchJson(`${baseUrl}/api/v1/local-secret-references`, { headers: authHeaders });
+
+  if (!Array.isArray(secretReferences.body.references)) {
+    fail('local secret references endpoint did not return a references array');
+  }
+
+  await fetchJsonExpectStatus(`${baseUrl}/api/v1/local-secret-references`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({
+      label: 'Bad inline secret reference fixture',
+      providerType: 'macos_keychain',
+      referenceName: `sk-${'a'.repeat(40)}`,
+      scope: 'exchange_connector'
+    })
+  }, 400);
+
+  await runSecretReferenceConnectorChecks(baseUrl, cookie);
+  await runBotAutomationFixtureChecks(baseUrl, cookie);
+
+  const systemMemory = await fetchJson(`${baseUrl}/api/v1/system-memory`, { headers: authHeaders });
+
+  if (!Object.prototype.hasOwnProperty.call(systemMemory.body.snapshot?.counts || {}, 'exchange_connector_readiness_events')) {
+    fail('system memory did not include exchange connector readiness event counts');
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(systemMemory.body.snapshot?.counts || {}, 'exchange_adapter_contract_events')) {
+    fail('system memory did not include exchange adapter contract event counts');
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(systemMemory.body.snapshot?.counts || {}, 'bot_live_enablement_reviews')) {
+    fail('system memory did not include bot live enablement review counts');
+  }
+
+  if (
+    systemMemory.body.snapshot?.ownerEvidence?.localOnly !== true
+    || systemMemory.body.snapshot?.ownerEvidence?.liveExecutionEnabled !== false
+    || systemMemory.body.snapshot?.ownerEvidence?.routeBoundary !== 'monitor_only_no_live_orders'
+    || systemMemory.body.snapshot?.botAutomationCapabilityPath?.paperAutomation?.enabled !== true
+    || systemMemory.body.snapshot?.botAutomationCapabilityPath?.futureLiveAutomation?.enabled !== false
+    || !systemMemory.body.snapshot?.botAutomationCapabilityPath?.futureLiveAutomation?.blockedGates?.includes('live_order_endpoint_enabled')
+    || !isOwnerAcceptanceReadyOrAccepted(systemMemory.body.snapshot?.ownerAcceptance)
+    || !Object.prototype.hasOwnProperty.call(systemMemory.body.snapshot?.counts || {}, 'owner_acceptance_records')
+    || !Array.isArray(systemMemory.body.snapshot?.recent?.ownerAcceptanceRecords)
+    || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
+      surface.id === 'owner_proof_packet'
+      && surface.location === '/owner-proof-packet'
+      && surface.localOnly === true
+      && surface.liveExecutionEnabled === false
+    ))
+    || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
+      surface.id === 'dashboard_readiness'
+      && surface.location === '/dashboard'
+      && surface.localOnly === true
+      && surface.liveExecutionEnabled === false
+    ))
+    || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
+      surface.id === 'mvp_test_pass_manifest'
+      && surface.location === '/mvp-test-pass'
+      && surface.localOnly === true
+      && surface.liveExecutionEnabled === false
+    ))
+    || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
+      surface.id === 'social_ops_drafts'
+      && surface.location === '/social-ops'
+      && surface.externalPostingEnabled === false
+    ))
+    || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
+      surface.id === 'solidity_lab_scaffolds'
+      && surface.location === '/solidity-lab'
+      && surface.deploymentEnabled === false
+    ))
+    || !systemMemory.body.snapshot?.ownerEvidence?.exportSurfaces?.some(surface => surface.id === 'owner_evidence_manifest_json' && surface.location === '/mvp-test-pass')
+    || !systemMemory.body.snapshot?.ownerEvidence?.exportSurfaces?.some(surface => surface.id === 'bot_safety_dossier_history_csv' && surface.format === 'csv')
+    || !systemMemory.body.snapshot?.ownerEvidence?.reviewChecklist?.includes('Confirm checksum marker')
+    || !systemMemory.body.snapshot?.ownerEvidence?.reviewChecklist?.includes('Confirm live execution remains blocked')
+    || !systemMemory.body.snapshot?.ownerEvidence?.fullLiveBlockers?.includes('live_order_endpoint_enabled')
+    || !systemMemory.body.snapshot?.ownerEvidence?.fullLiveBlockers?.includes('owner_go_live_command_accepted')
+    || !Number.isFinite(Number(systemMemory.body.snapshot?.counts?.multi_agent_coordination_runs))
+    || !Number.isFinite(Number(systemMemory.body.snapshot?.counts?.multi_agent_contributions))
+    || !Number.isFinite(Number(systemMemory.body.snapshot?.counts?.company_dns_targets))
+    || !Array.isArray(systemMemory.body.snapshot?.recent?.multiAgentRuns)
+    || !Array.isArray(systemMemory.body.snapshot?.recent?.multiAgentContributions)
+    || !Array.isArray(systemMemory.body.snapshot?.recent?.companyDnsTargets)
+    || !systemMemory.body.snapshot?.recent?.multiAgentRuns?.some(run => run.summary?.localOnly === true)
+    || systemMemory.body.snapshot?.companyIdentity?.identity?.company?.primaryDomain !== 'etherealdigital.ai'
+    || systemMemory.body.snapshot?.companyIdentity?.identity?.owner?.email !== 'patrick@etherealdigital.ai'
+    || !systemMemory.body.snapshot?.companyIdentity?.checklist?.some(item => item.id === 'external_actions_blocked' && item.status === 'ready')
+    || !systemMemory.body.snapshot?.ownerEvidence?.externalSurfaceBoundaries?.some(boundary => (
+      boundary.moduleId === 'social-ops'
+      && boundary.boundary === 'local_drafts_no_external_posting'
+      && boundary.externalPostingEnabled === false
+    ))
+    || !systemMemory.body.snapshot?.ownerEvidence?.externalSurfaceBoundaries?.some(boundary => (
+      boundary.moduleId === 'solidity-lab'
+      && boundary.boundary === 'local_scaffold_no_deployment'
+      && boundary.deploymentEnabled === false
+    ))
+  ) {
+    fail('system memory did not include owner evidence manifest and live-blocker references');
+  }
+
+  pass('authenticated health/local-verification/mvp-readiness/route-inventory/provider/schedule/bot-plan/bot-run/bot-schedule/safety-summary/risk-audit/filter/live-readiness-history/go-live-review/checklist-edit/emergency-stop/plan-management/secret-reference/connector-readiness/adapter-contract matrix filters API checks');
+}
+
+async function main() {
+  runNodeSyntaxCheck();
+  await checkExchangeAdapterScaffoldModule();
+  checkOwnerEvidenceModule();
+  checkOwnerAcceptanceModule();
+  checkOwnerProofPacketModule();
+  checkCommandSafetyModule();
+  await checkCommandRuntimeModule();
+  await checkAgentRecordActionsModule();
+  await checkChecklistActionsModule();
+  await checkProcessRuntimeModule();
+  checkServerPathsModule();
+  checkRequestHelpersModule();
+  await checkServerStartupModule();
+  checkAppMiddlewareModule();
+  await checkAuthRoutesModule();
+  checkRouteRegistrationModule();
+  await checkSqliteRuntimeModule();
+  checkDatabaseSchemaModule();
+  checkDbSelectsModule();
+  await checkDbRowLookupsModule();
+  checkReadinessModule();
+  checkLocalModelRoutingModule();
+  await checkLocalModelRuntimeModule();
+  await checkMlxLifecycleModule();
+  checkMultiAgentCoordinationModule();
+  checkSecretSafetyModule();
+  checkSystemConfigRuntimeModule();
+  checkCompanyIdentityModule();
+  checkExchangeMetadataModule();
+  checkStrategyResearchModule();
+  await checkStrategyDecisionLogRuntimeModule();
+  checkStrategyMathModule();
+  checkStrategySignalsModule();
+  checkStrategyEngineModule();
+  await checkMarketDataModule();
+  await checkMarketImportFilesModule();
+  await checkMarketImportJobRuntimeModule();
+  await checkMarketImportDependenciesModule();
+  await checkMarketRefreshScheduleRuntimeModule();
+  await checkDevServerModule();
+  checkCreatorRecordsModule();
+  await checkWorkspaceFilesModule();
+  checkCreatorPromptsModule();
+  checkCreatorScaffoldModule();
+  checkArtifactRowsModule();
+  checkSocialOpsModule();
+  checkRiskSafetyModule();
+  await checkRiskProfileActionsModule();
+  checkSolidityLabModule();
+  checkBotAutomationModule();
+  await checkBotAutomationActionsRuntimeModule();
+  await checkBotAutomationScheduleRuntimeModule();
+  checkInlineScripts('app/client/strategy-lab.html');
+  checkInlineScripts('app/client/index.html');
+  checkInlineScripts('app/client/creator.html');
+  checkInlineScripts('app/client/dashboard.html');
+  checkInlineScripts('app/client/owner-proof-packet.html');
+  checkInlineScripts('app/client/mvp-test-pass.html');
+  checkInlineScripts('app/client/server-route-inventory.html');
+  checkStrategyLabSafetyDossierExportUi();
+  checkMvpTestPassOwnerWorkflowUi();
+  checkDashboardMvpReadinessUi();
+  checkOwnerProofPacketUi();
+  checkHomeLocalProofUi();
+  checkAuthenticatedProofBanners();
+  checkRouteInventoryOwnerProofUi();
+  checkLocalOnlySurfaceCues();
+  checkMvpOwnerTestPassDoc();
+  checkProjectHandoffDoc();
+  await runServerApiChecks();
+}
+
+main().catch(error => {
+  console.error(`[fail] ${error.message}`);
+  process.exit(1);
+});

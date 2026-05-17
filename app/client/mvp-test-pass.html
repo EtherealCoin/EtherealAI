@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EtherealAI MVP Test Pass</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/owner-proof-packet">Proof Packet</a>
+        <a href="/server-route-inventory">Route Inventory</a>
+        <a href="/creator">Creator Agent</a>
+        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/solidity-lab">Solidity Lab</a>
+        <a href="/social-ops">Social Ops</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>MVP Test Pass</h1>
+        <p>Use this page before owner testing to confirm the local MVP is ready and live execution is still blocked.</p>
+
+        <section class="model-panel">
+            <h2>Readiness</h2>
+            <button id="refresh-readiness" type="button">Refresh Readiness</button>
+            <div id="readiness-cards" class="artifact-grid">Loading readiness...</div>
+            <div id="readiness-checklist" class="comparison-table">Loading checklist...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Completion Ledger</h2>
+            <div id="completion-ledger-cards" class="artifact-grid">Loading completion ledger...</div>
+            <div id="completion-ledger-gates" class="comparison-table">Loading completion gates...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Bot Automation Smoke</h2>
+            <div id="bot-workflow-smoke-cards" class="artifact-grid">Loading bot workflow smoke report...</div>
+            <div id="bot-workflow-smoke-table" class="comparison-table">Loading bot workflow smoke checks...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Owner Evidence Manifest</h2>
+            <div class="button-row">
+                <button id="owner-evidence-download" type="button" disabled>Download Evidence Manifest JSON</button>
+                <span id="owner-evidence-export-status" class="inline-status">Evidence manifest loading...</span>
+            </div>
+            <div id="owner-evidence-cards" class="artifact-grid">Loading owner evidence manifest...</div>
+            <div id="owner-evidence-table" class="comparison-table">Loading owner evidence manifest...</div>
+            <h3>Owner Evidence Review Checklist</h3>
+            <div id="owner-evidence-review-checklist" class="comparison-table">Loading owner evidence review checklist...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Owner Acceptance Record</h2>
+            <div class="button-row">
+                <a class="cta-button" href="/owner-proof-packet">Open Proof Packet</a>
+                <span id="owner-acceptance-record-status" class="inline-status">Loading local owner acceptance record state...</span>
+            </div>
+            <div id="owner-acceptance-record-cards" class="artifact-grid">Loading owner acceptance record...</div>
+            <div id="owner-acceptance-record-list" class="task-list">Loading owner acceptance record history...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Local Verification</h2>
+            <div id="verification-cards" class="artifact-grid">Loading verification...</div>
+            <div id="verification-table" class="comparison-table">Loading verification checks...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Owner Test Sequence</h2>
+            <div class="comparison-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Step</th>
+                            <th>Open</th>
+                            <th>Pass Condition</th>
+                        </tr>
+                    </thead>
+                    <tbody id="owner-test-steps"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const ownerTestSteps = [
+            {
+                step: 'Dashboard health',
+                href: '/dashboard',
+                pass: 'Server, database, dev-server status, local model status, and memory snapshot load.'
+            },
+            {
+                step: 'MVP readiness',
+                href: '/mvp-test-pass',
+                pass: 'MVP status is ready_for_owner_testing, MVP blockers are 0, and live execution is disabled.'
+            },
+            {
+                step: 'Owner evidence review',
+                href: '/mvp-test-pass',
+                pass: 'Owner Evidence Review Checklist lists local proof rows, checksum marker, and confirms live execution remains blocked.'
+            },
+            {
+                step: 'Strategy Lab safety',
+                href: '/strategy-lab',
+                pass: 'Local Verification, MVP Readiness, Automation Safety, and Launch Readiness panels load.'
+            },
+            {
+                step: 'Creator Agent loop',
+                href: '/creator',
+                pass: 'Tasks, workspace proposals, checkpoints, and safe command runs remain local and auditable.'
+            },
+            {
+                step: 'Paper automation',
+                href: '/strategy-lab',
+                pass: 'Paper bot plans and schedules run monitor-only; go-live and live order endpoint remain blocked.'
+            },
+            {
+                step: 'Bot automation review exports',
+                href: '/strategy-lab',
+                pass: 'Plan, paper-run, schedule, dossier JSON, and dossier history CSV exports use loaded local data; Dossier view shows monitor-only live execution blocked.'
+            },
+            {
+                step: 'Local MVP acceptance record',
+                href: '/owner-proof-packet',
+                pass: 'After manual testing, use Record Local MVP Acceptance; it records local evidence only and keeps live execution disabled.'
+            }
+        ];
+        let latestOwnerEvidenceManifest = null;
+        let latestOwnerAcceptanceRecordState = null;
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function renderCards(targetId, cards) {
+            document.getElementById(targetId).innerHTML = cards.map(card => `
+                <div class="artifact-stat">
+                    <strong>${escapeHtml(card.label)}</strong>
+                    <span>${escapeHtml(card.value)}</span>
+                    <span>${escapeHtml(card.note)}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderReadiness(readiness = {}) {
+            renderCards('readiness-cards', [
+                {
+                    label: 'MVP Status',
+                    value: readiness.mvpStatus || 'needs_review',
+                    note: readiness.mvpScope || 'local scope'
+                },
+                {
+                    label: 'MVP Completion',
+                    value: `${readiness.mvpCompletionPercent ?? 0}%`,
+                    note: `${readiness.totals?.mvpBlockingItems ?? 0} MVP blocker(s)`
+                },
+                {
+                    label: 'Owner Acceptance',
+                    value: formatOwnerAcceptanceStatus(readiness.ownerAcceptance?.status),
+                    note: readiness.ownerAcceptance?.localMvpGate === 'accepted'
+                        ? 'local acceptance recorded'
+                        : readiness.ownerAcceptance?.localMvpGate === 'ready'
+                            ? 'manual owner review remains'
+                            : 'resolve local blockers'
+                },
+                {
+                    label: 'Local End-to-End',
+                    value: `${readiness.localEndToEndCompletionPercent ?? readiness.mvpCompletionPercent ?? 0}%`,
+                    note: readiness.automationModes?.paper?.canRunAutomatically ? 'paper automation ready' : 'paper automation review'
+                },
+                {
+                    label: 'Full Live End-to-End',
+                    value: `${readiness.endToEndCompletionPercent ?? 0}%`,
+                    note: `${readiness.totals?.endToEndBlockingItems ?? 0} live blocker(s)`
+                },
+                {
+                    label: 'Paper Automation',
+                    value: readiness.automationModes?.paper?.canRunAutomatically ? 'Ready' : 'Review',
+                    note: `${readiness.automationModes?.paper?.counts?.schedules ?? 0} schedule(s)`
+                },
+                {
+                    label: 'Bot Review Exports',
+                    value: readiness.automationModes?.paper?.reviewExportsEnabled && readiness.automationModes?.paper?.dossierHistoryCsvExport ? 'Ready' : 'Review',
+                    note: 'filters, dossier, history CSV'
+                },
+                {
+                    label: 'Go-Live Command',
+                    value: readiness.automationModes?.live?.goLiveCommandExecution ? 'Executable' : 'Blocked',
+                    note: 'records blocked review only'
+                },
+                {
+                    label: 'Live Execution',
+                    value: readiness.liveExecution?.enabled ? 'Enabled' : 'Disabled',
+                    note: readiness.liveExecution?.goLiveAllowed ? 'go-live allowed' : 'go-live blocked'
+                }
+            ]);
+
+            document.getElementById('readiness-checklist').innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Area</th>
+                            <th>Item</th>
+                            <th>Status</th>
+                            <th>MVP</th>
+                            <th>Evidence</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${(readiness.checklist || []).map(item => `
+                            <tr>
+                                <td>${escapeHtml(item.area)}</td>
+                                <td>${escapeHtml(item.item)}</td>
+                                <td>${escapeHtml(item.status)}</td>
+                                <td>${item.mvpRequired ? 'required' : 'future'}</td>
+                                <td>${escapeHtml(item.evidence || '-')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            renderCompletionLedger(readiness.completionLedger || {});
+            renderBotWorkflowSmoke(readiness.botAutomationOwnerWorkflow || {});
+            renderOwnerEvidenceManifest(readiness.ownerEvidenceManifest || {});
+        }
+
+        function renderCompletionLedger(ledger = {}) {
+            const percentages = ledger.percentages || {};
+            const mvp = percentages.mvp || {};
+            const localPaper = percentages.localPaperEndToEnd || {};
+            const fullLive = percentages.fullLiveEndToEnd || {};
+
+            renderCards('completion-ledger-cards', [
+                {
+                    label: 'Why MVP is 99%',
+                    value: `${mvp.current ?? 0}%`,
+                    note: mvp.reason || 'Owner acceptance determines final local MVP completion.'
+                },
+                {
+                    label: 'Why Local Paper is 95%',
+                    value: `${localPaper.current ?? 0}%`,
+                    note: localPaper.reason || 'Active paper schedule review determines final local paper completion.'
+                },
+                {
+                    label: 'Why Full Live is 72%',
+                    value: `${fullLive.current ?? 0}%`,
+                    note: fullLive.reason || 'Live execution gates remain intentionally blocked.'
+                }
+            ]);
+
+            document.getElementById('completion-ledger-gates').innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Gate</th>
+                            <th>Lane</th>
+                            <th>Status</th>
+                            <th>What Moves It</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${(ledger.gates || []).map(gate => `
+                            <tr>
+                                <td>${escapeHtml(gate.label || gate.id)}</td>
+                                <td>${escapeHtml(gate.lane || '-')}</td>
+                                <td>${escapeHtml(gate.status || '-')}</td>
+                                <td>${escapeHtml(`${gate.moves || ''} Next: ${gate.nextAction || 'Review owner proof packet.'}`)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function formatOwnerAcceptanceStatus(status) {
+            if (status === 'accepted') {
+                return 'Accepted';
+            }
+
+            if (status === 'pending_owner_review') {
+                return 'Pending Review';
+            }
+
+            if (status === 'needs_local_review') {
+                return 'Needs Review';
+            }
+
+            return status || 'Unknown';
+        }
+
+        function renderBotWorkflowSmoke(workflow = {}) {
+            const exports = workflow.exports || {};
+            const liveExecution = workflow.liveExecution || {};
+            const routeSafety = workflow.routeSafetyProfile || {};
+
+            renderCards('bot-workflow-smoke-cards', [
+                {
+                    label: 'Workflow Status',
+                    value: workflow.status || 'needs_review',
+                    note: workflow.monitorOnly ? 'monitor-only' : 'review required'
+                },
+                {
+                    label: 'Plans',
+                    value: workflow.counts?.plans ?? 0,
+                    note: `${workflow.counts?.paperRuns ?? 0} paper run(s)`
+                },
+                {
+                    label: 'Schedules',
+                    value: workflow.counts?.schedules ?? 0,
+                    note: exports.scheduleJsonCsv ? 'schedule JSON/CSV ready' : 'schedule export review'
+                },
+                {
+                    label: 'Dossier Evidence',
+                    value: exports.safetyDossierJson && exports.dossierHistoryCsv ? 'Ready' : 'Review',
+                    note: 'JSON and history CSV'
+                },
+                {
+                    label: 'Route Boundary',
+                    value: routeSafety.boundary || 'review',
+                    note: routeSafety.liveExecutionEnabled ? 'live route enabled' : 'live route disabled'
+                },
+                {
+                    label: 'Live Execution',
+                    value: liveExecution.enabled ? 'Enabled' : 'Disabled',
+                    note: liveExecution.goLiveAllowed ? 'go-live allowed' : 'go-live blocked'
+                }
+            ]);
+
+            document.getElementById('bot-workflow-smoke-table').innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Check</th>
+                            <th>Status</th>
+                            <th>Evidence</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${(workflow.checks || []).map(check => `
+                            <tr>
+                                <td>${escapeHtml(check.label)}</td>
+                                <td>${escapeHtml(check.status)}</td>
+                                <td>${escapeHtml(check.evidence)}</td>
+                            </tr>
+                        `).join('') || '<tr><td colspan="3">No bot workflow smoke checks loaded.</td></tr>'}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderOwnerEvidenceManifest(manifest = {}) {
+            const artifacts = manifest.artifacts || [];
+            const downloadButton = document.getElementById('owner-evidence-download');
+            const exportStatus = document.getElementById('owner-evidence-export-status');
+            const checksumPrefix = manifest.checksum?.value ? manifest.checksum.value.slice(0, 12) : '';
+            const reviewRows = [
+                ...artifacts.map(item => ({
+                    item: `Review ${item.label}`,
+                    status: manifest.localOnly ? 'Ready' : 'Review',
+                    source: `${item.location} · ${item.format}`,
+                    ownerCheck: item.evidence
+                })),
+                {
+                    item: 'Confirm checksum marker',
+                    status: manifest.checksum?.value ? 'Ready' : 'Review',
+                    source: checksumPrefix ? `${manifest.checksum?.algorithm || 'sha256'} ${checksumPrefix}` : 'checksum missing',
+                    ownerCheck: 'Manifest artifact list has a local integrity marker.'
+                },
+                {
+                    item: 'Confirm live execution remains blocked',
+                    status: manifest.liveExecutionEnabled ? 'Review' : 'Ready',
+                    source: `${(manifest.blockedLiveGates || []).length} blocked live gate(s)`,
+                    ownerCheck: 'No live order endpoint or live exchange placement is enabled.'
+                }
+            ];
+            latestOwnerEvidenceManifest = manifest;
+            downloadButton.disabled = !artifacts.length;
+            exportStatus.textContent = artifacts.length
+                ? `${artifacts.length} evidence item(s) ready for local JSON export${checksumPrefix ? ` · sha256 ${checksumPrefix}` : ''}.`
+                : 'No evidence manifest available for export.';
+
+            renderCards('owner-evidence-cards', [
+                {
+                    label: 'Manifest Status',
+                    value: manifest.status || 'needs_review',
+                    note: manifest.localOnly ? 'local evidence only' : 'review scope'
+                },
+                {
+                    label: 'Evidence Items',
+                    value: artifacts.length,
+                    note: manifest.exportableEvidence ? 'exportable snapshots' : 'review only'
+                },
+                {
+                    label: 'Live Boundary',
+                    value: manifest.liveExecutionEnabled ? 'Enabled' : 'Disabled',
+                    note: 'no live order endpoint'
+                },
+                {
+                    label: 'Blocked Live Gates',
+                    value: (manifest.blockedLiveGates || []).length,
+                    note: (manifest.blockedLiveGates || []).slice(0, 2).join(', ') || 'none'
+                },
+                {
+                    label: 'Manifest Checksum',
+                    value: manifest.checksum?.value ? manifest.checksum.value.slice(0, 12) : '-',
+                    note: manifest.checksum?.algorithm || 'sha256'
+                }
+            ]);
+
+            document.getElementById('owner-evidence-table').innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Evidence</th>
+                            <th>Location</th>
+                            <th>Format</th>
+                            <th>Proof</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${artifacts.map(item => `
+                            <tr>
+                                <td>${escapeHtml(item.label)}</td>
+                                <td>${escapeHtml(item.location)}</td>
+                                <td>${escapeHtml(item.format)}</td>
+                                <td>${escapeHtml(item.evidence)}</td>
+                            </tr>
+                        `).join('') || '<tr><td colspan="4">No owner evidence manifest loaded.</td></tr>'}
+                    </tbody>
+                </table>
+            `;
+
+            document.getElementById('owner-evidence-review-checklist').innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Review Item</th>
+                            <th>Status</th>
+                            <th>Evidence Source</th>
+                            <th>Owner Check</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${reviewRows.map(row => `
+                            <tr>
+                                <td>${escapeHtml(row.item)}</td>
+                                <td>${escapeHtml(row.status)}</td>
+                                <td>${escapeHtml(row.source)}</td>
+                                <td>${escapeHtml(row.ownerCheck)}</td>
+                            </tr>
+                        `).join('') || '<tr><td colspan="4">No owner evidence review checklist loaded.</td></tr>'}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderOwnerAcceptanceRecordState(state = {}) {
+            latestOwnerAcceptanceRecordState = state;
+            const ownerAcceptance = state.ownerAcceptance || {};
+            const records = state.records || [];
+            const latestRecord = state.latestRecord || records[0] || null;
+            const status = document.getElementById('owner-acceptance-record-status');
+            status.textContent = latestRecord
+                ? `Local acceptance record #${latestRecord.id} loaded · live disabled.`
+                : 'No local owner acceptance record yet; record it from the proof packet after manual testing.';
+
+            renderCards('owner-acceptance-record-cards', [
+                {
+                    label: 'Owner Acceptance',
+                    value: formatOwnerAcceptanceStatus(ownerAcceptance.status),
+                    note: ownerAcceptance.localMvpGate === 'accepted'
+                        ? 'local acceptance recorded'
+                        : ownerAcceptance.localMvpGate === 'ready'
+                            ? 'manual owner review remains'
+                            : 'resolve local blockers'
+                },
+                {
+                    label: 'Local MVP Gate',
+                    value: ownerAcceptance.localMvpGate || 'review',
+                    note: ownerAcceptance.acceptanceRequiredForMvp100 === false ? 'accepted locally' : 'acceptance required for 100%'
+                },
+                {
+                    label: 'Acceptance Records',
+                    value: records.length,
+                    note: latestRecord ? `latest #${latestRecord.id}` : 'none recorded yet'
+                },
+                {
+                    label: 'Live Execution',
+                    value: state.liveExecution?.enabled ? 'Enabled' : 'Disabled',
+                    note: state.liveExecution?.goLiveAllowed ? 'go-live allowed' : 'go-live blocked'
+                }
+            ]);
+
+            const list = document.getElementById('owner-acceptance-record-list');
+
+            if (!records.length) {
+                list.innerHTML = `
+                    <article class="task-card">
+                        <div>
+                            <h3>No local owner acceptance records yet</h3>
+                            <p>Complete the manual pass, review the proof packet checksum, then use Record Local MVP Acceptance from /owner-proof-packet.</p>
+                        </div>
+                        <span>pending</span>
+                    </article>
+                `;
+                return;
+            }
+
+            list.innerHTML = records.map(record => `
+                <article class="task-card">
+                    <div>
+                        <h3>Local acceptance record #${escapeHtml(record.id)}</h3>
+                        <p>${escapeHtml(record.note || `Recorded ${record.createdAt || 'locally'}. Live execution remained disabled.`)}</p>
+                    </div>
+                    <span>${escapeHtml(formatOwnerAcceptanceStatus(record.status))}</span>
+                </article>
+            `).join('');
+        }
+
+        function downloadOwnerEvidenceManifest() {
+            if (!latestOwnerEvidenceManifest?.artifacts?.length) {
+                document.getElementById('owner-evidence-export-status').textContent = 'Load the owner evidence manifest before exporting JSON.';
+                return;
+            }
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const blob = new Blob([JSON.stringify(latestOwnerEvidenceManifest, null, 2)], {
+                type: 'application/json'
+            });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `etherealai-owner-evidence-manifest-${timestamp}.json`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+            const checksumPrefix = latestOwnerEvidenceManifest.checksum?.value
+                ? latestOwnerEvidenceManifest.checksum.value.slice(0, 12)
+                : '';
+            document.getElementById('owner-evidence-export-status').textContent = checksumPrefix
+                ? `Prepared owner evidence manifest JSON · sha256 ${checksumPrefix}.`
+                : 'Prepared owner evidence manifest JSON.';
+        }
+
+        function renderVerification(status = {}) {
+            const launch = status.launchReadiness || {};
+            renderCards('verification-cards', [
+                {
+                    label: 'Local Status',
+                    value: status.ok ? 'Verified' : 'Needs Review',
+                    note: status.generatedAt || '-'
+                },
+                {
+                    label: 'Database',
+                    value: status.database?.ok ? 'Reachable' : 'Blocked',
+                    note: status.database?.message || '-'
+                },
+                {
+                    label: 'Memory Sync',
+                    value: status.memory?.synced ? 'Synced' : 'Mismatch',
+                    note: `${status.memory?.presentFiles ?? 0}/${status.memory?.expectedFiles ?? 0} files`
+                },
+                {
+                    label: 'Launch',
+                    value: launch.launchStatus || 'blocked',
+                    note: launch.liveExecution?.goLiveAllowed ? 'go-live allowed' : 'go-live blocked'
+                }
+            ]);
+
+            const rows = [
+                ...(status.manifests || []).map(manifest => ({
+                    type: 'Manifest',
+                    name: manifest.label,
+                    status: manifest.ok ? 'ok' : 'blocked',
+                    detail: manifest.displayPath
+                })),
+                ...(status.memory?.files || []).map(file => ({
+                    type: file.role === 'canonical' ? 'Memory' : 'Memory Copy',
+                    name: file.displayPath,
+                    status: file.ok ? 'ok' : 'blocked',
+                    detail: file.sha256 ? file.sha256.slice(0, 12) : (file.error || '-')
+                })),
+                ...(launch.gates || []).map(gate => ({
+                    type: 'Launch Gate',
+                    name: gate.label,
+                    status: gate.passed ? 'pass' : 'blocked',
+                    detail: gate.id
+                }))
+            ];
+
+            document.getElementById('verification-table').innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Check</th>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(row => `
+                            <tr>
+                                <td>${escapeHtml(row.type)}</td>
+                                <td>${escapeHtml(row.name)}</td>
+                                <td>${escapeHtml(row.status)}</td>
+                                <td>${escapeHtml(row.detail)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderOwnerTestSteps() {
+            document.getElementById('owner-test-steps').innerHTML = ownerTestSteps.map((item, index) => `
+                <tr>
+                    <td>${index + 1}. ${escapeHtml(item.step)}</td>
+                    <td><a href="${escapeHtml(item.href)}">${escapeHtml(item.href)}</a></td>
+                    <td>${escapeHtml(item.pass)}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadReadiness() {
+            const [readinessResponse, verificationResponse, ownerAcceptanceResponse] = await Promise.all([
+                fetch('/api/v1/mvp-readiness-checklist'),
+                fetch('/api/v1/local-verification-status'),
+                fetch('/api/v1/owner-acceptance')
+            ]);
+            const readinessData = await readinessResponse.json();
+            const verificationData = await verificationResponse.json();
+            const ownerAcceptanceData = await ownerAcceptanceResponse.json();
+
+            if (!readinessResponse.ok) {
+                throw new Error(readinessData.error || readinessData.readiness?.error || 'Unable to load readiness.');
+            }
+
+            if (!verificationResponse.ok) {
+                throw new Error(verificationData.error || verificationData.status?.error || 'Unable to load verification.');
+            }
+
+            if (!ownerAcceptanceResponse.ok) {
+                throw new Error(ownerAcceptanceData.error || 'Unable to load owner acceptance record state.');
+            }
+
+            renderReadiness(readinessData.readiness);
+            renderVerification(verificationData.status);
+            renderOwnerAcceptanceRecordState(ownerAcceptanceData);
+        }
+
+        async function boot() {
+            renderOwnerTestSteps();
+
+            try {
+                await loadReadiness();
+            } catch (error) {
+                document.getElementById('readiness-cards').textContent = error.message;
+                document.getElementById('verification-cards').textContent = error.message;
+                document.getElementById('owner-acceptance-record-cards').textContent = error.message;
+            }
+        }
+
+        document.getElementById('refresh-readiness').addEventListener('click', async () => {
+            await boot();
+        });
+        document.getElementById('owner-evidence-download').addEventListener('click', downloadOwnerEvidenceManifest);
+
+        boot();
+    </script>
+</body>
+</html>

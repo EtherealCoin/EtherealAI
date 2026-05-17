@@ -1,11 +1,12 @@
 {
-  "name": "ai-agent-platform",
+  "name": "etherealai",
   "version": "1.0.0",
-  "description": "AI Agent Platform with Authentication and Backend Support",
-  "main": "backend/src/server.js",
+  "description": "EtherealAI local AI developer with authentication, trading research, and builder workflows",
+  "main": "app/server/src/server.js",
   "scripts": {
-    "start": "node backend/src/server.js",
-    "dev": "nodemon backend/src/server.js",
+    "start": "node app/server/src/server.js",
+    "dev": "nodemon app/server/src/server.js",
+    "test": "node scripts/verify-local-baseline.js",
     "build": "parcel build frontend/src/main.js",
     "watch": "parcel watch frontend/src/main.js"
   },
@@ -19,6 +20,6 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2",
-    "parcel": "^2.8.7" // Updated to a valid version of Parcel
+    "parcel": "^2.8.7"
   }
 }

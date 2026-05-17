@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EtherealAI Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/">Home</a>
+        <a href="/owner-proof-packet">Proof Packet</a>
+        <a href="/mvp-test-pass">MVP Test Pass</a>
+        <a href="/server-route-inventory">Route Inventory</a>
+        <a href="/creator">Creator Agent</a>
+        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/solidity-lab">Solidity Lab</a>
+        <a href="/social-ops">Social Ops</a>
+        <a href="/logout">Logout</a>
+    </nav>
+    <div class="container">
+        <h1>EtherealAI</h1>
+        <p>Your local-first AI developer for builder workflows, crypto research, Solidity, and automation.</p>
+
+        <section class="status-grid" aria-label="System status">
+            <article class="status-card" id="server-status">
+                <h2>Server</h2>
+                <p>Checking...</p>
+            </article>
+            <article class="status-card" id="dev-server-status">
+                <h2>Dev Server</h2>
+                <p>Checking...</p>
+            </article>
+            <article class="status-card" id="database-status">
+                <h2>Database</h2>
+                <p>Checking...</p>
+            </article>
+            <article class="status-card" id="ollama-status">
+                <h2>Local Models</h2>
+                <p>Checking...</p>
+            </article>
+        </section>
+
+        <section class="model-panel">
+            <h2>MVP Readiness</h2>
+            <div class="button-row">
+                <button id="refresh-mvp-readiness" type="button">Refresh Readiness</button>
+                <a class="cta-button" href="/mvp-test-pass">Open Test Pass</a>
+            </div>
+            <div id="dashboard-mvp-readiness" class="artifact-grid">Loading MVP readiness...</div>
+            <h3>Completion Ledger</h3>
+            <div id="dashboard-completion-ledger" class="task-list">Loading completion ledger...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Model Roles</h2>
+            <div id="model-roles" class="role-list">
+                <p>Loading model assignments...</p>
+            </div>
+        </section>
+
+        <section class="model-panel" id="multi-agent-coordination">
+            <h2>Multi-Agent Coordination</h2>
+            <div class="button-row">
+                <button id="refresh-multi-agent" type="button">Refresh Agents</button>
+                <button id="refresh-multi-agent-runs" type="button">Refresh Runs</button>
+            </div>
+            <div id="multi-agent-registry" class="role-list">Loading agent registry...</div>
+            <form id="multi-agent-form" class="model-test-form">
+                <label for="multi-agent-objective">Objective</label>
+                <textarea id="multi-agent-objective" name="objective" rows="4" maxlength="2000">Design the next safe EtherealAI build step using the current local model stack, preserving all no-live-execution gates.</textarea>
+
+                <label for="multi-agent-context">Context</label>
+                <textarea id="multi-agent-context" name="context" rows="3" maxlength="4000">Use current local stack: Qwen3.6 coder, DeepSeek planner, MLX benchmark lane, owner acceptance recorded, live execution disabled.</textarea>
+
+                <label for="multi-agent-execution-mode">Execution Mode</label>
+                <select id="multi-agent-execution-mode" name="executionMode">
+                    <option value="plan_only">Plan Only</option>
+                    <option value="local_model_draft">Local Model Draft</option>
+                </select>
+
+                <label for="multi-agent-provider-mode">Provider Mode</label>
+                <select id="multi-agent-provider-mode" name="providerMode">
+                    <option value="role_default">Role Default</option>
+                    <option value="mlx_fast_lane">MLX Fast Lane</option>
+                </select>
+
+                <label for="multi-agent-max-tokens">Max Tokens Per Agent</label>
+                <input id="multi-agent-max-tokens" name="maxTokens" type="number" min="80" max="600" value="220">
+
+                <div id="multi-agent-selector" class="checkbox-grid">Loading agent selector...</div>
+                <button type="submit">Create Coordination Run</button>
+            </form>
+            <pre id="multi-agent-output" class="model-output">Waiting for a coordination run...</pre>
+            <div id="multi-agent-runs" class="task-list">Loading coordination runs...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Dev Server Runs</h2>
+            <div class="button-row">
+                <button id="refresh-dev-server" type="button">Refresh Status</button>
+                <button id="record-dev-note" type="button">Record Status Note</button>
+            </div>
+            <div id="dev-server-runs" class="task-list">Loading dev server runs...</div>
+            <div id="dev-server-logs" class="timeline-list">Loading dev server logs...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Memory Snapshot</h2>
+            <div class="button-row">
+                <button id="refresh-memory" type="button">Refresh Snapshot</button>
+                <button id="export-memory" type="button" disabled>Export System Memory JSON</button>
+                <span id="memory-export-status" class="inline-status">Memory snapshot loading...</span>
+            </div>
+            <div id="owner-proof-surfaces" class="owner-proof-surfaces">Loading owner proof surfaces...</div>
+            <pre id="system-memory-output" class="model-output">Loading system memory...</pre>
+        </section>
+
+        <section class="model-panel">
+            <h2>Company Identity</h2>
+            <p class="inline-status">Configured identity: etherealdigital.ai · patrick@etherealdigital.ai · Cloudflare</p>
+            <div class="button-row">
+                <button id="refresh-company-identity" type="button">Refresh Identity</button>
+            </div>
+            <div id="company-identity-summary" class="artifact-grid">Loading company identity...</div>
+            <div id="company-identity-checklist" class="task-list">Loading identity checklist...</div>
+            <h3>Domain/Email Setup Center</h3>
+            <div id="company-setup-plan" class="task-list">Loading DNS setup plan...</div>
+            <form id="company-dns-target-form" class="model-test-form">
+                <label for="company-dns-record-type">Record Type</label>
+                <select id="company-dns-record-type" name="recordType">
+                    <option value="A">A</option>
+                    <option value="AAAA">AAAA</option>
+                    <option value="CNAME">CNAME</option>
+                    <option value="MX">MX</option>
+                    <option value="TXT">TXT</option>
+                    <option value="NS">NS</option>
+                    <option value="CAA">CAA</option>
+                </select>
+
+                <label for="company-dns-host">Host / Name</label>
+                <input id="company-dns-host" name="host" value="@" maxlength="160">
+
+                <label for="company-dns-value">Value</label>
+                <textarea id="company-dns-value" name="value" rows="2" maxlength="1000" placeholder="Paste the DNS value you plan to add manually in Cloudflare"></textarea>
+
+                <label for="company-dns-purpose">Purpose</label>
+                <select id="company-dns-purpose" name="purpose">
+                    <option value="website">Website</option>
+                    <option value="www_redirect">WWW Redirect</option>
+                    <option value="email_routing">Email Routing</option>
+                    <option value="spf">SPF</option>
+                    <option value="dkim">DKIM</option>
+                    <option value="dmarc">DMARC</option>
+                    <option value="domain_verification">Domain Verification</option>
+                    <option value="app_backend">App Backend</option>
+                    <option value="other">Other</option>
+                </select>
+
+                <label for="company-dns-status">Status</label>
+                <select id="company-dns-status" name="status">
+                    <option value="planned">Planned</option>
+                    <option value="owner_added">Owner Added</option>
+                    <option value="propagating">Propagating</option>
+                    <option value="verified">Verified</option>
+                    <option value="blocked">Blocked</option>
+                    <option value="not_needed">Not Needed</option>
+                </select>
+
+                <label for="company-dns-notes">Notes</label>
+                <textarea id="company-dns-notes" name="notes" rows="2" maxlength="1000" placeholder="Local note only; do not paste Cloudflare API tokens or secrets"></textarea>
+
+                <button type="submit">Save Local DNS Target</button>
+            </form>
+            <div id="company-dns-target-status" class="inline-status">DNS targets are local tracking only.</div>
+            <div id="company-dns-targets" class="task-list">Loading DNS/email targets...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Local Model Test</h2>
+            <form id="model-test-form" class="model-test-form">
+                <label for="model-role">Role</label>
+                <select id="model-role" name="role">
+                    <option value="auto">Auto</option>
+                    <option value="coder">Coder</option>
+                    <option value="planner">Planner</option>
+                    <option value="writer">Writer</option>
+                    <option value="autocomplete">Autocomplete</option>
+                </select>
+
+                <label for="model-prompt">Prompt</label>
+                <textarea id="model-prompt" name="prompt" rows="5" maxlength="8000">Explain what EtherealAI should build next in three practical steps.</textarea>
+
+                <button type="submit">Ask Local Model</button>
+            </form>
+            <pre id="model-output" class="model-output">Waiting for a prompt...</pre>
+        </section>
+
+        <section class="model-panel">
+            <h2>Local Model Benchmark</h2>
+            <form id="model-benchmark-form" class="model-test-form">
+                <label for="benchmark-role">Role</label>
+                <select id="benchmark-role" name="role">
+                    <option value="coder">Coder</option>
+                    <option value="auto">Auto</option>
+                    <option value="planner">Planner</option>
+                    <option value="writer">Writer</option>
+                    <option value="autocomplete">Autocomplete</option>
+                </select>
+
+                <label for="benchmark-provider">Provider</label>
+                <select id="benchmark-provider" name="provider">
+                    <option value="role-default">Role Default</option>
+                    <option value="ollama">Ollama</option>
+                    <option value="mlx">MLX</option>
+                </select>
+
+                <label for="benchmark-model">Model Override</label>
+                <input id="benchmark-model" name="model" value="qwen3.6:35b-a3b" maxlength="160">
+
+                <label for="benchmark-max-tokens">Max Tokens</label>
+                <input id="benchmark-max-tokens" name="maxTokens" type="number" min="1" max="4096" value="128">
+
+                <label class="checkbox-row" for="benchmark-disable-thinking">
+                    <input id="benchmark-disable-thinking" name="disableThinking" type="checkbox">
+                    Disable Thinking
+                </label>
+
+                <label for="benchmark-prompt">Benchmark Prompt</label>
+                <textarea id="benchmark-prompt" name="prompt" rows="5" maxlength="8000">Inspect a Node/Express route and name the safest first refactor to improve maintainability without changing behavior.</textarea>
+
+                <button type="submit">Run Benchmark</button>
+            </form>
+            <pre id="model-benchmark-output" class="model-output">Waiting for a benchmark...</pre>
+        </section>
+
+        <section class="model-panel">
+            <h2>MLX Lifecycle</h2>
+            <div class="button-row">
+                <button id="refresh-mlx-lifecycle" type="button">Refresh MLX Status</button>
+                <button id="start-mlx-lifecycle" type="button">Start MLX</button>
+                <button id="stop-mlx-lifecycle" type="button">Stop MLX</button>
+                <label class="checkbox-row" for="mlx-unload-ollama">
+                    <input id="mlx-unload-ollama" type="checkbox" checked>
+                    Unload Ollama Before Start
+                </label>
+            </div>
+            <div id="mlx-lifecycle-summary" class="task-list">Loading MLX lifecycle...</div>
+            <pre id="mlx-lifecycle-output" class="model-output">Waiting for MLX lifecycle status...</pre>
+        </section>
+
+        <section class="next-actions">
+            <h2>Next Build Modules</h2>
+            <ul>
+                <li>MVP Test Pass: confirm owner-test readiness and live-execution blockers.</li>
+                <li>Route Inventory: map the current server routes before modularization.</li>
+                <li>Creator Agent: turn plain-English requests into files, checks, and reports.</li>
+                <li>Strategy Lab: save crypto strategies, run backtests, then paper trade.</li>
+                <li>Solidity Lab: generate, test, and audit token contracts locally.</li>
+                <li>Social Ops: draft and queue content locally before any public posting connector exists.</li>
+            </ul>
+            <a class="cta-button" href="/mvp-test-pass">Open MVP Test Pass</a>
+        </section>
+    </div>
+    <script>
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function setStatus(id, ok, message) {
+            const card = document.getElementById(id);
+            card.classList.toggle('ok', Boolean(ok));
+            card.classList.toggle('warning', !ok);
+            card.querySelector('p').textContent = message;
+        }
+
+        function renderRoles(roles) {
+            const container = document.getElementById('model-roles');
+            container.innerHTML = Object.entries(roles).map(([role, config]) => `
+                <article class="role-card">
+                    <h3>${escapeHtml(role)}</h3>
+                    <p><strong>${escapeHtml(config.model)}</strong></p>
+                    <p>${escapeHtml(config.purpose)}</p>
+                    <p>Provider: ${escapeHtml(config.provider || 'role default')}</p>
+                </article>
+            `).join('');
+        }
+
+        let multiAgentRegistry = [];
+
+        function renderMultiAgentRegistry(data = {}) {
+            multiAgentRegistry = data.agents || [];
+            const registry = document.getElementById('multi-agent-registry');
+            const selector = document.getElementById('multi-agent-selector');
+            const hermes = data.hermesBenchmarkPlan || {};
+            const safetyGates = data.safetyGates || [];
+
+            if (!multiAgentRegistry.length) {
+                registry.textContent = 'No multi-agent registry returned.';
+                selector.textContent = 'No agents available.';
+                return;
+            }
+
+            registry.innerHTML = `
+                ${multiAgentRegistry.map(agent => `
+                <article class="role-card">
+                    <h3>${escapeHtml(agent.label)}</h3>
+                    <p><strong>${escapeHtml(agent.modelRole)} · ${escapeHtml(agent.model || 'role model')}</strong></p>
+                    <p>${escapeHtml(agent.purpose)}</p>
+                    <p>${escapeHtml(agent.lane)} · ${escapeHtml(agent.provider || 'role default')}</p>
+                </article>
+                `).join('')}
+                <article class="role-card">
+                    <h3>Hermes Benchmark Lane</h3>
+                    <p><strong>${escapeHtml(hermes.status || 'owner_review_required')}</strong></p>
+                    <p>Command: ${escapeHtml(hermes.recommendedCommand || 'ollama launch hermes')}</p>
+                    <p>${safetyGates.length} safety gate(s) enforced · bypass ${hermes.bypassAllowed ? 'allowed' : 'blocked'}</p>
+                </article>
+            `;
+            selector.innerHTML = multiAgentRegistry.map((agent, index) => `
+                <label class="checkbox-row" for="agent-${escapeHtml(agent.id)}">
+                    <input
+                        id="agent-${escapeHtml(agent.id)}"
+                        name="selectedAgents"
+                        type="checkbox"
+                        value="${escapeHtml(agent.id)}"
+                        ${index < 3 ? 'checked' : ''}
+                    >
+                    ${escapeHtml(agent.label)}
+                </label>
+            `).join('');
+        }
+
+        function renderMultiAgentRuns(runs = []) {
+            const container = document.getElementById('multi-agent-runs');
+
+            if (!runs.length) {
+                container.textContent = 'No coordination runs recorded yet.';
+                return;
+            }
+
+            container.innerHTML = runs.map(run => {
+                const contributionSummary = (run.contributions || [])
+                    .map(item => `${item.agent_label}: ${item.status}`)
+                    .join(' · ');
+                return `
+                    <article class="task-card">
+                        <div>
+                            <h3>#${run.id} · ${escapeHtml(run.status)} · ${escapeHtml(run.execution_mode)}</h3>
+                            <p>${escapeHtml(run.objective)}</p>
+                            <p>${escapeHtml(contributionSummary || 'No contributions recorded')}</p>
+                        </div>
+                        <span>${escapeHtml(run.provider_mode)}</span>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        async function loadMultiAgentRegistry() {
+            try {
+                const response = await fetch('/api/v1/multi-agent/registry');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load multi-agent registry');
+                }
+
+                renderMultiAgentRegistry(data);
+            } catch (error) {
+                document.getElementById('multi-agent-registry').textContent = error.message;
+                document.getElementById('multi-agent-selector').textContent = 'Agent selector unavailable.';
+            }
+        }
+
+        async function loadMultiAgentRuns() {
+            try {
+                const response = await fetch('/api/v1/multi-agent/runs?limit=5');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load multi-agent runs');
+                }
+
+                renderMultiAgentRuns(data.runs || []);
+            } catch (error) {
+                document.getElementById('multi-agent-runs').textContent = error.message;
+            }
+        }
+
+        function formatUptime(seconds) {
+            if (!Number.isFinite(seconds)) {
+                return 'unknown uptime';
+            }
+
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+
+            if (hours > 0) {
+                return `${hours}h ${minutes % 60}m`;
+            }
+
+            return `${minutes}m ${seconds % 60}s`;
+        }
+
+        function renderDevServerRuns(runs = []) {
+            const container = document.getElementById('dev-server-runs');
+
+            if (!runs.length) {
+                container.textContent = 'No dev server run records yet.';
+                return;
+            }
+
+            container.innerHTML = runs.map(run => `
+                <article class="task-card">
+                    <div>
+                        <h3>${run.command} · ${run.status}</h3>
+                        <p>PID ${run.pid} · port ${run.port} · heartbeat ${run.heartbeat_at}</p>
+                    </div>
+                    <span>#${run.id}</span>
+                </article>
+            `).join('');
+        }
+
+        function renderDevServerLogs(logs = []) {
+            const container = document.getElementById('dev-server-logs');
+
+            if (!logs.length) {
+                container.textContent = 'No dev server logs yet.';
+                return;
+            }
+
+            container.innerHTML = logs.map(log => `
+                <article class="timeline-item">
+                    <strong>${log.level} · ${log.message}</strong>
+                    <span>${log.created_at}</span>
+                    <p>${JSON.stringify(log.metadata || {})}</p>
+                </article>
+            `).join('');
+        }
+
+        function renderMvpReadiness(readiness = {}) {
+            const container = document.getElementById('dashboard-mvp-readiness');
+            const ownerEvidenceManifest = readiness.ownerEvidenceManifest || {};
+            const ownerAcceptance = readiness.ownerAcceptance || {};
+            const ownerEvidenceArtifacts = ownerEvidenceManifest.artifacts || [];
+            const checksumPrefix = ownerEvidenceManifest.checksum?.value
+                ? ownerEvidenceManifest.checksum.value.slice(0, 12)
+                : '-';
+            const routeSafetyProfile = readiness.botAutomationOwnerWorkflow?.routeSafetyProfile || {};
+            const checklistById = new Map((readiness.checklist || []).map(item => [item.id, item]));
+            const fullLiveBlockers = readiness.endToEndBlockingItems || [];
+            const liveBlockerRows = fullLiveBlockers.map(blockerId => {
+                const item = checklistById.get(blockerId) || {};
+                return `
+                    <li>
+                        <strong>${escapeHtml(item.item || blockerId)}</strong>
+                        <span>${escapeHtml(item.nextStep || item.evidence || 'Review live execution gate before enabling.')}</span>
+                    </li>
+                `;
+            }).join('');
+            const cards = [
+                {
+                    label: 'MVP Status',
+                    value: readiness.mvpStatus || 'needs_review',
+                    note: readiness.mvpScope || 'local scope'
+                },
+                {
+                    label: 'MVP Completion',
+                    value: `${readiness.mvpCompletionPercent ?? 0}%`,
+                    note: `${readiness.totals?.mvpBlockingItems ?? 0} MVP blocker(s)`
+                },
+                {
+                    label: 'Owner Acceptance',
+                    value: formatOwnerAcceptanceStatus(ownerAcceptance.status),
+                    note: ownerAcceptance.localMvpGate === 'accepted'
+                        ? 'local acceptance recorded'
+                        : ownerAcceptance.localMvpGate === 'ready'
+                            ? 'manual owner review remains'
+                            : 'resolve local blockers'
+                },
+                {
+                    label: 'Local End-to-End',
+                    value: `${readiness.localEndToEndCompletionPercent ?? readiness.mvpCompletionPercent ?? 0}%`,
+                    note: readiness.automationModes?.paper?.canRunAutomatically ? 'paper automation ready' : 'paper automation review'
+                },
+                {
+                    label: 'Full Live End-to-End',
+                    value: `${readiness.endToEndCompletionPercent ?? 0}%`,
+                    note: `${readiness.totals?.endToEndBlockingItems ?? 0} live blocker(s)`
+                },
+                {
+                    label: 'Go-Live Command',
+                    value: readiness.automationModes?.live?.goLiveCommandExecution ? 'Executable' : 'Blocked',
+                    note: 'records blocked review only'
+                },
+                {
+                    label: 'Live Execution',
+                    value: readiness.liveExecution?.enabled ? 'Enabled' : 'Disabled',
+                    note: readiness.liveExecution?.goLiveAllowed ? 'go-live allowed' : 'go-live blocked'
+                },
+                {
+                    label: 'Evidence Manifest',
+                    value: ownerEvidenceManifest.status === 'ready_for_owner_testing' ? 'Ready' : 'Review',
+                    note: `${ownerEvidenceArtifacts.length} local proof point(s)`
+                },
+                {
+                    label: 'Evidence Checksum',
+                    value: checksumPrefix,
+                    note: ownerEvidenceManifest.checksum?.algorithm || 'sha256'
+                },
+                {
+                    label: 'Route Boundary',
+                    value: routeSafetyProfile.boundary || 'monitor_only_no_live_orders',
+                    note: routeSafetyProfile.liveExecutionEnabled === false ? 'live route disabled' : 'review live route'
+                }
+            ];
+
+            container.innerHTML = `
+                ${cards.map(card => `
+                <div class="artifact-stat">
+                    <strong>${escapeHtml(card.label)}</strong>
+                    <span>${escapeHtml(card.value)}</span>
+                    <span>${escapeHtml(card.note)}</span>
+                </div>
+                `).join('')}
+                <div class="artifact-stat dashboard-live-blockers">
+                    <strong>Full Live Blockers</strong>
+                    <span>${fullLiveBlockers.length} gate(s) still intentionally blocked</span>
+                    <ul>
+                        ${liveBlockerRows || '<li><strong>No live blockers reported</strong><span>Review the readiness payload before changing live mode.</span></li>'}
+                    </ul>
+                </div>
+            `;
+            renderCompletionLedger(readiness.completionLedger || {});
+        }
+
+        function renderCompletionLedger(ledger = {}) {
+            const percentages = ledger.percentages || {};
+            const mvp = percentages.mvp || {};
+            const localPaper = percentages.localPaperEndToEnd || {};
+            const fullLive = percentages.fullLiveEndToEnd || {};
+            const rows = [
+                {
+                    title: 'Why MVP is 99%',
+                    description: `${mvp.reason || 'Owner acceptance determines final local MVP completion.'} Next: ${mvp.nextAction || 'Review owner proof packet.'}`,
+                    badge: `${mvp.current ?? 0}%`
+                },
+                {
+                    title: 'Why Local Paper is 95%',
+                    description: `${localPaper.reason || 'Active paper schedule review determines final local paper completion.'} Next: ${localPaper.nextAction || 'Review Strategy Lab paper schedules.'}`,
+                    badge: `${localPaper.current ?? 0}%`
+                },
+                {
+                    title: 'Why Full Live is 72%',
+                    description: `${fullLive.reason || 'Live execution gates remain intentionally blocked.'} Next: ${fullLive.nextAction || 'Keep live gates blocked.'}`,
+                    badge: `${fullLive.current ?? 0}%`
+                }
+            ];
+
+            document.getElementById('dashboard-completion-ledger').innerHTML = rows.map(row => `
+                <article class="task-card">
+                    <div>
+                        <h3>${escapeHtml(row.title)}</h3>
+                        <p>${escapeHtml(row.description)}</p>
+                    </div>
+                    <span>${escapeHtml(row.badge)}</span>
+                </article>
+            `).join('');
+        }
+
+        function formatOwnerAcceptanceStatus(status) {
+            if (status === 'accepted') {
+                return 'Accepted';
+            }
+
+            if (status === 'pending_owner_review') {
+                return 'Pending Review';
+            }
+
+            if (status === 'needs_local_review') {
+                return 'Needs Review';
+            }
+
+            return status || 'Unknown';
+        }
+
+        async function loadMvpReadiness() {
+            const container = document.getElementById('dashboard-mvp-readiness');
+            container.textContent = 'Loading MVP readiness...';
+
+            try {
+                const response = await fetch('/api/v1/mvp-readiness-checklist');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || data.readiness?.error || 'MVP readiness failed');
+                }
+
+                renderMvpReadiness(data.readiness);
+            } catch (error) {
+                container.textContent = error.message;
+            }
+        }
+
+        let latestSystemMemory = null;
+
+        function renderOwnerProofSurfaces(ownerEvidence = {}, ownerAcceptance = {}) {
+            const container = document.getElementById('owner-proof-surfaces');
+            const surfaces = ownerEvidence.proofSurfaces || [];
+            const acceptanceStatus = formatOwnerAcceptanceStatus(ownerAcceptance.status);
+
+            if (!surfaces.length) {
+                container.textContent = 'No owner proof surfaces reported in System Memory.';
+                return;
+            }
+
+            container.innerHTML = `
+                <strong>Owner Proof Surfaces</strong>
+                <span>${surfaces.length} local proof surface(s) documented in System Memory · Owner Acceptance: ${escapeHtml(acceptanceStatus)}.</span>
+                <div class="owner-proof-surface-list">
+                    <article>
+                        <strong>Owner acceptance</strong>
+                        <span>${escapeHtml(ownerAcceptance.status || 'unknown')}</span>
+                        <p>${escapeHtml(ownerAcceptance.completionReason || 'Owner acceptance status is unavailable.')}</p>
+                    </article>
+                    ${surfaces.map(surface => `
+                    <article>
+                        <strong>${escapeHtml(surface.label || surface.id)}</strong>
+                        <span>${escapeHtml(surface.location || 'local')}</span>
+                        <p>${escapeHtml(surface.evidence || 'Local proof available for owner review.')}</p>
+                    </article>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        async function loadSystemMemory() {
+            const output = document.getElementById('system-memory-output');
+            const exportButton = document.getElementById('export-memory');
+            const exportStatus = document.getElementById('memory-export-status');
+            const proofSurfaces = document.getElementById('owner-proof-surfaces');
+            output.textContent = 'Loading system memory...';
+            exportButton.disabled = true;
+            exportStatus.textContent = 'Memory snapshot loading...';
+            proofSurfaces.textContent = 'Loading owner proof surfaces...';
+
+            try {
+                const response = await fetch('/api/v1/system-memory');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'System memory failed');
+                }
+
+                latestSystemMemory = data.snapshot;
+                output.textContent = JSON.stringify(data.snapshot, null, 2);
+                renderOwnerProofSurfaces(data.snapshot?.ownerEvidence || {}, data.snapshot?.ownerAcceptance || {});
+                exportButton.disabled = false;
+                exportStatus.textContent = data.snapshot?.ownerEvidence?.localOnly
+                    && data.snapshot?.ownerEvidence?.liveExecutionEnabled === false
+                    && ['accepted', 'pending_owner_review'].includes(data.snapshot?.ownerAcceptance?.status)
+                    ? `Owner evidence included · owner acceptance ${data.snapshot.ownerAcceptance.status === 'accepted' ? 'recorded' : 'pending'} · live disabled.`
+                    : 'Owner evidence review needed.';
+            } catch (error) {
+                output.textContent = error.message;
+                exportButton.disabled = true;
+                exportStatus.textContent = 'Memory snapshot unavailable.';
+                proofSurfaces.textContent = 'Owner proof surfaces unavailable.';
+            }
+        }
+
+        function renderCompanyIdentity(data = {}) {
+            const identity = data.identity || {};
+            const company = identity.company || {};
+            const owner = identity.owner || {};
+            const token = identity.tokenIdentity || {};
+            const email = identity.email || {};
+            const dns = identity.dnsObservation || {};
+            const checklist = data.checklist || [];
+            const cards = [
+                {
+                    label: 'Company Domain',
+                    value: company.primaryDomain || 'not recorded',
+                    note: `${company.registrar || 'registrar unknown'} · ${company.dnsProvider || 'DNS unknown'}`
+                },
+                {
+                    label: 'CEO Email',
+                    value: owner.email || email.primaryMailbox || 'not recorded',
+                    note: `${owner.name || 'Owner'} · ${owner.role || 'CEO'}`
+                },
+                {
+                    label: 'Token Identity',
+                    value: token.name || 'not recorded',
+                    note: token.preferredWebsiteDomain || 'website domain pending'
+                },
+                {
+                    label: 'DNS Observation',
+                    value: dns.status || 'not checked',
+                    note: dns.observedAt || 'no timestamp'
+                },
+                {
+                    label: 'External Actions',
+                    value: data.externalAccountCreationEnabled ? 'Enabled' : 'Blocked',
+                    note: data.purchaseEnabled ? 'purchase enabled' : 'metadata only'
+                }
+            ];
+
+            document.getElementById('company-identity-summary').innerHTML = cards.map(card => `
+                <div class="artifact-stat">
+                    <strong>${escapeHtml(card.label)}</strong>
+                    <span>${escapeHtml(card.value)}</span>
+                    <span>${escapeHtml(card.note)}</span>
+                </div>
+            `).join('');
+            document.getElementById('company-identity-checklist').innerHTML = checklist.map(item => `
+                <article class="task-card">
+                    <div>
+                        <h3>${escapeHtml(item.label)}</h3>
+                        <p>${escapeHtml(item.evidence)} · ${escapeHtml(item.nextStep)}</p>
+                    </div>
+                    <span>${escapeHtml(item.status)}</span>
+                </article>
+            `).join('');
+            renderCompanySetupPlan(data.setupPlan || {});
+        }
+
+        function renderCompanySetupPlan(plan = {}) {
+            const steps = plan.recommendedManualSteps || [];
+            const summary = plan.summary || {};
+            const nextOwnerActions = plan.nextOwnerActions || [];
+            const cards = [
+                {
+                    label: 'Tracked Targets',
+                    value: String(summary.totalTargets ?? 0),
+                    note: `${summary.verifiedTargets ?? 0} verified · ${summary.pendingTargets ?? 0} pending`
+                },
+                {
+                    label: 'Website DNS',
+                    value: summary.websiteTargetTracked ? 'Tracked' : 'Planned',
+                    note: plan.primaryDomain || 'domain pending'
+                },
+                {
+                    label: 'Email DNS',
+                    value: summary.emailTargetTracked ? 'Tracked' : 'Planned',
+                    note: plan.primaryMailbox || 'mailbox pending'
+                }
+            ];
+            document.getElementById('company-setup-plan').innerHTML = `
+                <div class="artifact-grid">
+                    ${cards.map(card => `
+                        <div class="artifact-stat">
+                            <strong>${escapeHtml(card.label)}</strong>
+                            <span>${escapeHtml(card.value)}</span>
+                            <span>${escapeHtml(card.note)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                ${steps.map(step => `
+                    <article class="task-card">
+                        <div>
+                            <h3>${escapeHtml(step.label)}</h3>
+                            <p>${escapeHtml(nextOwnerActions.join(' '))}</p>
+                        </div>
+                        <span>${escapeHtml(step.status)}</span>
+                    </article>
+                `).join('')}
+            `;
+        }
+
+        function renderCompanyDnsTargets(data = {}) {
+            const targets = data.targets || [];
+            renderCompanySetupPlan(data.setupPlan || {});
+            document.getElementById('company-dns-targets').innerHTML = targets.length
+                ? targets.map(target => `
+                    <article class="task-card">
+                        <div>
+                            <h3>${escapeHtml(target.recordType)} ${escapeHtml(target.host)}</h3>
+                            <p>${escapeHtml(target.value)} · ${escapeHtml(target.purpose)} · ${escapeHtml(target.notes || 'local-only DNS tracking')}</p>
+                        </div>
+                        <span>${escapeHtml(target.status)}</span>
+                    </article>
+                `).join('')
+                : '<p>No DNS/email targets saved yet.</p>';
+        }
+
+        async function loadCompanyDnsTargets() {
+            try {
+                const response = await fetch('/api/v1/company-identity/dns-targets');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load DNS targets');
+                }
+
+                renderCompanyDnsTargets(data);
+            } catch (error) {
+                document.getElementById('company-dns-targets').textContent = error.message;
+            }
+        }
+
+        async function loadCompanyIdentity() {
+            try {
+                const response = await fetch('/api/v1/company-identity');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load company identity');
+                }
+
+                renderCompanyIdentity(data);
+                await loadCompanyDnsTargets();
+            } catch (error) {
+                document.getElementById('company-identity-summary').textContent = error.message;
+                document.getElementById('company-identity-checklist').textContent = 'Company identity checklist unavailable.';
+                document.getElementById('company-setup-plan').textContent = 'DNS setup plan unavailable.';
+            }
+        }
+
+        async function loadHealth() {
+            try {
+                const response = await fetch('/api/v1/health');
+                const health = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(health.error || 'Health check failed');
+                }
+
+                setStatus('server-status', health.server.ok, `Port ${health.server.port} · PID ${health.server.pid}`);
+                setStatus('database-status', health.database.ok, health.database.message);
+                const providerRows = health.localModelProviders?.providers || [];
+                const optionalOffline = providerRows
+                    .filter(provider => !provider.ok && provider.optional)
+                    .map(provider => provider.provider)
+                    .join(', ');
+                const providerMessage = optionalOffline
+                    ? `${health.ollama.message} · optional offline: ${optionalOffline}`
+                    : health.ollama.message;
+                setStatus('ollama-status', health.ollama.ok, providerMessage);
+                renderRoles(health.modelRoles);
+            } catch (error) {
+                setStatus('server-status', false, error.message);
+                setStatus('database-status', false, 'Unable to verify database');
+                setStatus('ollama-status', false, 'Unable to verify local models');
+            }
+        }
+
+        async function loadDevServerStatus() {
+            try {
+                const response = await fetch('/api/v1/dev-server/status');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Dev server status failed');
+                }
+
+                setStatus(
+                    'dev-server-status',
+                    data.ok,
+                    `${data.current.command} · ${formatUptime(data.current.uptimeSeconds)}`
+                );
+                renderDevServerRuns(data.recentRuns || []);
+                renderDevServerLogs(data.recentLogs || []);
+            } catch (error) {
+                setStatus('dev-server-status', false, error.message);
+                renderDevServerRuns([]);
+                renderDevServerLogs([]);
+            }
+        }
+
+        async function recordDevServerNote() {
+            const response = await fetch('/api/v1/dev-server/logs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ note: 'Dashboard status refresh requested by owner.' })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to record dev server note');
+            }
+
+            renderDevServerRuns(data.recentRuns || []);
+            renderDevServerLogs(data.recentLogs || []);
+        }
+
+        function renderMlxLifecycle(status = {}) {
+            const container = document.getElementById('mlx-lifecycle-summary');
+            const output = document.getElementById('mlx-lifecycle-output');
+            const memory = status.memoryIsolation || {};
+            const server = status.server || {};
+            const processInfo = status.process || {};
+            const logs = status.logs || [];
+
+            container.innerHTML = `
+                <article class="task-card">
+                    <div>
+                        <h3>MLX ${escapeHtml(status.status || 'unknown')}</h3>
+                        <p>${escapeHtml(server.message || 'No MLX status message')} · ${escapeHtml(server.baseUrl || 'no endpoint')}</p>
+                    </div>
+                    <span>${status.ok ? 'online' : 'offline'}</span>
+                </article>
+                <article class="task-card">
+                    <div>
+                        <h3>Memory Isolation</h3>
+                        <p>${escapeHtml(memory.message || 'Memory isolation status unavailable')}</p>
+                    </div>
+                    <span>${memory.isolated ? 'ready' : 'review'}</span>
+                </article>
+                <article class="task-card">
+                    <div>
+                        <h3>Managed Process</h3>
+                        <p>${processInfo.pid ? `PID ${processInfo.pid} · started ${escapeHtml(processInfo.startedAt || '-')}` : 'No managed MLX process is running'}</p>
+                    </div>
+                    <span>${status.managed ? 'managed' : 'none'}</span>
+                </article>
+            `;
+            output.textContent = JSON.stringify({
+                status: status.status,
+                ok: status.ok,
+                model: server.model,
+                installedModels: server.installedModels,
+                memoryIsolation: memory,
+                command: status.command,
+                recentLogs: logs.slice(0, 8)
+            }, null, 2);
+        }
+
+        async function loadMlxLifecycleStatus() {
+            const output = document.getElementById('mlx-lifecycle-output');
+            output.textContent = 'Loading MLX lifecycle status...';
+
+            try {
+                const response = await fetch('/api/v1/local-model/mlx-lifecycle');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load MLX lifecycle status');
+                }
+
+                renderMlxLifecycle(data);
+            } catch (error) {
+                document.getElementById('mlx-lifecycle-summary').textContent = error.message;
+                output.textContent = error.message;
+            }
+        }
+
+        const mlxLifecycleEndpoints = {
+            start: '/api/v1/local-model/mlx-lifecycle/start',
+            stop: '/api/v1/local-model/mlx-lifecycle/stop'
+        };
+
+        async function runMlxLifecycleAction(action) {
+            const output = document.getElementById('mlx-lifecycle-output');
+            const unloadOllama = document.getElementById('mlx-unload-ollama').checked;
+            const endpoint = mlxLifecycleEndpoints[action];
+            output.textContent = action === 'start'
+                ? 'Starting MLX with memory isolation...'
+                : 'Stopping MLX...';
+
+            if (!endpoint) {
+                output.textContent = 'Unsupported MLX lifecycle action.';
+                return;
+            }
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ unloadOllama })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Unable to ${action} MLX`);
+                }
+
+                renderMlxLifecycle(data.status || data);
+                await loadHealth();
+            } catch (error) {
+                output.textContent = error.message;
+            }
+        }
+
+        document.getElementById('model-test-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const output = document.getElementById('model-output');
+            output.textContent = 'Thinking locally...';
+
+            try {
+                const response = await fetch('/api/v1/local-model/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(Object.fromEntries(formData.entries()))
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Local model request failed');
+                }
+
+                const route = data.routing
+                    ? `Route: ${data.routing.mode} -> ${data.role} · ${data.routing.reason}\n`
+                    : '';
+                output.textContent = `${route}[${data.role}] ${data.model}\n\n${data.response}`;
+            } catch (error) {
+                output.textContent = error.message;
+            }
+        });
+
+        document.getElementById('model-benchmark-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const output = document.getElementById('model-benchmark-output');
+            output.textContent = 'Benchmarking locally...';
+
+            try {
+                const payload = Object.fromEntries(formData.entries());
+                if (!payload.model.trim()) {
+                    delete payload.model;
+                }
+                if (payload.disableThinking === 'on') {
+                    payload.think = false;
+                    delete payload.disableThinking;
+                }
+
+                const response = await fetch('/api/v1/local-model/benchmark', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Local model benchmark failed');
+                }
+
+                const header = data.ok
+                    ? `OK · ${data.provider} · ${data.model} · ${data.benchmark.durationMs}ms`
+                    : `FAILED · ${data.provider} · ${data.model || 'role model'} · ${data.benchmark.durationMs}ms`;
+                const route = data.routing
+                    ? `Route: ${data.routing.mode} -> ${data.role} · ${data.routing.reason}\n`
+                    : '';
+                output.textContent = `${header}\n${route}\n${data.response || data.error || 'No response text returned.'}`;
+            } catch (error) {
+                output.textContent = error.message;
+            }
+        });
+
+        document.getElementById('multi-agent-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const selectedAgents = formData.getAll('selectedAgents');
+            const output = document.getElementById('multi-agent-output');
+            output.textContent = 'Creating local coordination run...';
+
+            try {
+                const payload = {
+                    objective: formData.get('objective'),
+                    context: formData.get('context'),
+                    executionMode: formData.get('executionMode'),
+                    providerMode: formData.get('providerMode'),
+                    maxTokens: Number(formData.get('maxTokens') || 220),
+                    selectedAgents
+                };
+                const response = await fetch('/api/v1/multi-agent/runs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to create coordination run');
+                }
+
+                output.textContent = JSON.stringify(data.run, null, 2);
+                await loadMultiAgentRuns();
+                await loadSystemMemory();
+            } catch (error) {
+                output.textContent = error.message;
+            }
+        });
+
+        document.getElementById('company-dns-target-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const status = document.getElementById('company-dns-target-status');
+            status.textContent = 'Saving local DNS target...';
+
+            try {
+                const response = await fetch('/api/v1/company-identity/dns-targets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        recordType: formData.get('recordType'),
+                        host: formData.get('host'),
+                        value: formData.get('value'),
+                        purpose: formData.get('purpose'),
+                        status: formData.get('status'),
+                        notes: formData.get('notes')
+                    })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to save DNS target');
+                }
+
+                status.textContent = 'Saved local-only DNS target. Cloudflare was not changed.';
+                event.target.reset();
+                document.getElementById('company-dns-host').value = '@';
+                renderCompanyDnsTargets(data);
+                await loadSystemMemory();
+            } catch (error) {
+                status.textContent = error.message;
+            }
+        });
+
+        document.getElementById('refresh-memory').addEventListener('click', loadSystemMemory);
+        document.getElementById('refresh-company-identity').addEventListener('click', loadCompanyIdentity);
+        document.getElementById('refresh-dev-server').addEventListener('click', loadDevServerStatus);
+        document.getElementById('refresh-mvp-readiness').addEventListener('click', loadMvpReadiness);
+        document.getElementById('refresh-mlx-lifecycle').addEventListener('click', loadMlxLifecycleStatus);
+        document.getElementById('refresh-multi-agent').addEventListener('click', loadMultiAgentRegistry);
+        document.getElementById('refresh-multi-agent-runs').addEventListener('click', loadMultiAgentRuns);
+        document.getElementById('start-mlx-lifecycle').addEventListener('click', () => runMlxLifecycleAction('start'));
+        document.getElementById('stop-mlx-lifecycle').addEventListener('click', () => runMlxLifecycleAction('stop'));
+        document.getElementById('record-dev-note').addEventListener('click', async () => {
+            try {
+                await recordDevServerNote();
+                await loadDevServerStatus();
+            } catch (error) {
+                renderDevServerLogs([{
+                    level: 'error',
+                    message: error.message,
+                    metadata: {},
+                    created_at: new Date().toISOString()
+                }]);
+            }
+        });
+
+        document.getElementById('export-memory').addEventListener('click', () => {
+            const exportStatus = document.getElementById('memory-export-status');
+            if (!latestSystemMemory) {
+                exportStatus.textContent = 'Load System Memory before exporting JSON.';
+                return;
+            }
+
+            const blob = new Blob([JSON.stringify(latestSystemMemory, null, 2)], {
+                type: 'application/json'
+            });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = `etherealai-system-memory-owner-evidence-${Date.now()}.json`;
+            anchor.click();
+            URL.revokeObjectURL(url);
+            exportStatus.textContent = latestSystemMemory.ownerEvidence
+                ? 'Prepared system memory JSON · ownerEvidence included.'
+                : 'Prepared system memory JSON.';
+        });
+
+        loadHealth();
+        loadDevServerStatus();
+        loadMvpReadiness();
+        loadSystemMemory();
+        loadCompanyIdentity();
+        loadMlxLifecycleStatus();
+        loadMultiAgentRegistry();
+        loadMultiAgentRuns();
+    </script>
+</body>
+</html>

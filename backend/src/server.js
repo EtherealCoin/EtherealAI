@@ -20,10 +20,18 @@ const HTTPS = false; // Set to true if using HTTPS
 
 app.use(bodyParser.json());
 app.use(session({
-    secret: 'your-secret-key',
+    secret: process.env.SESSION_SECRET || 'local-dev-session-secret-change-before-production',
     resave: false,
     saveUninitialized: true
 }));
+
+app.use(helmet());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
+
+app.use(express.static(path.join(__dirname, '../..')));
 
 // Signup route
 app.post('/api/v1/auth/signup', async (req, res) => {
@@ -54,14 +62,6 @@ app.post('/api/v1/auth/login', async (req, res) => {
     });
 });
 
-// Dashboard route
-app.get('/dashboard', (req, res) => {
-    if (!req.session.userId) {
-        return res.redirect('/login');
-    }
-    res.sendFile(path.join(__dirname, '../../../client/dashboard.html'));
-});
-
 // Logout route
 app.post('/api/v1/auth/logout', (req, res) => {
     req.session.destroy(err => {
@@ -73,24 +73,16 @@ app.post('/api/v1/auth/logout', (req, res) => {
     });
 });
 
-app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
-
-app.use(express.static(path.join(__dirname, '../..')));
-
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../../client/index.html'));
+  res.sendFile(path.join(__dirname, '../../index.html'));
 });
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../../client/login.html'));
+  res.sendFile(path.join(__dirname, '../../login.html'));
 });
 
 app.get('/signup', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../../client/signup.html'));
+  res.sendFile(path.join(__dirname, '../../signup.html'));
 });
 
 app.get('/dashboard', (req, res) => {

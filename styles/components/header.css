@@ -4,6 +4,8 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     padding: 20px 0;
     display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
     justify-content: space-between;
     align-items: center;
 }
@@ -15,6 +17,26 @@
 nav {
     display: flex;
     gap: 20px;
+}
+
+.responsive-header .logo {
+    margin-left: 20px;
+}
+
+.responsive-header .logo a {
+    color: #111827;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.header-proof-strip {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    color: #374151;
+    font-size: 0.9rem;
+    margin-right: 20px;
+    padding: 8px 10px;
 }
 
 @media (max-width: 768px) {

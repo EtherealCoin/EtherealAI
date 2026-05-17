@@ -1,142 +1,771 @@
 const express = require('express');
-const helmet = require('helmet');
-const cors = require('cors');
-const session = require('express-session');
-const bodyParser = require('body-parser');
-const bcrypt = require('bcrypt');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const { pipeline } = require('stream/promises');
+const { execFile, spawn } = require('child_process');
+const {
+  getExchangeAdapterScaffold,
+  getExchangeAdapterScaffolds
+} = require('./exchange-adapter-scaffolds');
+const {
+  DEFAULT_SAFE_COMMAND_PREFIXES,
+  sanitizeTrustedCommandPrefixes
+} = require('./lib/command-safety');
+const {
+  createProcessRuntime
+} = require('./lib/process-runtime');
+const {
+  createServerPaths
+} = require('./lib/server-paths');
+const {
+  requireAuth,
+  createRequestError
+} = require('./lib/request-helpers');
+const {
+  startEtherealServer
+} = require('./lib/server-startup');
+const {
+  configureAppMiddleware
+} = require('./lib/app-middleware');
+const {
+  registerEtherealRoutes
+} = require('./lib/route-registration');
+const {
+  createSqliteRuntime
+} = require('./lib/sqlite-runtime');
+const {
+  initializeDatabase
+} = require('./lib/database-schema');
+const {
+  createCommandRuntime
+} = require('./lib/command-runtime');
+const {
+  createSystemConfigRuntime
+} = require('./lib/system-config-runtime');
+const {
+  buildCompanyIdentityChecklist,
+  buildCompanySetupPlan,
+  normalizeCompanyDnsTargetInput,
+  parseCompanyDnsTarget,
+  readCompanyIdentity
+} = require('./lib/company-identity');
+const {
+  createAgentRecordActionsRuntime
+} = require('./lib/agent-record-actions');
+const {
+  createChecklistActionsRuntime
+} = require('./lib/checklist-actions');
+const {
+  createDbRowLookupRuntime
+} = require('./lib/db-row-lookups');
+const {
+  EXCHANGE_CONNECTOR_SELECT,
+  EXCHANGE_CONNECTOR_READINESS_EVENT_SELECT,
+  EXCHANGE_ADAPTER_CONTRACT_EVENT_SELECT,
+  BOT_AUTOMATION_PLAN_SELECT,
+  BOT_AUTOMATION_RUN_SELECT,
+  BOT_LIVE_READINESS_EVENT_SELECT,
+  BOT_LIVE_ENABLEMENT_REVIEW_SELECT,
+  BOT_AUTOMATION_SCHEDULE_SELECT
+} = require('./lib/db-selects');
+const {
+  toSolidityIdentifier,
+  parseSolidityContractSpec,
+  buildSolidityStarter,
+  buildSolidityProjectFiles,
+  reviewSoliditySource
+} = require('./lib/solidity-lab');
+const {
+  buildTokenEcosystemCatalog,
+  buildTokenEcosystemBlueprint
+} = require('./lib/token-ecosystem');
+const {
+  getJsonManifestStatus,
+  getOnboardMemorySyncStatus,
+  buildLocalLaunchVerificationStatus,
+  buildMvpReadinessChecklist
+} = require('./lib/readiness');
+const {
+  chooseModelRoleForPrompt
+} = require('./lib/local-model-routing');
+const {
+  createLocalModelRuntime
+} = require('./lib/local-model-runtime');
+const {
+  createMlxLifecycleRuntime
+} = require('./lib/mlx-lifecycle');
+const {
+  MULTI_AGENT_SAFETY_GATES,
+  buildAgentPrompt,
+  buildPlanOnlyContribution,
+  buildCoordinationSummary,
+  buildHermesBenchmarkPlan,
+  getAgentRegistry,
+  limitText,
+  normalizeExecutionMode,
+  normalizeProviderMode,
+  normalizeSelectedAgents,
+  parseMultiAgentRun,
+  parseMultiAgentContribution
+} = require('./lib/multi-agent-coordination');
+const {
+  LOCAL_SECRET_PROVIDER_TYPES,
+  LOCAL_SECRET_SCOPES,
+  findSensitiveFields,
+  assertNoInlineSecretPayload,
+  sanitizeLocalSecretReferenceInput,
+  sanitizeExchangeConnectorInput
+} = require('./lib/secret-safety');
+const {
+  EXCHANGE_ADAPTER_CONTRACT_EXCHANGES,
+  parseExchangeConnector,
+  parseLocalSecretReference,
+  parseExchangeConnectorReadinessEvent,
+  parseExchangeAdapterContractEvent,
+  evaluateExchangeConnectorReadiness,
+  evaluateExchangeAdapterContract,
+  createExchangeAdapterContractSpec
+} = require('./lib/exchange-metadata');
+const {
+  parseSocialPost,
+  reviewSocialContent
+} = require('./lib/social-ops');
+const {
+  parseStrategy,
+  parseBacktest,
+  parsePaperSession,
+  parseOptimizationSweep,
+  parseSplitTest,
+  parseWalkForwardTest,
+  parseDecisionLog
+} = require('./lib/strategy-research');
+const {
+  createStrategyDecisionLogRuntime
+} = require('./lib/strategy-decision-logs');
+const {
+  roundNumber,
+  average
+} = require('./lib/strategy-math');
+const {
+  runCandleBacktest,
+  createPaperBotAutomationRunPayload,
+  createOptimizationSweepPayload,
+  createSplitTestPayload,
+  createWalkForwardPayload,
+  createPaperReplayPayload
+} = require('./lib/strategy-engine');
+const {
+  getProviderCandleLimit,
+  parseMarketDataProvider,
+  parseMarketDataRefreshSchedule,
+  parseMarketDataRefreshRun,
+  parseMarketImport,
+  parseMarketImportJob,
+  timeframeToMs,
+  addMinutesToIso,
+  normalizeScheduleStatus,
+  normalizeOptionalIsoDate,
+  clampScheduleCandleCount,
+  createBackfillWindow,
+  filterCandlesByBackfillWindow,
+  generateSyntheticOhlcvCsv,
+  candlesToOhlcvCsv,
+  dedupeSortAndLimitCandles,
+  parseOhlcvCsv,
+  parseOhlcvCsvLine,
+  createStreamingMarketDataSummaryTracker,
+  createMarketDataSummary,
+  getProviderHealthDefaults,
+  fetchProviderOhlcvCsv
+} = require('./lib/market-data');
+const {
+  createMarketImportFileRuntime
+} = require('./lib/market-import-files');
+const {
+  createMarketImportJobRuntime
+} = require('./lib/market-import-jobs');
+const {
+  createMarketRefreshScheduleRuntime
+} = require('./lib/market-refresh-schedules');
+const {
+  createMarketImportDependencyRuntime
+} = require('./lib/market-import-dependencies');
+const {
+  createDevServerRuntime,
+  parseDevServerRun,
+  parseDevServerLog
+} = require('./lib/dev-server');
+const {
+  normalizeArtifactType,
+  createArtifactRow,
+  filterArtifactRows
+} = require('./lib/artifact-rows');
+const {
+  parseFileProposal,
+  parseTask,
+  parseChecklistItem
+} = require('./lib/creator-records');
+const {
+  resolveWorkspacePath,
+  listWorkspaceEntries,
+  readWorkspaceFile,
+  collectWorkspaceContext,
+  createWorkspaceRuntime
+} = require('./lib/workspace-files');
+const {
+  createStarterPlan,
+  buildCreatorPlanningPrompt,
+  buildFileProposalPrompt,
+  buildMultiFileProposalPrompt,
+  buildWorkspaceEditPrompt,
+  normalizeWorkspaceEditPayload,
+  extractGeneratedFileContent,
+  parseJsonFromModelResponse,
+  normalizeGeneratedFiles,
+  buildChecklistPrompt,
+  normalizeGeneratedChecklist
+} = require('./lib/creator-prompts');
+const {
+  slugify,
+  getScaffoldFilesForTask,
+  prepareGeneratedProposalFiles
+} = require('./lib/creator-scaffold');
+const {
+  RISK_PROFILE_AUDIT_FIELDS,
+  getPositiveNumber,
+  parseRiskProfile,
+  parseRiskProfileAuditEvent,
+  parseOrderIntent,
+  getRiskProfileChangedFields,
+  evaluateOrderIntentRisk
+} = require('./lib/risk-safety');
+const {
+  createRiskProfileActionsRuntime
+} = require('./lib/risk-profile-actions');
+const {
+  evaluateBotAutomationReadiness,
+  evaluateBotLiveReadiness,
+  parseOwnerGoLiveCommand,
+  createBotLiveEnablementReviewPayload,
+  parseBotAutomationPlan,
+  parseBotAutomationRun,
+  parseBotLiveReadinessEvent,
+  parseBotLiveEnablementReview,
+  parseBotAutomationSchedule
+} = require('./lib/bot-automation');
+const {
+  createBotAutomationActionsRuntime
+} = require('./lib/bot-automation-actions');
+const {
+  createBotAutomationScheduleRuntime
+} = require('./lib/bot-automation-schedules');
+const {
+  parseOwnerAcceptanceRecord
+} = require('./lib/owner-acceptance');
 
 const app = express();
 
-// ✅ Correct path to client
-const CLIENT_DIR = path.join(__dirname, '../../client');
+const {
+  projectRoot: PROJECT_ROOT,
+  clientDir: CLIENT_DIR,
+  dbPath: DB_PATH,
+  modelConfigPath: MODEL_CONFIG_PATH,
+  automationPolicyPath: AUTOMATION_POLICY_PATH,
+  secretProviderCapabilitiesPath: SECRET_PROVIDER_CAPABILITIES_PATH,
+  companyIdentityPath: COMPANY_IDENTITY_PATH,
+  onboardMemoryPath: ONBOARD_MEMORY_PATH,
+  onboardMemoryCopyPaths: ONBOARD_MEMORY_COPY_PATHS,
+  workspacesDir: WORKSPACES_DIR,
+  marketImportUploadDir: MARKET_IMPORT_UPLOAD_DIR
+} = createServerPaths({
+  path,
+  serverDirname: __dirname
+});
+const MARKET_IMPORT_UPLOAD_MAX_BYTES = 512 * 1024 * 1024;
+const MARKET_REFRESH_POLL_MS = 60 * 1000;
+const BOT_AUTOMATION_SCHEDULE_POLL_MS = 60 * 1000;
+const db = new sqlite3.Database(DB_PATH);
+const {
+  dbRun,
+  dbAll,
+  dbGet,
+  checkDatabase
+} = createSqliteRuntime(db);
+const {
+  insertDecisionLogs
+} = createStrategyDecisionLogRuntime({
+  dbRun
+});
+const {
+  readModelConfig,
+  readAutomationPolicy,
+  writeAutomationPolicy,
+  readSecretProviderCapabilities,
+  sanitizeAutomationPolicyUpdate
+} = createSystemConfigRuntime({
+  fs,
+  modelConfigPath: MODEL_CONFIG_PATH,
+  automationPolicyPath: AUTOMATION_POLICY_PATH,
+  secretProviderCapabilitiesPath: SECRET_PROVIDER_CAPABILITIES_PATH,
+  defaultSafeCommandPrefixes: DEFAULT_SAFE_COMMAND_PREFIXES,
+  sanitizeTrustedCommandPrefixes,
+  localSecretProviderTypes: LOCAL_SECRET_PROVIDER_TYPES,
+  localSecretScopes: LOCAL_SECRET_SCOPES
+});
+const readCompanyIdentityManifest = () => readCompanyIdentity({
+  fs,
+  companyIdentityPath: COMPANY_IDENTITY_PATH
+});
+const {
+  checkOllama,
+  checkLocalModelProviders,
+  benchmarkLocalModel,
+  generateWithLocalModel
+} = createLocalModelRuntime({
+  readModelConfig,
+  chooseModelRoleForPrompt
+});
+const {
+  execFileText,
+  execFileCapture,
+  getGitStatusSnapshot
+} = createProcessRuntime({
+  execFile,
+  projectRoot: PROJECT_ROOT
+});
+const {
+  getStatus: getMlxLifecycleStatus,
+  start: startMlxLifecycle,
+  stop: stopMlxLifecycle
+} = createMlxLifecycleRuntime({
+  readModelConfig,
+  spawn,
+  execFileCapture
+});
+const {
+  resolveMarketImportUploadPath,
+  deleteMarketImportSourceFile,
+  createMarketImportUploadPath,
+  saveMarketImportUpload
+} = createMarketImportFileRuntime({
+  fs,
+  path,
+  crypto,
+  pipeline,
+  uploadDir: MARKET_IMPORT_UPLOAD_DIR,
+  maxUploadBytes: MARKET_IMPORT_UPLOAD_MAX_BYTES,
+  ensureUploadDir: () => fs.mkdirSync(MARKET_IMPORT_UPLOAD_DIR, { recursive: true })
+});
+const {
+  scheduleMarketImportWorker
+} = createMarketImportJobRuntime({
+  fs,
+  dbGet,
+  dbRun,
+  parseOhlcvCsv,
+  parseOhlcvCsvLine,
+  createMarketDataSummary,
+  createStreamingMarketDataSummaryTracker,
+  resolveMarketImportUploadPath,
+  deleteMarketImportSourceFile
+});
+const {
+  runMarketDataRefreshSchedule,
+  scheduleMarketRefreshWorker
+} = createMarketRefreshScheduleRuntime({
+  dbGet,
+  dbAll,
+  dbRun,
+  fetchProviderOhlcvCsv,
+  clampScheduleCandleCount,
+  getProviderCandleLimit,
+  addMinutesToIso,
+  parseMarketDataRefreshRun,
+  scheduleMarketImportWorker
+});
+const {
+  getMarketImportDependencyCount
+} = createMarketImportDependencyRuntime({
+  dbGet
+});
+const {
+  ensureWorkspacesDir,
+  getWorkspace
+} = createWorkspaceRuntime({
+  fs,
+  dbGet,
+  workspacesDir: WORKSPACES_DIR
+});
+const {
+  saveAgentEvent,
+  applyFileProposalRecord,
+  createCheckpointRecord,
+  createFileProposalRecords
+} = createAgentRecordActionsRuntime({
+  fs,
+  path,
+  dbRun,
+  dbGet,
+  getWorkspace,
+  resolveWorkspacePath,
+  parseFileProposal,
+  getGitStatusSnapshot
+});
+const {
+  createChecklistForTask,
+  appendChecklistItems
+} = createChecklistActionsRuntime({
+  dbAll,
+  dbGet,
+  dbRun,
+  parseChecklistItem,
+  saveAgentEvent
+});
+const {
+  commandTemplates,
+  isCommandAllowed,
+  serializeCommandTemplate,
+  getCommandTemplate,
+  executeCommandRequest,
+  createCommandRequestRecord
+} = createCommandRuntime({
+  path,
+  projectRoot: PROJECT_ROOT,
+  readAutomationPolicy,
+  getWorkspace,
+  execFileCapture,
+  dbRun,
+  dbGet,
+  saveAgentEvent
+});
 
-// ✅ Database (keep simple for now)
-const db = new sqlite3.Database('./database.sqlite');
+const PORT = Number(process.env.PORT || 3000);
+const DEV_SERVER_STARTED_AT = new Date().toISOString();
+const {
+  getDevServerStatus,
+  recordDevServerStart,
+  updateDevServerHeartbeat,
+  recordDevServerLog
+} = createDevServerRuntime({
+  path,
+  projectRoot: PROJECT_ROOT,
+  serverFile: __filename,
+  port: PORT,
+  startedAt: DEV_SERVER_STARTED_AT,
+  dbRun,
+  dbGet,
+  dbAll,
+  parseRun: parseDevServerRun,
+  parseLog: parseDevServerLog
+});
 
 // Initialize SQLite database
-db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT,
-      email TEXT UNIQUE,
-      password_hash TEXT
-    )
-  `);
+initializeDatabase(db);
+
+const ROUTE_SELECTS = {
+  exchangeConnector: EXCHANGE_CONNECTOR_SELECT,
+  exchangeConnectorReadinessEvent: EXCHANGE_CONNECTOR_READINESS_EVENT_SELECT,
+  exchangeAdapterContractEvent: EXCHANGE_ADAPTER_CONTRACT_EVENT_SELECT,
+  botAutomationPlan: BOT_AUTOMATION_PLAN_SELECT,
+  botLiveReadinessEvent: BOT_LIVE_READINESS_EVENT_SELECT,
+  botLiveEnablementReview: BOT_LIVE_ENABLEMENT_REVIEW_SELECT,
+  botAutomationRun: BOT_AUTOMATION_RUN_SELECT,
+  botAutomationSchedule: BOT_AUTOMATION_SCHEDULE_SELECT
+};
+const ROW_LOOKUP_SELECTS = {
+  exchangeConnector: ROUTE_SELECTS.exchangeConnector,
+  exchangeConnectorReadinessEvent: ROUTE_SELECTS.exchangeConnectorReadinessEvent,
+  exchangeAdapterContractEvent: ROUTE_SELECTS.exchangeAdapterContractEvent,
+  botAutomationPlan: ROUTE_SELECTS.botAutomationPlan,
+  botAutomationSchedule: ROUTE_SELECTS.botAutomationSchedule,
+  botAutomationRun: ROUTE_SELECTS.botAutomationRun,
+  botLiveReadinessEvent: ROUTE_SELECTS.botLiveReadinessEvent,
+  botLiveEnablementReview: ROUTE_SELECTS.botLiveEnablementReview
+};
+
+const {
+  getExchangeConnectorRow,
+  getExchangeConnectorReadinessEventRow,
+  getExchangeAdapterContractEventRow,
+  getBotAutomationPlanRow,
+  getBotAutomationScheduleRow,
+  getBotAutomationRunRow,
+  getBotLiveReadinessEventRow,
+  getBotLiveEnablementReviewRow
+} = createDbRowLookupRuntime({
+  dbGet,
+  selects: ROW_LOOKUP_SELECTS
+});
+const {
+  loadBotAutomationReadinessContext,
+  createBotAutomationPaperRun
+} = createBotAutomationActionsRuntime({
+  dbGet,
+  dbAll,
+  dbRun,
+  parseStrategy,
+  parseRiskProfile,
+  parsePaperSession,
+  parseExchangeConnector,
+  parseBotAutomationPlan,
+  parseBotAutomationRun,
+  getExchangeConnectorRow,
+  getBotAutomationPlanRow,
+  getBotAutomationRunRow,
+  evaluateBotAutomationReadiness,
+  createPaperBotAutomationRunPayload,
+  createRequestError
+});
+const {
+  runBotAutomationSchedule,
+  scheduleBotAutomationWorker
+} = createBotAutomationScheduleRuntime({
+  dbAll,
+  dbRun,
+  parseBotAutomationSchedule,
+  getBotAutomationScheduleRow,
+  createBotAutomationPaperRun,
+  createRequestError,
+  botAutomationScheduleSelect: BOT_AUTOMATION_SCHEDULE_SELECT
 });
 
-const PORT = process.env.PORT || 3000;
-
-// Middleware
-app.use(bodyParser.json());
-
-app.use(session({
-  secret: 'your-secret-key',
-  resave: false,
-  saveUninitialized: false
-}));
-
-app.use(helmet());
-
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
-
-// ✅ Serve frontend correctly
-app.use(express.static(CLIENT_DIR));
-
-// =======================
-// AUTH ROUTES
-// =======================
-
-// Signup
-app.post('/api/v1/auth/signup', async (req, res) => {
-  const { name, email, password } = req.body;
-
-  try {
-    const password_hash = await bcrypt.hash(password, 10);
-
-    db.run(
-      "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-      [name, email, password_hash],
-      function (err) {
-        if (err) {
-          return res.status(400).json({ error: err.message });
-        }
-
-        req.session.userId = this.lastID;
-        res.status(201).json({ message: 'User created successfully' });
-      }
-    );
-
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+const {
+  saveRiskProfileAuditEvent,
+  refreshBotPlansForRiskProfile
+} = createRiskProfileActionsRuntime({
+  dbAll,
+  dbRun,
+  parseBotAutomationPlan,
+  loadBotAutomationReadinessContext,
+  evaluateBotAutomationReadiness,
+  getBotAutomationPlanRow,
+  botAutomationPlanSelect: BOT_AUTOMATION_PLAN_SELECT
 });
 
-// Login
-app.post('/api/v1/auth/login', (req, res) => {
-  const { email, password } = req.body;
-
-  db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
-    if (err || !user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    const valid = await bcrypt.compare(password, user.password_hash);
-
-    if (!valid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    req.session.userId = user.id;
-    res.json({ message: 'Logged in successfully' });
-  });
+configureAppMiddleware(app, {
+  express,
+  bodyParser: require('body-parser'),
+  session: require('express-session'),
+  helmet: require('helmet'),
+  cors: require('cors'),
+  path,
+  projectRoot: PROJECT_ROOT,
+  clientDir: CLIENT_DIR,
+  frontendUrl: process.env.FRONTEND_URL
 });
 
-// Logout
-app.post('/api/v1/auth/logout', (req, res) => {
-  req.session.destroy(err => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+const ROUTE_PARSERS = {
+  parseTask,
+  parseChecklistItem,
+  parseFileProposal,
+  parseDevServerRun,
+  parseDevServerLog,
+  parseStrategy,
+  parseBacktest,
+  parsePaperSession,
+  parseOptimizationSweep,
+  parseSplitTest,
+  parseWalkForwardTest,
+  parseDecisionLog,
+  parseMarketImport,
+  parseMarketImportJob,
+  parseMarketDataProvider,
+  parseMarketDataRefreshSchedule,
+  parseMarketDataRefreshRun,
+  parseExchangeConnector,
+  parseExchangeConnectorReadinessEvent,
+  parseExchangeAdapterContractEvent,
+  parseLocalSecretReference,
+  parseRiskProfile,
+  parseRiskProfileAuditEvent,
+  parseOrderIntent,
+  parseBotAutomationPlan,
+  parseBotLiveReadinessEvent,
+  parseBotLiveEnablementReview,
+  parseBotAutomationRun,
+  parseBotAutomationSchedule,
+  parseSolidityContractSpec,
+  parseSocialPost,
+  parseOwnerAcceptanceRecord,
+  parseCompanyDnsTarget,
+  parseMultiAgentRun,
+  parseMultiAgentContribution
+};
 
-    res.clearCookie('connect.sid');
-    res.json({ message: 'Logged out successfully' });
-  });
-});
-
-// =======================
-// PAGE ROUTES
-// =======================
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(CLIENT_DIR, 'index.html'));
-});
-
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(CLIENT_DIR, 'login.html'));
-});
-
-app.get('/signup', (req, res) => {
-  res.sendFile(path.join(CLIENT_DIR, 'signup.html'));
-});
-
-app.get('/dashboard', (req, res) => {
-  if (!req.session.userId) {
-    return res.redirect('/login');
-  }
-
-  res.sendFile(path.join(CLIENT_DIR, 'dashboard.html'));
+registerEtherealRoutes(app, {
+  fs,
+  path,
+  db,
+  dbGet,
+  dbAll,
+  dbRun,
+  requireAuth,
+  projectRoot: PROJECT_ROOT,
+  clientDir: CLIENT_DIR,
+  workspacesDir: WORKSPACES_DIR,
+  modelConfigPath: MODEL_CONFIG_PATH,
+  automationPolicyPath: AUTOMATION_POLICY_PATH,
+  secretProviderCapabilitiesPath: SECRET_PROVIDER_CAPABILITIES_PATH,
+  onboardMemoryPath: ONBOARD_MEMORY_PATH,
+  onboardMemoryCopyPaths: ONBOARD_MEMORY_COPY_PATHS,
+  dbPath: DB_PATH,
+  port: PORT,
+  devServerStartedAt: DEV_SERVER_STARTED_AT,
+  serverFile: __filename,
+  readModelConfig,
+  readAutomationPolicy,
+  writeAutomationPolicy,
+  readSecretProviderCapabilities,
+  readCompanyIdentity: readCompanyIdentityManifest,
+  buildCompanyIdentityChecklist,
+  buildCompanySetupPlan,
+  normalizeCompanyDnsTargetInput,
+  parseCompanyDnsTarget,
+  sanitizeAutomationPolicyUpdate,
+  getJsonManifestStatus,
+  getOnboardMemorySyncStatus,
+  buildLocalLaunchVerificationStatus,
+  buildMvpReadinessChecklist,
+  checkDatabase,
+  checkOllama,
+  checkLocalModelProviders,
+  getDevServerStatus,
+  parseDevServerRun,
+  parseDevServerLog,
+  recordDevServerLog,
+  normalizeArtifactType,
+  createArtifactRow,
+  filterArtifactRows,
+  generateWithLocalModel,
+  benchmarkLocalModel,
+  getMlxLifecycleStatus,
+  startMlxLifecycle,
+  stopMlxLifecycle,
+  chooseModelRoleForPrompt,
+  createStarterPlan,
+  buildCreatorPlanningPrompt,
+  createChecklistForTask,
+  createCheckpointRecord,
+  applyFileProposalRecord,
+  createCommandRequestRecord,
+  ensureWorkspacesDir,
+  slugify,
+  getScaffoldFilesForTask,
+  getWorkspace,
+  collectWorkspaceContext,
+  resolveWorkspacePath,
+  buildChecklistPrompt,
+  buildFileProposalPrompt,
+  buildMultiFileProposalPrompt,
+  buildWorkspaceEditPrompt,
+  extractGeneratedFileContent,
+  parseJsonFromModelResponse,
+  normalizeGeneratedFiles,
+  normalizeWorkspaceEditPayload,
+  prepareGeneratedProposalFiles,
+  createFileProposalRecords,
+  normalizeGeneratedChecklist,
+  appendChecklistItems,
+  saveAgentEvent,
+  listWorkspaceEntries,
+  readWorkspaceFile,
+  insertDecisionLogs,
+  runCandleBacktest,
+  createOptimizationSweepPayload,
+  createSplitTestPayload,
+  createWalkForwardPayload,
+  createPaperReplayPayload,
+  roundNumber,
+  average,
+  sanitizeLocalSecretReferenceInput,
+  sanitizeExchangeConnectorInput,
+  getExchangeConnectorRow,
+  getExchangeConnectorReadinessEventRow,
+  getExchangeAdapterContractEventRow,
+  evaluateExchangeConnectorReadiness,
+  evaluateExchangeAdapterContract,
+  createExchangeAdapterContractSpec,
+  getExchangeAdapterScaffold,
+  getExchangeAdapterScaffolds,
+  exchangeAdapterContractExchanges: EXCHANGE_ADAPTER_CONTRACT_EXCHANGES,
+  findSensitiveFields,
+  normalizeScheduleStatus,
+  clampScheduleCandleCount,
+  fetchProviderOhlcvCsv,
+  getProviderHealthDefaults,
+  parseOhlcvCsv,
+  createMarketDataSummary,
+  createMarketImportUploadPath,
+  saveMarketImportUpload,
+  deleteMarketImportSourceFile,
+  resolveMarketImportUploadPath,
+  scheduleMarketImportWorker,
+  normalizeOptionalIsoDate,
+  createBackfillWindow,
+  scheduleMarketRefreshWorker,
+  runMarketDataRefreshSchedule,
+  getMarketImportDependencyCount,
+  getPositiveNumber,
+  getRiskProfileChangedFields,
+  saveRiskProfileAuditEvent,
+  refreshBotPlansForRiskProfile,
+  riskProfileAuditFields: RISK_PROFILE_AUDIT_FIELDS,
+  evaluateOrderIntentRisk,
+  reviewSocialContent,
+  getBotAutomationPlanRow,
+  getBotAutomationRunRow,
+  getBotAutomationScheduleRow,
+  getBotLiveReadinessEventRow,
+  getBotLiveEnablementReviewRow,
+  createBotAutomationPaperRun,
+  runBotAutomationSchedule,
+  scheduleBotAutomationWorker,
+  loadBotAutomationReadinessContext,
+  evaluateBotAutomationReadiness,
+  evaluateBotLiveReadiness,
+  createBotLiveEnablementReviewPayload,
+  assertNoInlineSecretPayload,
+  parseOwnerGoLiveCommand,
+  toSolidityIdentifier,
+  buildSolidityStarter,
+  buildSolidityProjectFiles,
+  reviewSoliditySource,
+  multiAgentSafetyGates: MULTI_AGENT_SAFETY_GATES,
+  buildAgentPrompt,
+  buildPlanOnlyContribution,
+  buildCoordinationSummary,
+  buildHermesBenchmarkPlan,
+  getAgentRegistry,
+  limitText,
+  normalizeExecutionMode,
+  normalizeProviderMode,
+  normalizeSelectedAgents,
+  buildTokenEcosystemCatalog,
+  buildTokenEcosystemBlueprint,
+  commandTemplates,
+  getGitStatusSnapshot,
+  serializeCommandTemplate,
+  getCommandTemplate,
+  isCommandAllowed,
+  executeCommandRequest,
+  selects: ROUTE_SELECTS,
+  parsers: ROUTE_PARSERS
 });
 
 // =======================
 // START SERVER
 // =======================
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+startEtherealServer({
+  app,
+  port: PORT,
+  recordDevServerStart,
+  updateDevServerHeartbeat,
+  scheduleMarketImportWorker,
+  scheduleMarketRefreshWorker,
+  scheduleBotAutomationWorker,
+  marketRefreshPollMs: MARKET_REFRESH_POLL_MS,
+  botAutomationSchedulePollMs: BOT_AUTOMATION_SCHEDULE_POLL_MS
 });

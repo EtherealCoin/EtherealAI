@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EtherealAI Route Inventory</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/owner-proof-packet">Proof Packet</a>
+        <a href="/mvp-test-pass">MVP Test Pass</a>
+        <a href="/creator">Creator Agent</a>
+        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/solidity-lab">Solidity Lab</a>
+        <a href="/social-ops">Social Ops</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>Server Route Inventory</h1>
+        <p>Use this inventory before splitting the large server file into smaller route modules.</p>
+        <div class="auth-proof-banner" role="status">
+            <strong>MVP 99% · Local E2E 95%</strong>
+            <span>Live execution disabled · <a href="/owner-proof-packet">Proof packet</a> · <a href="/mvp-test-pass">Owner evidence</a> · <a href="/dashboard">Dashboard</a></span>
+        </div>
+
+        <section class="model-panel">
+            <h2>Inventory Summary</h2>
+            <button id="refresh-inventory" type="button">Refresh Inventory</button>
+            <div id="inventory-cards" class="artifact-grid">Loading route inventory...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Owner Proof Coverage</h2>
+            <div id="owner-proof-coverage" class="artifact-grid">Loading owner proof coverage...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Suggested Modules</h2>
+            <div id="module-table" class="comparison-table">Loading module groups...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Route Table</h2>
+            <div id="route-table" class="comparison-table">Loading routes...</div>
+        </section>
+    </main>
+
+    <script>
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function renderCards(inventory = {}) {
+            const cards = [
+                {
+                    label: 'Routes',
+                    value: inventory.totalRoutes ?? 0,
+                    note: `${inventory.protectedRoutes ?? 0} protected`
+                },
+                {
+                    label: 'Suggested Modules',
+                    value: inventory.moduleCount ?? 0,
+                    note: inventory.modularizationPlan?.status || 'inventory'
+                },
+                {
+                    label: 'Safety Modules',
+                    value: inventory.safetyCriticalModules ?? 0,
+                    note: 'monitor-only and metadata boundaries'
+                },
+                {
+                    label: 'Server File',
+                    value: inventory.serverFile || '-',
+                    note: `${inventory.lineCount ?? 0} lines`
+                },
+                {
+                    label: 'Next Step',
+                    value: 'One module',
+                    note: 'Extract only after fresh checkpoint and verifier pass'
+                }
+            ];
+
+            document.getElementById('inventory-cards').innerHTML = cards.map(card => `
+                <div class="artifact-stat">
+                    <strong>${escapeHtml(card.label)}</strong>
+                    <span>${escapeHtml(card.value)}</span>
+                    <span>${escapeHtml(card.note)}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderProofCoverage(ownerEvidence = {}, ownerAcceptance = {}, ownerAcceptanceRecords = []) {
+            const proofSurfaces = ownerEvidence.proofSurfaces || [];
+            const exportSurfaces = ownerEvidence.exportSurfaces || [];
+            const fullLiveBlockers = ownerEvidence.fullLiveBlockers || [];
+            const latestOwnerAcceptanceRecord = ownerAcceptanceRecords[0] || ownerAcceptance.latestRecord || null;
+            const cards = [
+                {
+                    label: 'Proof Surfaces',
+                    value: proofSurfaces.length,
+                    note: ownerEvidence.localOnly ? 'local owner evidence' : 'review local-only state'
+                },
+                {
+                    label: 'Owner Acceptance',
+                    value: formatOwnerAcceptanceStatus(ownerAcceptance.status),
+                    note: ownerAcceptance.localMvpGate === 'accepted'
+                        ? 'local acceptance recorded'
+                        : ownerAcceptance.localMvpGate === 'ready'
+                            ? 'manual owner review remains'
+                            : 'resolve local blockers'
+                },
+                {
+                    label: 'Acceptance Records',
+                    value: ownerAcceptanceRecords.length,
+                    note: latestOwnerAcceptanceRecord
+                        ? `latest local record #${latestOwnerAcceptanceRecord.id}`
+                        : 'no local acceptance record yet'
+                },
+                {
+                    label: 'Export Surfaces',
+                    value: exportSurfaces.length,
+                    note: 'JSON/CSV local evidence'
+                },
+                {
+                    label: 'Full Live Blockers',
+                    value: fullLiveBlockers.length,
+                    note: ownerEvidence.liveExecutionEnabled === false ? 'live execution disabled' : 'review live state'
+                },
+                {
+                    label: 'Route Boundary',
+                    value: ownerEvidence.routeBoundary || 'monitor_only_no_live_orders',
+                    note: 'owner proof packet cross-check'
+                }
+            ];
+
+            document.getElementById('owner-proof-coverage').innerHTML = cards.map(card => `
+                <div class="artifact-stat">
+                    <strong>${escapeHtml(card.label)}</strong>
+                    <span>${escapeHtml(card.value)}</span>
+                    <span>${escapeHtml(card.note)}</span>
+                </div>
+            `).join('');
+        }
+
+        function formatOwnerAcceptanceStatus(status) {
+            if (status === 'accepted') {
+                return 'Accepted';
+            }
+
+            if (status === 'pending_owner_review') {
+                return 'Pending Review';
+            }
+
+            if (status === 'needs_local_review') {
+                return 'Needs Review';
+            }
+
+            return status || 'Unknown';
+        }
+
+        function renderModules(modules = []) {
+            document.getElementById('module-table').innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Module</th>
+                            <th>Category</th>
+                            <th>Routes</th>
+                            <th>Methods</th>
+                            <th>Safety</th>
+                            <th>Suggested File</th>
+                            <th>Current Files</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${modules.map(module => `
+                            <tr>
+                                <td>${escapeHtml(module.moduleId)}</td>
+                                <td>${escapeHtml(module.category)}</td>
+                                <td>${module.routeCount} (${module.protectedRouteCount} protected)</td>
+                                <td>${escapeHtml(JSON.stringify(module.methods || {}))}</td>
+                                <td>${escapeHtml(module.safetyProfile?.boundary || 'standard_app_route')}</td>
+                                <td>${escapeHtml(module.suggestedFile)}</td>
+                                <td>${escapeHtml((module.files || []).join(', '))}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderRoutes(routes = []) {
+            document.getElementById('route-table').innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Path</th>
+                            <th>Module</th>
+                            <th>Protected</th>
+                            <th>File</th>
+                            <th>Line</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${routes.map(route => `
+                            <tr>
+                                <td>${escapeHtml(route.method)}</td>
+                                <td>${escapeHtml(route.path)}</td>
+                                <td>${escapeHtml(route.moduleId)}</td>
+                                <td>${route.protected ? 'yes' : 'no'}</td>
+                                <td>${escapeHtml(route.file || '-')}</td>
+                                <td>${route.line}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function loadInventory() {
+            document.getElementById('inventory-cards').textContent = 'Loading route inventory...';
+            document.getElementById('owner-proof-coverage').textContent = 'Loading owner proof coverage...';
+            const [inventoryResponse, memoryResponse] = await Promise.all([
+                fetch('/api/v1/server-route-inventory'),
+                fetch('/api/v1/system-memory')
+            ]);
+            const inventoryData = await inventoryResponse.json();
+            const memoryData = await memoryResponse.json();
+
+            if (!inventoryResponse.ok) {
+                throw new Error(inventoryData.error || inventoryData.inventory?.error || 'Unable to load route inventory.');
+            }
+
+            if (!memoryResponse.ok) {
+                throw new Error(memoryData.error || 'Unable to load owner proof coverage.');
+            }
+
+            renderCards(inventoryData.inventory);
+            renderProofCoverage(
+                memoryData.snapshot?.ownerEvidence || {},
+                memoryData.snapshot?.ownerAcceptance || {},
+                memoryData.snapshot?.recent?.ownerAcceptanceRecords || []
+            );
+            renderModules(inventoryData.inventory.modules || []);
+            renderRoutes(inventoryData.inventory.routes || []);
+        }
+
+        document.getElementById('refresh-inventory').addEventListener('click', async () => {
+            try {
+                await loadInventory();
+            } catch (error) {
+                document.getElementById('inventory-cards').textContent = error.message;
+            }
+        });
+
+        loadInventory().catch(error => {
+            document.getElementById('inventory-cards').textContent = error.message;
+            document.getElementById('owner-proof-coverage').textContent = error.message;
+        });
+    </script>
+</body>
+</html>

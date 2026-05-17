@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solidity Lab</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/owner-proof-packet">Proof Packet</a>
+        <a href="/creator">Creator Agent</a>
+        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/social-ops">Social Ops</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>Solidity Lab</h1>
+        <div class="auth-proof-banner" role="status">
+            <strong>MVP 99% · Local E2E 95%</strong>
+            <span>Live execution disabled · <a href="/owner-proof-packet">Proof packet</a> · <a href="/mvp-test-pass">Owner evidence</a> · <a href="/dashboard">Dashboard</a></span>
+        </div>
+
+        <section class="model-panel">
+            <h2>Deployment Boundary</h2>
+            <div class="artifact-grid">
+                <div class="artifact-stat">
+                    <strong>Deployment</strong>
+                    <span>Local Only</span>
+                    <span>no mainnet or testnet broadcast</span>
+                </div>
+                <div class="artifact-stat">
+                    <strong>Wallet Secrets</strong>
+                    <span>Blocked</span>
+                    <span>private keys are not accepted</span>
+                </div>
+                <div class="artifact-stat">
+                    <strong>Scaffold</strong>
+                    <span>Review First</span>
+                    <span>draft, test, and audit before any future deploy phase</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Contract Spec</h2>
+            <form id="contract-form" class="model-test-form">
+                <label for="contract-name">Name</label>
+                <input id="contract-name" name="name" type="text" required>
+
+                <label for="contract-type">Type</label>
+                <select id="contract-type" name="contractType">
+                    <option value="erc20">ERC20 Token</option>
+                    <option value="erc721">ERC721 NFT</option>
+                    <option value="generic">Generic Contract</option>
+                </select>
+
+                <label for="contract-network">Target Blockchain</label>
+                <input id="contract-network" name="network" type="text" list="chain-network-options" value="base">
+                <datalist id="chain-network-options">
+                    <option value="base">Base</option>
+                    <option value="polygon">Polygon</option>
+                    <option value="bnb-chain">BNB Chain</option>
+                    <option value="avalanche">Avalanche</option>
+                    <option value="solana">Solana</option>
+                    <option value="arbitrum">Arbitrum</option>
+                    <option value="optimism">Optimism</option>
+                    <option value="ethereum">Ethereum</option>
+                    <option value="fantom-sonic">Fantom / Sonic</option>
+                    <option value="tron">TRON</option>
+                    <option value="sui">Sui</option>
+                    <option value="aptos">Aptos</option>
+                    <option value="cosmos">Cosmos SDK / IBC</option>
+                    <option value="polkadot">Polkadot / Substrate</option>
+                    <option value="near">NEAR</option>
+                    <option value="bitcoin-l2">Bitcoin L2</option>
+                    <option value="custom-chain">Custom / Any Other Blockchain</option>
+                </datalist>
+
+                <label for="solidity-version">Solidity Version</label>
+                <input id="solidity-version" name="solidityVersion" type="text" value="0.8.24">
+
+                <label for="contract-features">Features</label>
+                <textarea id="contract-features" name="features" rows="5"></textarea>
+
+                <label for="contract-risk-notes">Risk Notes</label>
+                <textarea id="contract-risk-notes" name="riskNotes" rows="3"></textarea>
+
+                <button type="submit">Save Spec</button>
+            </form>
+        </section>
+
+        <section class="model-panel">
+            <h2>Saved Specs</h2>
+            <div id="contract-list" class="comparison-table">Loading contracts...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Starter Source</h2>
+            <pre id="contract-output" class="model-output">No contract selected.</pre>
+        </section>
+
+        <section class="model-panel">
+            <h2>Token Ecosystem Studio</h2>
+            <div class="artifact-grid">
+                <div class="artifact-stat">
+                    <strong>Scope</strong>
+                    <span>Local Blueprint</span>
+                    <span>no deploy, no wallet keys, no external posting</span>
+                </div>
+                <div class="artifact-stat">
+                    <strong>Coverage</strong>
+                    <span>Token + NFT + Socials</span>
+                    <span>Discord, Telegram, YouTube, Medium, X, docs</span>
+                </div>
+                <div class="artifact-stat">
+                    <strong>Markets</strong>
+                    <span>Planning Only</span>
+                    <span>listing readiness, nodes, chain options, arbitrage design</span>
+                </div>
+            </div>
+            <div class="button-row">
+                <button id="load-ecosystem-catalog" type="button">Load Ecosystem Catalog</button>
+            </div>
+            <div id="ecosystem-catalog" class="comparison-table">Loading ecosystem catalog...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Multi-Chain Token Builder</h2>
+            <div id="multi-chain-token-blueprint" class="task-list">Select a contract spec and open its ecosystem blueprint.</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Website Creation Center</h2>
+            <div id="website-blueprint" class="task-list">Select a contract spec and open its ecosystem blueprint.</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Whitepaper Generator</h2>
+            <div id="whitepaper-blueprint" class="task-list">Select a contract spec and open its ecosystem blueprint.</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Chain Builder And Node Research</h2>
+            <div id="chain-node-blueprint" class="task-list">Select a contract spec and open its ecosystem blueprint.</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Listing Readiness</h2>
+            <div id="listing-blueprint" class="task-list">Select a contract spec and open its ecosystem blueprint.</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Cross-Chain Arbitrage Design</h2>
+            <pre id="ecosystem-output" class="model-output">No token ecosystem blueprint selected.</pre>
+        </section>
+    </main>
+
+    <script>
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function renderContracts(contracts = []) {
+            const output = document.getElementById('contract-list');
+
+            if (!contracts.length) {
+                output.textContent = 'No contract specs yet.';
+                return;
+            }
+
+            output.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Spec</th>
+                            <th>Type</th>
+                            <th>Network</th>
+                            <th>Status</th>
+                            <th>Source</th>
+                            <th>Review</th>
+                            <th>Workspace</th>
+                            <th>Blueprint</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${contracts.map(contract => `
+                            <tr>
+                                <td>#${contract.id} ${escapeHtml(contract.name)}</td>
+                                <td>${escapeHtml(contract.contract_type)}</td>
+                                <td>${escapeHtml(contract.network)}</td>
+                                <td>${escapeHtml(contract.status)}</td>
+                                <td><button type="button" data-contract-id="${contract.id}">Open</button></td>
+                                <td><button type="button" data-review-contract-id="${contract.id}">Review</button></td>
+                                <td><button type="button" data-scaffold-contract-id="${contract.id}">Scaffold</button></td>
+                                <td><button type="button" data-blueprint-contract-id="${contract.id}">Ecosystem</button></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            output.querySelectorAll('button[data-contract-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const response = await fetch(`/api/v1/solidity-contracts/${button.dataset.contractId}/starter`);
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        document.getElementById('contract-output').textContent = data.error || 'Unable to load starter source.';
+                        return;
+                    }
+
+                    document.getElementById('contract-output').textContent = [
+                        data.fileName,
+                        `Review: ${data.review?.status || '-'}`,
+                        '',
+                        data.source
+                    ].join('\n');
+                });
+            });
+
+            output.querySelectorAll('button[data-review-contract-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const response = await fetch(`/api/v1/solidity-contracts/${button.dataset.reviewContractId}/review`);
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        document.getElementById('contract-output').textContent = data.error || 'Unable to review contract.';
+                        return;
+                    }
+
+                    document.getElementById('contract-output').textContent = JSON.stringify(data.review, null, 2);
+                });
+            });
+
+            output.querySelectorAll('button[data-scaffold-contract-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const status = document.getElementById('contract-output');
+                    status.textContent = 'Creating local Solidity workspace...';
+
+                    const response = await fetch(`/api/v1/solidity-contracts/${button.dataset.scaffoldContractId}/scaffold`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ apply: true })
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        status.textContent = data.error || 'Workspace scaffold failed.';
+                        return;
+                    }
+
+                    status.textContent = [
+                        `Workspace: ${data.workspace.path}`,
+                        `Applied files: ${(data.applied || []).length}`,
+                        `New proposals: ${(data.proposals || []).length}`,
+                        `Skipped existing: ${(data.skipped || []).length}`
+                    ].join('\n');
+                    await loadContracts();
+                });
+            });
+
+            output.querySelectorAll('button[data-blueprint-contract-id]').forEach(button => {
+                button.addEventListener('click', () => loadEcosystemBlueprint(button.dataset.blueprintContractId));
+            });
+        }
+
+        function renderRows(rows = []) {
+            if (!rows.length) {
+                return '<p>No rows available.</p>';
+            }
+
+            return `
+                <table>
+                    <tbody>
+                        ${rows.map(row => `
+                            <tr>
+                                <th>${escapeHtml(row.label || row.name || row.title || row.id || row.platform || '-')}</th>
+                                <td>${escapeHtml(row.recommendation || row.fit || row.purpose || row.summary || row.output || row.evidence || row.status || '-')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderTaskCards(rows = []) {
+            if (!rows.length) {
+                return 'No blueprint rows available.';
+            }
+
+            return rows.map(row => `
+                <article class="task-card">
+                    <div>
+                        <h3>${escapeHtml(row.title || row.label || row.phase || row.id || '-')}</h3>
+                        <p>${escapeHtml(row.description || row.output || row.recommendation || row.fit || row.evidence || row.summary || '-')}</p>
+                    </div>
+                    <span>${escapeHtml(row.priority || row.status || row.family || '')}</span>
+                </article>
+            `).join('');
+        }
+
+        function renderEcosystemCatalog(catalog = {}) {
+            document.getElementById('ecosystem-catalog').innerHTML = `
+                <h3>Recommended Low-Fee Token Chains</h3>
+                ${renderRows(catalog.recommendedLowFeeChains || [])}
+                <h3>Supported Chain Options</h3>
+                ${renderRows(catalog.chains || [])}
+                <h3>Social Ops Channels</h3>
+                ${renderRows(catalog.socialChannels || [])}
+                <h3>Whitepaper Templates</h3>
+                ${renderRows(catalog.whitepaperTemplates || [])}
+                <h3>Website Templates</h3>
+                ${renderRows(catalog.websiteTemplates || [])}
+                <h3>Listing Sources</h3>
+                ${renderRows(catalog.listingSources || [])}
+            `;
+        }
+
+        function renderEcosystemBlueprint(blueprint = {}) {
+            const website = blueprint.website || {};
+            const whitepaper = blueprint.whitepaper || {};
+            const chainBuilder = blueprint.chainBuilder || {};
+            const listingReadiness = blueprint.listingReadiness || {};
+            const socialCampaign = blueprint.socialCampaign || {};
+            const logo = blueprint.logo || {};
+            const nodeResearch = blueprint.nodeResearch || {};
+            const multiChain = blueprint.multiChainTokenBuild || {};
+            const selectedChain = multiChain.selectedChain || {};
+            const standardPlan = multiChain.standardPlan || {};
+
+            document.getElementById('multi-chain-token-blueprint').innerHTML = renderTaskCards([
+                {
+                    title: selectedChain.name || 'Selected Chain',
+                    description: `${selectedChain.family || 'chain'} · ${selectedChain.fit || 'Select a target blockchain.'}`,
+                    status: selectedChain.gasProfile || 'chain'
+                },
+                {
+                    title: standardPlan.primaryStandard || 'Token Standard',
+                    description: `${standardPlan.starterScaffold || 'Local scaffold plan'} · ${standardPlan.notes || 'Review chain-specific token standard.'}`,
+                    status: standardPlan.implementationLane || 'standard'
+                },
+                {
+                    title: 'Low-Fee Launch Candidates',
+                    description: (multiChain.recommendedLowFeeChains || []).map(chain => chain.name).join(' · '),
+                    status: 'low-fee'
+                },
+                ...(multiChain.requiredBeforeLiveDeployment || []).map(item => ({
+                    title: item,
+                    description: 'Required before any future deployment phase.',
+                    status: 'required'
+                })),
+                ...(multiChain.blockedActions || []).map(item => ({
+                    title: item,
+                    description: 'Blocked in this MVP.',
+                    status: 'blocked'
+                }))
+            ]);
+
+            document.getElementById('website-blueprint').innerHTML = renderTaskCards([
+                ...(website.pages || []).map(page => ({
+                    title: page.label,
+                    description: (page.sections || []).join(' · '),
+                    status: website.template?.label || 'website'
+                })),
+                ...(website.roadmap || [])
+            ]);
+
+            document.getElementById('whitepaper-blueprint').innerHTML = renderTaskCards([
+                {
+                    title: whitepaper.draft?.title || 'Whitepaper Draft',
+                    description: whitepaper.draft?.abstract || 'No draft available.',
+                    status: whitepaper.template?.label || 'template'
+                },
+                ...(whitepaper.template?.sections || []).map(section => ({
+                    title: section,
+                    description: 'Auto-fill from token spec, roadmap, NFT utility, listing evidence, and owner notes.',
+                    status: 'section'
+                }))
+            ]);
+
+            document.getElementById('chain-node-blueprint').innerHTML = renderTaskCards([
+                ...(chainBuilder.options || []),
+                {
+                    title: 'Node Profitability Formula',
+                    description: nodeResearch.profitabilityFormula || 'No node formula available.',
+                    status: nodeResearch.status || 'research'
+                },
+                {
+                    title: 'Node Research Output',
+                    description: nodeResearch.output || 'Rank nodes by risk-adjusted expected return.',
+                    status: 'nodes'
+                }
+            ]);
+
+            document.getElementById('listing-blueprint').innerHTML = renderTaskCards(listingReadiness.checklist || []);
+            document.getElementById('ecosystem-output').textContent = JSON.stringify({
+                contract: blueprint.contract,
+                safetyBoundary: blueprint.safetyBoundary,
+                multiChainTokenBuild: multiChain,
+                tokenFeatureMatrix: blueprint.tokenFeatureMatrix,
+                nftUtilityDesigner: blueprint.nftUtilityDesigner,
+                logoCreationBrief: logo,
+                socialCampaign,
+                listingReadiness,
+                chainBuilder,
+                nodeResearch,
+                crossChainArbitrage: blueprint.crossChainArbitrage
+            }, null, 2);
+        }
+
+        async function loadEcosystemCatalog() {
+            const response = await fetch('/api/v1/solidity-ecosystem/catalog');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('ecosystem-catalog').textContent = data.error || 'Unable to load ecosystem catalog.';
+                return;
+            }
+
+            renderEcosystemCatalog(data.catalog || {});
+        }
+
+        async function loadEcosystemBlueprint(id) {
+            const output = document.getElementById('ecosystem-output');
+            output.textContent = `Loading ecosystem blueprint for contract #${id}...`;
+            const response = await fetch(`/api/v1/solidity-contracts/${id}/ecosystem-blueprint`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Unable to load ecosystem blueprint.';
+                return;
+            }
+
+            renderEcosystemBlueprint(data.blueprint || {});
+        }
+
+        async function loadContracts() {
+            const response = await fetch('/api/v1/solidity-contracts');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('contract-list').textContent = data.error || 'Unable to load contracts.';
+                return;
+            }
+
+            renderContracts(data.contracts || []);
+        }
+
+        function parseArtifactHash() {
+            const hash = decodeURIComponent(window.location.hash.replace(/^#/, ''));
+            const match = hash.match(/^artifact=solidity-contract:(\d+)$/);
+            return match ? match[1] : null;
+        }
+
+        async function openArtifactFromHash() {
+            const id = parseArtifactHash();
+
+            if (!id) {
+                return;
+            }
+
+            const response = await fetch(`/api/v1/solidity-contracts/${id}/starter`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('contract-output').textContent = data.error || 'Unable to open contract.';
+                return;
+            }
+
+            document.getElementById('contract-output').textContent = [
+                data.fileName,
+                `Review: ${data.review?.status || '-'}`,
+                '',
+                data.source
+            ].join('\n');
+        }
+
+        document.getElementById('contract-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const response = await fetch('/api/v1/solidity-contracts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(Object.fromEntries(formData.entries()))
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('contract-output').textContent = data.error || 'Contract save failed.';
+                return;
+            }
+
+            event.target.reset();
+            document.getElementById('contract-output').textContent = JSON.stringify(data.contract, null, 2);
+            await loadContracts();
+        });
+
+        document.getElementById('load-ecosystem-catalog').addEventListener('click', loadEcosystemCatalog);
+
+        window.addEventListener('hashchange', openArtifactFromHash);
+
+        loadContracts().then(openArtifactFromHash);
+        loadEcosystemCatalog();
+    </script>
+</body>
+</html>

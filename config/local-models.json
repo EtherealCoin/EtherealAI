@@ -1,0 +1,78 @@
+{
+  "defaultProvider": "ollama",
+  "provider": {
+    "name": "ollama",
+    "type": "ollama",
+    "baseUrl": "http://127.0.0.1:11434"
+  },
+  "providers": {
+    "ollama": {
+      "name": "ollama",
+      "type": "ollama",
+      "baseUrl": "http://127.0.0.1:11434",
+      "purpose": "Baseline local model server and current default runtime."
+    },
+    "mlx": {
+      "name": "mlx",
+      "type": "openai_compatible",
+      "baseUrl": "http://127.0.0.1:8080/v1",
+      "optional": true,
+      "purpose": "Apple Silicon optimized MLX/MLX-LM server lane for benchmarking before promotion.",
+      "lifecycle": {
+        "command": "/Users/ethereal/.local/bin/mlx_lm.server",
+        "host": "127.0.0.1",
+        "port": 8080,
+        "model": "mlx-community/Qwen3-Coder-Next-4bit",
+        "maxTokens": 512,
+        "temperature": 0,
+        "startupTimeoutMs": 180000,
+        "memoryIsolation": {
+          "unloadOllamaBeforeStart": true,
+          "unloadOllamaModels": [
+            "qwen3.6:35b-a3b",
+            "qwen3-coder-next:latest",
+            "deepseek-r1:70b",
+            "llama3:latest"
+          ]
+        }
+      }
+    }
+  },
+  "roles": {
+    "planner": {
+      "provider": "ollama",
+      "model": "deepseek-r1:70b",
+      "temperature": 0.6,
+      "purpose": "Architecture, step-by-step reasoning, tradeoff analysis, and project planning"
+    },
+    "coder": {
+      "provider": "ollama",
+      "model": "qwen3.6:35b-a3b",
+      "temperature": 0.2,
+      "think": false,
+      "purpose": "Writing, editing, refactoring, and repository-scale coding with Qwen3.6 35B-A3B in content-generation mode",
+      "fallbackModel": "qwen3-coder-next:latest"
+    },
+    "writer": {
+      "provider": "ollama",
+      "model": "llama3:latest",
+      "temperature": 0.7,
+      "purpose": "Drafting social posts, community updates, content calendars, and public-facing copy"
+    },
+    "autocomplete": {
+      "provider": "ollama",
+      "model": "qwen3.6:35b-a3b",
+      "temperature": 0.1,
+      "think": false,
+      "purpose": "Short local code completion and small implementation prompts without retaining Qwen 2.5 models"
+    }
+  },
+  "notes": [
+    "Keep private trading logic, exchange keys, wallet keys, and deployment keys out of prompts unless explicitly approved.",
+    "Use the planner for high-level reasoning, the coder for concrete file edits, and the writer for social/content drafts.",
+    "Autocomplete now uses Qwen3.6 with think:false so Qwen 2.5 models can be removed from the local machine.",
+    "Qwen3.6 35B-A3B is configured as the coder target with Ollama think:false so benchmark/test requests return content instead of spending the whole output cap on thinking text.",
+    "Qwen3-Coder-Next remains installed as the coder fallback/heavy comparison model.",
+    "MLX benchmark result: mlx-community/Qwen3-Coder-Next-4bit was faster than Ollama qwen3-coder-next:latest in local tests, but the MLX server must be running on port 8080 and crashed under concurrent large-model memory pressure."
+  ]
+}

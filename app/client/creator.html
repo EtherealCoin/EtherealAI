@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creator Agent</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/owner-proof-packet">Proof Packet</a>
+        <a href="/solidity-lab">Solidity Lab</a>
+        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/social-ops">Social Ops</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>Creator Agent</h1>
+        <p>Describe what you want built. The system will create a local plan first, then wait before making files or running commands.</p>
+        <div class="auth-proof-banner" role="status">
+            <strong>MVP 99% · Local E2E 95%</strong>
+            <span>Live execution disabled · <a href="/owner-proof-packet">Proof packet</a> · <a href="/mvp-test-pass">Owner evidence</a> · <a href="/dashboard">Dashboard</a></span>
+        </div>
+
+        <section class="model-panel">
+            <h2>New Build Request</h2>
+            <form id="creator-form" class="model-test-form">
+                <label for="title">Title</label>
+                <input id="title" name="title" type="text" placeholder="Crypto backtester, game prototype, Solidity test suite" required>
+
+                <label for="category">Category</label>
+                <select id="category" name="category">
+                    <option value="general">General Software</option>
+                    <option value="trading">Crypto Trading Research</option>
+                    <option value="solidity">Solidity / Token Tooling</option>
+                    <option value="social">Social Automation</option>
+                    <option value="game">Game / Interactive App</option>
+                </select>
+
+                <label for="request">Request</label>
+                <textarea id="request" name="request" rows="8" maxlength="12000" placeholder="Tell the system what you want it to build, in normal language." required></textarea>
+
+                <label for="modelRole">Planning Role</label>
+                <select id="modelRole" name="modelRole">
+                    <option value="auto">Auto</option>
+                    <option value="planner">Planner</option>
+                    <option value="coder">Coder</option>
+                    <option value="autocomplete">Autocomplete</option>
+                </select>
+
+                <label class="checkbox-row">
+                    <input id="useModel" name="useModel" type="checkbox">
+                    Use local model for this plan
+                </label>
+
+                <button type="submit">Create Plan</button>
+            </form>
+        </section>
+
+        <section class="model-panel">
+            <h2>Current Plan</h2>
+            <pre id="creator-output" class="model-output">No plan created yet.</pre>
+        </section>
+
+        <section class="model-panel">
+            <h2>Task Activity</h2>
+            <div id="task-artifact-summary" class="artifact-grid">Select a task to see its artifacts.</div>
+            <div id="task-timeline" class="timeline-list">No task selected.</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Artifact Browser</h2>
+            <div class="artifact-controls">
+                <select id="artifact-type">
+                    <option value="all">All</option>
+                    <option value="task">Tasks</option>
+                    <option value="file proposal">File Proposals</option>
+                    <option value="command run">Command Runs</option>
+                    <option value="checkpoint">Checkpoints</option>
+                    <option value="backtest">Backtests</option>
+                    <option value="paper session">Paper Sessions</option>
+                    <option value="optimization sweep">Optimization Sweeps</option>
+                    <option value="split test">Split Tests</option>
+                    <option value="walk forward test">Walk-Forward Tests</option>
+                    <option value="decision log">Decision Logs</option>
+                    <option value="market import">Market Imports</option>
+                    <option value="exchange connector">Exchange Connectors</option>
+                    <option value="risk profile">Risk Profiles</option>
+                    <option value="order intent">Order Intents</option>
+                    <option value="solidity contract">Solidity Contracts</option>
+                    <option value="social post">Social Posts</option>
+                </select>
+                <input id="artifact-query" type="search" placeholder="Search artifacts">
+                <button id="artifact-export" type="button">Export JSON</button>
+            </div>
+            <div class="artifact-pager">
+                <button id="artifact-prev" type="button" disabled>Previous</button>
+                <span id="artifact-page-status">Loading...</span>
+                <button id="artifact-next" type="button" disabled>Next</button>
+            </div>
+            <div id="global-artifact-summary" class="artifact-grid">Loading artifacts...</div>
+            <div id="global-artifact-list" class="timeline-list">Loading recent artifacts...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Execution Controls</h2>
+            <div class="control-grid">
+                <article>
+                    <h3>Owner Policy</h3>
+                    <form id="policy-form" class="model-test-form">
+                        <label for="policy-mode">Mode</label>
+                        <select id="policy-mode" name="mode">
+                            <option value="owner">Owner</option>
+                            <option value="guided">Guided</option>
+                        </select>
+
+                        <label class="checkbox-row">
+                            <input id="auto-approve-files" name="autoApproveFileProposals" type="checkbox">
+                            Auto-approve local file proposals
+                        </label>
+
+                        <label class="checkbox-row">
+                            <input id="auto-run-low-risk" name="autoRunLowRiskCommands" type="checkbox">
+                            Auto-run low-risk commands later
+                        </label>
+
+                        <label for="trusted-command-prefixes">Trusted Command Prefixes</label>
+                        <textarea id="trusted-command-prefixes" name="trustedCommandPrefixes" rows="7" placeholder="git status&#10;git diff&#10;npm test"></textarea>
+
+                        <button type="submit">Save Policy</button>
+                    </form>
+                    <pre id="policy-output" class="model-output">Loading owner policy...</pre>
+                </article>
+
+                <article>
+                    <h3>Approved Workspaces</h3>
+                    <form id="workspace-form" class="compact-form">
+                        <input id="workspace-name" name="name" type="text" placeholder="New workspace name" required>
+                        <button type="submit">Create</button>
+                    </form>
+                    <div id="workspace-list" class="small-list">Loading workspaces...</div>
+                </article>
+
+                <article>
+                    <h3>Task Checklist</h3>
+                    <button id="scaffold-task" type="button" disabled>Scaffold Starter Project</button>
+                    <button id="advance-task" type="button" disabled>Run Next Safe Step</button>
+                    <button id="create-checklist" type="button" disabled>Create Checklist For Selected Task</button>
+                    <button id="generate-checklist" type="button" disabled>Generate Checklist With Local Model</button>
+                    <div id="checklist-list" class="small-list">Select a task to see its checklist.</div>
+                </article>
+            </div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Git Checkpoint</h2>
+            <div class="button-row">
+                <button id="refresh-git" type="button">Refresh Git Status</button>
+                <button id="save-checkpoint" type="button">Save Checkpoint Record</button>
+            </div>
+            <pre id="git-status-output" class="model-output">Git status not loaded yet.</pre>
+        </section>
+
+        <section class="model-panel">
+            <h2>Command Guard</h2>
+            <form id="command-form" class="model-test-form">
+                <label for="command-workspace">Workspace</label>
+                <select id="command-workspace" name="workspaceId">
+                    <option value="">No workspace selected</option>
+                </select>
+
+                <label for="command-input">Command Request</label>
+                <input id="command-input" name="command" type="text" placeholder="git status, git diff, npm test, node --check app/server/src/server.js" required>
+
+                <button type="submit">Record Command Request</button>
+            </form>
+            <h3>Project Check Templates</h3>
+            <div id="command-template-list" class="small-list">Loading command templates...</div>
+            <pre id="command-output" class="model-output">Commands are recorded for review. They are not executed from this panel yet.</pre>
+            <button id="run-command" type="button" disabled>Run Latest Review-Ready Command</button>
+            <h3>Run History</h3>
+            <pre id="command-history-output" class="model-output">No command runs yet.</pre>
+        </section>
+
+        <section class="model-panel">
+            <h2>File Proposals</h2>
+            <div class="control-grid">
+                <article>
+                    <h3>Browse Workspace</h3>
+                    <form id="file-browser-form" class="model-test-form">
+                        <label for="file-workspace">Workspace</label>
+                        <select id="file-workspace" name="workspaceId">
+                            <option value="">No workspace selected</option>
+                        </select>
+
+                        <label for="file-path">Path</label>
+                        <input id="file-path" name="path" type="text" placeholder="." value=".">
+
+                        <div class="button-row">
+                            <button type="submit">Browse</button>
+                            <button id="read-file" type="button">Read File</button>
+                        </div>
+                    </form>
+                    <div id="file-list" class="small-list">Select a workspace to browse files.</div>
+                </article>
+
+                <article>
+                    <h3>File Content</h3>
+                    <pre id="file-content-output" class="model-output">No file loaded.</pre>
+                </article>
+            </div>
+
+            <form id="ai-proposal-form" class="model-test-form">
+                <h3>Generate With Local Coder</h3>
+                <label for="ai-proposal-path">Target Path</label>
+                <input id="ai-proposal-path" name="relativePath" type="text" placeholder="src/example.js" required>
+
+                <label for="ai-proposal-model-role">Model Role</label>
+                <select id="ai-proposal-model-role" name="modelRole">
+                    <option value="auto">Auto</option>
+                    <option value="coder">Coder</option>
+                    <option value="autocomplete">Fast Coder</option>
+                    <option value="planner">Planner</option>
+                </select>
+
+                <label for="ai-proposal-instruction">Instruction</label>
+                <textarea id="ai-proposal-instruction" name="instruction" rows="6" maxlength="8000" placeholder="Tell the local coding model exactly what this file should contain." required></textarea>
+
+                <button type="submit">Draft File Proposal</button>
+            </form>
+
+            <form id="ai-batch-proposal-form" class="model-test-form">
+                <h3>Generate Multi-File Change</h3>
+                <label for="ai-batch-model-role">Model Role</label>
+                <select id="ai-batch-model-role" name="modelRole">
+                    <option value="auto">Auto</option>
+                    <option value="coder">Coder</option>
+                    <option value="autocomplete">Fast Coder</option>
+                    <option value="planner">Planner</option>
+                </select>
+
+                <label for="ai-batch-instruction">Instruction</label>
+                <textarea id="ai-batch-instruction" name="instruction" rows="7" maxlength="10000" placeholder="Ask the local model for a small set of files. Example: create README.md and src/index.js for a tiny app." required></textarea>
+
+                <button type="submit">Draft Multi-File Proposals</button>
+            </form>
+
+            <form id="workspace-edit-form" class="model-test-form">
+                <h3>Workspace Edit Goal</h3>
+                <label for="workspace-edit-model-role">Model Role</label>
+                <select id="workspace-edit-model-role" name="modelRole">
+                    <option value="auto">Auto</option>
+                    <option value="coder">Coder</option>
+                    <option value="autocomplete">Fast Coder</option>
+                    <option value="planner">Planner</option>
+                </select>
+
+                <label for="workspace-edit-goal">Goal</label>
+                <textarea id="workspace-edit-goal" name="goal" rows="8" maxlength="12000" placeholder="Describe what should change across this workspace. The local model will inspect readable workspace files and draft reviewable file proposals." required></textarea>
+
+                <button type="submit">Draft Workspace Edit</button>
+            </form>
+
+            <form id="proposal-form" class="model-test-form">
+                <h3>Manual File Proposal</h3>
+                <label for="proposal-path">Proposal Path</label>
+                <input id="proposal-path" name="relativePath" type="text" placeholder="src/example.js" required>
+
+                <label for="proposal-content">Proposed Content</label>
+                <textarea id="proposal-content" name="proposedContent" rows="10" placeholder="Exact file content to write after approval." required></textarea>
+
+                <button type="submit">Create File Proposal</button>
+            </form>
+
+            <div class="button-row">
+                <button id="approve-proposal" type="button" disabled>Approve Latest Proposal</button>
+                <button id="reject-proposal" type="button" disabled>Reject Latest Proposal</button>
+                <button id="apply-proposal" type="button" disabled>Apply Approved Proposal</button>
+                <button id="apply-approved-proposals" type="button" disabled>Apply All Approved</button>
+            </div>
+            <pre id="proposal-output" class="model-output">No file proposals yet.</pre>
+        </section>
+
+        <section class="model-panel">
+            <h2>Recent Requests</h2>
+            <div id="task-list" class="task-list">
+                <p>Loading recent requests...</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let selectedTaskId = null;
+        let currentWorkspaces = [];
+        let currentProposals = [];
+        let currentCommandTemplates = [];
+        let currentArtifactData = null;
+        let artifactOffset = 0;
+        const artifactLimit = 25;
+        let latestCommandRequestId = null;
+        let latestProposalId = null;
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function renderPlan(task) {
+            const plan = task.plan;
+
+            if (plan.type === 'local-model-plan') {
+                return `#${task.id} ${task.title}\n\n${plan.markdown}`;
+            }
+
+            return [
+                `#${task.id} ${task.title}`,
+                '',
+                `Goal: ${plan.goal}`,
+                '',
+                'Phases:',
+                ...plan.phases.map((phase, index) => `${index + 1}. ${phase}`),
+                '',
+                'Safety Checks:',
+                ...plan.safetyChecks.map(check => `- ${check}`),
+                '',
+                `Next Action: ${plan.nextAction}`
+            ].join('\n');
+        }
+
+        function renderTasks(tasks) {
+            const list = document.getElementById('task-list');
+
+            if (!tasks.length) {
+                list.innerHTML = '<p>No creator requests yet.</p>';
+                return;
+            }
+
+            list.innerHTML = tasks.map(task => `
+                <article class="task-card">
+                    <h3>${escapeHtml(task.title)}</h3>
+                    <p>${escapeHtml(task.category)} · ${escapeHtml(task.status)}</p>
+                    <button type="button" data-task-id="${task.id}">View Plan</button>
+                </article>
+            `).join('');
+
+            list.querySelectorAll('button[data-task-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    await loadTaskDetail(button.dataset.taskId);
+                });
+            });
+        }
+
+        function renderChecklist(items) {
+            const list = document.getElementById('checklist-list');
+
+            if (!selectedTaskId) {
+                list.textContent = 'Select a task to see its checklist.';
+                return;
+            }
+
+            if (!items.length) {
+                list.textContent = 'No checklist yet. Create one before implementation.';
+                return;
+            }
+
+            list.innerHTML = items.map(item => `
+                <label class="checklist-item">
+                    <select data-checklist-id="${item.id}">
+                        <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>Pending</option>
+                        <option value="approved" ${item.status === 'approved' ? 'selected' : ''}>Approved</option>
+                        <option value="done" ${item.status === 'done' ? 'selected' : ''}>Done</option>
+                    </select>
+                    <span>${escapeHtml(item.label)}</span>
+                </label>
+            `).join('');
+
+            list.querySelectorAll('select[data-checklist-id]').forEach(select => {
+                select.addEventListener('change', async () => {
+                    const response = await fetch(`/api/v1/creator/checklist/${select.dataset.checklistId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ status: select.value })
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        alert(data.error || 'Checklist update failed');
+                    }
+                });
+            });
+        }
+
+        function renderWorkspaces(workspaces) {
+            currentWorkspaces = workspaces;
+            const list = document.getElementById('workspace-list');
+            const select = document.getElementById('command-workspace');
+            const fileWorkspace = document.getElementById('file-workspace');
+
+            if (!workspaces.length) {
+                list.textContent = 'No approved workspaces yet.';
+                select.innerHTML = '<option value="">No workspace selected</option>';
+                fileWorkspace.innerHTML = '<option value="">No workspace selected</option>';
+                return;
+            }
+
+            list.innerHTML = workspaces.map(workspace => `
+                <div class="workspace-row">
+                    <strong>${escapeHtml(workspace.name)}</strong>
+                    <code>${escapeHtml(workspace.path)}</code>
+                </div>
+            `).join('');
+
+            select.innerHTML = '<option value="">No workspace selected</option>' + workspaces.map(workspace => `
+                <option value="${workspace.id}">${escapeHtml(workspace.name)}</option>
+            `).join('');
+            fileWorkspace.innerHTML = workspaces.map(workspace => `
+                <option value="${workspace.id}">${escapeHtml(workspace.name)}</option>
+            `).join('');
+        }
+
+        function renderFiles(data) {
+            const list = document.getElementById('file-list');
+
+            if (!data.entries.length) {
+                list.textContent = 'Workspace folder is empty.';
+                return;
+            }
+
+            list.innerHTML = data.entries.map(entry => `
+                <button type="button" data-file-path="${escapeHtml(entry.path)}" data-file-type="${entry.type}">
+                    ${entry.type === 'directory' ? '[dir]' : '[file]'} ${escapeHtml(entry.path)}
+                </button>
+            `).join('');
+
+            list.querySelectorAll('button[data-file-path]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    document.getElementById('file-path').value = button.dataset.filePath;
+
+                    if (button.dataset.fileType === 'directory') {
+                        await browseWorkspaceFiles();
+                    } else {
+                        await readWorkspaceFile();
+                    }
+                });
+            });
+        }
+
+        function renderProposals(proposals = []) {
+            const output = document.getElementById('proposal-output');
+            const approveButton = document.getElementById('approve-proposal');
+            const rejectButton = document.getElementById('reject-proposal');
+            const applyButton = document.getElementById('apply-proposal');
+            const applyAllButton = document.getElementById('apply-approved-proposals');
+            currentProposals = proposals;
+
+            if (!proposals.length) {
+                latestProposalId = null;
+                approveButton.disabled = true;
+                rejectButton.disabled = true;
+                applyButton.disabled = true;
+                applyAllButton.disabled = true;
+                output.textContent = 'No file proposals yet.';
+                return;
+            }
+
+            const latest = proposals[0];
+            const approvedCount = proposals.filter(proposal => proposal.status === 'approved').length;
+            latestProposalId = latest.id;
+            approveButton.disabled = !['pending', 'rejected'].includes(latest.status);
+            rejectButton.disabled = latest.status !== 'pending';
+            applyButton.disabled = latest.status !== 'approved';
+            applyAllButton.disabled = approvedCount === 0;
+
+            output.textContent = proposals.map(proposal => [
+                `#${proposal.id} ${proposal.status}`,
+                `Workspace: ${proposal.workspace_id}`,
+                `Path: ${proposal.relative_path}`,
+                `Action: ${proposal.action}`,
+                `Created: ${proposal.created_at}`,
+                '',
+                'Proposed content:',
+                proposal.proposed_content
+            ].join('\n')).join('\n\n---\n\n');
+        }
+
+        function renderCommandRequests(commandRequests = []) {
+            const output = document.getElementById('command-output');
+            const runButton = document.getElementById('run-command');
+
+            if (!commandRequests.length) {
+                latestCommandRequestId = null;
+                runButton.disabled = true;
+                output.textContent = 'Commands are recorded for review. They are not executed from this panel yet.';
+                return;
+            }
+
+            const runnable = commandRequests.find(command => command.status === 'review_ready');
+            latestCommandRequestId = runnable ? runnable.id : null;
+            runButton.disabled = !latestCommandRequestId;
+
+            output.textContent = commandRequests.map(command => [
+                `#${command.id} ${command.status}`,
+                `Command: ${command.command}`,
+                `Reason: ${command.reason}`,
+                `Created: ${command.created_at}`
+            ].join('\n')).join('\n\n');
+        }
+
+        function renderCommandRuns(commandRuns = []) {
+            const output = document.getElementById('command-history-output');
+
+            if (!commandRuns.length) {
+                output.textContent = 'No command runs yet.';
+                return;
+            }
+
+            output.textContent = commandRuns.map(run => [
+                `Run #${run.id} ${run.status}`,
+                `Request: #${run.command_request_id}`,
+                `Exit code: ${run.exit_code}`,
+                `Created: ${run.created_at}`,
+                '',
+                'STDOUT:',
+                run.stdout || '(empty)',
+                '',
+                'STDERR:',
+                run.stderr || '(empty)'
+            ].join('\n')).join('\n\n---\n\n');
+        }
+
+        function renderCommandTemplates(templates = []) {
+            currentCommandTemplates = templates;
+            const list = document.getElementById('command-template-list');
+
+            if (!templates.length) {
+                list.textContent = 'No command templates available.';
+                return;
+            }
+
+            list.innerHTML = templates.map(template => `
+                <div class="command-template-row">
+                    <div>
+                        <strong>${escapeHtml(template.label)}</strong>
+                        <code>${escapeHtml(template.command)}</code>
+                        <span>${escapeHtml(template.description)} · ${escapeHtml(template.scope || 'project')}</span>
+                        ${template.allowed ? '' : `<em>${escapeHtml(template.reason)}</em>`}
+                    </div>
+                    <button type="button" data-template-id="${template.id}" ${template.allowed ? '' : 'disabled'}>Run</button>
+                </div>
+            `).join('');
+
+            list.querySelectorAll('button[data-template-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    await runCommandTemplate(button.dataset.templateId);
+                });
+            });
+        }
+
+        function showCommandRunResult(data, heading) {
+            document.getElementById('command-output').textContent = [
+                heading,
+                `Command request #${data.commandRequest.id}`,
+                `Run #${data.commandRun.id} ${data.commandRun.status}`,
+                `Exit code: ${data.commandRun.exit_code}`,
+                '',
+                'STDOUT:',
+                data.commandRun.stdout || '(empty)',
+                '',
+                'STDERR:',
+                data.commandRun.stderr || '(empty)'
+            ].join('\n');
+            renderCommandRuns([data.commandRun]);
+            latestCommandRequestId = null;
+            document.getElementById('run-command').disabled = true;
+        }
+
+        function renderTaskActivity(data) {
+            const summary = document.getElementById('task-artifact-summary');
+            const timeline = document.getElementById('task-timeline');
+            const checklistItems = data.checklist || [];
+            const doneChecklist = checklistItems.filter(item => item.status === 'done').length;
+            const approvedProposals = (data.fileProposals || []).filter(proposal => proposal.status === 'approved').length;
+            const appliedProposals = (data.fileProposals || []).filter(proposal => proposal.status === 'applied').length;
+            const successfulRuns = (data.commandRuns || []).filter(run => run.exit_code === 0).length;
+
+            summary.innerHTML = [
+                ['Checklist', `${doneChecklist}/${checklistItems.length} done`],
+                ['File Proposals', `${appliedProposals} applied · ${approvedProposals} approved`],
+                ['Command Runs', `${successfulRuns}/${(data.commandRuns || []).length} passed`],
+                ['Checkpoints', `${(data.checkpoints || []).length} saved`]
+            ].map(([label, value]) => `
+                <div class="artifact-stat">
+                    <strong>${escapeHtml(value)}</strong>
+                    <span>${escapeHtml(label)}</span>
+                </div>
+            `).join('');
+
+            const eventRows = (data.events || []).slice().reverse().slice(0, 20);
+
+            if (!eventRows.length) {
+                timeline.textContent = 'No activity events recorded yet.';
+                return;
+            }
+
+            timeline.innerHTML = eventRows.map(event => {
+                const metadata = event.metadata ? JSON.stringify(event.metadata) : '';
+
+                return `
+                    <article class="timeline-item">
+                        <strong>${escapeHtml(event.event_type)}</strong>
+                        <span>${escapeHtml(event.created_at)}</span>
+                        <p>${escapeHtml(event.message)}</p>
+                        ${metadata ? `<code>${escapeHtml(metadata)}</code>` : ''}
+                    </article>
+                `;
+            }).join('');
+        }
+
+        function buildArtifactRows(data) {
+            if (Array.isArray(data.rows)) {
+                return data.rows;
+            }
+
+            const recent = data.recent || {};
+
+            return [
+                ...(recent.tasks || []).map(item => ({
+                    type: 'task',
+                    id: item.id,
+                    title: `#${item.id} ${item.title}`,
+                    detail: `${item.category} · ${item.status}`,
+                    created: item.created_at,
+                    href: `/creator#artifact=task:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.fileProposals || []).map(item => ({
+                    type: 'file proposal',
+                    id: item.id,
+                    title: `#${item.id} ${item.relative_path}`,
+                    detail: `${item.status} · ${item.task_title || 'No task'} · ${item.workspace_name || 'No workspace'}`,
+                    created: item.created_at,
+                    href: `/creator#artifact=file-proposal:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.commandRuns || []).map(item => ({
+                    type: 'command run',
+                    id: item.id,
+                    title: `Run #${item.id} · ${item.command || 'unknown command'}`,
+                    detail: `${item.status} · exit ${item.exit_code} · ${item.task_title || 'No task'}`,
+                    created: item.created_at,
+                    href: `/creator#artifact=command-run:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.checkpoints || []).map(item => ({
+                    type: 'checkpoint',
+                    id: item.id,
+                    title: `#${item.id} ${item.note || 'Checkpoint'}`,
+                    detail: `${item.task_title || 'No task'} · ${item.git_status?.branch || 'unknown branch'}`,
+                    created: item.created_at,
+                    href: `/creator#artifact=checkpoint:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.backtests || []).map(item => ({
+                    type: 'backtest',
+                    id: item.id,
+                    title: `#${item.id} ${item.strategy_name || 'Strategy'}`,
+                    detail: `${item.market_symbol || ''} · ${item.result?.mode || item.status} · return ${item.result?.metrics?.totalReturnPercent ?? '-'}%`,
+                    created: item.created_at,
+                    href: `/strategy-lab#artifact=backtest:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.paperSessions || []).map(item => ({
+                    type: 'paper session',
+                    id: item.id,
+                    title: `#${item.id} ${item.name}`,
+                    detail: `${item.market_symbol || ''} · ${item.mode} · equity ${item.current_equity}`,
+                    created: item.created_at,
+                    href: `/strategy-lab#artifact=paper-session:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.optimizationSweeps || []).map(item => ({
+                    type: 'optimization sweep',
+                    id: item.id,
+                    title: `#${item.id} ${item.name}`,
+                    detail: `${item.market_symbol || ''} · ${item.result?.summary?.totalRunCount || 0} runs · best ${item.result?.summary?.bestReturnPercent ?? '-'}%`,
+                    created: item.created_at,
+                    href: `/strategy-lab#artifact=optimization-sweep:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.splitTests || []).map(item => ({
+                    type: 'split test',
+                    id: item.id,
+                    title: `#${item.id} ${item.name}`,
+                    detail: `${item.market_symbol || ''} · ${item.result?.summary?.stability || 'unknown'} · out ${item.result?.summary?.outOfSampleReturnPercent ?? '-'}%`,
+                    created: item.created_at,
+                    href: `/strategy-lab#artifact=split-test:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.walkForwardTests || []).map(item => ({
+                    type: 'walk forward test',
+                    id: item.id,
+                    title: `#${item.id} ${item.name}`,
+                    detail: `${item.market_symbol || ''} · ${item.result?.summary?.status || 'unknown'} · ${item.result?.summary?.windowCount || 0} windows`,
+                    created: item.created_at,
+                    href: `/strategy-lab#artifact=walk-forward-test:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.decisionLogs || []).map(item => ({
+                    type: 'decision log',
+                    id: item.id,
+                    title: `#${item.id} ${item.decision} ${item.market_symbol}`,
+                    detail: `${item.reason} · ${item.candle_timestamp} · ${item.strategy_name || 'Strategy'}`,
+                    created: item.created_at,
+                    href: `/strategy-lab#artifact=decision-log:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.marketImports || []).map(item => ({
+                    type: 'market import',
+                    id: item.id,
+                    title: `#${item.id} ${item.market_symbol}`,
+                    detail: `${item.timeframe} · ${item.summary?.candleCount || item.candle_count} candles · ${(item.summary?.warnings || []).length} warning(s)`,
+                    created: item.created_at,
+                    href: `/strategy-lab#artifact=market-import:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.exchangeConnectors || []).map(item => ({
+                    type: 'exchange connector',
+                    id: item.id,
+                    title: `#${item.id} ${item.label}`,
+                    detail: `${item.exchange_name} · ${item.mode} · ${item.status}`,
+                    created: item.created_at,
+                    href: `/strategy-lab#artifact=exchange-connector:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.riskProfiles || []).map(item => ({
+                    type: 'risk profile',
+                    id: item.id,
+                    title: `#${item.id} ${item.name}`,
+                    detail: `${item.mode} · ${item.status} · max order ${item.max_order_value} · kill ${item.kill_switch_enabled ? 'on' : 'off'}`,
+                    created: item.created_at,
+                    href: `/strategy-lab#artifact=risk-profile:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.orderIntents || []).map(item => ({
+                    type: 'order intent',
+                    id: item.id,
+                    title: `#${item.id} ${item.side} ${item.market_symbol}`,
+                    detail: `${item.order_type} · qty ${item.quantity} · ${item.status}`,
+                    created: item.created_at,
+                    href: `/strategy-lab#artifact=order-intent:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.solidityContracts || []).map(item => ({
+                    type: 'solidity contract',
+                    id: item.id,
+                    title: `#${item.id} ${item.name}`,
+                    detail: `${item.contract_type} · ${item.network} · ${item.status}`,
+                    created: item.created_at,
+                    href: `/solidity-lab#artifact=solidity-contract:${item.id}`,
+                    raw: item
+                })),
+                ...(recent.socialPosts || []).map(item => ({
+                    type: 'social post',
+                    id: item.id,
+                    title: `#${item.id} ${item.platform}`,
+                    detail: `${item.status} · ${(item.content || '').slice(0, 90)}`,
+                    created: item.created_at,
+                    href: `/social-ops#artifact=social-post:${item.id}`,
+                    raw: item
+                }))
+            ].sort((a, b) => String(b.created).localeCompare(String(a.created)));
+        }
+
+        function getFilteredArtifactRows(data) {
+            if (Array.isArray(data.rows)) {
+                return data.rows;
+            }
+
+            const type = document.getElementById('artifact-type').value;
+            const query = document.getElementById('artifact-query').value.trim().toLowerCase();
+
+            return buildArtifactRows(data).filter(row => {
+                const matchesType = type === 'all' || row.type === type;
+                const matchesQuery = !query || [
+                    row.type,
+                    row.title,
+                    row.detail,
+                    row.created,
+                    JSON.stringify(row.raw)
+                ].join(' ').toLowerCase().includes(query);
+
+                return matchesType && matchesQuery;
+            });
+        }
+
+        function getArtifactHash(row) {
+            return `artifact=${row.type.replaceAll(' ', '-')}:${row.id}`;
+        }
+
+        function renderArtifactPager(page = {}) {
+            const previous = document.getElementById('artifact-prev');
+            const next = document.getElementById('artifact-next');
+            const status = document.getElementById('artifact-page-status');
+            const total = page.total || 0;
+            const start = total ? (page.offset || 0) + 1 : 0;
+            const end = Math.min((page.offset || 0) + (page.limit || artifactLimit), total);
+
+            previous.disabled = !page.hasPrevious;
+            next.disabled = !page.hasNext;
+            status.textContent = `${start}-${end} of ${total}`;
+        }
+
+        function renderArtifactBrowser(data) {
+            currentArtifactData = data;
+            const summary = document.getElementById('global-artifact-summary');
+            const list = document.getElementById('global-artifact-list');
+            const counts = data.counts || {};
+
+            summary.innerHTML = [
+                ['Tasks', counts.tasks || 0],
+                ['File Proposals', counts.fileProposals || 0],
+                ['Command Runs', counts.commandRuns || 0],
+                ['Backtests', counts.backtests || 0],
+                ['Paper Replays', counts.paperSessions || 0],
+                ['Sweeps', counts.optimizationSweeps || 0],
+                ['Split Tests', counts.splitTests || 0],
+                ['Walk Forward', counts.walkForwardTests || 0],
+                ['Decision Logs', counts.decisionLogs || 0],
+                ['Market Imports', counts.marketImports || 0],
+                ['Connectors', counts.exchangeConnectors || 0],
+                ['Risk Profiles', counts.riskProfiles || 0],
+                ['Order Intents', counts.orderIntents || 0],
+                ['Contracts', counts.solidityContracts || 0],
+                ['Social Drafts', counts.socialPosts || 0],
+                ['Checkpoints', counts.checkpoints || 0]
+            ].map(([label, value]) => `
+                <div class="artifact-stat">
+                    <strong>${escapeHtml(value)}</strong>
+                    <span>${escapeHtml(label)}</span>
+                </div>
+            `).join('');
+
+            const rows = getFilteredArtifactRows(data);
+            renderArtifactPager(data.page || {
+                total: rows.length,
+                offset: 0,
+                limit: rows.length,
+                hasPrevious: false,
+                hasNext: false
+            });
+
+            if (!rows.length) {
+                list.textContent = 'No artifacts recorded yet.';
+                return;
+            }
+
+            list.innerHTML = rows.map(row => `
+                <article class="timeline-item" id="${escapeHtml(getArtifactHash(row))}">
+                    <strong>${escapeHtml(row.type)} · ${escapeHtml(row.title)}</strong>
+                    <span>${escapeHtml(row.created || '')}</span>
+                    <p>${escapeHtml(row.detail)}</p>
+                    <a href="${escapeHtml(row.href || `#${getArtifactHash(row)}`)}">Open</a>
+                </article>
+            `).join('');
+        }
+
+        function exportArtifacts() {
+            if (!currentArtifactData) {
+                return;
+            }
+
+            const payload = {
+                exportedAt: new Date().toISOString(),
+                filters: {
+                    type: document.getElementById('artifact-type').value,
+                    query: document.getElementById('artifact-query').value,
+                    offset: currentArtifactData.page?.offset || 0,
+                    limit: currentArtifactData.page?.limit || artifactLimit
+                },
+                counts: currentArtifactData.counts,
+                rows: getFilteredArtifactRows(currentArtifactData)
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], {
+                type: 'application/json'
+            });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `local-ai-artifacts-${new Date().toISOString().slice(0, 10)}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function loadArtifacts() {
+            const params = new URLSearchParams({
+                type: document.getElementById('artifact-type').value,
+                q: document.getElementById('artifact-query').value,
+                limit: String(artifactLimit),
+                offset: String(artifactOffset)
+            });
+            const response = await fetch(`/api/v1/artifacts?${params.toString()}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('global-artifact-list').textContent = data.error || 'Unable to load artifacts.';
+                return;
+            }
+
+            renderArtifactBrowser(data);
+        }
+
+        async function loadTaskDetail(taskId) {
+            const response = await fetch(`/api/v1/creator/tasks/${taskId}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to load task');
+            }
+
+            selectedTaskId = data.task.id;
+            document.getElementById('scaffold-task').disabled = false;
+            document.getElementById('advance-task').disabled = false;
+            document.getElementById('create-checklist').disabled = false;
+            document.getElementById('generate-checklist').disabled = false;
+            document.getElementById('creator-output').textContent = renderPlan(data.task);
+            renderChecklist(data.checklist || []);
+            renderCommandRequests(data.commandRequests || []);
+            renderCommandRuns(data.commandRuns || []);
+            renderTaskActivity(data);
+            await loadFileProposals();
+        }
+
+        async function loadTasks() {
+            const response = await fetch('/api/v1/creator/tasks');
+            const data = await response.json();
+            renderTasks(data.tasks || []);
+        }
+
+        async function loadWorkspaces() {
+            const response = await fetch('/api/v1/workspaces');
+            const data = await response.json();
+            renderWorkspaces(data.workspaces || []);
+        }
+
+        async function loadPolicy() {
+            const response = await fetch('/api/v1/policy');
+            const policy = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('policy-output').textContent = policy.error || 'Unable to load policy.';
+                return;
+            }
+
+            document.getElementById('policy-mode').value = policy.mode;
+            document.getElementById('auto-approve-files').checked = Boolean(policy.localAutomation.autoApproveFileProposals);
+            document.getElementById('auto-run-low-risk').checked = Boolean(policy.localAutomation.autoRunLowRiskCommands);
+            document.getElementById('trusted-command-prefixes').value = (policy.localAutomation.trustedCommandPrefixes || []).join('\n');
+            document.getElementById('policy-output').textContent = JSON.stringify(policy, null, 2);
+        }
+
+        async function loadCommandTemplates() {
+            const response = await fetch('/api/v1/command-templates');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('command-template-list').textContent = data.error || 'Unable to load command templates.';
+                return;
+            }
+
+            renderCommandTemplates(data.templates || []);
+        }
+
+        async function loadFileProposals() {
+            const url = selectedTaskId
+                ? `/api/v1/file-proposals?taskId=${selectedTaskId}`
+                : '/api/v1/file-proposals';
+            const response = await fetch(url);
+            const data = await response.json();
+            renderProposals(data.proposals || []);
+        }
+
+        async function browseWorkspaceFiles() {
+            const workspaceId = document.getElementById('file-workspace').value;
+            const filePath = document.getElementById('file-path').value;
+
+            if (!workspaceId) {
+                document.getElementById('file-list').textContent = 'Select a workspace first.';
+                return;
+            }
+
+            const response = await fetch(`/api/v1/workspaces/${workspaceId}/files?path=${encodeURIComponent(filePath)}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('file-list').textContent = data.error || 'Unable to browse workspace.';
+                return;
+            }
+
+            renderFiles(data);
+        }
+
+        async function readWorkspaceFile() {
+            const workspaceId = document.getElementById('file-workspace').value;
+            const filePath = document.getElementById('file-path').value;
+            const output = document.getElementById('file-content-output');
+
+            if (!workspaceId || !filePath) {
+                output.textContent = 'Select a workspace and file path first.';
+                return;
+            }
+
+            const response = await fetch(`/api/v1/workspaces/${workspaceId}/files/content?path=${encodeURIComponent(filePath)}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Unable to read file.';
+                return;
+            }
+
+            output.textContent = data.content;
+            document.getElementById('proposal-path').value = data.path;
+            document.getElementById('ai-proposal-path').value = data.path;
+            document.getElementById('proposal-content').value = data.content;
+        }
+
+        async function refreshGitStatus() {
+            const response = await fetch('/api/v1/git/status');
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to read Git status');
+            }
+
+            document.getElementById('git-status-output').textContent = [
+                `Branch: ${data.branch}`,
+                `Last commit: ${data.lastCommit}`,
+                `Clean: ${data.clean ? 'yes' : 'no'}`,
+                '',
+                data.shortStatus || 'No changes'
+            ].join('\n');
+        }
+
+        document.getElementById('creator-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const output = document.getElementById('creator-output');
+            const formData = new FormData(event.target);
+            const payload = Object.fromEntries(formData.entries());
+            payload.useModel = document.getElementById('useModel').checked;
+
+            output.textContent = payload.useModel
+                ? 'Asking the local model to create a plan...'
+                : 'Creating a starter plan...';
+
+            try {
+                const response = await fetch('/api/v1/creator/tasks', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Creator task failed');
+                }
+
+                output.textContent = renderPlan(data.task);
+                selectedTaskId = data.task.id;
+                document.getElementById('create-checklist').disabled = false;
+                document.getElementById('generate-checklist').disabled = false;
+                renderChecklist([]);
+                await loadTasks();
+            } catch (error) {
+                output.textContent = error.message;
+            }
+        });
+
+        document.getElementById('workspace-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const response = await fetch('/api/v1/workspaces', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(Object.fromEntries(formData.entries()))
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.error || 'Workspace creation failed');
+                return;
+            }
+
+            event.target.reset();
+            await loadWorkspaces();
+        });
+
+        document.getElementById('policy-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const payload = {
+                mode: document.getElementById('policy-mode').value,
+                autoApproveFileProposals: document.getElementById('auto-approve-files').checked,
+                autoRunLowRiskCommands: document.getElementById('auto-run-low-risk').checked,
+                trustedCommandPrefixes: document.getElementById('trusted-command-prefixes').value
+            };
+            const response = await fetch('/api/v1/policy', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            const policy = await response.json();
+
+            document.getElementById('policy-output').textContent = response.ok
+                ? JSON.stringify(policy, null, 2)
+                : policy.error || 'Policy update failed.';
+
+            if (response.ok) {
+                await loadCommandTemplates();
+            }
+        });
+
+        document.getElementById('create-checklist').addEventListener('click', async () => {
+            if (!selectedTaskId) {
+                return;
+            }
+
+            const response = await fetch(`/api/v1/creator/tasks/${selectedTaskId}/checklist`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                alert(data.error || 'Checklist creation failed');
+                return;
+            }
+
+            renderChecklist(data.checklist || []);
+        });
+
+        document.getElementById('generate-checklist').addEventListener('click', async () => {
+            if (!selectedTaskId) {
+                return;
+            }
+
+            const list = document.getElementById('checklist-list');
+            list.textContent = 'Asking the local model to generate a concrete checklist...';
+            const response = await fetch(`/api/v1/creator/tasks/${selectedTaskId}/checklist/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    modelRole: 'autocomplete',
+                    instruction: 'Create concrete next implementation checklist items for this task. Include review, file proposal, verification, and checkpoint steps.'
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                list.textContent = data.error || 'Checklist generation failed';
+                return;
+            }
+
+            renderChecklist(data.checklist || []);
+        });
+
+        document.getElementById('advance-task').addEventListener('click', async () => {
+            if (!selectedTaskId) {
+                return;
+            }
+
+            const output = document.getElementById('creator-output');
+            output.textContent = 'Running the next safe task step...';
+
+            const response = await fetch(`/api/v1/creator/tasks/${selectedTaskId}/advance`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Advance failed';
+                return;
+            }
+
+            await loadTaskDetail(selectedTaskId);
+            await loadArtifacts();
+            await refreshGitStatus();
+            document.getElementById('creator-output').textContent = [
+                `Advanced: ${data.action}`,
+                '',
+                JSON.stringify(data.actions || [], null, 2)
+            ].join('\n');
+        });
+
+        document.getElementById('scaffold-task').addEventListener('click', async () => {
+            if (!selectedTaskId) {
+                return;
+            }
+
+            const output = document.getElementById('proposal-output');
+            output.textContent = 'Creating starter project scaffold proposals...';
+
+            const response = await fetch(`/api/v1/creator/tasks/${selectedTaskId}/scaffold`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Scaffold failed';
+                return;
+            }
+
+            renderProposals(data.proposals || []);
+            await loadWorkspaces();
+            await loadTaskDetail(selectedTaskId);
+            await loadArtifacts();
+            document.getElementById('creator-output').textContent = [
+                `Workspace: ${data.workspace.name}`,
+                `Created proposals: ${(data.proposals || []).length}`,
+                `Skipped existing proposals: ${(data.skipped || []).length}`,
+                `Initial status: ${data.initialStatus}`
+            ].join('\n');
+        });
+
+        document.getElementById('refresh-git').addEventListener('click', async () => {
+            try {
+                await refreshGitStatus();
+            } catch (error) {
+                document.getElementById('git-status-output').textContent = error.message;
+            }
+        });
+
+        document.getElementById('save-checkpoint').addEventListener('click', async () => {
+            const response = await fetch('/api/v1/git/checkpoints', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    taskId: selectedTaskId,
+                    note: selectedTaskId
+                        ? `Checkpoint record for Creator task #${selectedTaskId}`
+                        : 'Manual checkpoint record'
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('git-status-output').textContent = data.error || 'Checkpoint failed';
+                return;
+            }
+
+            document.getElementById('git-status-output').textContent = [
+                `Checkpoint #${data.checkpoint.id} saved`,
+                `Created: ${data.checkpoint.created_at}`,
+                '',
+                `Branch: ${data.checkpoint.git_status.branch}`,
+                `Clean: ${data.checkpoint.git_status.clean ? 'yes' : 'no'}`,
+                '',
+                data.checkpoint.git_status.shortStatus || 'No changes'
+            ].join('\n');
+        });
+
+        document.getElementById('command-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const payload = Object.fromEntries(formData.entries());
+            payload.taskId = selectedTaskId;
+            payload.workspaceId = payload.workspaceId ? Number(payload.workspaceId) : null;
+
+            const response = await fetch('/api/v1/command-requests', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('command-output').textContent = data.error || 'Command request failed';
+                return;
+            }
+
+            if (data.autoRan && data.commandRun) {
+                showCommandRunResult(data, `Auto-ran safe command`);
+                event.target.reset();
+                return;
+            }
+
+            renderCommandRequests([data.commandRequest]);
+            event.target.reset();
+        });
+
+        async function runCommandTemplate(templateId) {
+            const template = currentCommandTemplates.find(item => item.id === templateId);
+            const output = document.getElementById('command-output');
+
+            output.textContent = template
+                ? `Running ${template.label}...`
+                : 'Running command template...';
+
+            const response = await fetch(`/api/v1/command-templates/${templateId}/run`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    taskId: selectedTaskId,
+                    workspaceId: document.getElementById('command-workspace').value
+                        ? Number(document.getElementById('command-workspace').value)
+                        : null
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Command template failed';
+                return;
+            }
+
+            if (data.autoRan && data.commandRun) {
+                showCommandRunResult(data, `Auto-ran template: ${data.template.label}`);
+                return;
+            }
+
+            renderCommandRequests([data.commandRequest]);
+        }
+
+        document.getElementById('run-command').addEventListener('click', async () => {
+            if (!latestCommandRequestId) {
+                return;
+            }
+
+            const output = document.getElementById('command-output');
+            output.textContent = 'Running approved safe command...';
+
+            const response = await fetch(`/api/v1/command-requests/${latestCommandRequestId}/run`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Command run failed';
+                return;
+            }
+
+            output.textContent = [
+                `Run #${data.commandRun.id} ${data.commandRun.status}`,
+                `Exit code: ${data.commandRun.exit_code}`,
+                '',
+                'STDOUT:',
+                data.commandRun.stdout || '(empty)',
+                '',
+                'STDERR:',
+                data.commandRun.stderr || '(empty)'
+            ].join('\n');
+            latestCommandRequestId = null;
+            document.getElementById('run-command').disabled = true;
+            await loadTaskDetail(selectedTaskId);
+        });
+
+        document.getElementById('file-browser-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            await browseWorkspaceFiles();
+        });
+
+        document.getElementById('read-file').addEventListener('click', async () => {
+            await readWorkspaceFile();
+        });
+
+        document.getElementById('ai-proposal-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const workspaceId = document.getElementById('file-workspace').value;
+            const output = document.getElementById('proposal-output');
+
+            if (!selectedTaskId) {
+                output.textContent = 'Select a Creator task first.';
+                return;
+            }
+
+            if (!workspaceId) {
+                output.textContent = 'Select a workspace first.';
+                return;
+            }
+
+            const formData = new FormData(event.target);
+            const payload = Object.fromEntries(formData.entries());
+            payload.workspaceId = Number(workspaceId);
+
+            output.textContent = 'Asking the local coding model to draft a file proposal...';
+            const response = await fetch(`/api/v1/creator/tasks/${selectedTaskId}/file-proposals/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Local coder file proposal failed';
+                return;
+            }
+
+            renderProposals([data.proposal]);
+            document.getElementById('creator-output').textContent = [
+                `Drafted with ${data.context?.fileCount || 0} workspace context file(s).`,
+                data.model?.routing ? `Model route: ${data.model.routing.mode} -> ${data.model.role}` : `Model: ${data.model?.role || 'local'} ${data.model?.name || ''}`,
+                ...(data.context?.files || []).map(file => `- ${file.path} (${file.size} bytes)`)
+            ].join('\n');
+            await loadFileProposals();
+        });
+
+        document.getElementById('ai-batch-proposal-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const workspaceId = document.getElementById('file-workspace').value;
+            const output = document.getElementById('proposal-output');
+
+            if (!selectedTaskId) {
+                output.textContent = 'Select a Creator task first.';
+                return;
+            }
+
+            if (!workspaceId) {
+                output.textContent = 'Select a workspace first.';
+                return;
+            }
+
+            const formData = new FormData(event.target);
+            const payload = Object.fromEntries(formData.entries());
+            payload.workspaceId = Number(workspaceId);
+
+            output.textContent = 'Asking the local coding model to draft a multi-file proposal batch...';
+            const response = await fetch(`/api/v1/creator/tasks/${selectedTaskId}/file-proposals/generate-batch`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Local coder multi-file proposal failed';
+                return;
+            }
+
+            renderProposals(data.proposals || []);
+            document.getElementById('creator-output').textContent = [
+                `Drafted batch with ${data.context?.fileCount || 0} workspace context file(s).`,
+                data.model?.routing ? `Model route: ${data.model.routing.mode} -> ${data.model.role}` : `Model: ${data.model?.role || 'local'} ${data.model?.name || ''}`,
+                ...(data.context?.files || []).map(file => `- ${file.path} (${file.size} bytes)`)
+            ].join('\n');
+            await loadFileProposals();
+        });
+
+        document.getElementById('workspace-edit-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const workspaceId = document.getElementById('file-workspace').value;
+            const output = document.getElementById('proposal-output');
+
+            if (!selectedTaskId) {
+                output.textContent = 'Select a Creator task first.';
+                return;
+            }
+
+            if (!workspaceId) {
+                output.textContent = 'Select a workspace first.';
+                return;
+            }
+
+            const formData = new FormData(event.target);
+            const payload = Object.fromEntries(formData.entries());
+            payload.workspaceId = Number(workspaceId);
+
+            output.textContent = 'Asking the local coding model to draft a workspace edit...';
+            const response = await fetch(`/api/v1/creator/tasks/${selectedTaskId}/workspace-edits/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Local workspace edit failed';
+                return;
+            }
+
+            renderProposals(data.proposals || []);
+            document.getElementById('creator-output').textContent = [
+                `Workspace edit: ${data.editPlan?.summary || 'No summary returned.'}`,
+                `Verification: ${data.editPlan?.verification || 'Review and run a relevant check.'}`,
+                `Drafted ${data.proposals?.length || 0} proposal(s) with ${data.context?.fileCount || 0} workspace context file(s).`,
+                data.model?.routing ? `Model route: ${data.model.routing.mode} -> ${data.model.role}` : `Model: ${data.model?.role || 'local'} ${data.model?.name || ''}`,
+                ...(data.context?.files || []).map(file => `- ${file.path} (${file.size} bytes)`)
+            ].join('\n');
+            await Promise.all([
+                loadFileProposals(),
+                selectedTaskId ? loadTask(selectedTaskId) : Promise.resolve()
+            ]);
+        });
+
+        document.getElementById('proposal-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const workspaceId = document.getElementById('file-workspace').value;
+            const output = document.getElementById('proposal-output');
+
+            if (!workspaceId) {
+                output.textContent = 'Select a workspace first.';
+                return;
+            }
+
+            const formData = new FormData(event.target);
+            const payload = Object.fromEntries(formData.entries());
+            payload.workspaceId = Number(workspaceId);
+            payload.taskId = selectedTaskId;
+            payload.action = 'upsert';
+
+            const response = await fetch('/api/v1/file-proposals', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'File proposal failed';
+                return;
+            }
+
+            renderProposals([data.proposal]);
+            await loadFileProposals();
+        });
+
+        async function updateLatestProposal(status) {
+            if (!latestProposalId) {
+                return;
+            }
+
+            const response = await fetch(`/api/v1/file-proposals/${latestProposalId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('proposal-output').textContent = data.error || 'Proposal update failed';
+                return;
+            }
+
+            renderProposals([data.proposal]);
+        }
+
+        document.getElementById('approve-proposal').addEventListener('click', async () => {
+            await updateLatestProposal('approved');
+        });
+
+        document.getElementById('reject-proposal').addEventListener('click', async () => {
+            await updateLatestProposal('rejected');
+        });
+
+        document.getElementById('apply-proposal').addEventListener('click', async () => {
+            if (!latestProposalId) {
+                return;
+            }
+
+            const output = document.getElementById('proposal-output');
+            const response = await fetch(`/api/v1/file-proposals/${latestProposalId}/apply`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Proposal apply failed';
+                return;
+            }
+
+            renderProposals([data.proposal]);
+            await browseWorkspaceFiles();
+        });
+
+        document.getElementById('apply-approved-proposals').addEventListener('click', async () => {
+            const approvedProposals = currentProposals.filter(proposal => proposal.status === 'approved');
+            const output = document.getElementById('proposal-output');
+
+            if (!approvedProposals.length) {
+                return;
+            }
+
+            output.textContent = `Applying ${approvedProposals.length} approved proposal(s)...`;
+
+            for (const proposal of approvedProposals) {
+                const response = await fetch(`/api/v1/file-proposals/${proposal.id}/apply`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    output.textContent = data.error || `Proposal #${proposal.id} apply failed`;
+                    return;
+                }
+            }
+
+            await loadFileProposals();
+            await browseWorkspaceFiles();
+        });
+
+        document.getElementById('artifact-type').addEventListener('change', () => {
+            artifactOffset = 0;
+            loadArtifacts();
+        });
+
+        document.getElementById('artifact-query').addEventListener('input', () => {
+            artifactOffset = 0;
+            loadArtifacts();
+        });
+
+        document.getElementById('artifact-prev').addEventListener('click', () => {
+            artifactOffset = Math.max(0, artifactOffset - artifactLimit);
+            loadArtifacts();
+        });
+
+        document.getElementById('artifact-next').addEventListener('click', () => {
+            artifactOffset += artifactLimit;
+            loadArtifacts();
+        });
+
+        document.getElementById('artifact-export').addEventListener('click', exportArtifacts);
+
+        loadTasks();
+        loadWorkspaces();
+        loadPolicy();
+        loadCommandTemplates();
+        loadArtifacts();
+        loadFileProposals();
+        refreshGitStatus().catch(error => {
+            document.getElementById('git-status-output').textContent = error.message;
+        });
+    </script>
+</body>
+</html>

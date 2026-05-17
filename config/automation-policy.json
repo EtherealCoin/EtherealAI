@@ -1,0 +1,24 @@
+{
+  "mode": "owner",
+  "localAutomation": {
+    "autoApproveFileProposals": true,
+    "autoRunLowRiskCommands": true,
+    "trustedCommandPrefixes": [
+      "git status",
+      "git diff",
+      "npm test",
+      "npm run build",
+      "npm run test",
+      "npm run lint",
+      "node --check",
+      "node --version"
+    ]
+  },
+  "hardStops": [
+    "Private keys, wallet keys, exchange keys, and deployment keys must stay out of source code and prompts unless explicitly provided for a local-only action.",
+    "Live trading requires a separate explicit enable flow.",
+    "Public social posting requires a separate explicit enable flow.",
+    "Mainnet contract deployment requires a separate explicit enable flow.",
+    "Destructive filesystem commands require explicit approval."
+  ]
+}

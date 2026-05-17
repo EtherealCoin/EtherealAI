@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Ops</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/owner-proof-packet">Proof Packet</a>
+        <a href="/creator">Creator Agent</a>
+        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/solidity-lab">Solidity Lab</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>Social Ops</h1>
+        <div class="auth-proof-banner" role="status">
+            <strong>MVP 99% · Local E2E 95%</strong>
+            <span>Live execution disabled · <a href="/owner-proof-packet">Proof packet</a> · <a href="/mvp-test-pass">Owner evidence</a> · <a href="/dashboard">Dashboard</a></span>
+        </div>
+
+        <section class="model-panel">
+            <h2>Local-Only Safety</h2>
+            <div class="artifact-grid">
+                <div class="artifact-stat">
+                    <strong>Public Posting</strong>
+                    <span>Disabled</span>
+                    <span>drafts stay local</span>
+                </div>
+                <div class="artifact-stat">
+                    <strong>External Connectors</strong>
+                    <span>Not Configured</span>
+                    <span>no social network API calls</span>
+                </div>
+                <div class="artifact-stat">
+                    <strong>Owner Review</strong>
+                    <span>Required</span>
+                    <span>save drafts before any future posting phase</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="model-panel">
+            <h2>AI Draft Generator</h2>
+            <form id="social-generate-form" class="model-test-form">
+                <label for="generate-platform">Platform</label>
+                <select id="generate-platform" name="platform">
+                    <option value="x">X</option>
+                    <option value="discord">Discord</option>
+                    <option value="telegram">Telegram</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="custom">Custom</option>
+                </select>
+
+                <label for="generate-model-role">Model Role</label>
+                <select id="generate-model-role" name="modelRole">
+                    <option value="auto">Auto</option>
+                    <option value="writer">Writer</option>
+                    <option value="planner">Planner</option>
+                    <option value="coder">Coder</option>
+                    <option value="autocomplete">Autocomplete</option>
+                </select>
+
+                <label for="generate-account">Account Label</label>
+                <input id="generate-account" name="accountLabel" type="text" placeholder="Main project account">
+
+                <label for="generate-scheduled">Scheduled For</label>
+                <input id="generate-scheduled" name="scheduledFor" type="datetime-local">
+
+                <label for="generate-voice">Voice</label>
+                <input id="generate-voice" name="voice" type="text" value="clear, confident, and community-focused">
+
+                <label for="campaign-brief">Campaign Brief</label>
+                <textarea id="campaign-brief" name="campaignBrief" rows="6" required></textarea>
+
+                <button type="submit">Generate Draft</button>
+            </form>
+        </section>
+
+        <section class="model-panel">
+            <h2>Draft Post</h2>
+            <form id="social-post-form" class="model-test-form">
+                <label for="post-platform">Platform</label>
+                <select id="post-platform" name="platform">
+                    <option value="x">X</option>
+                    <option value="discord">Discord</option>
+                    <option value="telegram">Telegram</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="custom">Custom</option>
+                </select>
+
+                <label for="post-account">Account Label</label>
+                <input id="post-account" name="accountLabel" type="text" placeholder="Main project account">
+
+                <label for="post-scheduled">Scheduled For</label>
+                <input id="post-scheduled" name="scheduledFor" type="datetime-local">
+
+                <label for="post-content">Content</label>
+                <textarea id="post-content" name="content" rows="7" required></textarea>
+
+                <button type="submit">Save Draft</button>
+            </form>
+            <pre id="social-output" class="model-output">No social draft selected.</pre>
+        </section>
+
+        <section class="model-panel">
+            <h2>Draft Queue</h2>
+            <div id="social-post-list" class="comparison-table">Loading drafts...</div>
+        </section>
+    </main>
+
+    <script>
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function renderSocialPosts(posts = []) {
+            const output = document.getElementById('social-post-list');
+
+            if (!posts.length) {
+                output.textContent = 'No social drafts yet.';
+                return;
+            }
+
+            output.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Draft</th>
+                            <th>Platform</th>
+                            <th>Account</th>
+                            <th>Status</th>
+                            <th>Review</th>
+                            <th>Scheduled</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${posts.map(post => `
+                            <tr>
+                                <td>#${post.id} ${escapeHtml(post.content.slice(0, 80))}</td>
+                                <td>${escapeHtml(post.platform)}</td>
+                                <td>${escapeHtml(post.account_label || '-')}</td>
+                                <td>${escapeHtml(post.status)}</td>
+                                <td>${escapeHtml(post.metadata?.review?.status || '-')}</td>
+                                <td>${escapeHtml(post.scheduled_for || '-')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function loadSocialPosts() {
+            const response = await fetch('/api/v1/social-posts');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('social-post-list').textContent = data.error || 'Unable to load social drafts.';
+                return;
+            }
+
+            renderSocialPosts(data.posts || []);
+        }
+
+        function parseArtifactHash() {
+            const hash = decodeURIComponent(window.location.hash.replace(/^#/, ''));
+            const match = hash.match(/^artifact=social-post:(\d+)$/);
+            return match ? match[1] : null;
+        }
+
+        async function openArtifactFromHash() {
+            const id = parseArtifactHash();
+
+            if (!id) {
+                return;
+            }
+
+            const response = await fetch(`/api/v1/social-posts/${id}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('social-output').textContent = data.error || 'Unable to open social draft.';
+                return;
+            }
+
+            document.getElementById('social-output').textContent = JSON.stringify(data.post, null, 2);
+        }
+
+        document.getElementById('social-post-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const response = await fetch('/api/v1/social-posts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(Object.fromEntries(formData.entries()))
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('social-output').textContent = data.error || 'Social draft save failed.';
+                return;
+            }
+
+            event.target.reset();
+            document.getElementById('social-output').textContent = JSON.stringify(data.post, null, 2);
+            await loadSocialPosts();
+        });
+
+        document.getElementById('social-generate-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const output = document.getElementById('social-output');
+            output.textContent = 'Asking the local model for a draft...';
+
+            const response = await fetch('/api/v1/social-posts/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(Object.fromEntries(formData.entries()))
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Social draft generation failed.';
+                return;
+            }
+
+            const route = data.model?.routing
+                ? `Model route: ${data.model.routing.mode} -> ${data.model.role}`
+                : `Model: ${data.model?.role || 'local'} ${data.model?.name || ''}`;
+            output.textContent = [
+                route,
+                '',
+                data.post.content
+            ].join('\n');
+            await loadSocialPosts();
+        });
+
+        window.addEventListener('hashchange', openArtifactFromHash);
+
+        loadSocialPosts().then(openArtifactFromHash);
+    </script>
+</body>
+</html>

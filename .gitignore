@@ -1,0 +1,14 @@
+.aider*
+.DS_Store
+node_modules/
+.parcel-cache/
+dist/
+market-data-uploads/
+.env
+.env.*
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+npm-debug.log*
+ONBOARD_MEMORY.md
