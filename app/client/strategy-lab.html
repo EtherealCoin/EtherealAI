@@ -566,9 +566,30 @@
   }
 ]</textarea>
 
+                <label for="rebalance-candidate-csv">Candidate CSV Import</label>
+                <textarea id="rebalance-candidate-csv" rows="6" placeholder="marketSymbol,marketCapRank,marketCapUsd,priceChangePercent24h,venue,venueType,chain,price,feePercent,slippagePercent,gasCost,liquidityScore"></textarea>
+                <div class="button-row">
+                    <button type="button" id="rebalance-import-csv">Import CSV Into JSON</button>
+                    <span id="rebalance-import-summary" class="inline-status">CSV import is local preview only.</span>
+                </div>
+
                 <button type="submit">Run Local Rebalance Batch</button>
             </form>
             <pre id="rebalance-batch-output" class="model-output">No rebalance batch run yet.</pre>
+            <div class="compact-form">
+                <select id="rebalance-batch-filter-status" aria-label="Filter rebalance batch status">
+                    <option value="">All statuses</option>
+                    <option value="paper_candidate">Paper Candidate</option>
+                    <option value="review">Review</option>
+                    <option value="no_candidates">No Candidates</option>
+                    <option value="archived">Archived</option>
+                </select>
+                <input type="number" id="rebalance-batch-filter-project" min="1" step="1" placeholder="Token project ID">
+                <button type="button" id="rebalance-batch-filter-refresh">Refresh Batches</button>
+                <button type="button" id="rebalance-batch-export-json" disabled>Download Batches JSON</button>
+                <button type="button" id="rebalance-batch-export-csv" disabled>Download Batches CSV</button>
+                <span id="rebalance-batch-filter-count" class="inline-status">Loading rebalance batches...</span>
+            </div>
             <div id="rebalance-batch-list" class="comparison-table">Loading rebalance batch history...</div>
             <div id="rebalance-review-queue" class="comparison-table">Loading rebalance review queue...</div>
         </section>
@@ -901,6 +922,8 @@
         let editingRiskProfileId = null;
         let editingBotPlanId = null;
         let editingBotScheduleId = null;
+        let latestRebalanceBatches = [];
+        let latestVisibleRebalanceBatches = [];
         let importOffset = 0;
         const importLimit = 25;
         let importJobPollTimer = null;
@@ -2883,11 +2906,43 @@
             await loadOrderIntents();
         }
 
-        function renderRebalanceBatches(batches = []) {
-            const output = document.getElementById('rebalance-batch-list');
+        function filterRebalanceBatches(batches = latestRebalanceBatches) {
+            const status = document.getElementById('rebalance-batch-filter-status')?.value || '';
+            const projectId = document.getElementById('rebalance-batch-filter-project')?.value || '';
 
-            if (!batches.length) {
-                output.textContent = 'No local rebalance batches yet.';
+            return batches.filter(batch => {
+                const statusMatches = !status || batch.status === status;
+                const projectMatches = !projectId || String(batch.token_ecosystem_project_id || '') === String(projectId);
+
+                return statusMatches && projectMatches;
+            });
+        }
+
+        function updateRebalanceBatchFilterCount(visibleCount = 0, totalCount = 0) {
+            const count = document.getElementById('rebalance-batch-filter-count');
+            const jsonButton = document.getElementById('rebalance-batch-export-json');
+            const csvButton = document.getElementById('rebalance-batch-export-csv');
+
+            if (count) {
+                count.textContent = `${visibleCount} of ${totalCount} batch(es) visible · local-only exports`;
+            }
+
+            if (jsonButton) {
+                jsonButton.disabled = visibleCount < 1;
+            }
+
+            if (csvButton) {
+                csvButton.disabled = visibleCount < 1;
+            }
+        }
+
+        function renderRebalanceBatches(batches = latestRebalanceBatches) {
+            const output = document.getElementById('rebalance-batch-list');
+            latestVisibleRebalanceBatches = filterRebalanceBatches(batches);
+            updateRebalanceBatchFilterCount(latestVisibleRebalanceBatches.length, batches.length);
+
+            if (!latestVisibleRebalanceBatches.length) {
+                output.textContent = batches.length ? 'No rebalance batches match the current filters.' : 'No local rebalance batches yet.';
                 return;
             }
 
@@ -2901,12 +2956,14 @@
                             <th>Paper</th>
                             <th>Best</th>
                             <th>Net Profit</th>
+                            <th>Export</th>
                             <th>Draft Intents</th>
                             <th>Social Drafts</th>
+                            <th>Archive</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${batches.map(batch => `
+                        ${latestVisibleRebalanceBatches.map(batch => `
                             <tr>
                                 <td>#${batch.id} ${escapeHtml(batch.name || '')}</td>
                                 <td>${escapeHtml(batch.status)}</td>
@@ -2914,24 +2971,44 @@
                                 <td>${escapeHtml(String(batch.result?.summary?.paperCandidateCount ?? 0))}</td>
                                 <td>${escapeHtml(batch.result?.summary?.bestMarketSymbol || '-')}</td>
                                 <td>${escapeHtml(String(batch.result?.summary?.estimatedNetProfit ?? 0))}</td>
+                                <td><button type="button" data-rebalance-export-id="${batch.id}">Export Detail</button></td>
                                 <td><button type="button" data-rebalance-draft-id="${batch.id}">Create Draft Intents</button></td>
                                 <td><button type="button" data-rebalance-social-id="${batch.id}">Create Campaign Drafts</button></td>
+                                <td><button type="button" data-rebalance-archive-id="${batch.id}" ${batch.status === 'archived' ? 'disabled' : ''}>Archive</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
             `;
 
+            output.querySelectorAll('button[data-rebalance-export-id]').forEach(button => {
+                button.addEventListener('click', () => exportSingleRebalanceBatch(button.dataset.rebalanceExportId));
+            });
             output.querySelectorAll('button[data-rebalance-draft-id]').forEach(button => {
                 button.addEventListener('click', () => createDraftIntentsFromRebalanceBatch(button.dataset.rebalanceDraftId));
             });
             output.querySelectorAll('button[data-rebalance-social-id]').forEach(button => {
                 button.addEventListener('click', () => createSocialDraftsFromRebalanceBatch(button.dataset.rebalanceSocialId));
             });
+            output.querySelectorAll('button[data-rebalance-archive-id]').forEach(button => {
+                button.addEventListener('click', () => archiveRebalanceBatch(button.dataset.rebalanceArchiveId));
+            });
         }
 
         async function loadRebalanceBatches() {
-            const response = await fetch('/api/v1/order-intents/rebalance-batches');
+            const params = new URLSearchParams();
+            const status = document.getElementById('rebalance-batch-filter-status')?.value || '';
+            const projectId = document.getElementById('rebalance-batch-filter-project')?.value || '';
+
+            if (status) {
+                params.set('status', status);
+            }
+
+            if (projectId) {
+                params.set('tokenEcosystemProjectId', projectId);
+            }
+
+            const response = await fetch(`/api/v1/order-intents/rebalance-batches${params.toString() ? `?${params}` : ''}`);
             const data = await response.json();
 
             if (!response.ok) {
@@ -2939,7 +3016,87 @@
                 return;
             }
 
-            renderRebalanceBatches(data.batches || []);
+            latestRebalanceBatches = data.batches || [];
+            renderRebalanceBatches(latestRebalanceBatches);
+        }
+
+        async function archiveRebalanceBatch(batchId) {
+            const output = document.getElementById('rebalance-batch-output');
+            output.textContent = `Archiving local rebalance batch #${batchId}...`;
+            const response = await fetch(`/api/v1/order-intents/rebalance-batches/${batchId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: 'archived' })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Unable to archive rebalance batch.';
+                return;
+            }
+
+            output.textContent = JSON.stringify({
+                archivedBatch: data.batch,
+                liveExecutionEnabled: data.liveExecutionEnabled,
+                networkCallsEnabled: data.networkCallsEnabled
+            }, null, 2);
+            await loadRebalanceBatches();
+            await loadRebalanceReviewQueue();
+        }
+
+        async function exportSingleRebalanceBatch(batchId) {
+            const output = document.getElementById('rebalance-batch-output');
+            const response = await fetch(`/api/v1/order-intents/rebalance-batches/${batchId}/export`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Unable to export rebalance batch.';
+                return;
+            }
+
+            const blob = new Blob([data.export?.csv || ''], {
+                type: 'text/csv'
+            });
+            const link = document.createElement('a');
+
+            link.href = URL.createObjectURL(blob);
+            link.download = data.export?.filename || `etherealai-rebalance-batch-${batchId}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+            output.textContent = `Prepared CSV export for rebalance batch #${batchId}.`;
+        }
+
+        async function importRebalanceCandidatesFromCsv() {
+            const csvText = document.getElementById('rebalance-candidate-csv').value;
+            const summary = document.getElementById('rebalance-import-summary');
+            const output = document.getElementById('rebalance-batch-output');
+
+            summary.textContent = 'Parsing local candidate CSV...';
+            const response = await fetch('/api/v1/order-intents/rebalance-candidates/import-csv', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ csvText })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                summary.textContent = data.error || 'CSV import failed.';
+                output.textContent = summary.textContent;
+                return;
+            }
+
+            document.getElementById('rebalance-candidates').value = JSON.stringify(data.candidates, null, 2);
+            summary.textContent = `${data.summary?.candidateCount || 0} token(s), ${data.summary?.quoteCount || 0} quote row(s), ${data.summary?.top200Count || 0} top-200 candidate(s) imported locally.`;
+            output.textContent = JSON.stringify({
+                importSummary: data.summary,
+                localOnly: data.localOnly,
+                liveExecutionEnabled: data.liveExecutionEnabled,
+                networkCallsEnabled: data.networkCallsEnabled
+            }, null, 2);
         }
 
         function renderRebalanceReviewQueue(queue = {}) {
@@ -6301,6 +6458,31 @@
 
         document.getElementById('arbitrage-simulator-form').addEventListener('submit', runArbitrageSimulation);
         document.getElementById('rebalance-batch-form').addEventListener('submit', runRebalanceBatch);
+        document.getElementById('rebalance-import-csv').addEventListener('click', importRebalanceCandidatesFromCsv);
+        document.getElementById('rebalance-batch-filter-refresh').addEventListener('click', loadRebalanceBatches);
+        document.getElementById('rebalance-batch-filter-status').addEventListener('change', loadRebalanceBatches);
+        document.getElementById('rebalance-batch-filter-project').addEventListener('input', () => {
+            renderRebalanceBatches(latestRebalanceBatches);
+        });
+        document.getElementById('rebalance-batch-export-json').addEventListener('click', () => {
+            downloadJsonSnapshot(latestVisibleRebalanceBatches, 'etherealai-filtered-rebalance-batches', 'No filtered rebalance batches are available to download.');
+        });
+        document.getElementById('rebalance-batch-export-csv').addEventListener('click', () => {
+            downloadCsvSnapshot(latestVisibleRebalanceBatches, [
+                { label: 'id', value: batch => batch.id },
+                { label: 'name', value: batch => batch.name },
+                { label: 'status', value: batch => batch.status },
+                { label: 'token_ecosystem_project_id', value: batch => batch.token_ecosystem_project_id || '' },
+                { label: 'candidate_universe_count', value: batch => batch.result?.candidateUniverseCount || 0 },
+                { label: 'selected_count', value: batch => batch.result?.summary?.selectedCount || 0 },
+                { label: 'paper_candidate_count', value: batch => batch.result?.summary?.paperCandidateCount || 0 },
+                { label: 'best_market_symbol', value: batch => batch.result?.summary?.bestMarketSymbol || '' },
+                { label: 'estimated_net_profit', value: batch => batch.result?.summary?.estimatedNetProfit || 0 },
+                { label: 'average_net_edge_percent', value: batch => batch.result?.summary?.averageNetEdgePercent || 0 },
+                { label: 'created_at', value: batch => batch.created_at },
+                { label: 'updated_at', value: batch => batch.updated_at }
+            ], 'etherealai-filtered-rebalance-batches', 'No filtered rebalance batches are available to download.');
+        });
 
         document.getElementById('bot-plan-form').addEventListener('submit', async event => {
             event.preventDefault();

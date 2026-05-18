@@ -1265,12 +1265,14 @@ function checkRouteRegistrationModule() {
     || !serverSource.includes('parseArbitrageSimulationRun')
     || !serverSource.includes('simulateTopRebalanceBatch')
     || !serverSource.includes('parseRebalanceSimulationBatch')
+    || !serverSource.includes('parseRebalanceCandidateCsv')
     || !serverSource.includes('getGitPublishStatus')
     || !routeRegistrationSource.includes('parseTokenEcosystemProject: parsers.parseTokenEcosystemProject')
     || !routeRegistrationSource.includes('simulateCrossExchangeArbitrage')
     || !routeRegistrationSource.includes('parseArbitrageSimulationRun: parsers.parseArbitrageSimulationRun')
     || !routeRegistrationSource.includes('simulateTopRebalanceBatch')
     || !routeRegistrationSource.includes('parseRebalanceSimulationBatch: parsers.parseRebalanceSimulationBatch')
+    || !routeRegistrationSource.includes('parseRebalanceCandidateCsv')
     || !routeRegistrationSource.includes('parseTokenEcosystemProject: parsers.parseTokenEcosystemProject')
     || !routeRegistrationSource.includes('getGitPublishStatus')
     || !serverSource.includes('selects: ROW_LOOKUP_SELECTS')
@@ -4324,6 +4326,7 @@ function checkOrderIntentSimulatorModule() {
   const {
     normalizeCrossExchangeSimulationInput,
     normalizeTopRebalanceBatchInput,
+    parseRebalanceCandidateCsv,
     parseArbitrageSimulationRun,
     parseRebalanceSimulationBatch,
     simulateCrossExchangeArbitrage,
@@ -4382,6 +4385,21 @@ function checkOrderIntentSimulatorModule() {
       }
     ]
   });
+  const rebalanceCsv = [
+    'marketSymbol,marketCapRank,marketCapUsd,priceChangePercent24h,priceChangePercent7d,venue,venueType,chain,price,feePercent,slippagePercent,gasCost,liquidityScore',
+    'EAI/USDT,42,850000000,-12.4,-18.2,binance,cex,centralized,0.99,0.10,0.05,0,91',
+    'EAI/USDT,42,850000000,-12.4,-18.2,aerodrome,dex,base,1.01,0.30,0.10,0.05,70'
+  ].join('\n');
+  const csvCandidates = parseRebalanceCandidateCsv(rebalanceCsv);
+  const rebalanceInputFromCsv = normalizeTopRebalanceBatchInput({
+    name: 'Verifier CSV top-200 rebalance batch',
+    portfolioCapital: 10000,
+    allocationPerCandidatePercent: 5,
+    maxCandidates: 2,
+    minDropPercent: 3,
+    minNetEdgePercent: 0.25,
+    candidateCsv: rebalanceCsv
+  });
   const rebalanceBatch = simulateTopRebalanceBatch(rebalanceInput);
   const parsedRun = parseArbitrageSimulationRun({
     id: 33,
@@ -4435,6 +4453,10 @@ function checkOrderIntentSimulatorModule() {
     || rebalanceBatch.summary?.paperCandidateCount !== 1
     || rebalanceBatch.recommendedDraftIntentGroups?.length !== 1
     || rebalanceBatch.recommendedDraftIntentGroups?.[0]?.draftIntents?.length !== 2
+    || csvCandidates.length !== 1
+    || csvCandidates[0].venueQuotes.length !== 2
+    || rebalanceInputFromCsv.candidates.length !== 1
+    || rebalanceInputFromCsv.candidates[0].marketSymbol !== 'EAI/USDT'
     || parsedRebalanceBatch.localOnly !== true
     || parsedRebalanceBatch.networkCallsEnabled !== false
     || parsedRebalanceBatch.liveExecutionEnabled !== false
@@ -5375,9 +5397,19 @@ function checkStrategyLabSafetyDossierExportUi() {
     || !html.includes('Top-200 Rebalance Batch Simulator')
     || !html.includes('id="rebalance-batch-form"')
     || !html.includes('Run Local Rebalance Batch')
+    || !html.includes('id="rebalance-candidate-csv"')
+    || !html.includes('Import CSV Into JSON')
+    || !html.includes('id="rebalance-batch-filter-status"')
+    || !html.includes('id="rebalance-batch-export-json"')
+    || !html.includes('id="rebalance-batch-export-csv"')
+    || !html.includes('function importRebalanceCandidatesFromCsv()')
+    || !html.includes('function archiveRebalanceBatch(batchId)')
+    || !html.includes('function exportSingleRebalanceBatch(batchId)')
     || !html.includes('id="rebalance-batch-list"')
     || !html.includes('id="rebalance-review-queue"')
     || !html.includes('/api/v1/order-intents/rebalance-batches')
+    || !html.includes('/api/v1/order-intents/rebalance-candidates/import-csv')
+    || !html.includes('/export')
     || !html.includes('/api/v1/order-intents/rebalance-review-queue')
     || !html.includes('/api/v1/social-posts/rebalance-batches/')
     || !html.includes('function runRebalanceBatch(event)')
@@ -7503,6 +7535,30 @@ async function runServerApiChecks() {
     fail('cross-exchange arbitrage simulation did not create local-only draft order intents');
   }
 
+  const rebalanceCsvText = [
+    'marketSymbol,marketCapRank,marketCapUsd,priceChangePercent24h,priceChangePercent7d,venue,venueType,chain,price,feePercent,slippagePercent,gasCost,liquidityScore',
+    'EAI/USDT,42,850000000,-12.4,-18.2,binance,cex,centralized,0.99,0.10,0.05,0,91',
+    'EAI/USDT,42,850000000,-12.4,-18.2,aerodrome,dex,base,1.01,0.30,0.10,0.05,70'
+  ].join('\n');
+  const rebalanceCandidateImport = await fetchJson(`${baseUrl}/api/v1/order-intents/rebalance-candidates/import-csv`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({
+      csvText: rebalanceCsvText
+    })
+  });
+
+  if (
+    rebalanceCandidateImport.body.localOnly !== true
+    || rebalanceCandidateImport.body.liveExecutionEnabled !== false
+    || rebalanceCandidateImport.body.networkCallsEnabled !== false
+    || rebalanceCandidateImport.body.summary?.candidateCount !== 1
+    || rebalanceCandidateImport.body.summary?.quoteCount !== 2
+    || rebalanceCandidateImport.body.candidates?.[0]?.venueQuotes?.length !== 2
+  ) {
+    fail('top-200 rebalance CSV import did not return local-only normalized candidates');
+  }
+
   const rebalanceBatch = await fetchJson(`${baseUrl}/api/v1/order-intents/rebalance-batches`, {
     method: 'POST',
     headers: authJsonHeaders(cookie),
@@ -7663,6 +7719,31 @@ async function runServerApiChecks() {
     fail('rebalance batch campaign draft API did not create local-only Social Ops drafts');
   }
 
+  const rebalanceBatchExport = await fetchJson(`${baseUrl}/api/v1/order-intents/rebalance-batches/${rebalanceBatch.body.batch.id}/export`, {
+    headers: authHeaders
+  });
+  const archivedRebalanceBatch = await fetchJson(`${baseUrl}/api/v1/order-intents/rebalance-batches/${rebalanceBatch.body.batch.id}`, {
+    method: 'PATCH',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({
+      status: 'archived'
+    })
+  });
+  const archivedRebalanceBatchList = await fetchJson(`${baseUrl}/api/v1/order-intents/rebalance-batches?status=archived`, {
+    headers: authHeaders
+  });
+
+  if (
+    rebalanceBatchExport.body.localOnly !== true
+    || !rebalanceBatchExport.body.export?.csv?.includes('marketSymbol')
+    || rebalanceBatchExport.body.export?.liveExecutionEnabled !== false
+    || archivedRebalanceBatch.body.batch?.status !== 'archived'
+    || archivedRebalanceBatch.body.liveExecutionEnabled !== false
+    || !archivedRebalanceBatchList.body.batches?.some(batch => String(batch.id) === String(rebalanceBatch.body.batch.id))
+  ) {
+    fail('rebalance batch archive/export/filter APIs did not preserve local-only state');
+  }
+
   await fetchJsonExpectStatus(`${baseUrl}/api/v1/order-intents/simulate-cross-exchange`, {
     method: 'POST',
     headers: authJsonHeaders(cookie),
@@ -7683,6 +7764,14 @@ async function runServerApiChecks() {
           password: 'not-allowed'
         }
       ]
+    })
+  }, 400);
+
+  await fetchJsonExpectStatus(`${baseUrl}/api/v1/order-intents/rebalance-candidates/import-csv`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({
+      csvText: 'marketSymbol,password\nEAI/USDT,not-allowed'
     })
   }, 400);
 
@@ -7978,10 +8067,13 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/order-intents/arbitrage-simulations' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/order-intents/arbitrage-simulations/:id' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/order-intents/arbitrage-simulations/:id/draft-intents' && route.file === 'app/server/src/routes/order-intents.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/order-intents/rebalance-candidates/import-csv' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/order-intents/rebalance-batches' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/order-intents/rebalance-batches' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/order-intents/rebalance-review-queue' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/order-intents/rebalance-batches/:id' && route.file === 'app/server/src/routes/order-intents.js')
+    || !inventory.routes.some(route => route.method === 'PATCH' && route.path === '/api/v1/order-intents/rebalance-batches/:id' && route.file === 'app/server/src/routes/order-intents.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/order-intents/rebalance-batches/:id/export' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/order-intents/rebalance-batches/:id/draft-intents' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.path === '/api/v1/order-intents/:id' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/social-posts' && route.file === 'app/server/src/routes/social-ops.js')

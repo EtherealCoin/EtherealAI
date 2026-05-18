@@ -393,11 +393,176 @@ function normalizeRebalanceCandidate(candidate = {}, index = 0) {
   };
 }
 
+function normalizeCsvHeader(header = '') {
+  return String(header || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function parseCsvRows(csvText = '') {
+  rejectSecretLikeSimulationInput({ csvText });
+  const text = String(csvText || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+
+  if (!text) {
+    throw new Error('Candidate CSV text is required.');
+  }
+
+  if (text.length > 2_000_000) {
+    throw new Error('Candidate CSV is too large for one local preview. Keep it under 2 MB.');
+  }
+
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let inQuotes = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const nextChar = text[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        cell += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      row.push(cell.trim());
+      cell = '';
+      continue;
+    }
+
+    if (char === '\n' && !inQuotes) {
+      row.push(cell.trim());
+      if (row.some(value => value !== '')) {
+        rows.push(row);
+      }
+      row = [];
+      cell = '';
+      continue;
+    }
+
+    cell += char;
+  }
+
+  row.push(cell.trim());
+  if (row.some(value => value !== '')) {
+    rows.push(row);
+  }
+
+  if (rows.length < 2) {
+    throw new Error('Candidate CSV needs a header row and at least one data row.');
+  }
+
+  const headers = rows[0].map(normalizeCsvHeader);
+
+  return rows.slice(1).map(values => headers.reduce((record, header, index) => {
+    if (header) {
+      record[header] = values[index] ?? '';
+    }
+
+    return record;
+  }, {}));
+}
+
+function getCsvField(row = {}, aliases = []) {
+  for (const alias of aliases) {
+    const key = normalizeCsvHeader(alias);
+
+    if (Object.prototype.hasOwnProperty.call(row, key) && String(row[key]).trim() !== '') {
+      return String(row[key]).trim();
+    }
+  }
+
+  return '';
+}
+
+function getCsvNumber(row = {}, aliases = [], fallback = undefined) {
+  const raw = getCsvField(row, aliases);
+
+  if (!raw) {
+    return fallback;
+  }
+
+  const parsed = Number(String(raw).replace(/[$,%\s]/g, ''));
+
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function parseRebalanceCandidateCsv(csvText = '') {
+  const rows = parseCsvRows(csvText);
+  const grouped = new Map();
+
+  rows.forEach((row, index) => {
+    const marketSymbol = cleanText(
+      getCsvField(row, ['marketSymbol', 'market_symbol', 'symbol', 'pair', 'ticker']),
+      '',
+      40
+    ).toUpperCase();
+
+    if (!marketSymbol) {
+      throw new Error(`Candidate CSV row ${index + 2} needs a marketSymbol/symbol value.`);
+    }
+
+    if (!grouped.has(marketSymbol)) {
+      grouped.set(marketSymbol, {
+        marketSymbol,
+        marketCapRank: getCsvNumber(row, ['marketCapRank', 'market_cap_rank', 'cmcRank', 'rank'], index + 1),
+        marketCapUsd: getCsvNumber(row, ['marketCapUsd', 'market_cap_usd', 'marketCap', 'market_cap'], 0),
+        priceChangePercent24h: getCsvNumber(row, ['priceChangePercent24h', 'price_change_percent_24h', 'change24h', 'change_24h'], 0),
+        priceChangePercent7d: getCsvNumber(row, ['priceChangePercent7d', 'price_change_percent_7d', 'change7d', 'change_7d'], 0),
+        currentHoldingValue: getCsvNumber(row, ['currentHoldingValue', 'current_holding_value', 'holdingUsd', 'holding_usd'], 0),
+        targetWeightPercent: getCsvNumber(row, ['targetWeightPercent', 'target_weight_percent', 'targetWeight', 'target_weight'], 0),
+        notes: cleanText(getCsvField(row, ['notes', 'note']), '', 300),
+        venueQuotes: []
+      });
+    }
+
+    const candidate = grouped.get(marketSymbol);
+    const venue = cleanText(getCsvField(row, ['venue', 'exchange', 'dex', 'cex']), '', 80);
+    const price = getCsvNumber(row, ['price', 'quotePrice', 'quote_price', 'lastPrice', 'last_price'], null);
+
+    if (venue || Number.isFinite(price)) {
+      candidate.venueQuotes.push({
+        venue: venue || `csv-venue-${candidate.venueQuotes.length + 1}`,
+        venueType: getCsvField(row, ['venueType', 'venue_type', 'type']) || 'cex',
+        chain: getCsvField(row, ['chain', 'blockchain', 'network']) || 'centralized',
+        price,
+        feePercent: getCsvNumber(row, ['feePercent', 'fee_percent', 'fee'], 0),
+        slippagePercent: getCsvNumber(row, ['slippagePercent', 'slippage_percent', 'slippage'], 0),
+        gasCost: getCsvNumber(row, ['gasCost', 'gas_cost', 'gas'], 0),
+        bridgeCost: getCsvNumber(row, ['bridgeCost', 'bridge_cost', 'bridge'], 0),
+        liquidityScore: getCsvNumber(row, ['liquidityScore', 'liquidity_score', 'liquidity'], 50),
+        latencyMs: getCsvNumber(row, ['latencyMs', 'latency_ms', 'latency'], 0)
+      });
+    }
+  });
+
+  const candidates = Array.from(grouped.values()).map((candidate, index) => {
+    if (!candidate.venueQuotes.length) {
+      throw new Error(`Candidate CSV token ${candidate.marketSymbol} needs at least one venue quote row.`);
+    }
+
+    return normalizeRebalanceCandidate(candidate, index);
+  });
+
+  if (!candidates.length) {
+    throw new Error('Candidate CSV did not contain any usable candidates.');
+  }
+
+  return candidates;
+}
+
 function normalizeTopRebalanceBatchInput(input = {}) {
   rejectSecretLikeSimulationInput(input);
+  const csvCandidates = typeof input.candidateCsv === 'string' && input.candidateCsv.trim()
+    ? parseRebalanceCandidateCsv(input.candidateCsv)
+    : null;
   const candidates = Array.isArray(input.candidates) && input.candidates.length
     ? input.candidates
-    : DEFAULT_REBALANCE_CANDIDATES;
+    : csvCandidates || DEFAULT_REBALANCE_CANDIDATES;
   const normalizedCandidates = candidates.map(normalizeRebalanceCandidate);
 
   return {
@@ -576,6 +741,7 @@ function parseRebalanceSimulationBatch(row = {}) {
 module.exports = {
   DEFAULT_VENUE_QUOTES,
   DEFAULT_REBALANCE_CANDIDATES,
+  parseRebalanceCandidateCsv,
   normalizeCrossExchangeSimulationInput,
   normalizeTopRebalanceBatchInput,
   simulateCrossExchangeArbitrage,

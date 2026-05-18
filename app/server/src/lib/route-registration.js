@@ -150,6 +150,7 @@ function registerEtherealRoutes(app, options) {
     evaluateOrderIntentRisk,
     simulateCrossExchangeArbitrage,
     simulateTopRebalanceBatch,
+    parseRebalanceCandidateCsv,
     reviewSocialContent,
     getBotAutomationPlanRow,
     getBotAutomationRunRow,
@@ -554,6 +555,7 @@ function registerEtherealRoutes(app, options) {
     parseOrderIntent: parsers.parseOrderIntent,
     parseArbitrageSimulationRun: parsers.parseArbitrageSimulationRun,
     parseRebalanceSimulationBatch: parsers.parseRebalanceSimulationBatch,
+    parseRebalanceCandidateCsv,
     evaluateOrderIntentRisk,
     simulateCrossExchangeArbitrage,
     simulateTopRebalanceBatch

@@ -9,10 +9,63 @@ function registerOrderIntentRoutes(app, {
   parseOrderIntent,
   parseArbitrageSimulationRun,
   parseRebalanceSimulationBatch,
+  parseRebalanceCandidateCsv,
   evaluateOrderIntentRisk,
   simulateCrossExchangeArbitrage,
   simulateTopRebalanceBatch
 }) {
+  const allowedRebalanceBatchStatuses = new Set(['paper_candidate', 'review', 'no_candidates', 'archived']);
+
+  function csvValue(value) {
+    const text = value === null || value === undefined ? '' : String(value);
+
+    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  }
+
+  function buildRebalanceBatchExportCsv(batch) {
+    const rows = (batch.result?.simulations || []).map(item => ({
+      batchId: batch.id,
+      batchName: batch.name,
+      batchStatus: batch.status,
+      marketSymbol: item.candidate?.marketSymbol,
+      marketCapRank: item.candidate?.marketCapRank,
+      priceChangePercent24h: item.candidate?.priceChangePercent24h,
+      allocationUsd: item.allocationUsd,
+      simulationStatus: item.simulation?.status,
+      entryVenue: item.simulation?.bestEntry?.venue,
+      entryChain: item.simulation?.bestEntry?.chain,
+      entryPrice: item.simulation?.bestEntry?.price,
+      exitVenue: item.simulation?.bestExit?.venue,
+      exitChain: item.simulation?.bestExit?.chain,
+      exitPrice: item.simulation?.bestExit?.price,
+      estimatedNetProfit: item.simulation?.economics?.estimatedNetProfit,
+      estimatedNetEdgePercent: item.simulation?.economics?.estimatedNetEdgePercent
+    }));
+    const columns = [
+      'batchId',
+      'batchName',
+      'batchStatus',
+      'marketSymbol',
+      'marketCapRank',
+      'priceChangePercent24h',
+      'allocationUsd',
+      'simulationStatus',
+      'entryVenue',
+      'entryChain',
+      'entryPrice',
+      'exitVenue',
+      'exitChain',
+      'exitPrice',
+      'estimatedNetProfit',
+      'estimatedNetEdgePercent'
+    ];
+
+    return [
+      columns.map(csvValue).join(','),
+      ...rows.map(row => columns.map(column => csvValue(row[column])).join(','))
+    ].join('\n');
+  }
+
   async function getOrderIntentRow(id) {
     return dbGet(
       `SELECT trade_order_intents.*, exchange_connectors.label AS connector_label,
@@ -40,6 +93,36 @@ function registerOrderIntentRoutes(app, {
       [id]
     ));
   }
+
+  app.post('/api/v1/order-intents/rebalance-candidates/import-csv', requireAuth, async (req, res) => {
+    try {
+      const sensitiveFields = findSensitiveFields(req.body || {});
+
+      if (sensitiveFields.length) {
+        return res.status(400).json({
+          error: 'Rebalance candidate CSV imports cannot store secrets.',
+          sensitiveFields
+        });
+      }
+
+      const csvText = req.body?.csvText || req.body?.candidateCsv || '';
+      const candidates = parseRebalanceCandidateCsv(csvText);
+
+      res.json({
+        candidates,
+        summary: {
+          candidateCount: candidates.length,
+          quoteCount: candidates.reduce((total, candidate) => total + candidate.venueQuotes.length, 0),
+          top200Count: candidates.filter(candidate => candidate.marketCapRank <= 200).length
+        },
+        localOnly: true,
+        liveExecutionEnabled: false,
+        networkCallsEnabled: false
+      });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
 
   app.get('/api/v1/order-intents', requireAuth, async (req, res) => {
     try {
@@ -175,15 +258,41 @@ function registerOrderIntentRoutes(app, {
 
   app.get('/api/v1/order-intents/rebalance-batches', requireAuth, async (req, res) => {
     try {
+      const filters = [];
+      const params = [];
+      const status = String(req.query.status || '').trim().toLowerCase();
+      const tokenEcosystemProjectId = req.query.tokenEcosystemProjectId
+        ? Number(req.query.tokenEcosystemProjectId)
+        : null;
+
+      if (status && status !== 'all') {
+        if (!allowedRebalanceBatchStatuses.has(status)) {
+          return res.status(400).json({ error: 'Unsupported rebalance batch status filter.' });
+        }
+        filters.push('status = ?');
+        params.push(status);
+      }
+
+      if (tokenEcosystemProjectId) {
+        filters.push('token_ecosystem_project_id = ?');
+        params.push(tokenEcosystemProjectId);
+      }
+
       const rows = await dbAll(
         `SELECT *
          FROM rebalance_simulation_batches
+         ${filters.length ? `WHERE ${filters.join(' AND ')}` : ''}
          ORDER BY created_at DESC, id DESC
-         LIMIT 100`
+         LIMIT 100`,
+        params
       );
 
       res.json({
         batches: rows.map(parseRebalanceSimulationBatch),
+        filters: {
+          status: status || 'all',
+          tokenEcosystemProjectId
+        },
         localOnly: true,
         liveExecutionEnabled: false,
         networkCallsEnabled: false
@@ -242,6 +351,33 @@ function registerOrderIntentRoutes(app, {
     }
   });
 
+  app.get('/api/v1/order-intents/rebalance-batches/:id/export', requireAuth, async (req, res) => {
+    try {
+      const batch = await getRebalanceSimulationBatch(req.params.id);
+
+      if (!batch) {
+        return res.status(404).json({ error: 'Rebalance simulation batch not found' });
+      }
+
+      res.json({
+        batch,
+        export: {
+          filename: `etherealai-rebalance-batch-${batch.id}.csv`,
+          csv: `${buildRebalanceBatchExportCsv(batch)}\n`,
+          json: batch,
+          localOnly: true,
+          liveExecutionEnabled: false,
+          networkCallsEnabled: false
+        },
+        localOnly: true,
+        liveExecutionEnabled: false,
+        networkCallsEnabled: false
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get('/api/v1/order-intents/rebalance-batches/:id', requireAuth, async (req, res) => {
     try {
       const batch = await getRebalanceSimulationBatch(req.params.id);
@@ -251,6 +387,45 @@ function registerOrderIntentRoutes(app, {
       }
 
       res.json({ batch });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch('/api/v1/order-intents/rebalance-batches/:id', requireAuth, async (req, res) => {
+    try {
+      const sensitiveFields = findSensitiveFields(req.body || {});
+
+      if (sensitiveFields.length) {
+        return res.status(400).json({
+          error: 'Rebalance batch updates cannot store secrets.',
+          sensitiveFields
+        });
+      }
+
+      const batch = await getRebalanceSimulationBatch(req.params.id);
+
+      if (!batch) {
+        return res.status(404).json({ error: 'Rebalance simulation batch not found' });
+      }
+
+      const status = String(req.body?.status || '').trim().toLowerCase();
+
+      if (!allowedRebalanceBatchStatuses.has(status)) {
+        return res.status(400).json({ error: 'Unsupported rebalance batch status.' });
+      }
+
+      await dbRun(
+        'UPDATE rebalance_simulation_batches SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [status, batch.id]
+      );
+
+      res.json({
+        batch: await getRebalanceSimulationBatch(batch.id),
+        localOnly: true,
+        liveExecutionEnabled: false,
+        networkCallsEnabled: false
+      });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

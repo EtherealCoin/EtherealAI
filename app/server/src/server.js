@@ -251,6 +251,7 @@ const {
 const {
   parseArbitrageSimulationRun,
   parseRebalanceSimulationBatch,
+  parseRebalanceCandidateCsv,
   simulateCrossExchangeArbitrage,
   simulateTopRebalanceBatch
 } = require('./lib/order-intent-simulator');
@@ -597,6 +598,7 @@ const ROUTE_PARSERS = {
   parseOrderIntent,
   parseArbitrageSimulationRun,
   parseRebalanceSimulationBatch,
+  parseRebalanceCandidateCsv,
   parseBotAutomationPlan,
   parseBotLiveReadinessEvent,
   parseBotLiveEnablementReview,
@@ -733,6 +735,7 @@ registerEtherealRoutes(app, {
   evaluateOrderIntentRisk,
   simulateCrossExchangeArbitrage,
   simulateTopRebalanceBatch,
+  parseRebalanceCandidateCsv,
   reviewSocialContent,
   getBotAutomationPlanRow,
   getBotAutomationRunRow,
