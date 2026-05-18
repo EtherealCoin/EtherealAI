@@ -483,6 +483,38 @@
         </section>
 
         <section class="model-panel">
+            <h2>Cross-Exchange Arbitrage Simulator</h2>
+            <form id="arbitrage-simulator-form" class="model-test-form">
+                <label for="arb-market">Market / Symbol</label>
+                <input type="text" id="arb-market" name="marketSymbol" value="ETH/USDT" required>
+
+                <label for="arb-quantity">Quantity</label>
+                <input type="number" id="arb-quantity" name="quantity" value="1" min="0" step="0.00000001" required>
+
+                <label for="arb-min-edge">Minimum Net Edge %</label>
+                <input type="number" id="arb-min-edge" name="minNetEdgePercent" value="0.25" min="0" step="0.01">
+
+                <label for="arb-strategy-type">Strategy Type</label>
+                <select id="arb-strategy-type" name="strategyType">
+                    <option value="arbitrage_route_check">Arbitrage route check</option>
+                    <option value="top_200_rebalance">Top-200 rebalance route check</option>
+                    <option value="cross_chain_exit_reentry">Cross-chain exit/re-entry check</option>
+                </select>
+
+                <label for="arb-venue-quotes">Venue Quotes JSON</label>
+                <textarea id="arb-venue-quotes" name="venueQuotes" rows="9">[
+  {"venue":"binance","venueType":"cex","chain":"centralized","price":100,"feePercent":0.10,"slippagePercent":0.05,"gasCost":0,"liquidityScore":90},
+  {"venue":"coinbase","venueType":"cex","chain":"centralized","price":100.35,"feePercent":0.16,"slippagePercent":0.06,"gasCost":0,"liquidityScore":84},
+  {"venue":"aerodrome","venueType":"dex","chain":"base","price":100.55,"feePercent":0.30,"slippagePercent":0.15,"gasCost":0.08,"liquidityScore":72},
+  {"venue":"raydium","venueType":"dex","chain":"solana","price":99.72,"feePercent":0.25,"slippagePercent":0.12,"gasCost":0.02,"liquidityScore":69}
+]</textarea>
+
+                <button type="submit">Run Local Route Simulation</button>
+            </form>
+            <pre id="arbitrage-simulator-output" class="model-output">No arbitrage route simulation run yet.</pre>
+        </section>
+
+        <section class="model-panel">
             <h2>Automation Safety Center</h2>
             <button type="button" id="refresh-automation-safety">Refresh Safety Summary</button>
             <div id="local-verification-panel" class="comparison-table">Loading local verification status...</div>
@@ -2669,6 +2701,43 @@
             }
 
             renderOrderIntents(data.intents || []);
+        }
+
+        async function runArbitrageSimulation(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const output = document.getElementById('arbitrage-simulator-output');
+            let venueQuotes = [];
+
+            try {
+                venueQuotes = JSON.parse(formData.get('venueQuotes') || '[]');
+            } catch (error) {
+                output.textContent = 'Venue Quotes JSON is invalid.';
+                return;
+            }
+
+            output.textContent = 'Running local route simulation...';
+            const response = await fetch('/api/v1/order-intents/simulate-cross-exchange', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    marketSymbol: formData.get('marketSymbol'),
+                    quantity: Number(formData.get('quantity')),
+                    minNetEdgePercent: Number(formData.get('minNetEdgePercent')),
+                    strategyType: formData.get('strategyType'),
+                    venueQuotes
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Arbitrage route simulation failed.';
+                return;
+            }
+
+            output.textContent = JSON.stringify(data.simulation, null, 2);
         }
 
         function countSafetyRows(rows = [], predicate = () => true) {
@@ -5875,6 +5944,8 @@
             output.textContent = JSON.stringify(data.intent, null, 2);
             await loadOrderIntents();
         });
+
+        document.getElementById('arbitrage-simulator-form').addEventListener('submit', runArbitrageSimulation);
 
         document.getElementById('bot-plan-form').addEventListener('submit', async event => {
             event.preventDefault();

@@ -7,7 +7,8 @@ function registerOrderIntentRoutes(app, {
   getPositiveNumber,
   parseRiskProfile,
   parseOrderIntent,
-  evaluateOrderIntentRisk
+  evaluateOrderIntentRisk,
+  simulateCrossExchangeArbitrage
 }) {
   app.get('/api/v1/order-intents', requireAuth, async (req, res) => {
     try {
@@ -50,6 +51,25 @@ function registerOrderIntentRoutes(app, {
       res.json({ intent: parseOrderIntent(row) });
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/order-intents/simulate-cross-exchange', requireAuth, async (req, res) => {
+    try {
+      const sensitiveFields = findSensitiveFields(req.body || {});
+
+      if (sensitiveFields.length) {
+        return res.status(400).json({
+          error: 'Cross-exchange simulations cannot store secrets.',
+          sensitiveFields
+        });
+      }
+
+      res.json({
+        simulation: simulateCrossExchangeArbitrage(req.body || {})
+      });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
     }
   });
 

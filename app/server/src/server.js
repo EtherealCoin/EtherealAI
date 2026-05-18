@@ -249,6 +249,9 @@ const {
   evaluateOrderIntentRisk
 } = require('./lib/risk-safety');
 const {
+  simulateCrossExchangeArbitrage
+} = require('./lib/order-intent-simulator');
+const {
   createRiskProfileActionsRuntime
 } = require('./lib/risk-profile-actions');
 const {
@@ -722,6 +725,7 @@ registerEtherealRoutes(app, {
   refreshBotPlansForRiskProfile,
   riskProfileAuditFields: RISK_PROFILE_AUDIT_FIELDS,
   evaluateOrderIntentRisk,
+  simulateCrossExchangeArbitrage,
   reviewSocialContent,
   getBotAutomationPlanRow,
   getBotAutomationRunRow,

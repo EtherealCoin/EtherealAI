@@ -42,6 +42,26 @@ function registerSolidityLabRoutes(app, {
     ));
   }
 
+  async function saveTokenEcosystemProjectBlueprint(project) {
+    const blueprint = buildTokenEcosystemProjectBlueprint({
+      ...project,
+      contractSpecId: project.contract_spec_id,
+      contractType: project.contract_type,
+      targetChain: project.target_chain,
+      nftUtilityNotes: project.nft_utility_notes,
+      ecosystemNotes: project.ecosystem_notes
+    });
+
+    await dbRun(
+      `UPDATE token_ecosystem_projects
+       SET blueprint_json = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [JSON.stringify(blueprint), project.id]
+    );
+
+    return getTokenEcosystemProject(project.id);
+  }
+
   async function createWorkspaceForTokenProject(project) {
     ensureWorkspacesDir();
     const workspaceSlug = `token-ecosystem-${project.id}-${slugify(project.name) || 'project'}`.slice(0, 80);
@@ -210,6 +230,70 @@ function registerSolidityLabRoutes(app, {
       res.status(201).json({ project });
     } catch (error) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch('/api/v1/token-ecosystem-projects/:id', requireAuth, async (req, res) => {
+    try {
+      const existing = await getTokenEcosystemProject(req.params.id);
+
+      if (!existing) {
+        return res.status(404).json({ error: 'Token ecosystem project not found' });
+      }
+
+      const input = normalizeTokenEcosystemProjectInput(req.body || {}, existing);
+      await dbRun(
+        `UPDATE token_ecosystem_projects
+         SET contract_spec_id = ?, name = ?, target_chain = ?, contract_type = ?,
+             feature_selections_json = ?, nft_utility_notes = ?, ecosystem_notes = ?,
+             status = ?, local_only = 1, external_actions_enabled = 0, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          input.contractSpecId,
+          input.name,
+          input.targetChain,
+          input.contractType,
+          JSON.stringify(input.featureSelections),
+          input.nftUtilityNotes,
+          input.ecosystemNotes,
+          input.status,
+          existing.id
+        ]
+      );
+
+      const project = await saveTokenEcosystemProjectBlueprint(await getTokenEcosystemProject(existing.id));
+
+      res.json({ project });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete('/api/v1/token-ecosystem-projects/:id', requireAuth, async (req, res) => {
+    try {
+      const existing = await getTokenEcosystemProject(req.params.id);
+
+      if (!existing) {
+        return res.status(404).json({ error: 'Token ecosystem project not found' });
+      }
+
+      await dbRun(
+        `UPDATE token_ecosystem_projects
+         SET status = 'archived', local_only = 1, external_actions_enabled = 0, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [existing.id]
+      );
+
+      const project = await saveTokenEcosystemProjectBlueprint(await getTokenEcosystemProject(existing.id));
+
+      res.json({
+        project,
+        archived: true,
+        localOnly: true,
+        externalActionsEnabled: false
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   });
 

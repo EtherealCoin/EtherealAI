@@ -83,6 +83,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/readiness.js',
     'app/server/src/lib/system-config-runtime.js',
     'app/server/src/lib/risk-safety.js',
+    'app/server/src/lib/order-intent-simulator.js',
     'app/server/src/lib/risk-profile-actions.js',
     'app/server/src/lib/secret-safety.js',
     'app/server/src/lib/social-ops.js',
@@ -1245,7 +1246,9 @@ function checkRouteRegistrationModule() {
     || !serverSource.includes('buildTokenEcosystemProjectBlueprint')
     || !serverSource.includes('buildTokenEcosystemWorkspaceFiles')
     || !serverSource.includes('parseTokenEcosystemProject')
+    || !serverSource.includes('simulateCrossExchangeArbitrage')
     || !routeRegistrationSource.includes('parseTokenEcosystemProject: parsers.parseTokenEcosystemProject')
+    || !routeRegistrationSource.includes('simulateCrossExchangeArbitrage')
     || !serverSource.includes('selects: ROW_LOOKUP_SELECTS')
     || !serverSource.includes('selects: ROUTE_SELECTS')
     || !serverSource.includes('parsers: ROUTE_PARSERS')
@@ -4289,6 +4292,72 @@ function checkRiskSafetyModule() {
   pass('risk safety module');
 }
 
+function checkOrderIntentSimulatorModule() {
+  const {
+    normalizeCrossExchangeSimulationInput,
+    simulateCrossExchangeArbitrage
+  } = require(path.join(projectRoot, 'app/server/src/lib/order-intent-simulator'));
+  const input = normalizeCrossExchangeSimulationInput({
+    marketSymbol: 'EAI/USDT',
+    quantity: 10,
+    minNetEdgePercent: 0.25,
+    strategyType: 'top_200_rebalance',
+    venueQuotes: [
+      {
+        venue: 'binance',
+        venueType: 'cex',
+        chain: 'centralized',
+        price: 99,
+        feePercent: 0.1,
+        slippagePercent: 0.05,
+        gasCost: 0,
+        liquidityScore: 91
+      },
+      {
+        venue: 'aerodrome',
+        venueType: 'dex',
+        chain: 'base',
+        price: 101,
+        feePercent: 0.3,
+        slippagePercent: 0.1,
+        gasCost: 0.5,
+        liquidityScore: 70
+      }
+    ]
+  });
+  const simulation = simulateCrossExchangeArbitrage(input);
+
+  if (
+    input.marketSymbol !== 'EAI/USDT'
+    || input.venueQuotes.length !== 2
+    || simulation.safetyBoundary?.liveExecutionEnabled !== false
+    || simulation.safetyBoundary?.networkCallsEnabled !== false
+    || simulation.safetyBoundary?.credentialLoadingEnabled !== false
+    || simulation.bestEntry?.venue !== 'binance'
+    || simulation.bestExit?.venue !== 'aerodrome'
+    || simulation.economics?.estimatedNetProfit <= 0
+    || simulation.recommendedDraftIntents?.length !== 2
+    || !simulation.blockingFailures?.includes('live_order_endpoint_enabled')
+  ) {
+    fail('order intent simulator module did not preserve local-only arbitrage route math');
+  }
+
+  try {
+    normalizeCrossExchangeSimulationInput({
+      marketSymbol: 'EAI/USDT',
+      quantity: 1,
+      apiKey: `sk-${'a'.repeat(40)}`
+    });
+    fail('order intent simulator accepted a secret-like payload');
+  } catch (error) {
+    if (!/cannot store private keys/i.test(error.message)) {
+      fail('order intent simulator rejected with an unexpected error');
+    }
+  }
+
+  pass('order intent simulator module');
+}
+
 async function checkRiskProfileActionsModule() {
   const {
     createRiskProfileActionsRuntime
@@ -5180,6 +5249,12 @@ function checkStrategyLabSafetyDossierExportUi() {
     || !html.includes('No dossier history yet.')
     || !html.includes('Live execution disabled: no credential loading, no live order endpoint, and no exchange order placement.')
     || !html.includes('Monitor-only. No live execution enabled.')
+    || !html.includes('Cross-Exchange Arbitrage Simulator')
+    || !html.includes('id="arbitrage-simulator-form"')
+    || !html.includes('Run Local Route Simulation')
+    || !html.includes('/api/v1/order-intents/simulate-cross-exchange')
+    || !html.includes('function runArbitrageSimulation(event)')
+    || !html.includes('No arbitrage route simulation run yet.')
     || !html.includes('id="bot-plan-filter-form"')
     || !html.includes('id="bot-plan-filter-mode"')
     || !html.includes('id="bot-plan-filter-status"')
@@ -5646,8 +5721,13 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('Token Creation Options')
     || !solidity.includes('Token Ecosystem Projects')
     || !solidity.includes('Save Ecosystem Project')
+    || !solidity.includes('Update Selected Project')
+    || !solidity.includes('Load For Edit')
     || !solidity.includes('Generate Workspace')
+    || !solidity.includes('Archive Project')
     || !solidity.includes('/api/v1/token-ecosystem-projects')
+    || !solidity.includes("method: 'PATCH'")
+    || !solidity.includes("method: 'DELETE'")
     || !solidity.includes('/workspace')
     || !solidity.includes('Passive income / rewards model')
     || !solidity.includes('NFT utility upgrades')
@@ -6982,11 +7062,11 @@ async function runServerApiChecks() {
     },
     {
       path: '/strategy-lab',
-      requiredText: ['MVP 99% · Local E2E 95%', 'Live execution disabled', 'Proof packet', 'Owner evidence']
+      requiredText: ['MVP 99% · Local E2E 95%', 'Live execution disabled', 'Proof packet', 'Owner evidence', 'Cross-Exchange Arbitrage Simulator']
     },
     {
       path: '/solidity-lab',
-      requiredText: ['MVP 99% · Local E2E 95%', 'Proof packet', 'Deployment Boundary', 'no mainnet or testnet broadcast', 'Token Ecosystem Studio', 'Token Ecosystem Projects', 'Save Ecosystem Project', 'Multi-Chain Token Builder', 'Listing Readiness']
+      requiredText: ['MVP 99% · Local E2E 95%', 'Proof packet', 'Deployment Boundary', 'no mainnet or testnet broadcast', 'Token Ecosystem Studio', 'Token Ecosystem Projects', 'Save Ecosystem Project', 'Update Selected Project', 'Multi-Chain Token Builder', 'Listing Readiness']
     },
     {
       path: '/social-ops',
@@ -7092,6 +7172,37 @@ async function runServerApiChecks() {
     fail('token ecosystem project API did not return persisted project detail/list rows');
   }
 
+  const updatedTokenProject = await fetchJson(`${baseUrl}/api/v1/token-ecosystem-projects/${tokenProject.body.project.id}`, {
+    method: 'PATCH',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({
+      name: `${tokenProject.body.project.name} edited`,
+      targetChain: 'polygon',
+      contractType: 'erc20',
+      featureSelections: [
+        'passive income reward model',
+        'NFT utility upgrades for profitability and access tiers',
+        'arbitrage-aware strategy design',
+        'CoinMarketCap and CoinGecko listing evidence packet'
+      ],
+      nftUtilityNotes: 'Edited verifier NFT utility notes.',
+      ecosystemNotes: 'Edited verifier ecosystem notes. Still local-only.',
+      status: 'draft_review'
+    })
+  });
+
+  if (
+    updatedTokenProject.body.project?.name !== `${tokenProject.body.project.name} edited`
+    || updatedTokenProject.body.project?.target_chain !== 'polygon'
+    || updatedTokenProject.body.project?.status !== 'draft_review'
+    || updatedTokenProject.body.project?.localOnly !== true
+    || updatedTokenProject.body.project?.externalActionsEnabled !== false
+    || updatedTokenProject.body.project?.blueprint?.multiChainTokenBuild?.selectedChain?.id !== 'polygon'
+    || updatedTokenProject.body.project?.blueprint?.safetyBoundary?.deploymentEnabled !== false
+  ) {
+    fail('token ecosystem project API did not persist local-only update/archive-ready blueprint data');
+  }
+
   const unsafeTokenProject = await fetchJsonExpectStatus(`${baseUrl}/api/v1/token-ecosystem-projects`, {
     method: 'POST',
     headers: authJsonHeaders(cookie),
@@ -7131,6 +7242,25 @@ async function runServerApiChecks() {
     fail('token ecosystem project workspace generation did not produce the expected local artifact set');
   }
 
+  const archivedTokenProject = await fetchJson(`${baseUrl}/api/v1/token-ecosystem-projects/${tokenProject.body.project.id}`, {
+    method: 'DELETE',
+    headers: authJsonHeaders(cookie)
+  });
+
+  if (
+    archivedTokenProject.body.archived !== true
+    || archivedTokenProject.body.project?.status !== 'archived'
+    || archivedTokenProject.body.project?.localOnly !== true
+    || archivedTokenProject.body.project?.externalActionsEnabled !== false
+    || archivedTokenProject.body.project?.blueprint?.project?.externalActionsEnabled !== false
+  ) {
+    fail('token ecosystem project archive route did not preserve local-only archived state');
+  }
+
+  if (tokenWorkspace.body.workspace?.path && tokenWorkspace.body.workspace.path.startsWith(projectRoot)) {
+    fs.rmSync(tokenWorkspace.body.workspace.path, { recursive: true, force: true });
+  }
+
   const multiAgentRegistry = await fetchJson(`${baseUrl}/api/v1/multi-agent/registry`, { headers: authHeaders });
 
   if (
@@ -7148,6 +7278,60 @@ async function runServerApiChecks() {
   ) {
     fail('multi-agent registry did not expose local-only agent roles and blocked Hermes benchmark lane');
   }
+
+  const arbitrageSimulation = await fetchJson(`${baseUrl}/api/v1/order-intents/simulate-cross-exchange`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({
+      marketSymbol: 'EAI/USDT',
+      quantity: 10,
+      minNetEdgePercent: 0.25,
+      strategyType: 'top_200_rebalance',
+      venueQuotes: [
+        {
+          venue: 'binance',
+          venueType: 'cex',
+          chain: 'centralized',
+          price: 99,
+          feePercent: 0.1,
+          slippagePercent: 0.05,
+          gasCost: 0,
+          liquidityScore: 91
+        },
+        {
+          venue: 'aerodrome',
+          venueType: 'dex',
+          chain: 'base',
+          price: 101,
+          feePercent: 0.3,
+          slippagePercent: 0.1,
+          gasCost: 0.5,
+          liquidityScore: 70
+        }
+      ]
+    })
+  });
+
+  if (
+    arbitrageSimulation.body.simulation?.safetyBoundary?.liveExecutionEnabled !== false
+    || arbitrageSimulation.body.simulation?.safetyBoundary?.networkCallsEnabled !== false
+    || arbitrageSimulation.body.simulation?.bestEntry?.venue !== 'binance'
+    || arbitrageSimulation.body.simulation?.bestExit?.venue !== 'aerodrome'
+    || arbitrageSimulation.body.simulation?.economics?.estimatedNetProfit <= 0
+    || !arbitrageSimulation.body.simulation?.blockingFailures?.includes('live_order_endpoint_enabled')
+  ) {
+    fail('cross-exchange arbitrage simulator API did not return local-only route economics');
+  }
+
+  await fetchJsonExpectStatus(`${baseUrl}/api/v1/order-intents/simulate-cross-exchange`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({
+      marketSymbol: 'EAI/USDT',
+      quantity: 1,
+      apiKey: `sk-${'a'.repeat(40)}`
+    })
+  }, 400);
 
   const multiAgentRun = await fetchJson(`${baseUrl}/api/v1/multi-agent/runs`, {
     method: 'POST',
@@ -7427,6 +7611,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/api/v1/risk-profile-audit-events/:id' && route.file === 'app/server/src/routes/risk-profiles.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/order-intents' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/order-intents' && route.file === 'app/server/src/routes/order-intents.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/order-intents/simulate-cross-exchange' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.path === '/api/v1/order-intents/:id' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/social-posts' && route.file === 'app/server/src/routes/social-ops.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/social-posts' && route.file === 'app/server/src/routes/social-ops.js')
@@ -7443,6 +7628,8 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/token-ecosystem-projects' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/token-ecosystem-projects/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'PATCH' && route.path === '/api/v1/token-ecosystem-projects/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'DELETE' && route.path === '/api/v1/token-ecosystem-projects/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects/:id/workspace' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-capability-path' && route.file === 'app/server/src/routes/bot-automation.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-plans' && route.file === 'app/server/src/routes/bot-automation.js')
@@ -7749,6 +7936,7 @@ async function main() {
   checkArtifactRowsModule();
   checkSocialOpsModule();
   checkRiskSafetyModule();
+  checkOrderIntentSimulatorModule();
   await checkRiskProfileActionsModule();
   checkSolidityLabModule();
   checkBotAutomationModule();
