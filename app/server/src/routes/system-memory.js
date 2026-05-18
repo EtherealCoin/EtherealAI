@@ -45,6 +45,7 @@ function registerSystemMemoryRoutes(app, {
         'risk_profile_audit_events',
         'trade_order_intents',
         'arbitrage_simulation_runs',
+        'rebalance_simulation_batches',
         'bot_automation_plans',
         'bot_live_readiness_events',
         'bot_live_enablement_reviews',
@@ -94,6 +95,7 @@ function registerSystemMemoryRoutes(app, {
         riskProfileAuditRows,
         orderIntentRows,
         arbitrageSimulationRows,
+        rebalanceBatchRows,
         botPlanRows,
         botLiveReadinessRows,
         botLiveEnablementReviewRows,
@@ -210,6 +212,7 @@ function registerSystemMemoryRoutes(app, {
            LIMIT 10`
         ),
         dbAll('SELECT * FROM arbitrage_simulation_runs ORDER BY created_at DESC, id DESC LIMIT 10'),
+        dbAll('SELECT * FROM rebalance_simulation_batches ORDER BY created_at DESC, id DESC LIMIT 10'),
         dbAll(
           `${selects.botAutomationPlan}
            ORDER BY bot_automation_plans.created_at DESC
@@ -320,6 +323,7 @@ function registerSystemMemoryRoutes(app, {
             riskProfileAuditEvents: riskProfileAuditRows.map(parsers.parseRiskProfileAuditEvent),
             orderIntents: orderIntentRows.map(parsers.parseOrderIntent),
             arbitrageSimulationRuns: arbitrageSimulationRows.map(parsers.parseArbitrageSimulationRun),
+            rebalanceSimulationBatches: rebalanceBatchRows.map(parsers.parseRebalanceSimulationBatch),
             botAutomationPlans: parsedBotPlans,
             botLiveReadinessEvents: botLiveReadinessRows.map(parsers.parseBotLiveReadinessEvent),
             botLiveEnablementReviews: botLiveEnablementReviewRows.map(parsers.parseBotLiveEnablementReview),

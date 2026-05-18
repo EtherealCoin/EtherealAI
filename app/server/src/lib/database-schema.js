@@ -532,6 +532,26 @@ function initializeDatabase(db) {
     `);
 
     db.run(`
+      CREATE TABLE IF NOT EXISTS rebalance_simulation_batches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        token_ecosystem_project_id INTEGER,
+        name TEXT NOT NULL,
+        strategy_type TEXT NOT NULL DEFAULT 'top_200_rebalance_batch',
+        status TEXT NOT NULL DEFAULT 'review',
+        input_json TEXT NOT NULL DEFAULT '{}',
+        result_json TEXT NOT NULL DEFAULT '{}',
+        local_only INTEGER NOT NULL DEFAULT 1,
+        network_calls_enabled INTEGER NOT NULL DEFAULT 0,
+        live_execution_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(token_ecosystem_project_id) REFERENCES token_ecosystem_projects(id)
+      )
+    `);
+
+    db.run(`
       CREATE TABLE IF NOT EXISTS solidity_contract_specs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,

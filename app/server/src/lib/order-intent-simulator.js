@@ -45,6 +45,106 @@ const DEFAULT_VENUE_QUOTES = [
   }
 ];
 
+const DEFAULT_REBALANCE_CANDIDATES = [
+  {
+    marketSymbol: 'EAI/USDT',
+    marketCapRank: 42,
+    marketCapUsd: 850000000,
+    priceChangePercent24h: -12.4,
+    priceChangePercent7d: -18.2,
+    venueQuotes: [
+      {
+        venue: 'binance',
+        venueType: 'cex',
+        chain: 'centralized',
+        price: 0.99,
+        feePercent: 0.1,
+        slippagePercent: 0.05,
+        gasCost: 0,
+        liquidityScore: 91
+      },
+      {
+        venue: 'aerodrome',
+        venueType: 'dex',
+        chain: 'base',
+        price: 1.01,
+        feePercent: 0.3,
+        slippagePercent: 0.1,
+        gasCost: 0.05,
+        liquidityScore: 70
+      },
+      {
+        venue: 'raydium',
+        venueType: 'dex',
+        chain: 'solana',
+        price: 0.985,
+        feePercent: 0.25,
+        slippagePercent: 0.12,
+        gasCost: 0.02,
+        liquidityScore: 67
+      }
+    ]
+  },
+  {
+    marketSymbol: 'BASE/USDT',
+    marketCapRank: 88,
+    marketCapUsd: 420000000,
+    priceChangePercent24h: -8.1,
+    priceChangePercent7d: -10.4,
+    venueQuotes: [
+      {
+        venue: 'coinbase',
+        venueType: 'cex',
+        chain: 'centralized',
+        price: 2.42,
+        feePercent: 0.16,
+        slippagePercent: 0.06,
+        gasCost: 0,
+        liquidityScore: 84
+      },
+      {
+        venue: 'aerodrome',
+        venueType: 'dex',
+        chain: 'base',
+        price: 2.48,
+        feePercent: 0.3,
+        slippagePercent: 0.14,
+        gasCost: 0.04,
+        liquidityScore: 75
+      }
+    ]
+  },
+  {
+    marketSymbol: 'SOL/USDT',
+    marketCapRank: 5,
+    marketCapUsd: 78000000000,
+    priceChangePercent24h: -2.2,
+    priceChangePercent7d: -4.8,
+    venueQuotes: [
+      {
+        venue: 'binance',
+        venueType: 'cex',
+        chain: 'centralized',
+        price: 175.2,
+        feePercent: 0.1,
+        slippagePercent: 0.05,
+        gasCost: 0,
+        liquidityScore: 95
+      },
+      {
+        venue: 'raydium',
+        venueType: 'dex',
+        chain: 'solana',
+        price: 175.55,
+        feePercent: 0.25,
+        slippagePercent: 0.08,
+        gasCost: 0.02,
+        liquidityScore: 83
+      }
+    ]
+  }
+];
+
 function roundNumber(value, decimals = 8) {
   if (!Number.isFinite(value)) {
     return 0;
@@ -133,6 +233,12 @@ function normalizeCrossExchangeSimulationInput(input = {}) {
     venueQuotes: normalizedQuotes,
     notes: cleanText(input.notes || '', '', 500)
   };
+}
+
+function getPositiveNumber(value, fallback = 1) {
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function buildVenueExecution(quote, quantity, side) {
@@ -256,6 +362,174 @@ function simulateCrossExchangeArbitrage(input = {}) {
   };
 }
 
+function normalizeRebalanceCandidate(candidate = {}, index = 0) {
+  const marketSymbol = cleanText(
+    candidate.marketSymbol || candidate.market_symbol || `TOKEN${index + 1}/USDT`,
+    '',
+    40
+  ).toUpperCase();
+  const marketCapRank = Math.max(1, Math.round(getPositiveNumber(
+    candidate.marketCapRank ?? candidate.market_cap_rank,
+    index + 1
+  )));
+  const venueQuotes = Array.isArray(candidate.venueQuotes || candidate.venue_quotes)
+    ? candidate.venueQuotes || candidate.venue_quotes
+    : DEFAULT_VENUE_QUOTES;
+
+  if (!marketSymbol) {
+    throw new Error('Each rebalance candidate needs a market symbol.');
+  }
+
+  return {
+    marketSymbol,
+    marketCapRank,
+    marketCapUsd: getNonNegativeNumber(candidate.marketCapUsd ?? candidate.market_cap_usd, 0),
+    priceChangePercent24h: Number(candidate.priceChangePercent24h ?? candidate.price_change_percent_24h ?? 0),
+    priceChangePercent7d: Number(candidate.priceChangePercent7d ?? candidate.price_change_percent_7d ?? 0),
+    currentHoldingValue: getNonNegativeNumber(candidate.currentHoldingValue ?? candidate.current_holding_value, 0),
+    targetWeightPercent: getNonNegativeNumber(candidate.targetWeightPercent ?? candidate.target_weight_percent, 0),
+    notes: cleanText(candidate.notes || '', '', 300),
+    venueQuotes: venueQuotes.map(normalizeVenueQuote)
+  };
+}
+
+function normalizeTopRebalanceBatchInput(input = {}) {
+  rejectSecretLikeSimulationInput(input);
+  const candidates = Array.isArray(input.candidates) && input.candidates.length
+    ? input.candidates
+    : DEFAULT_REBALANCE_CANDIDATES;
+  const normalizedCandidates = candidates.map(normalizeRebalanceCandidate);
+
+  return {
+    name: cleanText(input.name || input.batchName || 'Top-200 rebalance local simulation', '', 120),
+    strategyType: cleanText(input.strategyType || input.strategy_type || 'top_200_rebalance_batch', 'top_200_rebalance_batch', 80),
+    tokenEcosystemProjectId: input.tokenEcosystemProjectId || input.token_ecosystem_project_id
+      ? Number(input.tokenEcosystemProjectId || input.token_ecosystem_project_id)
+      : null,
+    portfolioCapital: getPositiveNumber(input.portfolioCapital ?? input.portfolio_capital, 10000),
+    allocationPerCandidatePercent: Math.min(100, getPositiveNumber(
+      input.allocationPerCandidatePercent ?? input.allocation_per_candidate_percent,
+      5
+    )),
+    maxCandidates: Math.min(50, Math.max(1, Math.round(getPositiveNumber(input.maxCandidates ?? input.max_candidates, 5)))),
+    minDropPercent: getNonNegativeNumber(input.minDropPercent ?? input.min_drop_percent, 3),
+    minNetEdgePercent: getNonNegativeNumber(input.minNetEdgePercent ?? input.min_net_edge_percent, 0.25),
+    candidates: normalizedCandidates,
+    notes: cleanText(input.notes || '', '', 500)
+  };
+}
+
+function rankRebalanceCandidate(left, right) {
+  if (left.priceChangePercent24h !== right.priceChangePercent24h) {
+    return left.priceChangePercent24h - right.priceChangePercent24h;
+  }
+
+  return left.marketCapRank - right.marketCapRank;
+}
+
+function simulateTopRebalanceBatch(input = {}) {
+  const normalized = normalizeTopRebalanceBatchInput(input);
+  const eligibleCandidates = normalized.candidates
+    .filter(candidate => candidate.marketCapRank <= 200)
+    .filter(candidate => candidate.priceChangePercent24h <= -normalized.minDropPercent)
+    .sort(rankRebalanceCandidate)
+    .slice(0, normalized.maxCandidates);
+  const allocationUsd = normalized.portfolioCapital * (normalized.allocationPerCandidatePercent / 100);
+  const simulations = eligibleCandidates.map(candidate => {
+    const bestRawPrice = Math.min(...candidate.venueQuotes.map(quote => quote.price));
+    const quantity = allocationUsd / bestRawPrice;
+    const simulation = simulateCrossExchangeArbitrage({
+      marketSymbol: candidate.marketSymbol,
+      quantity,
+      minNetEdgePercent: normalized.minNetEdgePercent,
+      strategyType: normalized.strategyType,
+      venueQuotes: candidate.venueQuotes,
+      notes: candidate.notes
+    });
+
+    return {
+      candidate,
+      allocationUsd: roundNumber(allocationUsd, 4),
+      quantity: roundNumber(quantity, 8),
+      simulation
+    };
+  });
+  const paperCandidates = simulations.filter(item => item.simulation.status === 'paper_candidate');
+  const estimatedNetProfit = paperCandidates.reduce(
+    (total, item) => total + (item.simulation.economics?.estimatedNetProfit || 0),
+    0
+  );
+  const bestCandidate = paperCandidates
+    .slice()
+    .sort((left, right) => (
+      right.simulation.economics.estimatedNetEdgePercent - left.simulation.economics.estimatedNetEdgePercent
+    ))[0] || null;
+  const status = eligibleCandidates.length === 0
+    ? 'no_candidates'
+    : paperCandidates.length > 0
+      ? 'paper_candidate'
+      : 'review';
+
+  return {
+    status,
+    generatedAt: new Date().toISOString(),
+    name: normalized.name,
+    strategyType: normalized.strategyType,
+    tokenEcosystemProjectId: normalized.tokenEcosystemProjectId,
+    portfolioCapital: normalized.portfolioCapital,
+    allocationPerCandidatePercent: normalized.allocationPerCandidatePercent,
+    allocationUsd: roundNumber(allocationUsd, 4),
+    maxCandidates: normalized.maxCandidates,
+    minDropPercent: normalized.minDropPercent,
+    minNetEdgePercent: normalized.minNetEdgePercent,
+    candidateUniverseCount: normalized.candidates.length,
+    eligibleCandidates: eligibleCandidates.map(candidate => ({
+      marketSymbol: candidate.marketSymbol,
+      marketCapRank: candidate.marketCapRank,
+      marketCapUsd: candidate.marketCapUsd,
+      priceChangePercent24h: candidate.priceChangePercent24h,
+      priceChangePercent7d: candidate.priceChangePercent7d
+    })),
+    simulations,
+    summary: {
+      selectedCount: eligibleCandidates.length,
+      paperCandidateCount: paperCandidates.length,
+      rejectedCount: simulations.length - paperCandidates.length,
+      estimatedNetProfit: roundNumber(estimatedNetProfit, 4),
+      averageNetEdgePercent: roundNumber(
+        simulations.reduce((total, item) => total + item.simulation.economics.estimatedNetEdgePercent, 0)
+          / Math.max(1, simulations.length),
+        4
+      ),
+      bestMarketSymbol: bestCandidate?.candidate?.marketSymbol || null,
+      bestNetEdgePercent: bestCandidate?.simulation?.economics?.estimatedNetEdgePercent ?? null
+    },
+    recommendedDraftIntentGroups: paperCandidates.map(item => ({
+      marketSymbol: item.candidate.marketSymbol,
+      marketCapRank: item.candidate.marketCapRank,
+      priceChangePercent24h: item.candidate.priceChangePercent24h,
+      allocationUsd: item.allocationUsd,
+      simulationStatus: item.simulation.status,
+      economics: item.simulation.economics,
+      draftIntents: item.simulation.recommendedDraftIntents
+    })),
+    safetyBoundary: {
+      localOnly: true,
+      networkCallsEnabled: false,
+      credentialLoadingEnabled: false,
+      liveExecutionEnabled: false,
+      orderEndpointEnabled: false,
+      note: 'This batch uses local candidate and quote data only. It ranks top-200 drawdown candidates and creates review artifacts, not live orders.'
+    },
+    blockingFailures: [
+      'live_order_endpoint_enabled',
+      'runtime_credential_value_loading',
+      'exchange_adapter_network_calls'
+    ],
+    notes: normalized.notes
+  };
+}
+
 function parseArbitrageSimulationRun(row = {}) {
   if (!row) {
     return null;
@@ -277,9 +551,35 @@ function parseArbitrageSimulationRun(row = {}) {
   };
 }
 
+function parseRebalanceSimulationBatch(row = {}) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    token_ecosystem_project_id: row.token_ecosystem_project_id,
+    name: row.name,
+    strategy_type: row.strategy_type,
+    status: row.status,
+    input: JSON.parse(row.input_json || '{}'),
+    result: JSON.parse(row.result_json || '{}'),
+    localOnly: row.local_only !== 0,
+    networkCallsEnabled: row.network_calls_enabled === 1,
+    liveExecutionEnabled: row.live_execution_enabled === 1,
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+}
+
 module.exports = {
   DEFAULT_VENUE_QUOTES,
+  DEFAULT_REBALANCE_CANDIDATES,
   normalizeCrossExchangeSimulationInput,
+  normalizeTopRebalanceBatchInput,
   simulateCrossExchangeArbitrage,
-  parseArbitrageSimulationRun
+  simulateTopRebalanceBatch,
+  parseArbitrageSimulationRun,
+  parseRebalanceSimulationBatch
 };

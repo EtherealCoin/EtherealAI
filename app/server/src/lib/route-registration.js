@@ -149,6 +149,7 @@ function registerEtherealRoutes(app, options) {
     riskProfileAuditFields,
     evaluateOrderIntentRisk,
     simulateCrossExchangeArbitrage,
+    simulateTopRebalanceBatch,
     reviewSocialContent,
     getBotAutomationPlanRow,
     getBotAutomationRunRow,
@@ -551,8 +552,10 @@ function registerEtherealRoutes(app, options) {
     parseRiskProfile: parsers.parseRiskProfile,
     parseOrderIntent: parsers.parseOrderIntent,
     parseArbitrageSimulationRun: parsers.parseArbitrageSimulationRun,
+    parseRebalanceSimulationBatch: parsers.parseRebalanceSimulationBatch,
     evaluateOrderIntentRisk,
-    simulateCrossExchangeArbitrage
+    simulateCrossExchangeArbitrage,
+    simulateTopRebalanceBatch
   });
 
   registerSocialOpsRoutes(app, {

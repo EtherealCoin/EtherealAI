@@ -36,6 +36,7 @@
                 <a href="#bot-automation">Bots</a>
                 <a href="#market-data">Market Data</a>
                 <a href="#market-imports">Imports</a>
+                <a href="#rebalance-batch">Rebalance</a>
             </div>
         </section>
 
@@ -513,6 +514,63 @@
             </form>
             <pre id="arbitrage-simulator-output" class="model-output">No arbitrage route simulation run yet.</pre>
             <div id="arbitrage-simulation-list" class="comparison-table">Loading local arbitrage simulation history...</div>
+        </section>
+
+        <section class="model-panel" id="rebalance-batch">
+            <h2>Top-200 Rebalance Batch Simulator</h2>
+            <form id="rebalance-batch-form" class="model-test-form">
+                <label for="rebalance-name">Batch Name</label>
+                <input type="text" id="rebalance-name" name="name" value="Top-200 drawdown rebalance check" required>
+
+                <label for="rebalance-token-project">Token Ecosystem Project ID</label>
+                <input type="number" id="rebalance-token-project" name="tokenEcosystemProjectId" min="1" step="1" placeholder="Optional">
+
+                <label for="rebalance-capital">Portfolio Capital</label>
+                <input type="number" id="rebalance-capital" name="portfolioCapital" value="10000" min="1" step="100">
+
+                <label for="rebalance-allocation">Allocation % Per Candidate</label>
+                <input type="number" id="rebalance-allocation" name="allocationPerCandidatePercent" value="5" min="0.01" max="100" step="0.01">
+
+                <label for="rebalance-max-candidates">Max Candidates</label>
+                <input type="number" id="rebalance-max-candidates" name="maxCandidates" value="5" min="1" max="50" step="1">
+
+                <label for="rebalance-min-drop">Minimum 24h Drop %</label>
+                <input type="number" id="rebalance-min-drop" name="minDropPercent" value="3" min="0" step="0.1">
+
+                <label for="rebalance-min-edge">Minimum Net Edge %</label>
+                <input type="number" id="rebalance-min-edge" name="minNetEdgePercent" value="0.25" min="0" step="0.01">
+
+                <label for="rebalance-candidates">Candidate Tokens JSON</label>
+                <textarea id="rebalance-candidates" name="candidates" rows="12">[
+  {
+    "marketSymbol":"EAI/USDT",
+    "marketCapRank":42,
+    "marketCapUsd":850000000,
+    "priceChangePercent24h":-12.4,
+    "priceChangePercent7d":-18.2,
+    "venueQuotes":[
+      {"venue":"binance","venueType":"cex","chain":"centralized","price":0.99,"feePercent":0.10,"slippagePercent":0.05,"gasCost":0,"liquidityScore":91},
+      {"venue":"aerodrome","venueType":"dex","chain":"base","price":1.01,"feePercent":0.30,"slippagePercent":0.10,"gasCost":0.05,"liquidityScore":70}
+    ]
+  },
+  {
+    "marketSymbol":"BASE/USDT",
+    "marketCapRank":88,
+    "marketCapUsd":420000000,
+    "priceChangePercent24h":-8.1,
+    "priceChangePercent7d":-10.4,
+    "venueQuotes":[
+      {"venue":"coinbase","venueType":"cex","chain":"centralized","price":2.42,"feePercent":0.16,"slippagePercent":0.06,"gasCost":0,"liquidityScore":84},
+      {"venue":"aerodrome","venueType":"dex","chain":"base","price":2.48,"feePercent":0.30,"slippagePercent":0.14,"gasCost":0.04,"liquidityScore":75}
+    ]
+  }
+]</textarea>
+
+                <button type="submit">Run Local Rebalance Batch</button>
+            </form>
+            <pre id="rebalance-batch-output" class="model-output">No rebalance batch run yet.</pre>
+            <div id="rebalance-batch-list" class="comparison-table">Loading rebalance batch history...</div>
+            <div id="rebalance-review-queue" class="comparison-table">Loading rebalance review queue...</div>
         </section>
 
         <section class="model-panel">
@@ -2823,6 +2881,184 @@
                 networkCallsEnabled: data.networkCallsEnabled
             }, null, 2);
             await loadOrderIntents();
+        }
+
+        function renderRebalanceBatches(batches = []) {
+            const output = document.getElementById('rebalance-batch-list');
+
+            if (!batches.length) {
+                output.textContent = 'No local rebalance batches yet.';
+                return;
+            }
+
+            output.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Batch</th>
+                            <th>Status</th>
+                            <th>Selected</th>
+                            <th>Paper</th>
+                            <th>Best</th>
+                            <th>Net Profit</th>
+                            <th>Draft Intents</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${batches.map(batch => `
+                            <tr>
+                                <td>#${batch.id} ${escapeHtml(batch.name || '')}</td>
+                                <td>${escapeHtml(batch.status)}</td>
+                                <td>${escapeHtml(String(batch.result?.summary?.selectedCount ?? 0))}</td>
+                                <td>${escapeHtml(String(batch.result?.summary?.paperCandidateCount ?? 0))}</td>
+                                <td>${escapeHtml(batch.result?.summary?.bestMarketSymbol || '-')}</td>
+                                <td>${escapeHtml(String(batch.result?.summary?.estimatedNetProfit ?? 0))}</td>
+                                <td><button type="button" data-rebalance-draft-id="${batch.id}">Create Draft Intents</button></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            output.querySelectorAll('button[data-rebalance-draft-id]').forEach(button => {
+                button.addEventListener('click', () => createDraftIntentsFromRebalanceBatch(button.dataset.rebalanceDraftId));
+            });
+        }
+
+        async function loadRebalanceBatches() {
+            const response = await fetch('/api/v1/order-intents/rebalance-batches');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('rebalance-batch-list').textContent = data.error || 'Unable to load rebalance batches.';
+                return;
+            }
+
+            renderRebalanceBatches(data.batches || []);
+        }
+
+        function renderRebalanceReviewQueue(queue = {}) {
+            const output = document.getElementById('rebalance-review-queue');
+            const summary = queue.summary || {};
+            const intents = queue.draftIntents || [];
+
+            output.innerHTML = `
+                <p><strong>Review Queue</strong> ${escapeHtml(String(summary.batchCount || 0))} batches · ${escapeHtml(String(summary.draftIntentCount || 0))} draft intents · live disabled</p>
+                ${intents.length ? `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Intent</th>
+                                <th>Batch</th>
+                                <th>Market</th>
+                                <th>Side</th>
+                                <th>Risk</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${intents.slice(0, 12).map(intent => `
+                                <tr>
+                                    <td>#${intent.id}</td>
+                                    <td>#${escapeHtml(String(intent.payload?.rebalanceBatchId || '-'))}</td>
+                                    <td>${escapeHtml(intent.market_symbol)}</td>
+                                    <td>${escapeHtml(intent.side)}</td>
+                                    <td>${escapeHtml(intent.payload?.riskReview?.status || '-')}</td>
+                                    <td>${escapeHtml(intent.status)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : '<p>No rebalance draft intents waiting for review.</p>'}
+            `;
+        }
+
+        async function loadRebalanceReviewQueue() {
+            const response = await fetch('/api/v1/order-intents/rebalance-review-queue');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('rebalance-review-queue').textContent = data.error || 'Unable to load rebalance review queue.';
+                return;
+            }
+
+            renderRebalanceReviewQueue(data.queue || {});
+        }
+
+        async function runRebalanceBatch(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const output = document.getElementById('rebalance-batch-output');
+            let candidates = [];
+
+            try {
+                candidates = JSON.parse(formData.get('candidates') || '[]');
+            } catch (error) {
+                output.textContent = 'Candidate Tokens JSON is invalid.';
+                return;
+            }
+
+            output.textContent = 'Running local top-200 rebalance batch...';
+            const tokenProjectId = formData.get('tokenEcosystemProjectId')
+                ? Number(formData.get('tokenEcosystemProjectId'))
+                : null;
+            const response = await fetch('/api/v1/order-intents/rebalance-batches', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: formData.get('name'),
+                    tokenEcosystemProjectId: tokenProjectId,
+                    portfolioCapital: Number(formData.get('portfolioCapital')),
+                    allocationPerCandidatePercent: Number(formData.get('allocationPerCandidatePercent')),
+                    maxCandidates: Number(formData.get('maxCandidates')),
+                    minDropPercent: Number(formData.get('minDropPercent')),
+                    minNetEdgePercent: Number(formData.get('minNetEdgePercent')),
+                    candidates
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Rebalance batch simulation failed.';
+                return;
+            }
+
+            output.textContent = JSON.stringify(data.simulation, null, 2);
+            await loadRebalanceBatches();
+            await loadRebalanceReviewQueue();
+        }
+
+        async function createDraftIntentsFromRebalanceBatch(batchId) {
+            const output = document.getElementById('rebalance-batch-output');
+            output.textContent = `Creating draft order intents from rebalance batch #${batchId}...`;
+            const response = await fetch(`/api/v1/order-intents/rebalance-batches/${batchId}/draft-intents`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    strategyId: selectedStrategyId,
+                    riskProfileId: selectedRiskProfileId,
+                    maxIntentPairs: 10
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Rebalance draft intent creation failed.';
+                return;
+            }
+
+            output.textContent = JSON.stringify({
+                rebalanceBatch: data.batch,
+                createdDraftIntents: data.intents,
+                liveExecutionEnabled: data.liveExecutionEnabled,
+                networkCallsEnabled: data.networkCallsEnabled
+            }, null, 2);
+            await loadOrderIntents();
+            await loadRebalanceReviewQueue();
         }
 
         function countSafetyRows(rows = [], predicate = () => true) {
@@ -6031,6 +6267,7 @@
         });
 
         document.getElementById('arbitrage-simulator-form').addEventListener('submit', runArbitrageSimulation);
+        document.getElementById('rebalance-batch-form').addEventListener('submit', runRebalanceBatch);
 
         document.getElementById('bot-plan-form').addEventListener('submit', async event => {
             event.preventDefault();
@@ -6426,6 +6663,8 @@
                 loadRiskProfiles(),
                 loadOrderIntents(),
                 loadArbitrageSimulationRuns(),
+                loadRebalanceBatches(),
+                loadRebalanceReviewQueue(),
                 loadLocalVerificationStatus(),
                 loadMvpReadinessChecklist(),
                 loadAutomationSafetySummary(),

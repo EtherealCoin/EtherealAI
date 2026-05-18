@@ -8,8 +8,10 @@ function registerOrderIntentRoutes(app, {
   parseRiskProfile,
   parseOrderIntent,
   parseArbitrageSimulationRun,
+  parseRebalanceSimulationBatch,
   evaluateOrderIntentRisk,
-  simulateCrossExchangeArbitrage
+  simulateCrossExchangeArbitrage,
+  simulateTopRebalanceBatch
 }) {
   async function getOrderIntentRow(id) {
     return dbGet(
@@ -28,6 +30,13 @@ function registerOrderIntentRoutes(app, {
   async function getArbitrageSimulationRun(id) {
     return parseArbitrageSimulationRun(await dbGet(
       'SELECT * FROM arbitrage_simulation_runs WHERE id = ?',
+      [id]
+    ));
+  }
+
+  async function getRebalanceSimulationBatch(id) {
+    return parseRebalanceSimulationBatch(await dbGet(
+      'SELECT * FROM rebalance_simulation_batches WHERE id = ?',
       [id]
     ));
   }
@@ -154,6 +163,241 @@ function registerOrderIntentRoutes(app, {
 
       res.status(201).json({
         run,
+        intents,
+        localOnly: true,
+        liveExecutionEnabled: false,
+        networkCallsEnabled: false
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/order-intents/rebalance-batches', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `SELECT *
+         FROM rebalance_simulation_batches
+         ORDER BY created_at DESC, id DESC
+         LIMIT 100`
+      );
+
+      res.json({
+        batches: rows.map(parseRebalanceSimulationBatch),
+        localOnly: true,
+        liveExecutionEnabled: false,
+        networkCallsEnabled: false
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/order-intents/rebalance-review-queue', requireAuth, async (req, res) => {
+    try {
+      const [batchRows, intentRows] = await Promise.all([
+        dbAll(
+          `SELECT *
+           FROM rebalance_simulation_batches
+           ORDER BY created_at DESC, id DESC
+           LIMIT 50`
+        ),
+        dbAll(
+          `SELECT trade_order_intents.*, exchange_connectors.label AS connector_label,
+                  exchange_connectors.exchange_name, risk_profiles.name AS risk_profile_name,
+                  trading_strategies.name AS strategy_name
+           FROM trade_order_intents
+           LEFT JOIN exchange_connectors ON exchange_connectors.id = trade_order_intents.connector_id
+           LEFT JOIN risk_profiles ON risk_profiles.id = trade_order_intents.risk_profile_id
+           LEFT JOIN trading_strategies ON trading_strategies.id = trade_order_intents.strategy_id
+           ORDER BY trade_order_intents.created_at DESC
+           LIMIT 500`
+        )
+      ]);
+      const batches = batchRows.map(parseRebalanceSimulationBatch);
+      const batchIds = new Set(batches.map(batch => Number(batch.id)));
+      const intents = intentRows
+        .map(parseOrderIntent)
+        .filter(intent => (
+          intent.payload?.mode === 'top_200_rebalance_batch_draft_intent_v1'
+          && batchIds.has(Number(intent.payload?.rebalanceBatchId))
+        ));
+
+      res.json({
+        queue: {
+          batches,
+          draftIntents: intents,
+          summary: {
+            batchCount: batches.length,
+            draftIntentCount: intents.length,
+            paperCandidateBatchCount: batches.filter(batch => batch.status === 'paper_candidate').length
+          }
+        },
+        localOnly: true,
+        liveExecutionEnabled: false,
+        networkCallsEnabled: false
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/order-intents/rebalance-batches/:id', requireAuth, async (req, res) => {
+    try {
+      const batch = await getRebalanceSimulationBatch(req.params.id);
+
+      if (!batch) {
+        return res.status(404).json({ error: 'Rebalance simulation batch not found' });
+      }
+
+      res.json({ batch });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/order-intents/rebalance-batches', requireAuth, async (req, res) => {
+    try {
+      const sensitiveFields = findSensitiveFields(req.body || {});
+
+      if (sensitiveFields.length) {
+        return res.status(400).json({
+          error: 'Rebalance batch simulations cannot store secrets.',
+          sensitiveFields
+        });
+      }
+
+      const simulation = simulateTopRebalanceBatch(req.body || {});
+
+      if (simulation.tokenEcosystemProjectId) {
+        const project = await dbGet(
+          'SELECT id FROM token_ecosystem_projects WHERE id = ?',
+          [simulation.tokenEcosystemProjectId]
+        );
+
+        if (!project) {
+          return res.status(400).json({ error: 'Token ecosystem project not found' });
+        }
+      }
+
+      const result = await dbRun(
+        `INSERT INTO rebalance_simulation_batches
+         (user_id, token_ecosystem_project_id, name, strategy_type, status, input_json, result_json,
+          local_only, network_calls_enabled, live_execution_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, 0)`,
+        [
+          req.session.userId || null,
+          simulation.tokenEcosystemProjectId,
+          simulation.name,
+          simulation.strategyType,
+          simulation.status,
+          JSON.stringify(req.body || {}),
+          JSON.stringify(simulation)
+        ]
+      );
+      const batch = await getRebalanceSimulationBatch(result.lastID);
+
+      res.status(201).json({
+        simulation,
+        batch,
+        localOnly: true,
+        liveExecutionEnabled: false,
+        networkCallsEnabled: false
+      });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/order-intents/rebalance-batches/:id/draft-intents', requireAuth, async (req, res) => {
+    try {
+      const batch = await getRebalanceSimulationBatch(req.params.id);
+
+      if (!batch) {
+        return res.status(404).json({ error: 'Rebalance simulation batch not found' });
+      }
+
+      const riskProfileId = req.body?.riskProfileId ? Number(req.body.riskProfileId) : null;
+      const strategyId = req.body?.strategyId ? Number(req.body.strategyId) : null;
+      const paperSessionId = req.body?.paperSessionId ? Number(req.body.paperSessionId) : null;
+      const botPlanId = req.body?.botPlanId ? Number(req.body.botPlanId) : null;
+      const currentOpenTrades = getPositiveNumber(req.body?.currentOpenTrades, 0);
+      const currentDailyLoss = getPositiveNumber(req.body?.currentDailyLoss, 0);
+      const maxIntentPairs = Math.min(25, Math.max(1, Math.round(Number(req.body?.maxIntentPairs) || 10)));
+      const riskProfile = riskProfileId
+        ? parseRiskProfile(await dbGet('SELECT * FROM risk_profiles WHERE id = ?', [riskProfileId]))
+        : null;
+
+      if (riskProfileId && !riskProfile) {
+        return res.status(400).json({ error: 'Risk profile not found' });
+      }
+
+      if (botPlanId) {
+        const plan = await dbGet('SELECT id FROM bot_automation_plans WHERE id = ?', [botPlanId]);
+
+        if (!plan) {
+          return res.status(400).json({ error: 'Bot automation plan not found' });
+        }
+      }
+
+      const intentGroups = (batch.result?.recommendedDraftIntentGroups || []).slice(0, maxIntentPairs);
+      const intents = [];
+
+      for (const group of intentGroups) {
+        for (const leg of group.draftIntents || []) {
+          const riskReview = evaluateOrderIntentRisk(riskProfile, {
+            quantity: Number(leg.quantity),
+            limitPrice: Number(leg.limitPrice),
+            currentOpenTrades,
+            currentDailyLoss
+          });
+          const payload = {
+            mode: 'top_200_rebalance_batch_draft_intent_v1',
+            warning: 'Draft order intent from a local top-200 rebalance batch only. This does not place live orders.',
+            createdBy: 'local-top-200-rebalance-simulator',
+            rebalanceBatchId: batch.id,
+            tokenEcosystemProjectId: batch.token_ecosystem_project_id,
+            botPlanId,
+            batchStatus: batch.status,
+            marketRankContext: {
+              marketCapRank: group.marketCapRank,
+              priceChangePercent24h: group.priceChangePercent24h,
+              allocationUsd: group.allocationUsd,
+              economics: group.economics
+            },
+            simulationLeg: leg,
+            liveExecution: {
+              enabled: false,
+              orderEndpointEnabled: false,
+              networkCallsEnabled: false
+            },
+            riskReview
+          };
+          const result = await dbRun(
+            `INSERT INTO trade_order_intents
+             (connector_id, risk_profile_id, strategy_id, paper_session_id, market_symbol, side, order_type, quantity, limit_price, status, reason, payload_json)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              null,
+              riskProfileId,
+              strategyId,
+              paperSessionId,
+              group.marketSymbol,
+              leg.side,
+              leg.orderType,
+              Number(leg.quantity),
+              Number(leg.limitPrice),
+              'draft',
+              `${leg.reason} Top-200 rebalance batch #${batch.id}; venue: ${leg.venue}; chain: ${leg.chain}`.slice(0, 500),
+              JSON.stringify(payload)
+            ]
+          );
+          intents.push(parseOrderIntent(await getOrderIntentRow(result.lastID)));
+        }
+      }
+
+      res.status(201).json({
+        batch,
         intents,
         localOnly: true,
         liveExecutionEnabled: false,

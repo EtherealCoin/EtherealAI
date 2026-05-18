@@ -250,7 +250,9 @@ const {
 } = require('./lib/risk-safety');
 const {
   parseArbitrageSimulationRun,
-  simulateCrossExchangeArbitrage
+  parseRebalanceSimulationBatch,
+  simulateCrossExchangeArbitrage,
+  simulateTopRebalanceBatch
 } = require('./lib/order-intent-simulator');
 const {
   createRiskProfileActionsRuntime
@@ -593,6 +595,7 @@ const ROUTE_PARSERS = {
   parseRiskProfileAuditEvent,
   parseOrderIntent,
   parseArbitrageSimulationRun,
+  parseRebalanceSimulationBatch,
   parseBotAutomationPlan,
   parseBotLiveReadinessEvent,
   parseBotLiveEnablementReview,
@@ -728,6 +731,7 @@ registerEtherealRoutes(app, {
   riskProfileAuditFields: RISK_PROFILE_AUDIT_FIELDS,
   evaluateOrderIntentRisk,
   simulateCrossExchangeArbitrage,
+  simulateTopRebalanceBatch,
   reviewSocialContent,
   getBotAutomationPlanRow,
   getBotAutomationRunRow,
