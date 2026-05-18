@@ -46,6 +46,7 @@ const {
 } = require('./lib/system-config-runtime');
 const {
   buildCompanyIdentityChecklist,
+  buildCloudflareWebsitePlan,
   buildCompanySetupPlan,
   normalizeCompanyDnsTargetInput,
   parseCompanyDnsTarget,
@@ -769,6 +770,7 @@ registerEtherealRoutes(app, {
   buildTokenEcosystemBlueprint,
   buildTokenEcosystemProjectBlueprint,
   buildTokenEcosystemWorkspaceFiles,
+  buildCloudflareWebsitePlan,
   normalizeTokenEcosystemProjectInput,
   commandTemplates,
   getGitStatusSnapshot,

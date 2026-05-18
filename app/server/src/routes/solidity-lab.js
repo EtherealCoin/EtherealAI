@@ -16,8 +16,12 @@ function registerSolidityLabRoutes(app, {
   buildTokenEcosystemBlueprint,
   buildTokenEcosystemProjectBlueprint,
   buildTokenEcosystemWorkspaceFiles,
+  buildCloudflareWebsitePlan,
   normalizeTokenEcosystemProjectInput,
+  normalizeCompanyDnsTargetInput,
   parseTokenEcosystemProject,
+  parseCompanyDnsTarget,
+  readCompanyIdentity,
   ensureWorkspacesDir,
   slugify,
   workspacesDir,
@@ -124,6 +128,14 @@ function registerSolidityLabRoutes(app, {
          LIMIT 500`
       )
     ]);
+    const cloudflareDnsRows = await dbAll(
+      `SELECT *
+       FROM company_dns_targets
+       WHERE notes LIKE ?
+       ORDER BY updated_at DESC, id DESC
+       LIMIT 100`,
+      [`%tokenProjectId:${project.id}%`]
+    );
     const rebalanceBatches = rebalanceRows.map(row => ({
       id: row.id,
       name: row.name,
@@ -144,6 +156,7 @@ function registerSolidityLabRoutes(app, {
       .map(parseLocalSocialPost)
       .filter(post => Number(post.metadata?.tokenEcosystemProjectId) === Number(project.id));
     const fileProposals = proposalRows.map(parseFileProposal);
+    const cloudflareDnsTargets = cloudflareDnsRows.map(parseCompanyDnsTarget);
 
     return {
       project,
@@ -153,14 +166,17 @@ function registerSolidityLabRoutes(app, {
       rebalanceBatches,
       draftOrderIntents,
       socialDrafts,
+      cloudflareDnsTargets,
       counts: {
         fileProposals: fileProposals.length,
         rebalanceBatches: rebalanceBatches.length,
         draftOrderIntents: draftOrderIntents.length,
-        socialDrafts: socialDrafts.length
+        socialDrafts: socialDrafts.length,
+        cloudflareDnsTargets: cloudflareDnsTargets.length
       },
       nextLocalActions: [
         'Generate or refresh the token ecosystem workspace.',
+        'Generate or refresh the Cloudflare website DNS plan.',
         'Run a rebalance batch with this token ecosystem project ID.',
         'Create draft order intents from qualifying paper candidates.',
         'Create local Social Ops campaign drafts from the linked rebalance batch.',
@@ -470,6 +486,78 @@ function registerSolidityLabRoutes(app, {
       });
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/token-ecosystem-projects/:id/cloudflare-dns-plan', requireAuth, async (req, res) => {
+    try {
+      const project = await getTokenEcosystemProject(req.params.id);
+
+      if (!project) {
+        return res.status(404).json({ error: 'Token ecosystem project not found' });
+      }
+
+      const identity = readCompanyIdentity();
+      const plan = buildCloudflareWebsitePlan(project, identity);
+      const savedTargets = [];
+      const skippedTargets = [];
+
+      for (const target of plan.dnsTargets) {
+        const normalized = normalizeCompanyDnsTargetInput(target, identity);
+        const existing = await dbGet(
+          `SELECT *
+           FROM company_dns_targets
+           WHERE domain = ? AND record_type = ? AND host = ? AND value = ? AND purpose = ?
+           ORDER BY id DESC
+           LIMIT 1`,
+          [
+            normalized.domain,
+            normalized.recordType,
+            normalized.host,
+            normalized.value,
+            normalized.purpose
+          ]
+        );
+
+        if (existing) {
+          skippedTargets.push(parseCompanyDnsTarget(existing));
+          continue;
+        }
+
+        const result = await dbRun(
+          `INSERT INTO company_dns_targets
+             (user_id, domain, record_type, host, value, purpose, status, notes, local_only, external_mutation_enabled)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0)`,
+          [
+            req.session.userId || null,
+            normalized.domain,
+            normalized.recordType,
+            normalized.host,
+            normalized.value,
+            normalized.purpose,
+            normalized.status,
+            normalized.notes
+          ]
+        );
+        savedTargets.push(parseCompanyDnsTarget(await dbGet(
+          'SELECT * FROM company_dns_targets WHERE id = ?',
+          [result.lastID]
+        )));
+      }
+
+      res.status(201).json({
+        project,
+        plan,
+        savedTargets,
+        skippedTargets,
+        localOnly: true,
+        externalMutationEnabled: false,
+        cloudflareApiCallsEnabled: false,
+        credentialLoadingEnabled: false,
+        emailRoutingPreserved: true
+      });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
     }
   });
 

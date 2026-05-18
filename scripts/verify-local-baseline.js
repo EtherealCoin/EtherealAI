@@ -2234,6 +2234,7 @@ function checkCompanyIdentityModule() {
   const {
     buildCompanyIdentityChecklist,
     buildCompanySetupPlan,
+    buildCloudflareWebsitePlan,
     normalizeCompanyDnsTargetInput,
     parseCompanyDnsTarget,
     normalizeCompanyIdentity
@@ -2294,6 +2295,7 @@ function checkCompanyIdentityModule() {
     updated_at: '2026-05-17 10:00:00'
   });
   const setupPlan = buildCompanySetupPlan(identity, [parsedDnsTarget]);
+  const websitePlan = buildCloudflareWebsitePlan({ id: 77, name: 'EtherealAI' }, identity);
 
   if (
     identity.localOnly !== true
@@ -2321,6 +2323,13 @@ function checkCompanyIdentityModule() {
     || setupPlan.cloudflareAccessPlan?.recommendedToken?.resourceScope !== 'etherealdigital.ai zone only'
     || !setupPlan.cloudflareAccessPlan?.manualSteps?.some(step => step.id === 'rotate_password' && step.status === 'owner_action_required')
     || setupPlan.cloudflareAccessPlan?.secretReferenceTemplate?.referenceName !== 'etherealai/cloudflare/dns/etherealdigital.ai'
+    || websitePlan.primaryFqdn !== 'etherealdigital.ai'
+    || websitePlan.pagesDevTarget !== 'etherealai-etherealai.pages.dev'
+    || websitePlan.dnsTargets?.length !== 4
+    || !websitePlan.dnsTargets.some(target => target.host === '@' && target.purpose === 'website' && target.notes.includes('tokenProjectId:77'))
+    || !websitePlan.dnsTargets.some(target => target.host === 'app' && target.purpose === 'app_backend')
+    || websitePlan.emailRouting?.primaryMailbox !== 'patrick@etherealdigital.ai'
+    || websitePlan.safetyBoundary?.cloudflareApiCallsEnabled !== false
   ) {
     fail('company identity module did not preserve local-only Cloudflare domain/email identity behavior');
   }
@@ -4802,6 +4811,7 @@ function checkSolidityLabModule() {
     || tokenProjectBlueprint.safetyBoundary?.externalPostingEnabled !== false
     || !tokenProjectBlueprint.project?.featureSelections?.includes('arbitrage-aware strategy design')
     || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'website/SITE_MAP.md')
+    || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'website/CLOUDFLARE_DEPLOYMENT_PLAN.md')
     || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'whitepaper/WHITEPAPER_DRAFT.md')
     || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'automation/CROSS_CHAIN_ARBITRAGE_DESIGN.md')
     || !tokenProjectWorkspaceFiles.every(file => file.content.includes('No wallet private keys') || file.relativePath !== 'README.md')
@@ -5958,12 +5968,14 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('Update Selected Project')
     || !solidity.includes('Load For Edit')
     || !solidity.includes('Generate Workspace')
+    || !solidity.includes('Cloudflare Plan')
     || !solidity.includes('Artifact Manifest')
     || !solidity.includes('Archive Project')
     || !solidity.includes('/api/v1/token-ecosystem-projects')
     || !solidity.includes("method: 'PATCH'")
     || !solidity.includes("method: 'DELETE'")
     || !solidity.includes('/workspace')
+    || !solidity.includes('/cloudflare-dns-plan')
     || !solidity.includes('/artifacts')
     || !solidity.includes('Passive income / rewards model')
     || !solidity.includes('NFT utility upgrades')
@@ -7502,6 +7514,7 @@ async function runServerApiChecks() {
     || !tokenWorkspace.body.workspace?.path
     || tokenWorkspaceFiles.length < 8
     || !tokenWorkspaceFiles.some(file => file.relative_path === 'website/SITE_MAP.md')
+    || !tokenWorkspaceFiles.some(file => file.relative_path === 'website/CLOUDFLARE_DEPLOYMENT_PLAN.md')
     || !tokenWorkspaceFiles.some(file => file.relative_path === 'whitepaper/WHITEPAPER_DRAFT.md')
     || !tokenWorkspaceFiles.some(file => file.relative_path === 'social/SOCIAL_LAUNCH_PLAN.md')
     || !tokenWorkspaceFiles.some(file => file.relative_path === 'listing/LISTING_EVIDENCE_PACKET.md')
@@ -7509,6 +7522,28 @@ async function runServerApiChecks() {
     || !['workspace_ready', 'workspace_proposed'].includes(tokenWorkspace.body.project?.status)
   ) {
     fail('token ecosystem project workspace generation did not produce the expected local artifact set');
+  }
+
+  const cloudflarePlan = await fetchJson(`${baseUrl}/api/v1/token-ecosystem-projects/${tokenProject.body.project.id}/cloudflare-dns-plan`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie)
+  });
+
+  const cloudflareTrackedTargetCount = (cloudflarePlan.body.savedTargets?.length || 0)
+    + (cloudflarePlan.body.skippedTargets?.length || 0);
+
+  if (
+    cloudflarePlan.body.localOnly !== true
+    || cloudflarePlan.body.externalMutationEnabled !== false
+    || cloudflarePlan.body.cloudflareApiCallsEnabled !== false
+    || cloudflarePlan.body.credentialLoadingEnabled !== false
+    || cloudflarePlan.body.emailRoutingPreserved !== true
+    || cloudflarePlan.body.plan?.primaryDomain !== 'etherealdigital.ai'
+    || cloudflarePlan.body.plan?.dnsTargets?.length !== 4
+    || cloudflareTrackedTargetCount < 4
+    || ![...(cloudflarePlan.body.savedTargets || []), ...(cloudflarePlan.body.skippedTargets || [])].some(target => target.host === 'app' && target.purpose === 'app_backend')
+  ) {
+    fail('token ecosystem Cloudflare DNS plan route did not preserve local-only website DNS planning');
   }
 
   const tokenArtifactManifest = await fetchJson(`${baseUrl}/api/v1/token-ecosystem-projects/${tokenProject.body.project.id}/artifacts`, {
@@ -7522,6 +7557,7 @@ async function runServerApiChecks() {
     || tokenArtifactManifest.body.manifest?.project?.id !== tokenProject.body.project.id
     || tokenArtifactManifest.body.manifest?.workspace?.id !== tokenWorkspace.body.workspace?.id
     || tokenArtifactManifest.body.manifest?.counts?.fileProposals < 8
+    || tokenArtifactManifest.body.manifest?.counts?.cloudflareDnsTargets < 4
     || tokenArtifactManifest.body.manifest?.safetyBoundary?.deploymentEnabled !== false
     || tokenArtifactManifest.body.manifest?.safetyBoundary?.publicPostingEnabled !== false
     || tokenArtifactManifest.body.manifest?.safetyBoundary?.liveTradingEnabled !== false
@@ -8215,6 +8251,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.method === 'PATCH' && route.path === '/api/v1/token-ecosystem-projects/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'DELETE' && route.path === '/api/v1/token-ecosystem-projects/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects/:id/workspace' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects/:id/cloudflare-dns-plan' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-capability-path' && route.file === 'app/server/src/routes/bot-automation.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-plans' && route.file === 'app/server/src/routes/bot-automation.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/bot-automation-plans' && route.file === 'app/server/src/routes/bot-automation.js')

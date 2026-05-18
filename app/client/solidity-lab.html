@@ -532,6 +532,7 @@
                         <button type="button" data-project-blueprint-id="${project.id}">Open Blueprint</button>
                         <button type="button" data-project-edit-id="${project.id}">Load For Edit</button>
                         <button type="button" data-project-workspace-id="${project.id}">Generate Workspace</button>
+                        <button type="button" data-project-cloudflare-id="${project.id}">Cloudflare Plan</button>
                         <button type="button" data-project-artifacts-id="${project.id}">Artifact Manifest</button>
                         <button type="button" data-project-archive-id="${project.id}">Archive Project</button>
                     </div>
@@ -587,6 +588,28 @@
                     await loadTokenEcosystemProjects();
                 });
             });
+            container.querySelectorAll('button[data-project-cloudflare-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const status = document.getElementById('token-ecosystem-project-status');
+                    status.textContent = 'Saving local Cloudflare website DNS plan...';
+                    const response = await fetch(`/api/v1/token-ecosystem-projects/${button.dataset.projectCloudflareId}/cloudflare-dns-plan`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        status.textContent = data.error || 'Cloudflare DNS plan failed.';
+                        return;
+                    }
+
+                    status.textContent = `Cloudflare plan saved: ${data.savedTargets?.length || 0} new DNS target(s), ${data.skippedTargets?.length || 0} already tracked.`;
+                    document.getElementById('ecosystem-output').textContent = JSON.stringify(data, null, 2);
+                });
+            });
             container.querySelectorAll('button[data-project-artifacts-id]').forEach(button => {
                 button.addEventListener('click', async () => {
                     const status = document.getElementById('token-ecosystem-project-status');
@@ -599,7 +622,7 @@
                         return;
                     }
 
-                    status.textContent = `Artifact manifest: ${data.manifest.counts.fileProposals} file proposal(s), ${data.manifest.counts.rebalanceBatches} rebalance batch(es), ${data.manifest.counts.socialDrafts} social draft(s).`;
+                    status.textContent = `Artifact manifest: ${data.manifest.counts.fileProposals} file proposal(s), ${data.manifest.counts.rebalanceBatches} rebalance batch(es), ${data.manifest.counts.socialDrafts} social draft(s), ${data.manifest.counts.cloudflareDnsTargets} Cloudflare DNS target(s).`;
                     document.getElementById('ecosystem-output').textContent = JSON.stringify(data.manifest, null, 2);
                 });
             });

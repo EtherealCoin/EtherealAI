@@ -1516,6 +1516,33 @@ ${(website.roadmap || []).map(item => `- ${item.phase}: ${item.title} - ${item.o
 `
     },
     {
+      relativePath: 'website/CLOUDFLARE_DEPLOYMENT_PLAN.md',
+      content: `# Cloudflare Website Deployment Plan
+
+Status: local planning only
+
+## Intended Cloudflare Use
+
+- Host the generated token website/dapp shell through Cloudflare Pages or an owner-selected static host.
+- Track planned DNS records in EtherealAI before any Cloudflare change.
+- Preserve existing company email routing for patrick@etherealdigital.ai.
+
+## Suggested Domains
+
+- Primary site: project slug under etherealdigital.ai, or the root domain for the main EtherealAI token site.
+- WWW companion: redirects or mirrors the primary site.
+- App subdomain: dapp shell and holder dashboard.
+- Docs subdomain: whitepaper, roadmap, and public documentation.
+
+## Safety Boundary
+
+- No Cloudflare password is stored here.
+- No Cloudflare API token is stored here.
+- No DNS mutation is performed by this workspace.
+- Add custom domains in Cloudflare Pages before relying on CNAME records.
+`
+    },
+    {
       relativePath: 'whitepaper/WHITEPAPER_DRAFT.md',
       content: `# ${whitepaper.draft?.title || `${tokenName} Whitepaper Draft`}
 
