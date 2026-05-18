@@ -483,6 +483,7 @@
                         <button type="button" data-project-blueprint-id="${project.id}">Open Blueprint</button>
                         <button type="button" data-project-edit-id="${project.id}">Load For Edit</button>
                         <button type="button" data-project-workspace-id="${project.id}">Generate Workspace</button>
+                        <button type="button" data-project-artifacts-id="${project.id}">Artifact Manifest</button>
                         <button type="button" data-project-archive-id="${project.id}">Archive Project</button>
                     </div>
                 </article>
@@ -535,6 +536,22 @@
 
                     status.textContent = `Workspace ready: ${data.workspace.path} · applied ${data.applied?.length || 0} file(s).`;
                     await loadTokenEcosystemProjects();
+                });
+            });
+            container.querySelectorAll('button[data-project-artifacts-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const status = document.getElementById('token-ecosystem-project-status');
+                    status.textContent = 'Loading local token ecosystem artifact manifest...';
+                    const response = await fetch(`/api/v1/token-ecosystem-projects/${button.dataset.projectArtifactsId}/artifacts`);
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        status.textContent = data.error || 'Artifact manifest failed.';
+                        return;
+                    }
+
+                    status.textContent = `Artifact manifest: ${data.manifest.counts.fileProposals} file proposal(s), ${data.manifest.counts.rebalanceBatches} rebalance batch(es), ${data.manifest.counts.socialDrafts} social draft(s).`;
+                    document.getElementById('ecosystem-output').textContent = JSON.stringify(data.manifest, null, 2);
                 });
             });
             container.querySelectorAll('button[data-project-archive-id]').forEach(button => {

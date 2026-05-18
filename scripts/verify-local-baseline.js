@@ -5897,11 +5897,13 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('Update Selected Project')
     || !solidity.includes('Load For Edit')
     || !solidity.includes('Generate Workspace')
+    || !solidity.includes('Artifact Manifest')
     || !solidity.includes('Archive Project')
     || !solidity.includes('/api/v1/token-ecosystem-projects')
     || !solidity.includes("method: 'PATCH'")
     || !solidity.includes("method: 'DELETE'")
     || !solidity.includes('/workspace')
+    || !solidity.includes('/artifacts')
     || !solidity.includes('Passive income / rewards model')
     || !solidity.includes('NFT utility upgrades')
     || !solidity.includes('Top-200 rebalance bot')
@@ -7239,7 +7241,7 @@ async function runServerApiChecks() {
     },
     {
       path: '/solidity-lab',
-      requiredText: ['MVP 99% · Local E2E 95%', 'Proof packet', 'Deployment Boundary', 'no mainnet or testnet broadcast', 'Token Ecosystem Studio', 'Token Ecosystem Projects', 'Save Ecosystem Project', 'Update Selected Project', 'Multi-Chain Token Builder', 'Listing Readiness']
+      requiredText: ['MVP 99% · Local E2E 95%', 'Proof packet', 'Deployment Boundary', 'no mainnet or testnet broadcast', 'Token Ecosystem Studio', 'Token Ecosystem Projects', 'Save Ecosystem Project', 'Update Selected Project', 'Artifact Manifest', 'Multi-Chain Token Builder', 'Listing Readiness']
     },
     {
       path: '/social-ops',
@@ -7413,6 +7415,24 @@ async function runServerApiChecks() {
     || !['workspace_ready', 'workspace_proposed'].includes(tokenWorkspace.body.project?.status)
   ) {
     fail('token ecosystem project workspace generation did not produce the expected local artifact set');
+  }
+
+  const tokenArtifactManifest = await fetchJson(`${baseUrl}/api/v1/token-ecosystem-projects/${tokenProject.body.project.id}/artifacts`, {
+    headers: authHeaders
+  });
+
+  if (
+    tokenArtifactManifest.body.localOnly !== true
+    || tokenArtifactManifest.body.externalActionsEnabled !== false
+    || tokenArtifactManifest.body.liveExecutionEnabled !== false
+    || tokenArtifactManifest.body.manifest?.project?.id !== tokenProject.body.project.id
+    || tokenArtifactManifest.body.manifest?.workspace?.id !== tokenWorkspace.body.workspace?.id
+    || tokenArtifactManifest.body.manifest?.counts?.fileProposals < 8
+    || tokenArtifactManifest.body.manifest?.safetyBoundary?.deploymentEnabled !== false
+    || tokenArtifactManifest.body.manifest?.safetyBoundary?.publicPostingEnabled !== false
+    || tokenArtifactManifest.body.manifest?.safetyBoundary?.liveTradingEnabled !== false
+  ) {
+    fail('token ecosystem artifact manifest did not link local workspace/artifact state safely');
   }
 
   const archivedTokenProject = await fetchJson(`${baseUrl}/api/v1/token-ecosystem-projects/${tokenProject.body.project.id}`, {
@@ -8092,6 +8112,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/token-ecosystem-projects' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/token-ecosystem-projects/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/token-ecosystem-projects/:id/artifacts' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'PATCH' && route.path === '/api/v1/token-ecosystem-projects/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'DELETE' && route.path === '/api/v1/token-ecosystem-projects/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects/:id/workspace' && route.file === 'app/server/src/routes/solidity-lab.js')

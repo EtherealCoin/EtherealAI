@@ -35,11 +35,146 @@ function registerSolidityLabRoutes(app, {
     }
   });
 
+  function safeJsonParse(value, fallback = {}) {
+    try {
+      return JSON.parse(value || JSON.stringify(fallback));
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function parseLocalSocialPost(row = {}) {
+    return {
+      id: row.id,
+      platform: row.platform,
+      account_label: row.account_label,
+      content: row.content,
+      status: row.status,
+      scheduled_for: row.scheduled_for,
+      metadata: safeJsonParse(row.metadata_json, {}),
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    };
+  }
+
+  function parseLocalOrderIntent(row = {}) {
+    return {
+      id: row.id,
+      market_symbol: row.market_symbol,
+      side: row.side,
+      order_type: row.order_type,
+      quantity: row.quantity,
+      limit_price: row.limit_price,
+      status: row.status,
+      reason: row.reason,
+      payload: safeJsonParse(row.payload_json, {}),
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    };
+  }
+
   async function getTokenEcosystemProject(id) {
     return parseTokenEcosystemProject(await dbGet(
       'SELECT * FROM token_ecosystem_projects WHERE id = ?',
       [id]
     ));
+  }
+
+  async function buildTokenProjectArtifactManifest(project) {
+    const workspaceSlug = `token-ecosystem-${project.id}-${slugify(project.name) || 'project'}`.slice(0, 80);
+    const workspace = await dbGet('SELECT * FROM workspaces WHERE slug = ?', [workspaceSlug]);
+    const [
+      contractSpec,
+      proposalRows,
+      rebalanceRows,
+      orderIntentRows,
+      socialRows
+    ] = await Promise.all([
+      project.contract_spec_id
+        ? dbGet('SELECT * FROM solidity_contract_specs WHERE id = ?', [project.contract_spec_id])
+        : Promise.resolve(null),
+      workspace
+        ? dbAll(
+          `SELECT *
+           FROM file_write_proposals
+           WHERE workspace_id = ?
+           ORDER BY id DESC
+           LIMIT 100`,
+          [workspace.id]
+        )
+        : Promise.resolve([]),
+      dbAll(
+        `SELECT *
+         FROM rebalance_simulation_batches
+         WHERE token_ecosystem_project_id = ?
+         ORDER BY created_at DESC, id DESC
+         LIMIT 100`,
+        [project.id]
+      ),
+      dbAll(
+        `SELECT *
+         FROM trade_order_intents
+         ORDER BY created_at DESC, id DESC
+         LIMIT 500`
+      ),
+      dbAll(
+        `SELECT *
+         FROM social_posts
+         ORDER BY created_at DESC, id DESC
+         LIMIT 500`
+      )
+    ]);
+    const rebalanceBatches = rebalanceRows.map(row => ({
+      id: row.id,
+      name: row.name,
+      status: row.status,
+      strategy_type: row.strategy_type,
+      result: safeJsonParse(row.result_json, {}),
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    }));
+    const rebalanceBatchIds = new Set(rebalanceBatches.map(batch => Number(batch.id)));
+    const draftOrderIntents = orderIntentRows
+      .map(parseLocalOrderIntent)
+      .filter(intent => (
+        Number(intent.payload?.tokenEcosystemProjectId) === Number(project.id)
+        || rebalanceBatchIds.has(Number(intent.payload?.rebalanceBatchId))
+      ));
+    const socialDrafts = socialRows
+      .map(parseLocalSocialPost)
+      .filter(post => Number(post.metadata?.tokenEcosystemProjectId) === Number(project.id));
+    const fileProposals = proposalRows.map(parseFileProposal);
+
+    return {
+      project,
+      workspace: workspace || null,
+      contractSpec: contractSpec ? parseSolidityContractSpec(contractSpec) : null,
+      fileProposals,
+      rebalanceBatches,
+      draftOrderIntents,
+      socialDrafts,
+      counts: {
+        fileProposals: fileProposals.length,
+        rebalanceBatches: rebalanceBatches.length,
+        draftOrderIntents: draftOrderIntents.length,
+        socialDrafts: socialDrafts.length
+      },
+      nextLocalActions: [
+        'Generate or refresh the token ecosystem workspace.',
+        'Run a rebalance batch with this token ecosystem project ID.',
+        'Create draft order intents from qualifying paper candidates.',
+        'Create local Social Ops campaign drafts from the linked rebalance batch.',
+        'Export the manifest for owner review before any external action.'
+      ],
+      safetyBoundary: {
+        localOnly: true,
+        externalActionsEnabled: false,
+        deploymentEnabled: false,
+        publicPostingEnabled: false,
+        liveTradingEnabled: false,
+        credentialLoadingEnabled: false
+      }
+    };
   }
 
   async function saveTokenEcosystemProjectBlueprint(project) {
@@ -180,6 +315,25 @@ function registerSolidityLabRoutes(app, {
       }
 
       res.json({ project });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/token-ecosystem-projects/:id/artifacts', requireAuth, async (req, res) => {
+    try {
+      const project = await getTokenEcosystemProject(req.params.id);
+
+      if (!project) {
+        return res.status(404).json({ error: 'Token ecosystem project not found' });
+      }
+
+      res.json({
+        manifest: await buildTokenProjectArtifactManifest(project),
+        localOnly: true,
+        externalActionsEnabled: false,
+        liveExecutionEnabled: false
+      });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
