@@ -23,6 +23,54 @@ function toSolidityStringLiteral(value) {
   return JSON.stringify(String(value || ''));
 }
 
+const SOLIDITY_FUNGIBLE_TYPES = new Set(['erc20', 'bep20', 'trc20']);
+const SOLIDITY_NFT_TYPES = new Set(['erc721', 'trc721']);
+const SOLIDITY_MULTI_TOKEN_TYPES = new Set(['erc1155']);
+
+function isSolidityLikeContractType(type = '') {
+  const normalized = String(type || '').toLowerCase();
+
+  return SOLIDITY_FUNGIBLE_TYPES.has(normalized)
+    || SOLIDITY_NFT_TYPES.has(normalized)
+    || SOLIDITY_MULTI_TOKEN_TYPES.has(normalized)
+    || normalized === 'generic';
+}
+
+function getTokenTypeLabel(type = '') {
+  const labels = {
+    erc20: 'ERC20 / EVM fungible token',
+    bep20: 'BEP20 / BNB-compatible token',
+    erc721: 'ERC721 / EVM NFT',
+    erc1155: 'ERC1155 / EVM multi-token',
+    'spl-token': 'Solana SPL Token',
+    'token-2022': 'Solana Token-2022',
+    'metaplex-nft': 'Solana Metaplex NFT',
+    trc20: 'TRC20 token',
+    trc721: 'TRC721 NFT',
+    'move-coin': 'Move coin/resource token',
+    'move-nft': 'Move object/digital asset NFT',
+    cw20: 'CosmWasm CW20 token',
+    cw721: 'CosmWasm CW721 NFT',
+    'native-denom': 'Cosmos native denom',
+    psp22: 'Substrate PSP22 / pallet asset',
+    psp34: 'Substrate PSP34 / NFT',
+    nep141: 'NEAR NEP-141 token',
+    nep171: 'NEAR NEP-171 NFT',
+    'cardano-native-asset': 'Cardano native asset',
+    'algorand-asa': 'Algorand ASA',
+    'stellar-asset': 'Stellar issued asset',
+    'xrp-issued-currency': 'XRP Ledger issued currency',
+    'hedera-hts': 'Hedera Token Service asset',
+    'tezos-fa2': 'Tezos FA1.2 / FA2',
+    'flow-ft': 'Flow fungible token',
+    'ton-jetton': 'TON Jetton',
+    'bitcoin-rune': 'Bitcoin Rune / BRC-20 plan',
+    generic: 'generic / chain-specific contract'
+  };
+
+  return labels[String(type || '').toLowerCase()] || String(type || 'chain-specific token');
+}
+
 function parseSolidityContractSpec(row) {
   if (!row) {
     return null;
@@ -47,6 +95,31 @@ function buildSolidityStarter(spec) {
   const version = String(spec.solidity_version || '0.8.24').replace(/[^\d.]/g, '') || '0.8.24';
   const features = String(spec.features || '').trim();
   const tokenSymbol = contractName.slice(0, 8).toUpperCase();
+  const contractType = String(spec.contract_type || 'generic').toLowerCase();
+
+  if (!isSolidityLikeContractType(contractType)) {
+    return `# ${spec.name} Local Token Scaffold Plan
+
+Draft only. This is a chain-specific token plan, not a Solidity contract.
+
+- Token standard: ${getTokenTypeLabel(contractType)}
+- Target blockchain: ${spec.network || 'custom-chain'}
+- Requested features: ${features || 'Define token utility, supply, roles, and wallet/explorer requirements.'}
+
+## Local Build Requirements
+
+1. Confirm the chain standard and official tooling.
+2. Create a local/testnet-only token scaffold.
+3. Add unit or framework-native tests.
+4. Document issuer/admin/update roles.
+5. Add block explorer, wallet, RPC, and listing evidence requirements.
+6. Keep private keys, wallet mnemonics, API keys, and deploy keys outside EtherealAI.
+
+## Live Boundary
+
+No mainnet, testnet, devnet, wallet signing, liquidity creation, or listing submission is enabled from this scaffold.
+`;
+  }
   const header = [
     '// SPDX-License-Identifier: MIT',
     `pragma solidity ^${version};`,
@@ -55,7 +128,7 @@ function buildSolidityStarter(spec) {
     features ? `// Requested features: ${features.replace(/\r?\n/g, ' ')}` : ''
   ].filter(Boolean).join('\n');
 
-  if (spec.contract_type === 'erc20') {
+  if (SOLIDITY_FUNGIBLE_TYPES.has(contractType)) {
     return `${header}
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -72,7 +145,7 @@ contract ${contractName} is ERC20, Ownable {
 `;
   }
 
-  if (spec.contract_type === 'erc721') {
+  if (SOLIDITY_NFT_TYPES.has(contractType)) {
     return `${header}
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -90,6 +163,25 @@ contract ${contractName} is ERC721, Ownable {
         tokenId = nextTokenId;
         nextTokenId += 1;
         _safeMint(to, tokenId);
+    }
+}
+`;
+  }
+
+  if (SOLIDITY_MULTI_TOKEN_TYPES.has(contractType)) {
+    return `${header}
+
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract ${contractName} is ERC1155, Ownable {
+    constructor(address initialOwner, string memory baseUri)
+        ERC1155(baseUri)
+        Ownable(initialOwner)
+    {}
+
+    function mint(address to, uint256 id, uint256 amount, bytes calldata data) external onlyOwner {
+        _mint(to, id, amount, data);
     }
 }
 `;
@@ -125,12 +217,70 @@ function buildSolidityProjectFiles(spec) {
   const contractFile = `contracts/${contractName}.sol`;
   const source = buildSolidityStarter(spec);
   const packageName = slugifyPackageName(spec.name) || 'local-solidity-project';
-  const deployArgs = spec.contract_type === 'erc20'
+  const contractType = String(spec.contract_type || 'generic').toLowerCase();
+
+  if (!isSolidityLikeContractType(contractType)) {
+    return [
+      {
+        relativePath: 'README.md',
+        content: `# ${spec.name}
+
+Local chain-specific token workspace generated from Solidity Lab spec #${spec.id}.
+
+## Token Target
+
+- Token standard: ${getTokenTypeLabel(contractType)}
+- Target blockchain: ${spec.network}
+- Solidity version field: ${spec.solidity_version} (kept for EVM compatibility; this lane may not use Solidity)
+
+## Required Before Any Live Phase
+
+- Confirm official chain docs and token standard.
+- Create local/testnet-only scaffold with the chain's official tooling.
+- Add framework-native tests.
+- Document issuer/admin/update roles.
+- Document explorer, wallet, RPC, indexer, and listing evidence.
+- Do not put wallet private keys, seed phrases, API keys, deploy keys, or exchange keys in this folder.
+`
+      },
+      {
+        relativePath: 'TOKEN_STANDARD_PLAN.md',
+        content: source
+      },
+      {
+        relativePath: 'LOCAL_TEST_PLAN.md',
+        content: `# Local Test Plan
+
+1. Install official tooling for ${spec.network}.
+2. Run a local simulator, localnet, emulator, or official test framework.
+3. Create the token/mint/asset only in local or test mode.
+4. Verify supply, issuer/admin roles, metadata, transfer rules, freeze/pause rules, and explorer/indexer visibility.
+5. Record evidence before any future deployment approval.
+
+Live deployment remains disabled.
+`
+      },
+      {
+        relativePath: '.gitignore',
+        content: `.env
+.env.*
+node_modules/
+target/
+build/
+dist/
+`
+      }
+    ];
+  }
+
+  const deployArgs = SOLIDITY_FUNGIBLE_TYPES.has(contractType)
     ? 'owner.address, ethers.parseEther("1000000")'
-    : spec.contract_type === 'erc721'
+    : SOLIDITY_NFT_TYPES.has(contractType)
       ? 'owner.address'
+      : SOLIDITY_MULTI_TOKEN_TYPES.has(contractType)
+        ? 'owner.address, "ipfs://local-placeholder/{id}.json"'
       : '';
-  const ownerExpectation = spec.contract_type === 'generic'
+  const ownerExpectation = contractType === 'generic'
     ? 'expect(await contract.owner()).to.equal(owner.address);'
     : 'expect(await contract.owner()).to.equal(owner.address);';
 
@@ -248,6 +398,34 @@ artifacts/
 }
 
 function reviewSoliditySource(spec, source) {
+  if (!isSolidityLikeContractType(spec.contract_type)) {
+    const checks = [
+      {
+        id: 'chain_specific_plan',
+        label: 'Chain-specific token plan generated',
+        passed: /Local Token Scaffold Plan/i.test(source)
+      },
+      {
+        id: 'no_secret_markers',
+        label: 'No embedded credential values',
+        passed: !/(-----BEGIN|sk-[a-z0-9]{20,}|xprv|mnemonic:\s*\S|seed phrase:\s*\S)/i.test(source)
+      },
+      {
+        id: 'live_boundary',
+        label: 'Live deployment boundary is explicit',
+        passed: /No mainnet|Live Boundary|wallet signing/i.test(source)
+      }
+    ];
+    const failed = checks.filter(check => !check.passed);
+
+    return {
+      status: failed.length ? 'review' : 'planning',
+      checks,
+      failures: failed.map(check => check.id),
+      note: 'Non-EVM planning review only. Generate the chain-specific scaffold, tests, and official-tooling workflow before any deployment phase.'
+    };
+  }
+
   const checks = [
     {
       id: 'spdx',
@@ -276,7 +454,7 @@ function reviewSoliditySource(spec, source) {
     }
   ];
 
-  if (spec.contract_type === 'erc20') {
+  if (SOLIDITY_FUNGIBLE_TYPES.has(String(spec.contract_type || '').toLowerCase())) {
     checks.push({
       id: 'erc20_import',
       label: 'ERC20 import is present',
@@ -289,7 +467,7 @@ function reviewSoliditySource(spec, source) {
     });
   }
 
-  if (spec.contract_type === 'erc721') {
+  if (SOLIDITY_NFT_TYPES.has(String(spec.contract_type || '').toLowerCase())) {
     checks.push({
       id: 'erc721_import',
       label: 'ERC721 import is present',
@@ -310,6 +488,8 @@ function reviewSoliditySource(spec, source) {
 module.exports = {
   toSolidityIdentifier,
   toSolidityStringLiteral,
+  isSolidityLikeContractType,
+  getTokenTypeLabel,
   parseSolidityContractSpec,
   buildSolidityStarter,
   buildSolidityProjectFiles,

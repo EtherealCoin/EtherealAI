@@ -522,14 +522,43 @@ function registerSolidityLabRoutes(app, {
       const solidityVersion = String(req.body?.solidityVersion || '0.8.24').trim().slice(0, 20);
       const features = String(req.body?.features || '').trim().slice(0, 4000);
       const riskNotes = String(req.body?.riskNotes || '').trim().slice(0, 4000);
-      const allowedTypes = new Set(['erc20', 'erc721', 'generic']);
+      const allowedTypes = new Set([
+        'erc20',
+        'bep20',
+        'erc721',
+        'erc1155',
+        'spl-token',
+        'token-2022',
+        'metaplex-nft',
+        'trc20',
+        'trc721',
+        'move-coin',
+        'move-nft',
+        'cw20',
+        'cw721',
+        'native-denom',
+        'psp22',
+        'psp34',
+        'nep141',
+        'nep171',
+        'cardano-native-asset',
+        'algorand-asa',
+        'stellar-asset',
+        'xrp-issued-currency',
+        'hedera-hts',
+        'tezos-fa2',
+        'flow-ft',
+        'ton-jetton',
+        'bitcoin-rune',
+        'generic'
+      ]);
 
       if (!name) {
         return res.status(400).json({ error: 'Contract name is required' });
       }
 
       if (!allowedTypes.has(contractType)) {
-        return res.status(400).json({ error: 'Contract type must be erc20, erc721, or generic' });
+        return res.status(400).json({ error: 'Contract type must be one of the supported local token standards.' });
       }
 
       const result = await dbRun(

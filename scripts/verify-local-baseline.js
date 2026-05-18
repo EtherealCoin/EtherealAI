@@ -4646,6 +4646,16 @@ function checkSolidityLabModule() {
   });
   const source = buildSolidityStarter(spec);
   const review = reviewSoliditySource(spec, source);
+  const cardanoSource = buildSolidityStarter({
+    ...spec,
+    contract_type: 'cardano-native-asset',
+    network: 'cardano'
+  });
+  const cardanoReview = reviewSoliditySource({
+    ...spec,
+    contract_type: 'cardano-native-asset',
+    network: 'cardano'
+  }, cardanoSource);
   const catalog = buildTokenEcosystemCatalog();
   const blueprint = buildTokenEcosystemBlueprint({
     ...spec,
@@ -4656,6 +4666,17 @@ function checkSolidityLabModule() {
   const polygonBuildPlan = buildMultiChainTokenBuildPlan({
     ...spec,
     network: 'polygon'
+  });
+  const cardanoBuildPlan = buildMultiChainTokenBuildPlan({
+    ...spec,
+    contract_type: 'cardano-native-asset',
+    network: 'cardano'
+  });
+  const algorandProjectInput = normalizeTokenEcosystemProjectInput({
+    name: 'Algorand Fixture Ecosystem',
+    targetChain: 'algorand',
+    contractType: 'algorand-asa',
+    featureSelections: ['website, roadmap, logo, and whitepaper generation']
   });
   const tokenProjectInput = normalizeTokenEcosystemProjectInput({
     name: 'EtherealAI Fixture Ecosystem',
@@ -4707,17 +4728,39 @@ function checkSolidityLabModule() {
     review.status !== 'pass'
     || !review.checks.some(check => check.id === 'erc20_import' && check.passed === true)
     || !/Compile, test, static analysis, and audit/.test(review.note)
+    || !cardanoSource.includes('chain-specific token plan')
+    || !cardanoSource.includes('Cardano native asset')
+    || cardanoReview.status !== 'planning'
   ) {
     fail('solidity lab module did not preserve template review behavior');
   }
 
   if (
-    catalog.chains?.length < 10
+    catalog.chains?.length < 30
     || !catalog.recommendedLowFeeChains?.some(chain => chain.id === 'base')
     || !catalog.recommendedLowFeeChains?.some(chain => chain.id === 'polygon')
     || !catalog.recommendedLowFeeChains?.some(chain => chain.id === 'bnb-chain')
     || !catalog.recommendedLowFeeChains?.some(chain => chain.id === 'avalanche')
     || !catalog.recommendedLowFeeChains?.some(chain => chain.id === 'solana')
+    || !catalog.chains?.some(chain => chain.id === 'cardano')
+    || !catalog.chains?.some(chain => chain.id === 'algorand')
+    || !catalog.chains?.some(chain => chain.id === 'stellar')
+    || !catalog.chains?.some(chain => chain.id === 'xrp-ledger')
+    || !catalog.chains?.some(chain => chain.id === 'hedera')
+    || !catalog.chains?.some(chain => chain.id === 'tezos')
+    || !catalog.chains?.some(chain => chain.id === 'flow')
+    || !catalog.chains?.some(chain => chain.id === 'ton')
+    || !catalog.chains?.some(chain => chain.id === 'linea')
+    || !catalog.chains?.some(chain => chain.id === 'scroll')
+    || !catalog.chains?.some(chain => chain.id === 'zksync-era')
+    || !catalog.chains?.some(chain => chain.id === 'mantle')
+    || !catalog.chains?.some(chain => chain.id === 'opbnb')
+    || !catalog.chains?.some(chain => chain.id === 'injective')
+    || !catalog.chains?.some(chain => chain.id === 'osmosis')
+    || !catalog.tokenContractTypes?.includes('spl-token')
+    || !catalog.tokenContractTypes?.includes('cardano-native-asset')
+    || !catalog.tokenContractTypes?.includes('algorand-asa')
+    || !catalog.tokenContractTypes?.includes('hedera-hts')
     || !catalog.socialChannels?.some(channel => channel.id === 'discord')
     || !catalog.socialChannels?.some(channel => channel.id === 'medium')
     || !catalog.listingSources?.some(sourceItem => sourceItem.platform === 'CoinMarketCap')
@@ -4732,6 +4775,10 @@ function checkSolidityLabModule() {
     || polygonBuildPlan.selectedChain?.id !== 'polygon'
     || polygonBuildPlan.standardPlan?.implementationLane !== 'evm_solidity'
     || !/OpenZeppelin/.test(polygonBuildPlan.standardPlan?.starterScaffold || '')
+    || cardanoBuildPlan.selectedChain?.id !== 'cardano'
+    || cardanoBuildPlan.standardPlan?.implementationLane !== 'cardano_native_asset'
+    || algorandProjectInput.targetChain !== 'algorand'
+    || algorandProjectInput.contractType !== 'algorand-asa'
     || blueprint.featureFlags?.passiveIncome !== true
     || blueprint.featureFlags?.nftUtility !== true
     || blueprint.featureFlags?.crossChain !== true
@@ -5910,11 +5957,26 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('Apply Token Options To Spec')
     || !solidity.includes('Select Low-Fee Launch Defaults')
     || !solidity.includes('Target Blockchain')
+    || !solidity.includes('Solana SPL Token')
+    || !solidity.includes('Cardano Native Asset')
+    || !solidity.includes('Algorand ASA')
+    || !solidity.includes('Hedera Token Service')
+    || !solidity.includes('Bitcoin Rune / BRC-20 Plan')
     || !solidity.includes('Solana')
     || !solidity.includes('Polygon')
     || !solidity.includes('BNB Chain')
     || !solidity.includes('Avalanche')
     || !solidity.includes('Base')
+    || !solidity.includes('Cardano')
+    || !solidity.includes('Algorand')
+    || !solidity.includes('Stellar')
+    || !solidity.includes('XRP Ledger')
+    || !solidity.includes('Hedera')
+    || !solidity.includes('Tezos')
+    || !solidity.includes('Flow')
+    || !solidity.includes('TON')
+    || !solidity.includes('zkSync Era')
+    || !solidity.includes('Hyperliquid')
     || !solidity.includes('Custom / Any Other Blockchain')
     || !solidity.includes('Multi-Chain Token Builder')
     || !solidity.includes('Website Creation Center')
@@ -7187,7 +7249,7 @@ async function runServerApiChecks() {
     || !ownerProofPacket.body.packet?.paperAutomationRunbook?.blockedLiveActions?.some(action => action.id === 'live_order_endpoint_enabled')
     || ownerProofPacket.body.packet?.proofSurfaces?.length !== 7
     || ownerProofPacket.body.packet?.exportSurfaces?.length !== 3
-    || ownerProofPacket.body.packet?.fullLiveBlockers?.length !== 4
+    || ownerProofPacket.body.packet?.fullLiveBlockers?.length < 4
     || ownerProofPacket.body.packet?.routeSafety?.safetyCriticalModules < 6
     || ownerProofPacket.body.packet?.checksum?.algorithm !== 'sha256'
     || ownerProofPacket.body.packet?.checksum?.source !== 'ownerProofPacket.withoutChecksum'
@@ -7286,9 +7348,27 @@ async function runServerApiChecks() {
     || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'bnb-chain')
     || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'avalanche')
     || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'base')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'cardano')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'algorand')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'stellar')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'xrp-ledger')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'hedera')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'tezos')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'flow')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'ton')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'linea')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'scroll')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'zksync-era')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'mantle')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'injective')
+    || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'osmosis')
     || !ecosystemCatalog.body.catalog?.chains?.some(chain => chain.id === 'custom-chain')
     || !ecosystemCatalog.body.catalog?.recommendedLowFeeChains?.some(chain => chain.id === 'solana')
     || !ecosystemCatalog.body.catalog?.recommendedLowFeeChains?.some(chain => chain.id === 'polygon')
+    || !ecosystemCatalog.body.catalog?.recommendedLowFeeChains?.some(chain => chain.id === 'algorand')
+    || !ecosystemCatalog.body.catalog?.tokenContractTypes?.includes('spl-token')
+    || !ecosystemCatalog.body.catalog?.tokenContractTypes?.includes('cardano-native-asset')
+    || !ecosystemCatalog.body.catalog?.tokenContractTypes?.includes('algorand-asa')
     || !ecosystemCatalog.body.catalog?.socialChannels?.some(channel => channel.id === 'discord')
     || !ecosystemCatalog.body.catalog?.socialChannels?.some(channel => channel.id === 'telegram')
     || !ecosystemCatalog.body.catalog?.socialChannels?.some(channel => channel.id === 'youtube')

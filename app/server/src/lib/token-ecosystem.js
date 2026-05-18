@@ -36,6 +36,37 @@ const DEFAULT_TOKEN_FEATURE_SELECTIONS = [
   'website, roadmap, logo, and whitepaper generation'
 ];
 
+const SUPPORTED_TOKEN_CONTRACT_TYPES = [
+  'erc20',
+  'bep20',
+  'erc721',
+  'erc1155',
+  'spl-token',
+  'token-2022',
+  'metaplex-nft',
+  'trc20',
+  'trc721',
+  'move-coin',
+  'move-nft',
+  'cw20',
+  'cw721',
+  'native-denom',
+  'psp22',
+  'psp34',
+  'nep141',
+  'nep171',
+  'cardano-native-asset',
+  'algorand-asa',
+  'stellar-asset',
+  'xrp-issued-currency',
+  'hedera-hts',
+  'tezos-fa2',
+  'flow-ft',
+  'ton-jetton',
+  'bitcoin-rune',
+  'generic'
+];
+
 const SOCIAL_CHANNELS = [
   {
     id: 'x',
@@ -262,6 +293,270 @@ const CHAIN_CATALOG = [
     crossChainNotes: 'Useful for app-first ecosystems with non-EVM UX requirements.'
   },
   {
+    id: 'cardano',
+    name: 'Cardano',
+    family: 'cardano',
+    gasProfile: 'low',
+    launchFit: 'native_asset_research_candidate',
+    fit: 'Native assets, eUTXO accounting, long-horizon research communities, and Plutus/Aiken smart-contract paths.',
+    tokenStandards: ['Native Asset', 'CIP-68 NFT', 'Plutus token policy'],
+    tooling: ['cardano-cli', 'Aiken', 'Plutus', 'Lucid'],
+    crossChainNotes: 'Non-EVM/eUTXO path; token policy, wallet UX, and DEX liquidity assumptions differ materially.'
+  },
+  {
+    id: 'algorand',
+    name: 'Algorand',
+    family: 'algorand',
+    gasProfile: 'very_low',
+    launchFit: 'low_fee_native_asset_candidate',
+    fit: 'Low-fee native assets, fast settlement, and Python/TEAL-oriented app logic.',
+    tokenStandards: ['Algorand Standard Asset', 'ARC standards'],
+    tooling: ['AlgoKit', 'Algorand Python', 'PyTeal', 'algod'],
+    crossChainNotes: 'ASA creation is not Solidity; indexer, wallet, and liquidity integrations are chain-specific.'
+  },
+  {
+    id: 'stellar',
+    name: 'Stellar',
+    family: 'stellar',
+    gasProfile: 'very_low',
+    launchFit: 'payments_asset_candidate',
+    fit: 'Issued assets, payments, anchors, and Soroban smart-contract extensions.',
+    tokenStandards: ['Stellar issued asset', 'Soroban token contract'],
+    tooling: ['Stellar CLI', 'Soroban SDK', 'Horizon'],
+    crossChainNotes: 'Best for payment-style assets; trustline/anchor assumptions must be documented.'
+  },
+  {
+    id: 'xrp-ledger',
+    name: 'XRP Ledger',
+    family: 'xrp',
+    gasProfile: 'very_low',
+    launchFit: 'issued_currency_candidate',
+    fit: 'Issued currencies, payment rails, AMM research, and XLS NFT paths.',
+    tokenStandards: ['Issued Currency', 'XLS-20 NFT'],
+    tooling: ['xrpl.js', 'XRPL CLI/tools', 'rippled testnet'],
+    crossChainNotes: 'Issuer/trustline model differs from contract-token systems.'
+  },
+  {
+    id: 'hedera',
+    name: 'Hedera',
+    family: 'hedera',
+    gasProfile: 'low',
+    launchFit: 'enterprise_token_service_candidate',
+    fit: 'Native Token Service assets, predictable fees, and enterprise-style integrations.',
+    tokenStandards: ['Hedera Token Service fungible token', 'HTS NFT'],
+    tooling: ['Hedera SDK', 'HashScan', 'Smart Contract Service'],
+    crossChainNotes: 'HTS token creation is service/API driven; keys, roles, and compliance flags require careful review.'
+  },
+  {
+    id: 'tezos',
+    name: 'Tezos',
+    family: 'tezos',
+    gasProfile: 'low',
+    launchFit: 'formal_contract_candidate',
+    fit: 'FA token standards, art/NFT ecosystem history, and Michelson/LIGO/SmartPy workflows.',
+    tokenStandards: ['FA1.2', 'FA2'],
+    tooling: ['LIGO', 'SmartPy', 'Octez', 'Taquito'],
+    crossChainNotes: 'Non-EVM path; contract language, wallet, and marketplace assumptions are separate.'
+  },
+  {
+    id: 'flow',
+    name: 'Flow',
+    family: 'flow',
+    gasProfile: 'low',
+    launchFit: 'consumer_nft_candidate',
+    fit: 'Consumer NFT/app ecosystems with Cadence resource-oriented smart contracts.',
+    tokenStandards: ['Flow FungibleToken', 'Flow NonFungibleToken'],
+    tooling: ['Cadence', 'Flow CLI', 'Flow JS SDK'],
+    crossChainNotes: 'Resource model is distinct; good for consumer collectibles and app-native utility.'
+  },
+  {
+    id: 'ton',
+    name: 'TON',
+    family: 'ton',
+    gasProfile: 'low',
+    launchFit: 'messaging_ecosystem_candidate',
+    fit: 'Telegram-adjacent distribution, Jettons, NFTs, and high-throughput app experiments.',
+    tokenStandards: ['Jetton', 'TON NFT'],
+    tooling: ['FunC', 'Tact', 'TON SDK', 'Blueprint'],
+    crossChainNotes: 'Requires TON-specific wallet, explorer, message, and contract assumptions.'
+  },
+  {
+    id: 'cronos',
+    name: 'Cronos',
+    family: 'evm',
+    gasProfile: 'low',
+    launchFit: 'retail_evm_candidate',
+    fit: 'EVM-compatible retail/DeFi ecosystem with lower fees than Ethereum.',
+    tokenStandards: ['ERC20', 'ERC721', 'ERC1155'],
+    tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry'],
+    crossChainNotes: 'Treat liquidity depth and CEX/DEX route support as project-specific research.'
+  },
+  {
+    id: 'gnosis',
+    name: 'Gnosis Chain',
+    family: 'evm',
+    gasProfile: 'low',
+    launchFit: 'dao_evm_candidate',
+    fit: 'Low-fee EVM ecosystem with DAO and payments history.',
+    tokenStandards: ['ERC20', 'ERC721', 'ERC1155'],
+    tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry'],
+    crossChainNotes: 'Useful for governance/DAO-heavy designs and low-fee experimentation.'
+  },
+  {
+    id: 'celo',
+    name: 'Celo',
+    family: 'evm',
+    gasProfile: 'low',
+    launchFit: 'mobile_payments_evm_candidate',
+    fit: 'Mobile-first EVM-compatible ecosystem and real-world payment experiments.',
+    tokenStandards: ['ERC20', 'ERC721', 'ERC1155'],
+    tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry'],
+    crossChainNotes: 'Good for payment/use-case tokens where mobile UX matters.'
+  },
+  {
+    id: 'linea',
+    name: 'Linea',
+    family: 'evm-l2',
+    gasProfile: 'low',
+    launchFit: 'zk_evm_candidate',
+    fit: 'zkEVM L2 with Ethereum-aligned tooling and lower fees.',
+    tokenStandards: ['ERC20', 'ERC721', 'ERC1155'],
+    tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry'],
+    crossChainNotes: 'Bridge and finality assumptions must be documented for route logic.'
+  },
+  {
+    id: 'scroll',
+    name: 'Scroll',
+    family: 'evm-l2',
+    gasProfile: 'low',
+    launchFit: 'zk_evm_candidate',
+    fit: 'zkEVM L2 with familiar Solidity tooling.',
+    tokenStandards: ['ERC20', 'ERC721', 'ERC1155'],
+    tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry'],
+    crossChainNotes: 'Bridge timing, liquidity depth, and explorer support should be researched per launch.'
+  },
+  {
+    id: 'zksync-era',
+    name: 'zkSync Era',
+    family: 'evm-l2',
+    gasProfile: 'low',
+    launchFit: 'zk_evm_candidate',
+    fit: 'ZK rollup ecosystem with Solidity-like workflows and chain-specific compiler/deployment details.',
+    tokenStandards: ['ERC20', 'ERC721', 'ERC1155'],
+    tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry', 'zkSync tooling'],
+    crossChainNotes: 'Use chain-specific compile/deploy config rather than assuming normal Hardhat broadcast.'
+  },
+  {
+    id: 'mantle',
+    name: 'Mantle',
+    family: 'evm-l2',
+    gasProfile: 'low',
+    launchFit: 'modular_evm_candidate',
+    fit: 'EVM L2 ecosystem with modular-chain positioning.',
+    tokenStandards: ['ERC20', 'ERC721', 'ERC1155'],
+    tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry'],
+    crossChainNotes: 'Assess DEX liquidity, bridge route costs, and listing support before launch.'
+  },
+  {
+    id: 'blast',
+    name: 'Blast',
+    family: 'evm-l2',
+    gasProfile: 'low',
+    launchFit: 'defi_evm_candidate',
+    fit: 'EVM L2 with DeFi-native incentives and DEX activity.',
+    tokenStandards: ['ERC20', 'ERC721', 'ERC1155'],
+    tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry'],
+    crossChainNotes: 'Incentive and yield assumptions need separate disclosure and risk review.'
+  },
+  {
+    id: 'opbnb',
+    name: 'opBNB',
+    family: 'evm-l2',
+    gasProfile: 'very_low',
+    launchFit: 'retail_low_fee_evm_candidate',
+    fit: 'BNB ecosystem L2 for low-fee retail/community token experiments.',
+    tokenStandards: ['ERC20', 'ERC721', 'ERC1155'],
+    tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry'],
+    crossChainNotes: 'Useful for low-cost testing but liquidity/listing support must be confirmed.'
+  },
+  {
+    id: 'sei',
+    name: 'Sei',
+    family: 'evm-cosmos',
+    gasProfile: 'low',
+    launchFit: 'trading_ecosystem_candidate',
+    fit: 'Trading-oriented ecosystem with EVM/Cosmos-adjacent routes depending on deployment lane.',
+    tokenStandards: ['ERC20 where EVM lane applies', 'Cosmos/native assets where applicable'],
+    tooling: ['Solidity/EVM tooling', 'Cosmos tooling', 'chain-specific SDKs'],
+    crossChainNotes: 'Select EVM or native lane explicitly before scaffold generation.'
+  },
+  {
+    id: 'injective',
+    name: 'Injective',
+    family: 'cosmos',
+    gasProfile: 'low',
+    launchFit: 'defi_trading_chain_candidate',
+    fit: 'Cosmos-based DeFi/trading ecosystem with exchange-oriented infrastructure.',
+    tokenStandards: ['native denom', 'CosmWasm/CW20 where supported'],
+    tooling: ['Cosmos tooling', 'CosmWasm', 'Injective SDKs'],
+    crossChainNotes: 'Strong candidate for trading workflows; requires chain-specific market and bridge research.'
+  },
+  {
+    id: 'osmosis',
+    name: 'Osmosis',
+    family: 'cosmos',
+    gasProfile: 'low',
+    launchFit: 'dex_liquidity_research_candidate',
+    fit: 'Cosmos DEX ecosystem for liquidity, IBC assets, and cross-chain market research.',
+    tokenStandards: ['native denom', 'IBC asset', 'CosmWasm where supported'],
+    tooling: ['Cosmos tooling', 'IBC tooling', 'Osmosis SDKs'],
+    crossChainNotes: 'Useful for IBC liquidity routing and DEX research.'
+  },
+  {
+    id: 'berachain',
+    name: 'Berachain',
+    family: 'evm',
+    gasProfile: 'chain_specific',
+    launchFit: 'emerging_evm_candidate',
+    fit: 'EVM-compatible emerging DeFi ecosystem; treat as research-first until launch details are stable.',
+    tokenStandards: ['ERC20', 'ERC721', 'ERC1155'],
+    tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry'],
+    crossChainNotes: 'Emerging-chain assumptions require current docs, liquidity, and explorer review before implementation.'
+  },
+  {
+    id: 'monad',
+    name: 'Monad',
+    family: 'evm',
+    gasProfile: 'chain_specific',
+    launchFit: 'emerging_high_throughput_evm_candidate',
+    fit: 'High-throughput EVM-compatible ecosystem candidate.',
+    tokenStandards: ['ERC20', 'ERC721', 'ERC1155'],
+    tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry'],
+    crossChainNotes: 'Emerging-chain assumptions require current docs, testnet/mainnet status, liquidity, and explorer review.'
+  },
+  {
+    id: 'hyperliquid',
+    name: 'Hyperliquid',
+    family: 'hyperliquid',
+    gasProfile: 'chain_specific',
+    launchFit: 'trading_native_candidate',
+    fit: 'Trading-native ecosystem candidate where token/listing mechanics are chain-specific.',
+    tokenStandards: ['chain-specific spot asset / HIP standards'],
+    tooling: ['Hyperliquid APIs', 'chain-specific docs'],
+    crossChainNotes: 'Treat as a special trading/listing lane, not a generic ERC20 deployment.'
+  },
+  {
+    id: 'kaspa',
+    name: 'Kaspa',
+    family: 'utxo',
+    gasProfile: 'chain_specific',
+    launchFit: 'utxo_research_candidate',
+    fit: 'High-throughput UTXO-style ecosystem where token support is standards/tooling specific.',
+    tokenStandards: ['chain-specific token standard'],
+    tooling: ['official node/tools', 'ecosystem SDKs'],
+    crossChainNotes: 'Research-first; do not assume account-model smart contract behavior.'
+  },
+  {
     id: 'bitcoin-l2',
     name: 'Bitcoin L2 / Ordinals Adjacent',
     family: 'bitcoin-l2',
@@ -296,7 +591,19 @@ const LOW_FEE_LAUNCH_CHAIN_IDS = [
   'fantom-sonic',
   'sui',
   'aptos',
-  'near'
+  'near',
+  'algorand',
+  'stellar',
+  'hedera',
+  'celo',
+  'linea',
+  'scroll',
+  'zksync-era',
+  'mantle',
+  'opbnb',
+  'sei',
+  'injective',
+  'osmosis'
 ];
 
 const WHITEPAPER_TEMPLATES = [
@@ -375,6 +682,24 @@ function normalizeChainId(value = '') {
     ['sol', 'solana'],
     ['fantom', 'fantom-sonic'],
     ['sonic', 'fantom-sonic'],
+    ['ada', 'cardano'],
+    ['algo', 'algorand'],
+    ['xlm', 'stellar'],
+    ['stellar-network', 'stellar'],
+    ['xrp', 'xrp-ledger'],
+    ['xrpl', 'xrp-ledger'],
+    ['hbar', 'hedera'],
+    ['flow-blockchain', 'flow'],
+    ['the-open-network', 'ton'],
+    ['toncoin', 'ton'],
+    ['zk-sync', 'zksync-era'],
+    ['zksync', 'zksync-era'],
+    ['zk-sync-era', 'zksync-era'],
+    ['hyperliquid-l1', 'hyperliquid'],
+    ['bitcoin', 'bitcoin-l2'],
+    ['runes', 'bitcoin-l2'],
+    ['brc20', 'bitcoin-l2'],
+    ['brc-20', 'bitcoin-l2'],
     ['custom', 'custom-chain'],
     ['any', 'custom-chain'],
     ['other', 'custom-chain'],
@@ -404,12 +729,22 @@ function getRecommendedLowFeeChains() {
 
 function getTokenStandardPlan(spec = {}, chain = getChainOption(spec.network)) {
   const type = String(spec.contract_type || 'erc20').toLowerCase();
-  const isNft = type === 'erc721' || type === 'erc1155';
+  const isNft = [
+    'erc721',
+    'erc1155',
+    'metaplex-nft',
+    'trc721',
+    'move-nft',
+    'cw721',
+    'psp34',
+    'nep171',
+    'tezos-fa2'
+  ].includes(type) || /nft|721|1155|fa2|psp34|nep171/i.test(type);
 
   if (chain.family.startsWith('evm')) {
     return {
       implementationLane: 'evm_solidity',
-      primaryStandard: isNft ? 'ERC721/ERC1155' : chain.id === 'bnb-chain' ? 'BEP20-compatible ERC20' : 'ERC20',
+      primaryStandard: isNft ? 'ERC721/ERC1155' : chain.id === 'bnb-chain' || type === 'bep20' ? 'BEP20-compatible ERC20' : 'ERC20',
       starterScaffold: 'Solidity + OpenZeppelin + Hardhat local workspace',
       notes: 'Base, Polygon, BNB Chain, Avalanche, Arbitrum, Optimism, and most EVM chains can share the same Solidity contract with chain-specific deployment config added later.'
     };
@@ -418,7 +753,7 @@ function getTokenStandardPlan(spec = {}, chain = getChainOption(spec.network)) {
   if (chain.family === 'solana') {
     return {
       implementationLane: 'solana_spl',
-      primaryStandard: isNft ? 'Metaplex NFT / compressed NFT plan' : 'SPL Token or Token-2022',
+      primaryStandard: type === 'token-2022' ? 'Token-2022' : isNft ? 'Metaplex NFT / compressed NFT plan' : 'SPL Token',
       starterScaffold: 'Solana local-validator + SPL Token CLI or TypeScript @solana/spl-token scaffold',
       notes: 'Solana is not Solidity/EVM. Token creation should be generated as an SPL/Token-2022 mint workflow with local validator tests before any devnet/mainnet action.'
     };
@@ -451,6 +786,78 @@ function getTokenStandardPlan(spec = {}, chain = getChainOption(spec.network)) {
     };
   }
 
+  if (chain.family === 'cardano') {
+    return {
+      implementationLane: 'cardano_native_asset',
+      primaryStandard: isNft ? 'Cardano native asset / CIP NFT policy' : 'Cardano Native Asset',
+      starterScaffold: 'cardano-cli/Aiken policy script plan with local/testnet-only checklist',
+      notes: 'Cardano token creation uses eUTXO token policies and native assets rather than Solidity contracts.'
+    };
+  }
+
+  if (chain.family === 'algorand') {
+    return {
+      implementationLane: 'algorand_asa',
+      primaryStandard: isNft ? 'Algorand ASA NFT / ARC asset' : 'Algorand Standard Asset',
+      starterScaffold: 'AlgoKit localnet ASA creation plan',
+      notes: 'Algorand token creation is ASA configuration plus optional smart-contract controls, not Solidity deployment.'
+    };
+  }
+
+  if (chain.family === 'stellar') {
+    return {
+      implementationLane: 'stellar_issued_asset',
+      primaryStandard: isNft ? 'Soroban NFT-style contract plan' : 'Stellar issued asset',
+      starterScaffold: 'Stellar testnet issuer/distributor/trustline plan',
+      notes: 'Stellar assets use issuer/distributor accounts and trustlines; Soroban is a separate smart-contract lane.'
+    };
+  }
+
+  if (chain.family === 'xrp') {
+    return {
+      implementationLane: 'xrp_issued_currency',
+      primaryStandard: isNft ? 'XLS-20 NFT' : 'XRPL Issued Currency',
+      starterScaffold: 'XRPL testnet issuer/trustline/AMM research plan',
+      notes: 'XRPL assets use issuer and trustline mechanics rather than EVM contracts.'
+    };
+  }
+
+  if (chain.family === 'hedera') {
+    return {
+      implementationLane: 'hedera_token_service',
+      primaryStandard: isNft ? 'HTS NFT' : 'HTS fungible token',
+      starterScaffold: 'Hedera local/testnet Token Service plan with key-role matrix',
+      notes: 'Hedera Token Service uses token create/update role keys; key governance must be reviewed before any live action.'
+    };
+  }
+
+  if (chain.family === 'tezos') {
+    return {
+      implementationLane: 'tezos_fa_contract',
+      primaryStandard: isNft ? 'FA2' : 'FA1.2 / FA2',
+      starterScaffold: 'LIGO/SmartPy/Octez local contract plan',
+      notes: 'Tezos token logic uses FA standards and Michelson-oriented tooling, not Solidity.'
+    };
+  }
+
+  if (chain.family === 'flow') {
+    return {
+      implementationLane: 'flow_cadence',
+      primaryStandard: isNft ? 'Flow NonFungibleToken' : 'Flow FungibleToken',
+      starterScaffold: 'Cadence local emulator token contract plan',
+      notes: 'Flow uses Cadence resource-oriented contracts and account capabilities.'
+    };
+  }
+
+  if (chain.family === 'ton') {
+    return {
+      implementationLane: 'ton_jetton',
+      primaryStandard: isNft ? 'TON NFT' : 'TON Jetton',
+      starterScaffold: 'Tact/FunC local blueprint plan',
+      notes: 'TON token creation uses Jetton/NFT contracts and message-based contract interactions.'
+    };
+  }
+
   if (chain.family === 'move') {
     return {
       implementationLane: 'move_package',
@@ -463,9 +870,27 @@ function getTokenStandardPlan(spec = {}, chain = getChainOption(spec.network)) {
   if (chain.family === 'tron') {
     return {
       implementationLane: 'tron_solidity',
-      primaryStandard: isNft ? 'TRC721' : 'TRC20',
+      primaryStandard: type === 'trc721' || isNft ? 'TRC721' : 'TRC20',
       starterScaffold: 'TRON Solidity-style contract and TronWeb/TronBox local plan',
       notes: 'TRON is Solidity-like but has different tooling, wallet, resource, and explorer assumptions.'
+    };
+  }
+
+  if (chain.family === 'bitcoin-l2' || chain.family === 'utxo') {
+    return {
+      implementationLane: 'bitcoin_or_utxo_token_research',
+      primaryStandard: isNft ? 'Ordinal/inscription or L2-specific NFT' : 'Rune/BRC-20/L2-specific fungible asset',
+      starterScaffold: 'research-first token standard and local indexer/testnet plan',
+      notes: 'Bitcoin/UTXO-style token paths are standard/indexer specific and must not be treated as account-model smart contracts.'
+    };
+  }
+
+  if (chain.family === 'hyperliquid') {
+    return {
+      implementationLane: 'hyperliquid_asset_research',
+      primaryStandard: 'chain-specific spot asset/listing standard',
+      starterScaffold: 'Hyperliquid asset/listing research and API-safe local plan',
+      notes: 'Hyperliquid is trading-native; token mechanics depend on current chain/listing rules and should be researched before implementation.'
     };
   }
 
@@ -875,6 +1300,7 @@ function buildSocialCampaignPlan(spec = {}) {
 function buildTokenEcosystemCatalog() {
   return {
     chains: CHAIN_CATALOG,
+    tokenContractTypes: SUPPORTED_TOKEN_CONTRACT_TYPES,
     recommendedLowFeeChains: getRecommendedLowFeeChains(),
     socialChannels: SOCIAL_CHANNELS,
     whitepaperTemplates: WHITEPAPER_TEMPLATES,
@@ -951,14 +1377,14 @@ function normalizeTokenEcosystemProjectInput(input = {}, existing = {}) {
   const contractType = cleanProjectText(input.contractType ?? input.contract_type ?? existing.contract_type ?? existing.contractType ?? 'erc20', 'erc20', 40).toLowerCase();
   const featureSelections = normalizeFeatureSelections(input.featureSelections ?? input.feature_selections ?? existing.featureSelections ?? existing.feature_selections);
   const contractSpecId = input.contractSpecId ?? input.contract_spec_id ?? existing.contract_spec_id ?? existing.contractSpecId ?? null;
-  const allowedContractTypes = new Set(['erc20', 'erc721', 'generic']);
+  const allowedContractTypes = new Set(SUPPORTED_TOKEN_CONTRACT_TYPES);
 
   if (!name) {
     throw new Error('Token ecosystem project name is required');
   }
 
   if (!allowedContractTypes.has(contractType)) {
-    throw new Error('Contract type must be erc20, erc721, or generic');
+    throw new Error('Contract type must be one of the supported local token standards');
   }
 
   return {
