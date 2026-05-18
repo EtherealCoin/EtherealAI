@@ -2902,6 +2902,7 @@
                             <th>Best</th>
                             <th>Net Profit</th>
                             <th>Draft Intents</th>
+                            <th>Social Drafts</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2914,6 +2915,7 @@
                                 <td>${escapeHtml(batch.result?.summary?.bestMarketSymbol || '-')}</td>
                                 <td>${escapeHtml(String(batch.result?.summary?.estimatedNetProfit ?? 0))}</td>
                                 <td><button type="button" data-rebalance-draft-id="${batch.id}">Create Draft Intents</button></td>
+                                <td><button type="button" data-rebalance-social-id="${batch.id}">Create Campaign Drafts</button></td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -2922,6 +2924,9 @@
 
             output.querySelectorAll('button[data-rebalance-draft-id]').forEach(button => {
                 button.addEventListener('click', () => createDraftIntentsFromRebalanceBatch(button.dataset.rebalanceDraftId));
+            });
+            output.querySelectorAll('button[data-rebalance-social-id]').forEach(button => {
+                button.addEventListener('click', () => createSocialDraftsFromRebalanceBatch(button.dataset.rebalanceSocialId));
             });
         }
 
@@ -3059,6 +3064,34 @@
             }, null, 2);
             await loadOrderIntents();
             await loadRebalanceReviewQueue();
+        }
+
+        async function createSocialDraftsFromRebalanceBatch(batchId) {
+            const output = document.getElementById('rebalance-batch-output');
+            output.textContent = `Creating local Social Ops campaign drafts from rebalance batch #${batchId}...`;
+            const response = await fetch(`/api/v1/social-posts/rebalance-batches/${batchId}/campaign-drafts`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    platforms: ['x', 'discord', 'telegram', 'youtube', 'medium'],
+                    accountLabel: 'EtherealAI local campaign'
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Campaign draft creation failed.';
+                return;
+            }
+
+            output.textContent = JSON.stringify({
+                rebalanceBatch: data.batch,
+                createdSocialDrafts: data.posts,
+                externalPostingEnabled: data.externalPostingEnabled,
+                liveExecutionEnabled: data.liveExecutionEnabled
+            }, null, 2);
         }
 
         function countSafetyRows(rows = [], predicate = () => true) {

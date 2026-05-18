@@ -1255,6 +1255,7 @@ function checkRouteRegistrationModule() {
     || !routeRegistrationSource.includes('parseArbitrageSimulationRun: parsers.parseArbitrageSimulationRun')
     || !routeRegistrationSource.includes('simulateTopRebalanceBatch')
     || !routeRegistrationSource.includes('parseRebalanceSimulationBatch: parsers.parseRebalanceSimulationBatch')
+    || !routeRegistrationSource.includes('parseTokenEcosystemProject: parsers.parseTokenEcosystemProject')
     || !serverSource.includes('selects: ROW_LOOKUP_SELECTS')
     || !serverSource.includes('selects: ROUTE_SELECTS')
     || !serverSource.includes('parsers: ROUTE_PARSERS')
@@ -5361,9 +5362,12 @@ function checkStrategyLabSafetyDossierExportUi() {
     || !html.includes('id="rebalance-review-queue"')
     || !html.includes('/api/v1/order-intents/rebalance-batches')
     || !html.includes('/api/v1/order-intents/rebalance-review-queue')
+    || !html.includes('/api/v1/social-posts/rebalance-batches/')
     || !html.includes('function runRebalanceBatch(event)')
     || !html.includes('function loadRebalanceBatches()')
     || !html.includes('function createDraftIntentsFromRebalanceBatch(batchId)')
+    || !html.includes('function createSocialDraftsFromRebalanceBatch(batchId)')
+    || !html.includes('Create Campaign Drafts')
     || !html.includes('id="bot-plan-filter-form"')
     || !html.includes('id="bot-plan-filter-mode"')
     || !html.includes('id="bot-plan-filter-status"')
@@ -5814,6 +5818,9 @@ function checkLocalOnlySurfaceCues() {
     || !social.includes('no social network API calls')
     || !social.includes('Owner Review')
     || !social.includes('save drafts before any future posting phase')
+    || !social.includes('<option value="medium">Medium</option>')
+    || !social.includes('<option value="farcaster">Farcaster</option>')
+    || !social.includes('<option value="docs">Docs Portal</option>')
   ) {
     fail('Social Ops is missing local-only safety cues');
   }
@@ -7605,6 +7612,32 @@ async function runServerApiChecks() {
     fail('top-200 rebalance batch did not create local-only review queue draft intents');
   }
 
+  const rebalanceCampaignDrafts = await fetchJson(`${baseUrl}/api/v1/social-posts/rebalance-batches/${rebalanceBatch.body.batch.id}/campaign-drafts`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({
+      platforms: ['x', 'discord', 'telegram', 'youtube', 'medium'],
+      accountLabel: 'Verifier campaign'
+    })
+  });
+
+  if (
+    rebalanceCampaignDrafts.body.localOnly !== true
+    || rebalanceCampaignDrafts.body.externalPostingEnabled !== false
+    || rebalanceCampaignDrafts.body.liveExecutionEnabled !== false
+    || rebalanceCampaignDrafts.body.posts?.length !== 5
+    || !rebalanceCampaignDrafts.body.posts?.some(post => post.platform === 'medium')
+    || !rebalanceCampaignDrafts.body.posts?.every(post => (
+      post.status === 'draft'
+      && post.metadata?.source === 'rebalance_batch_campaign_draft_v1'
+      && post.metadata?.rebalanceBatchId === rebalanceBatch.body.batch.id
+      && post.metadata?.externalPostingEnabled === false
+      && post.metadata?.liveExecutionEnabled === false
+    ))
+  ) {
+    fail('rebalance batch campaign draft API did not create local-only Social Ops drafts');
+  }
+
   await fetchJsonExpectStatus(`${baseUrl}/api/v1/order-intents/simulate-cross-exchange`, {
     method: 'POST',
     headers: authJsonHeaders(cookie),
@@ -7625,6 +7658,15 @@ async function runServerApiChecks() {
           password: 'not-allowed'
         }
       ]
+    })
+  }, 400);
+
+  await fetchJsonExpectStatus(`${baseUrl}/api/v1/social-posts/rebalance-batches/${rebalanceBatch.body.batch.id}/campaign-drafts`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({
+      platforms: ['medium'],
+      socialToken: `sk-${'a'.repeat(40)}`
     })
   }, 400);
 
@@ -7920,6 +7962,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/social-posts' && route.file === 'app/server/src/routes/social-ops.js')
     || !inventory.routes.some(route => route.path === '/api/v1/social-posts/:id' && route.file === 'app/server/src/routes/social-ops.js')
     || !inventory.routes.some(route => route.path === '/api/v1/social-posts/generate' && route.file === 'app/server/src/routes/social-ops.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/social-posts/rebalance-batches/:id/campaign-drafts' && route.file === 'app/server/src/routes/social-ops.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/solidity-contracts' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/solidity-contracts' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/solidity-contracts/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
@@ -8137,6 +8180,12 @@ async function runServerApiChecks() {
       && batch.networkCallsEnabled === false
       && batch.liveExecutionEnabled === false
       && batch.result?.safetyBoundary?.liveExecutionEnabled === false
+    ))
+    || !Array.isArray(systemMemory.body.snapshot?.recent?.socialPosts)
+    || !systemMemory.body.snapshot?.recent?.socialPosts?.some(post => (
+      post.metadata?.source === 'rebalance_batch_campaign_draft_v1'
+      && post.metadata?.externalPostingEnabled === false
+      && post.metadata?.liveExecutionEnabled === false
     ))
     || !Number.isFinite(Number(systemMemory.body.snapshot?.counts?.token_ecosystem_projects))
     || !Array.isArray(systemMemory.body.snapshot?.recent?.tokenEcosystemProjects)

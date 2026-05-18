@@ -565,6 +565,8 @@ function registerEtherealRoutes(app, options) {
     dbRun,
     findSensitiveFields,
     parseSocialPost: parsers.parseSocialPost,
+    parseRebalanceSimulationBatch: parsers.parseRebalanceSimulationBatch,
+    parseTokenEcosystemProject: parsers.parseTokenEcosystemProject,
     reviewSocialContent,
     generateWithLocalModel
   });
