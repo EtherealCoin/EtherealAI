@@ -161,11 +161,13 @@ function buildCompanySetupPlan(identity = {}, dnsTargets = []) {
   const pendingTargets = targets.filter(target => !['verified', 'not_needed'].includes(target.status));
   const hasWebsiteTarget = targets.some(target => ['website', 'www_redirect', 'app_backend'].includes(target.purpose));
   const hasEmailTarget = targets.some(target => ['email_routing', 'spf', 'dkim', 'dmarc'].includes(target.purpose));
+  const primaryDomain = identity.company?.primaryDomain || '';
+  const primaryMailbox = identity.email?.primaryMailbox || identity.owner?.email || '';
 
   return {
     title: 'Domain/Email Setup Center',
-    primaryDomain: identity.company?.primaryDomain || '',
-    primaryMailbox: identity.email?.primaryMailbox || identity.owner?.email || '',
+    primaryDomain,
+    primaryMailbox,
     localOnly: true,
     externalMutationEnabled: false,
     summary: {
@@ -202,6 +204,88 @@ function buildCompanySetupPlan(identity = {}, dnsTargets = []) {
       'Add Cloudflare DNS targets here after reviewing them in Cloudflare.',
       'Mark targets owner_added, propagating, or verified as DNS changes are made manually.',
       'Keep Cloudflare credentials and API tokens outside EtherealAI.'
+    ],
+    cloudflareAccessPlan: buildCloudflareAccessPlan({ primaryDomain, primaryMailbox })
+  };
+}
+
+function buildCloudflareAccessPlan({ primaryDomain = '', primaryMailbox = '' } = {}) {
+  const referenceName = primaryDomain
+    ? `etherealai/cloudflare/dns/${primaryDomain}`
+    : 'etherealai/cloudflare/dns/company-domain';
+
+  return {
+    title: 'Cloudflare Access Gate',
+    localOnly: true,
+    externalMutationEnabled: false,
+    passwordLoginAllowed: false,
+    tokenValuesAccepted: false,
+    credentialLoadingImplemented: false,
+    recommendedToken: {
+      provider: 'Cloudflare',
+      tokenType: 'User API Token',
+      resourceScope: primaryDomain ? `${primaryDomain} zone only` : 'single Cloudflare zone only',
+      permissions: [
+        'Zone:Zone:Read',
+        'Zone:DNS:Read',
+        'Zone:DNS:Edit'
+      ],
+      restrictions: [
+        'Do not use a global API key.',
+        'Do not paste the token into EtherealAI or chat.',
+        'Rotate the Cloudflare account password if it was pasted anywhere outside Cloudflare.'
+      ]
+    },
+    secretReferenceTemplate: {
+      label: primaryDomain
+        ? `Cloudflare DNS token - ${primaryDomain}`
+        : 'Cloudflare DNS token',
+      providerType: 'macos_keychain',
+      referenceName,
+      scope: 'generic',
+      status: 'planned',
+      notes: `Local metadata only. Store the real scoped Cloudflare DNS API token in macOS Keychain under ${referenceName}; EtherealAI must store only this reference name.`
+    },
+    manualSteps: [
+      {
+        id: 'rotate_password',
+        label: 'Change exposed Cloudflare password',
+        status: 'owner_action_required',
+        detail: 'Because a password was pasted into chat, change it in Cloudflare before adding any API token.'
+      },
+      {
+        id: 'enable_2fa',
+        label: 'Confirm Cloudflare 2FA',
+        status: 'owner_action_required',
+        detail: 'Use authenticator-app or hardware-key 2FA before creating automation credentials.'
+      },
+      {
+        id: 'create_scoped_token',
+        label: 'Create scoped DNS API token',
+        status: 'owner_action_required',
+        detail: primaryDomain
+          ? `Limit the token to the ${primaryDomain} zone with DNS read/edit permissions only.`
+          : 'Limit the token to one zone with DNS read/edit permissions only.'
+      },
+      {
+        id: 'store_keychain',
+        label: 'Store token in macOS Keychain',
+        status: 'owner_action_required',
+        detail: `Use the service/reference name ${referenceName}; do not store the token in source code, SQLite, or chat.`
+      },
+      {
+        id: 'save_reference',
+        label: 'Save local reference metadata',
+        status: 'etherealai_ready',
+        detail: 'Save the reference below so future DNS automation can locate the Keychain item after a reviewed credential loader exists.'
+      }
+    ],
+    nextOwnerActions: [
+      primaryMailbox
+        ? `After rotating the password, confirm ${primaryMailbox} can receive Cloudflare security emails.`
+        : 'After rotating the password, confirm the Cloudflare account email can receive security emails.',
+      'Create a scoped Cloudflare API token for DNS only.',
+      'Save only the Keychain reference metadata in EtherealAI.'
     ]
   };
 }
@@ -269,6 +353,7 @@ function buildCompanyIdentityChecklist(identity = {}) {
 
 module.exports = {
   buildCompanyIdentityChecklist,
+  buildCloudflareAccessPlan,
   buildCompanySetupPlan,
   normalizeCompanyDnsTargetInput,
   normalizeCompanyIdentity,

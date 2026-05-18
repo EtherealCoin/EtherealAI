@@ -184,6 +184,42 @@
             </form>
             <div id="company-dns-target-status" class="inline-status">DNS targets are local tracking only.</div>
             <div id="company-dns-targets" class="task-list">Loading DNS/email targets...</div>
+
+            <h3>Cloudflare Access Gate</h3>
+            <p class="inline-status">Do not paste Cloudflare passwords or API tokens here. Store the real token in macOS Keychain; EtherealAI records only the reference label.</p>
+            <div id="cloudflare-access-plan" class="task-list">Loading Cloudflare access plan...</div>
+            <form id="cloudflare-secret-reference-form" class="model-test-form">
+                <label for="cloudflare-secret-label">Reference Label</label>
+                <input id="cloudflare-secret-label" name="label" maxlength="120" value="Cloudflare DNS token - etherealdigital.ai">
+
+                <label for="cloudflare-secret-provider">Local Secret Provider</label>
+                <select id="cloudflare-secret-provider" name="providerType">
+                    <option value="macos_keychain">macOS Keychain</option>
+                    <option value="onepassword">1Password</option>
+                    <option value="env_var_name">Environment Variable Name</option>
+                    <option value="local_vault_path">Local Vault Path</option>
+                    <option value="other_reference">Other Local Reference</option>
+                </select>
+
+                <label for="cloudflare-secret-reference-name">Reference Name</label>
+                <input id="cloudflare-secret-reference-name" name="referenceName" maxlength="180" value="etherealai/cloudflare/dns/etherealdigital.ai">
+
+                <label for="cloudflare-secret-status">Reference Status</label>
+                <select id="cloudflare-secret-status" name="status">
+                    <option value="planned">Planned</option>
+                    <option value="missing">Missing</option>
+                    <option value="configured">Configured</option>
+                    <option value="disabled">Disabled</option>
+                </select>
+
+                <label for="cloudflare-secret-notes">Local Notes</label>
+                <textarea id="cloudflare-secret-notes" name="notes" rows="2" maxlength="1000">Local metadata only. Store the real scoped Cloudflare DNS API token in macOS Keychain under etherealai/cloudflare/dns/etherealdigital.ai; EtherealAI must store only this reference name.</textarea>
+
+                <input type="hidden" name="scope" value="generic">
+                <button type="submit">Save Cloudflare Reference</button>
+            </form>
+            <div id="cloudflare-secret-reference-status" class="inline-status">Cloudflare credential metadata is local-only.</div>
+            <div id="cloudflare-secret-references" class="task-list">Loading Cloudflare secret references...</div>
         </section>
 
         <section class="model-panel">
@@ -859,6 +895,107 @@
                     </article>
                 `).join('')}
             `;
+            renderCloudflareAccessPlan(plan.cloudflareAccessPlan || {});
+        }
+
+        function renderCloudflareAccessPlan(accessPlan = {}) {
+            const token = accessPlan.recommendedToken || {};
+            const template = accessPlan.secretReferenceTemplate || {};
+            const manualSteps = accessPlan.manualSteps || [];
+            const restrictions = token.restrictions || [];
+            const permissions = token.permissions || [];
+            const cards = [
+                {
+                    label: 'Password Login',
+                    value: accessPlan.passwordLoginAllowed ? 'Allowed' : 'Blocked',
+                    note: accessPlan.passwordLoginAllowed ? 'review' : 'use scoped token instead'
+                },
+                {
+                    label: 'Token Values',
+                    value: accessPlan.tokenValuesAccepted ? 'Accepted' : 'Rejected',
+                    note: 'metadata references only'
+                },
+                {
+                    label: 'Cloudflare Scope',
+                    value: token.resourceScope || 'single zone only',
+                    note: permissions.join(', ') || 'DNS read/edit'
+                }
+            ];
+
+            document.getElementById('cloudflare-access-plan').innerHTML = `
+                <div class="artifact-grid">
+                    ${cards.map(card => `
+                        <div class="artifact-stat">
+                            <strong>${escapeHtml(card.label)}</strong>
+                            <span>${escapeHtml(card.value)}</span>
+                            <span>${escapeHtml(card.note)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                ${manualSteps.map(step => `
+                    <article class="task-card">
+                        <div>
+                            <h3>${escapeHtml(step.label)}</h3>
+                            <p>${escapeHtml(step.detail || restrictions.join(' '))}</p>
+                        </div>
+                        <span>${escapeHtml(step.status)}</span>
+                    </article>
+                `).join('')}
+            `;
+
+            if (template.label) {
+                document.getElementById('cloudflare-secret-label').value = template.label;
+            }
+            if (template.providerType) {
+                document.getElementById('cloudflare-secret-provider').value = template.providerType;
+            }
+            if (template.referenceName) {
+                document.getElementById('cloudflare-secret-reference-name').value = template.referenceName;
+            }
+            if (template.status) {
+                document.getElementById('cloudflare-secret-status').value = template.status;
+            }
+            if (template.notes) {
+                document.getElementById('cloudflare-secret-notes').value = template.notes;
+            }
+        }
+
+        function renderCloudflareSecretReferences(references = []) {
+            const cloudflareReferences = references.filter(reference => {
+                const haystack = [
+                    reference.label,
+                    reference.reference_name,
+                    reference.notes
+                ].join(' ').toLowerCase();
+                return haystack.includes('cloudflare');
+            });
+
+            document.getElementById('cloudflare-secret-references').innerHTML = cloudflareReferences.length
+                ? cloudflareReferences.map(reference => `
+                    <article class="task-card">
+                        <div>
+                            <h3>#${escapeHtml(reference.id)} ${escapeHtml(reference.label)}</h3>
+                            <p>${escapeHtml(reference.provider_type)} · ${escapeHtml(reference.reference_name)} · ${escapeHtml(reference.notes || 'metadata only')}</p>
+                        </div>
+                        <span>${escapeHtml(reference.status)}</span>
+                    </article>
+                `).join('')
+                : '<p>No Cloudflare secret references saved yet.</p>';
+        }
+
+        async function loadCloudflareSecretReferences() {
+            try {
+                const response = await fetch('/api/v1/local-secret-references');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load local secret references');
+                }
+
+                renderCloudflareSecretReferences(data.references || []);
+            } catch (error) {
+                document.getElementById('cloudflare-secret-references').textContent = error.message;
+            }
         }
 
         function renderCompanyDnsTargets(data = {}) {
@@ -903,10 +1040,12 @@
 
                 renderCompanyIdentity(data);
                 await loadCompanyDnsTargets();
+                await loadCloudflareSecretReferences();
             } catch (error) {
                 document.getElementById('company-identity-summary').textContent = error.message;
                 document.getElementById('company-identity-checklist').textContent = 'Company identity checklist unavailable.';
                 document.getElementById('company-setup-plan').textContent = 'DNS setup plan unavailable.';
+                document.getElementById('cloudflare-access-plan').textContent = 'Cloudflare access plan unavailable.';
             }
         }
 
@@ -1304,6 +1443,42 @@
                 event.target.reset();
                 document.getElementById('company-dns-host').value = '@';
                 renderCompanyDnsTargets(data);
+                await loadSystemMemory();
+            } catch (error) {
+                status.textContent = error.message;
+            }
+        });
+
+        document.getElementById('cloudflare-secret-reference-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const status = document.getElementById('cloudflare-secret-reference-status');
+            status.textContent = 'Saving Cloudflare local reference metadata...';
+
+            try {
+                const response = await fetch('/api/v1/local-secret-references', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        label: formData.get('label'),
+                        providerType: formData.get('providerType'),
+                        referenceName: formData.get('referenceName'),
+                        scope: formData.get('scope'),
+                        status: formData.get('status'),
+                        notes: formData.get('notes')
+                    })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to save Cloudflare reference');
+                }
+
+                status.textContent = `Saved local reference #${data.reference.id}. Secret value was not stored.`;
+                await loadCloudflareSecretReferences();
                 await loadSystemMemory();
             } catch (error) {
                 status.textContent = error.message;

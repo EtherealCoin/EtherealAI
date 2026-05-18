@@ -2315,6 +2315,12 @@ function checkCompanyIdentityModule() {
     || setupPlan.externalMutationEnabled !== false
     || setupPlan.summary.totalTargets !== 1
     || !setupPlan.recommendedManualSteps.some(step => step.id === 'email_dns_targets' && step.status === 'tracked')
+    || setupPlan.cloudflareAccessPlan?.passwordLoginAllowed !== false
+    || setupPlan.cloudflareAccessPlan?.tokenValuesAccepted !== false
+    || setupPlan.cloudflareAccessPlan?.credentialLoadingImplemented !== false
+    || setupPlan.cloudflareAccessPlan?.recommendedToken?.resourceScope !== 'etherealdigital.ai zone only'
+    || !setupPlan.cloudflareAccessPlan?.manualSteps?.some(step => step.id === 'rotate_password' && step.status === 'owner_action_required')
+    || setupPlan.cloudflareAccessPlan?.secretReferenceTemplate?.referenceName !== 'etherealai/cloudflare/dns/etherealdigital.ai'
   ) {
     fail('company identity module did not preserve local-only Cloudflare domain/email identity behavior');
   }
@@ -5659,6 +5665,14 @@ function checkDashboardMvpReadinessUi() {
     || !html.includes('Domain/Email Setup Center')
     || !html.includes('id="company-dns-target-form"')
     || !html.includes('id="company-dns-targets"')
+    || !html.includes('Cloudflare Access Gate')
+    || !html.includes('id="cloudflare-secret-reference-form"')
+    || !html.includes('id="cloudflare-access-plan"')
+    || !html.includes('id="cloudflare-secret-references"')
+    || !html.includes('function renderCloudflareAccessPlan(accessPlan = {})')
+    || !html.includes('function loadCloudflareSecretReferences()')
+    || !html.includes('/api/v1/local-secret-references')
+    || !html.includes('Secret value was not stored.')
     || !html.includes('function renderCompanyIdentity(data = {})')
     || !html.includes('function renderCompanyDnsTargets(data = {})')
     || !html.includes('/api/v1/company-identity')
@@ -7926,6 +7940,8 @@ async function runServerApiChecks() {
     || companyIdentity.body.identity?.tokenIdentity?.name !== 'EtherealAI'
     || !companyIdentity.body.checklist?.some(item => item.id === 'email_dns_visible')
     || !companyIdentity.body.checklist?.some(item => item.id === 'external_actions_blocked' && item.status === 'ready')
+    || companyIdentity.body.setupPlan?.cloudflareAccessPlan?.recommendedToken?.provider !== 'Cloudflare'
+    || companyIdentity.body.setupPlan?.cloudflareAccessPlan?.externalMutationEnabled !== false
   ) {
     fail('company identity endpoint did not expose local-only Cloudflare domain/email state');
   }
@@ -7938,6 +7954,9 @@ async function runServerApiChecks() {
     || !Array.isArray(companyDnsTargets.body.targets)
     || companyDnsTargets.body.setupPlan?.primaryDomain !== 'etherealdigital.ai'
     || companyDnsTargets.body.setupPlan?.externalMutationEnabled !== false
+    || companyDnsTargets.body.setupPlan?.cloudflareAccessPlan?.passwordLoginAllowed !== false
+    || companyDnsTargets.body.setupPlan?.cloudflareAccessPlan?.tokenValuesAccepted !== false
+    || companyDnsTargets.body.setupPlan?.cloudflareAccessPlan?.secretReferenceTemplate?.scope !== 'generic'
     || !companyDnsTargets.body.setupPlan?.recommendedManualSteps?.some(step => step.id === 'email_dns_targets')
   ) {
     fail('company DNS target endpoint did not expose local-only setup tracking state');
