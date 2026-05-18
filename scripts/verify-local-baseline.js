@@ -2230,14 +2230,15 @@ function checkSystemConfigRuntimeModule() {
   pass('system config runtime module');
 }
 
-function checkCompanyIdentityModule() {
+async function checkCompanyIdentityModule() {
   const {
     buildCompanyIdentityChecklist,
     buildCompanySetupPlan,
     buildCloudflareWebsitePlan,
     normalizeCompanyDnsTargetInput,
     parseCompanyDnsTarget,
-    normalizeCompanyIdentity
+    normalizeCompanyIdentity,
+    verifyCompanyDnsTargetPublic
   } = require(path.join(projectRoot, 'app/server/src/lib/company-identity'));
   const identity = normalizeCompanyIdentity({
     company: {
@@ -2309,6 +2310,24 @@ function checkCompanyIdentityModule() {
   });
   const setupPlan = buildCompanySetupPlan(identity, [parsedDnsTarget]);
   const websitePlan = buildCloudflareWebsitePlan({ id: 77, name: 'EtherealAI' }, identity);
+  const dnsVerification = await verifyCompanyDnsTargetPublic({
+    id: 44,
+    domain: 'etherealdigit.ai',
+    recordType: 'CNAME',
+    host: '@',
+    value: 'etherealai-etherealai.pages.dev'
+  }, {
+    checkedAt: new Date('2026-05-18T00:00:00Z'),
+    resolver: {
+      async resolveCname(recordName) {
+        if (recordName !== 'etherealdigit.ai') {
+          throw new Error('unexpected record name');
+        }
+
+        return ['etherealai-etherealai.pages.dev'];
+      }
+    }
+  });
 
   if (
     identity.localOnly !== true
@@ -2359,6 +2378,10 @@ function checkCompanyIdentityModule() {
     || websitePlan.emailRouting?.primaryMailbox !== 'patrick@etherealdigital.ai'
     || !websitePlan.emailRouting?.suggestedAliases?.includes('support@etherealdigital.ai')
     || websitePlan.safetyBoundary?.cloudflareApiCallsEnabled !== false
+    || dnsVerification.verified !== true
+    || dnsVerification.status !== 'verified'
+    || dnsVerification.cloudflareApiCallsEnabled !== false
+    || dnsVerification.dnsMutationEnabled !== false
   ) {
     fail('company identity module did not preserve local-only Cloudflare domain/email identity behavior');
   }
@@ -5702,6 +5725,7 @@ function checkDashboardMvpReadinessUi() {
     || !html.includes('id="company-identity-summary"')
     || !html.includes('id="company-identity-checklist"')
     || !html.includes('Domain/Email Setup Center')
+    || !html.includes('id="verify-public-dns"')
     || !html.includes('id="company-dns-target-form"')
     || !html.includes('id="company-dns-domain"')
     || !html.includes('id="company-dns-targets"')
@@ -5717,6 +5741,7 @@ function checkDashboardMvpReadinessUi() {
     || !html.includes('function renderCompanyDnsTargets(data = {})')
     || !html.includes('/api/v1/company-identity')
     || !html.includes('/api/v1/company-identity/dns-targets')
+    || !html.includes('/api/v1/company-identity/dns-targets/verify-public')
     || !html.includes('Token Website Domain')
     || !html.includes('Cloudflare Account')
     || !html.includes('etherealdigit.ai')
@@ -8364,6 +8389,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/api/v1/policy' && route.file === 'app/server/src/routes/system-config.js')
     || !inventory.routes.some(route => route.path === '/api/v1/company-identity' && route.file === 'app/server/src/routes/company-identity.js')
     || !inventory.routes.some(route => route.path === '/api/v1/company-identity/dns-targets' && route.file === 'app/server/src/routes/company-identity.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/company-identity/dns-targets/verify-public' && route.file === 'app/server/src/routes/company-identity.js')
     || !inventory.routes.some(route => route.path === '/api/v1/company-identity/dns-targets/:id' && route.file === 'app/server/src/routes/company-identity.js')
     || !inventory.routes.some(route => route.path === '/api/v1/system-memory' && route.file === 'app/server/src/routes/system-memory.js')
     || !inventory.routes.some(route => route.path === '/api/v1/owner-proof-packet' && route.file === 'app/server/src/routes/owner-proof-packet.js')
@@ -8657,7 +8683,7 @@ async function main() {
   checkMultiAgentCoordinationModule();
   checkSecretSafetyModule();
   checkSystemConfigRuntimeModule();
-  checkCompanyIdentityModule();
+  await checkCompanyIdentityModule();
   checkExchangeMetadataModule();
   checkStrategyResearchModule();
   await checkStrategyDecisionLogRuntimeModule();

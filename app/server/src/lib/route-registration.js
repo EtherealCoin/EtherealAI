@@ -56,6 +56,7 @@ function registerEtherealRoutes(app, options) {
     buildCompanySetupPlan,
     normalizeCompanyDnsTargetInput,
     parseCompanyDnsTarget,
+    verifyCompanyDnsTargetPublic,
     sanitizeAutomationPolicyUpdate,
     getJsonManifestStatus,
     getOnboardMemorySyncStatus,
@@ -218,7 +219,8 @@ function registerEtherealRoutes(app, options) {
     buildCompanyIdentityChecklist,
     buildCompanySetupPlan,
     normalizeCompanyDnsTargetInput,
-    parseCompanyDnsTarget
+    parseCompanyDnsTarget,
+    verifyCompanyDnsTargetPublic
   });
 
   registerHealthRoutes(app, {

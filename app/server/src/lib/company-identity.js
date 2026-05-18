@@ -1,3 +1,5 @@
+const dns = require('dns');
+
 const DNS_RECORD_TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'NS', 'CAA'];
 const DNS_TARGET_PURPOSES = [
   'website',
@@ -249,6 +251,152 @@ function parseCompanyDnsTarget(row = {}) {
     created_at: row.created_at,
     updated_at: row.updated_at
   };
+}
+
+function normalizeDnsCompareValue(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\.$/, '');
+}
+
+function buildDnsRecordName(target = {}) {
+  const domain = normalizeDomain(target.domain);
+  const host = String(target.host || '@').trim().toLowerCase();
+
+  if (!domain) {
+    return '';
+  }
+
+  if (!host || host === '@') {
+    return domain;
+  }
+
+  return host.endsWith(`.${domain}`) ? host : `${host}.${domain}`;
+}
+
+function flattenDnsRecords(recordType = '', records = []) {
+  if (recordType === 'MX') {
+    return records.map(record => `${record.priority} ${record.exchange}`);
+  }
+
+  if (recordType === 'TXT') {
+    return records.map(record => Array.isArray(record) ? record.join('') : String(record));
+  }
+
+  if (recordType === 'CAA') {
+    return records.map(record => `${record.flags} ${record.tag} ${record.value}`);
+  }
+
+  return records.map(record => String(record));
+}
+
+async function resolveDnsRecordsForTarget(target = {}, resolver = dns.promises) {
+  const recordType = String(target.recordType || target.record_type || '').toUpperCase();
+  const recordName = buildDnsRecordName(target);
+
+  if (!recordName) {
+    throw new Error('DNS record name could not be derived');
+  }
+
+  if (recordType === 'A') {
+    return resolver.resolve4(recordName);
+  }
+
+  if (recordType === 'AAAA') {
+    return resolver.resolve6(recordName);
+  }
+
+  if (recordType === 'CNAME') {
+    return resolver.resolveCname(recordName);
+  }
+
+  if (recordType === 'MX') {
+    return resolver.resolveMx(recordName);
+  }
+
+  if (recordType === 'TXT') {
+    return resolver.resolveTxt(recordName);
+  }
+
+  if (recordType === 'NS') {
+    return resolver.resolveNs(recordName);
+  }
+
+  if (recordType === 'CAA' && typeof resolver.resolveCaa === 'function') {
+    return resolver.resolveCaa(recordName);
+  }
+
+  return resolver.resolve(recordName, recordType);
+}
+
+function dnsRecordsMatchExpected(recordType = '', expectedValue = '', observedValues = []) {
+  const normalizedExpected = normalizeDnsCompareValue(expectedValue);
+  const normalizedObserved = observedValues.map(normalizeDnsCompareValue);
+
+  if (recordType === 'TXT') {
+    return normalizedObserved.some(value => (
+      value === normalizedExpected
+      || value.includes(normalizedExpected)
+      || normalizedExpected.includes(value)
+    ));
+  }
+
+  if (recordType === 'MX') {
+    const expectedParts = normalizedExpected.split(/\s+/);
+    const expectedExchange = expectedParts.length > 1
+      ? expectedParts.slice(1).join(' ')
+      : normalizedExpected;
+
+    return normalizedObserved.some(value => (
+      value === normalizedExpected
+      || value.endsWith(` ${expectedExchange}`)
+      || value === expectedExchange
+    ));
+  }
+
+  return normalizedObserved.includes(normalizedExpected);
+}
+
+async function verifyCompanyDnsTargetPublic(target = {}, { resolver = dns.promises, checkedAt = new Date() } = {}) {
+  const recordType = String(target.recordType || target.record_type || '').toUpperCase();
+  const recordName = buildDnsRecordName(target);
+  const expectedValue = String(target.value || target.target || '').trim();
+  const baseResult = {
+    targetId: target.id ? Number(target.id) : null,
+    domain: target.domain,
+    recordType,
+    host: target.host,
+    recordName,
+    expectedValue,
+    checkedAt: checkedAt.toISOString(),
+    localOnly: true,
+    externalMutationEnabled: false,
+    cloudflareApiCallsEnabled: false,
+    dnsMutationEnabled: false
+  };
+
+  try {
+    const records = await resolveDnsRecordsForTarget(target, resolver);
+    const observedValues = flattenDnsRecords(recordType, records);
+    const verified = dnsRecordsMatchExpected(recordType, expectedValue, observedValues);
+
+    return {
+      ...baseResult,
+      verified,
+      status: verified ? 'verified' : 'propagating',
+      observedValues,
+      error: null
+    };
+  } catch (error) {
+    return {
+      ...baseResult,
+      verified: false,
+      status: 'propagating',
+      observedValues: [],
+      error: error.code || error.message
+    };
+  }
 }
 
 function buildCompanySetupPlan(identity = {}, dnsTargets = []) {
@@ -626,5 +774,6 @@ module.exports = {
   normalizeCompanyIdentity,
   normalizeDnsLabel,
   parseCompanyDnsTarget,
-  readCompanyIdentity
+  readCompanyIdentity,
+  verifyCompanyDnsTargetPublic
 };

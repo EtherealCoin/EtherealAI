@@ -7,7 +7,8 @@ function registerCompanyIdentityRoutes(app, {
   buildCompanyIdentityChecklist,
   buildCompanySetupPlan,
   normalizeCompanyDnsTargetInput,
-  parseCompanyDnsTarget
+  parseCompanyDnsTarget,
+  verifyCompanyDnsTargetPublic
 }) {
   async function listCompanyDnsTargets() {
     const rows = await dbAll(
@@ -50,6 +51,56 @@ function registerCompanyIdentityRoutes(app, {
         setupPlan: buildCompanySetupPlan(identity, targets),
         localOnly: true,
         externalMutationEnabled: false
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/company-identity/dns-targets/verify-public', requireAuth, async (req, res) => {
+    try {
+      const identity = readCompanyIdentity();
+      const targets = await listCompanyDnsTargets();
+      const requestedIds = new Set((Array.isArray(req.body?.targetIds) ? req.body.targetIds : [])
+        .map(value => Number(value))
+        .filter(Number.isFinite));
+      const limit = Math.min(Math.max(Number(req.body?.limit || 50), 1), 100);
+      const selectedTargets = (requestedIds.size
+        ? targets.filter(target => requestedIds.has(Number(target.id)))
+        : targets
+      ).slice(0, limit);
+      const results = [];
+
+      for (const target of selectedTargets) {
+        const result = await verifyCompanyDnsTargetPublic(target);
+        const nextStatus = result.verified ? 'verified' : 'propagating';
+
+        await dbRun(
+          `UPDATE company_dns_targets
+           SET status = ?,
+               local_only = 1,
+               external_mutation_enabled = 0,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          [nextStatus, target.id]
+        );
+
+        results.push(result);
+      }
+
+      const refreshedTargets = await listCompanyDnsTargets();
+
+      res.json({
+        ok: true,
+        results,
+        checkedCount: results.length,
+        verifiedCount: results.filter(result => result.verified).length,
+        targets: refreshedTargets,
+        setupPlan: buildCompanySetupPlan(identity, refreshedTargets),
+        localOnly: true,
+        externalMutationEnabled: false,
+        cloudflareApiCallsEnabled: false,
+        dnsMutationEnabled: false
       });
     } catch (error) {
       res.status(500).json({ error: error.message });

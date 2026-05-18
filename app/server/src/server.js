@@ -50,7 +50,8 @@ const {
   buildCompanySetupPlan,
   normalizeCompanyDnsTargetInput,
   parseCompanyDnsTarget,
-  readCompanyIdentity
+  readCompanyIdentity,
+  verifyCompanyDnsTargetPublic
 } = require('./lib/company-identity');
 const {
   createAgentRecordActionsRuntime
@@ -644,6 +645,7 @@ registerEtherealRoutes(app, {
   buildCompanySetupPlan,
   normalizeCompanyDnsTargetInput,
   parseCompanyDnsTarget,
+  verifyCompanyDnsTargetPublic,
   sanitizeAutomationPolicyUpdate,
   getJsonManifestStatus,
   getOnboardMemorySyncStatus,

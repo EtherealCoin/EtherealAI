@@ -131,6 +131,7 @@
             <p class="inline-status">Configured identity: website etherealdigit.ai · email patrick@etherealdigital.ai · Cloudflare account patrick@lakepowellford.com metadata only</p>
             <div class="button-row">
                 <button id="refresh-company-identity" type="button">Refresh Identity</button>
+                <button id="verify-public-dns" type="button">Verify Public DNS</button>
             </div>
             <div id="company-identity-summary" class="artifact-grid">Loading company identity...</div>
             <div id="company-identity-checklist" class="task-list">Loading identity checklist...</div>
@@ -1475,6 +1476,32 @@
                 status.textContent = 'Saved local-only DNS target. Cloudflare was not changed.';
                 event.target.reset();
                 document.getElementById('company-dns-host').value = '@';
+                renderCompanyDnsTargets(data);
+                await loadSystemMemory();
+            } catch (error) {
+                status.textContent = error.message;
+            }
+        });
+
+        document.getElementById('verify-public-dns').addEventListener('click', async () => {
+            const status = document.getElementById('company-dns-target-status');
+            status.textContent = 'Checking public DNS records without Cloudflare API access...';
+
+            try {
+                const response = await fetch('/api/v1/company-identity/dns-targets/verify-public', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ limit: 100 })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to verify public DNS');
+                }
+
+                status.textContent = `Public DNS checked: ${data.verifiedCount || 0}/${data.checkedCount || 0} verified. Cloudflare was not changed.`;
                 renderCompanyDnsTargets(data);
                 await loadSystemMemory();
             } catch (error) {
