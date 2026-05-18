@@ -187,6 +187,17 @@
         </section>
 
         <section class="model-panel">
+            <h2>GitHub Publish Center</h2>
+            <p class="inline-status">Target: EtherealCoin/EtherealAI · private repository recommended · GitHub password auth is not supported.</p>
+            <div class="button-row">
+                <button id="refresh-github-publish" type="button">Refresh Publish Status</button>
+            </div>
+            <div id="github-publish-summary" class="artifact-grid">Loading GitHub publish status...</div>
+            <div id="github-publish-actions" class="task-list">Loading publish actions...</div>
+            <pre id="github-publish-output" class="model-output">GitHub publish status not loaded yet.</pre>
+        </section>
+
+        <section class="model-panel">
             <h2>Local Model Test</h2>
             <form id="model-test-form" class="model-test-form">
                 <label for="model-role">Role</label>
@@ -899,6 +910,89 @@
             }
         }
 
+        function renderGitHubPublishStatus(status = {}) {
+            const target = status.target || {};
+            const git = status.git || {};
+            const readiness = status.publishReadiness || {};
+            const safety = status.safetyBoundary || {};
+            const cards = [
+                {
+                    label: 'Target Repository',
+                    value: `${target.owner || 'EtherealCoin'}/${target.repo || 'EtherealAI'}`,
+                    note: target.visibility || 'private recommended'
+                },
+                {
+                    label: 'Remote Match',
+                    value: git.matchesTarget ? 'Ready' : 'Review',
+                    note: git.originPushUrl || 'origin remote missing'
+                },
+                {
+                    label: 'Local Commits',
+                    value: git.branch || 'unknown',
+                    note: git.lastCommit || 'last commit unavailable'
+                },
+                {
+                    label: 'GitHub Auth',
+                    value: readiness.authState || 'unknown',
+                    note: readiness.passwordAuthAllowed === false ? 'password auth unsupported' : 'review auth'
+                },
+                {
+                    label: 'Boundary',
+                    value: safety.noCredentialStored ? 'No Secrets Stored' : 'Review',
+                    note: safety.noAccountCreation ? 'account creation remains owner action' : 'review account state'
+                }
+            ];
+
+            document.getElementById('github-publish-summary').innerHTML = cards.map(card => `
+                <div class="artifact-stat">
+                    <strong>${escapeHtml(card.label)}</strong>
+                    <span>${escapeHtml(card.value)}</span>
+                    <span>${escapeHtml(card.note)}</span>
+                </div>
+            `).join('');
+            document.getElementById('github-publish-actions').innerHTML = (readiness.nextOwnerActions || []).map((action, index) => `
+                <article class="task-card">
+                    <div>
+                        <h3>Step ${index + 1}</h3>
+                        <p>${escapeHtml(action)}</p>
+                    </div>
+                    <span>${readiness.blockedBy?.length ? 'owner action' : 'ready'}</span>
+                </article>
+            `).join('');
+            document.getElementById('github-publish-output').textContent = JSON.stringify({
+                target,
+                git: {
+                    branch: git.branch,
+                    clean: git.clean,
+                    originPushUrl: git.originPushUrl,
+                    matchesTarget: git.matchesTarget,
+                    recentCommits: git.recentCommits
+                },
+                publishReadiness: readiness,
+                safetyBoundary: safety
+            }, null, 2);
+        }
+
+        async function loadGitHubPublishStatus() {
+            const output = document.getElementById('github-publish-output');
+            output.textContent = 'Loading GitHub publish status...';
+
+            try {
+                const response = await fetch('/api/v1/git/publish-status?owner=EtherealCoin&repo=EtherealAI');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load GitHub publish status');
+                }
+
+                renderGitHubPublishStatus(data);
+            } catch (error) {
+                document.getElementById('github-publish-summary').textContent = error.message;
+                document.getElementById('github-publish-actions').textContent = 'GitHub publish actions unavailable.';
+                output.textContent = error.message;
+            }
+        }
+
         async function loadHealth() {
             try {
                 const response = await fetch('/api/v1/health');
@@ -1218,6 +1312,7 @@
 
         document.getElementById('refresh-memory').addEventListener('click', loadSystemMemory);
         document.getElementById('refresh-company-identity').addEventListener('click', loadCompanyIdentity);
+        document.getElementById('refresh-github-publish').addEventListener('click', loadGitHubPublishStatus);
         document.getElementById('refresh-dev-server').addEventListener('click', loadDevServerStatus);
         document.getElementById('refresh-mvp-readiness').addEventListener('click', loadMvpReadiness);
         document.getElementById('refresh-live-handoff').addEventListener('click', loadLiveExecutionHandoff);
@@ -1267,6 +1362,7 @@
         loadLiveExecutionHandoff();
         loadSystemMemory();
         loadCompanyIdentity();
+        loadGitHubPublishStatus();
         loadMlxLifecycleStatus();
         loadMultiAgentRegistry();
         loadMultiAgentRuns();

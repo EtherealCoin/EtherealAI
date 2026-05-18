@@ -4,6 +4,7 @@ function registerCommandRoutes(app, {
   dbAll,
   commandTemplates,
   getGitStatusSnapshot,
+  getGitPublishStatus,
   createCheckpointRecord,
   createCommandRequestRecord,
   serializeCommandTemplate,
@@ -14,6 +15,17 @@ function registerCommandRoutes(app, {
   app.get('/api/v1/git/status', requireAuth, async (req, res) => {
     try {
       res.json(await getGitStatusSnapshot());
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/git/publish-status', requireAuth, async (req, res) => {
+    try {
+      res.json(await getGitPublishStatus({
+        owner: req.query.owner || 'EtherealCoin',
+        repo: req.query.repo || 'EtherealAI'
+      }));
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

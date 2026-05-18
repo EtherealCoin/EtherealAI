@@ -849,7 +849,12 @@ async function checkProcessRuntimeModule() {
       }
 
       if (command === 'git' && args[0] === 'log') {
-        callback(null, 'abc123 fixture commit\n', '');
+        callback(null, args.includes('-5') ? 'abc123 fixture commit\nbb222 second fixture\n' : 'abc123 fixture commit\n', '');
+        return;
+      }
+
+      if (command === 'git' && args[0] === 'remote') {
+        callback(null, 'origin https://EtherealCoin@github.com/EtherealCoin/EtherealAI.git (fetch)\norigin https://EtherealCoin@github.com/EtherealCoin/EtherealAI.git (push)\n', '');
         return;
       }
 
@@ -859,6 +864,10 @@ async function checkProcessRuntimeModule() {
   const text = await runtime.execFileText('echo', ['fixture']);
   const capture = await runtime.execFileCapture('bad-command', []);
   const gitStatus = await runtime.getGitStatusSnapshot();
+  const publishStatus = await runtime.getGitPublishStatus({
+    owner: 'EtherealCoin',
+    repo: 'EtherealAI'
+  });
 
   if (
     text !== 'trimmed output'
@@ -869,6 +878,12 @@ async function checkProcessRuntimeModule() {
     || gitStatus.branch !== 'main'
     || gitStatus.clean !== true
     || gitStatus.lastCommit !== 'abc123 fixture commit'
+    || publishStatus.target.repo !== 'EtherealAI'
+    || publishStatus.git.matchesTarget !== true
+    || publishStatus.publishReadiness.authState !== 'needs_pat_or_credential_manager'
+    || publishStatus.publishReadiness.passwordAuthAllowed !== false
+    || publishStatus.safetyBoundary.noCredentialStored !== true
+    || publishStatus.git.recentCommits.length !== 2
   ) {
     fail('process runtime module did not preserve command/Git helper behavior');
   }
@@ -1250,12 +1265,14 @@ function checkRouteRegistrationModule() {
     || !serverSource.includes('parseArbitrageSimulationRun')
     || !serverSource.includes('simulateTopRebalanceBatch')
     || !serverSource.includes('parseRebalanceSimulationBatch')
+    || !serverSource.includes('getGitPublishStatus')
     || !routeRegistrationSource.includes('parseTokenEcosystemProject: parsers.parseTokenEcosystemProject')
     || !routeRegistrationSource.includes('simulateCrossExchangeArbitrage')
     || !routeRegistrationSource.includes('parseArbitrageSimulationRun: parsers.parseArbitrageSimulationRun')
     || !routeRegistrationSource.includes('simulateTopRebalanceBatch')
     || !routeRegistrationSource.includes('parseRebalanceSimulationBatch: parsers.parseRebalanceSimulationBatch')
     || !routeRegistrationSource.includes('parseTokenEcosystemProject: parsers.parseTokenEcosystemProject')
+    || !routeRegistrationSource.includes('getGitPublishStatus')
     || !serverSource.includes('selects: ROW_LOOKUP_SELECTS')
     || !serverSource.includes('selects: ROUTE_SELECTS')
     || !serverSource.includes('parsers: ROUTE_PARSERS')
@@ -5569,6 +5586,14 @@ function checkDashboardMvpReadinessUi() {
     || !html.includes('/api/v1/company-identity/dns-targets')
     || !html.includes('etherealdigital.ai')
     || !html.includes('patrick@etherealdigital.ai')
+    || !html.includes('GitHub Publish Center')
+    || !html.includes('id="github-publish-summary"')
+    || !html.includes('id="github-publish-actions"')
+    || !html.includes('id="github-publish-output"')
+    || !html.includes('function renderGitHubPublishStatus(status = {})')
+    || !html.includes('/api/v1/git/publish-status?owner=EtherealCoin&repo=EtherealAI')
+    || !html.includes('password auth unsupported')
+    || !html.includes('account creation remains owner action')
     || !styles.includes('.owner-proof-surfaces')
     || !styles.includes('.owner-proof-surface-list')
     || !styles.includes('.checkbox-grid')
@@ -7871,6 +7896,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/api/v1/file-proposals/:id' && route.file === 'app/server/src/routes/file-proposals.js')
     || !inventory.routes.some(route => route.path === '/api/v1/file-proposals/:id/apply' && route.file === 'app/server/src/routes/file-proposals.js')
     || !inventory.routes.some(route => route.path === '/api/v1/git/status' && route.file === 'app/server/src/routes/commands.js')
+    || !inventory.routes.some(route => route.path === '/api/v1/git/publish-status' && route.file === 'app/server/src/routes/commands.js')
     || !inventory.routes.some(route => route.path === '/api/v1/git/checkpoints' && route.file === 'app/server/src/routes/commands.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/command-requests' && route.file === 'app/server/src/routes/commands.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/command-requests' && route.file === 'app/server/src/routes/commands.js')
@@ -8021,6 +8047,23 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/owner-proof-packet' && route.file === 'app/server/src/routes/pages.js')
   ) {
     fail('server route inventory did not expose expected modularization inventory data');
+  }
+
+  const gitPublishStatus = await fetchJson(`${baseUrl}/api/v1/git/publish-status?owner=EtherealCoin&repo=EtherealAI`, {
+    headers: authHeaders
+  });
+
+  if (
+    gitPublishStatus.body.target?.owner !== 'EtherealCoin'
+    || gitPublishStatus.body.target?.repo !== 'EtherealAI'
+    || gitPublishStatus.body.publishReadiness?.passwordAuthAllowed !== false
+    || gitPublishStatus.body.publishReadiness?.tokenStoredByEtherealAI !== false
+    || gitPublishStatus.body.publishReadiness?.externalAccountCreatedByEtherealAI !== false
+    || !gitPublishStatus.body.publishReadiness?.blockedBy?.includes('github_authentication_required')
+    || gitPublishStatus.body.safetyBoundary?.noCredentialStored !== true
+    || gitPublishStatus.body.safetyBoundary?.noAccountCreation !== true
+  ) {
+    fail('git publish status did not expose local-only GitHub auth boundary');
   }
 
   const providers = await fetchJson(`${baseUrl}/api/v1/market-data/providers`, { headers: authHeaders });

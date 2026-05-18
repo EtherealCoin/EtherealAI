@@ -343,7 +343,8 @@ const {
 const {
   execFileText,
   execFileCapture,
-  getGitStatusSnapshot
+  getGitStatusSnapshot,
+  getGitPublishStatus
 } = createProcessRuntime({
   execFile,
   projectRoot: PROJECT_ROOT
@@ -768,6 +769,7 @@ registerEtherealRoutes(app, {
   normalizeTokenEcosystemProjectInput,
   commandTemplates,
   getGitStatusSnapshot,
+  getGitPublishStatus,
   serializeCommandTemplate,
   getCommandTemplate,
   isCommandAllowed,
