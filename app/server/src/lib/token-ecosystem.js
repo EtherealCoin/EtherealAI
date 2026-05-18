@@ -25,6 +25,17 @@ const LISTING_SOURCES = [
   }
 ];
 
+const DEFAULT_TOKEN_FEATURE_SELECTIONS = [
+  'passive income reward model',
+  'NFT utility upgrades for profitability and access tiers',
+  'cross-chain bridge and liquidity route plan',
+  'top 200 market cap rebalancing bot use case',
+  'arbitrage-aware strategy design',
+  'CoinMarketCap and CoinGecko listing evidence packet',
+  'Discord, Telegram, YouTube, Medium, X launch bundle',
+  'website, roadmap, logo, and whitepaper generation'
+];
+
 const SOCIAL_CHANNELS = [
   {
     id: 'x',
@@ -909,6 +920,291 @@ function buildTokenEcosystemBlueprint(spec = {}) {
   };
 }
 
+function cleanProjectText(value, fallback = '', maxLength = 4000) {
+  const cleaned = String(value ?? fallback).trim();
+  return cleaned.length > maxLength ? cleaned.slice(0, maxLength) : cleaned;
+}
+
+function rejectSecretLikeTokenProjectInput(payload = {}) {
+  const text = JSON.stringify(payload);
+
+  if (/-----BEGIN|private key|seed phrase|mnemonic|api[_-]?key|cloudflare token|exchange secret|wallet secret/i.test(text)) {
+    throw new Error('Token ecosystem projects cannot store private keys, API keys, wallet secrets, mnemonics, or deployment secrets.');
+  }
+}
+
+function normalizeFeatureSelections(value) {
+  const raw = Array.isArray(value)
+    ? value
+    : String(value || '')
+      .split(/[,\n]/)
+      .map(item => item.trim())
+      .filter(Boolean);
+
+  return Array.from(new Set(raw.map(item => cleanProjectText(item, '', 160)).filter(Boolean))).slice(0, 32);
+}
+
+function normalizeTokenEcosystemProjectInput(input = {}, existing = {}) {
+  rejectSecretLikeTokenProjectInput(input);
+  const name = cleanProjectText(input.name ?? existing.name, '', 140);
+  const targetChain = normalizeChainId(input.targetChain ?? input.target_chain ?? existing.target_chain ?? existing.targetChain ?? 'base');
+  const contractType = cleanProjectText(input.contractType ?? input.contract_type ?? existing.contract_type ?? existing.contractType ?? 'erc20', 'erc20', 40).toLowerCase();
+  const featureSelections = normalizeFeatureSelections(input.featureSelections ?? input.feature_selections ?? existing.featureSelections ?? existing.feature_selections);
+  const contractSpecId = input.contractSpecId ?? input.contract_spec_id ?? existing.contract_spec_id ?? existing.contractSpecId ?? null;
+  const allowedContractTypes = new Set(['erc20', 'erc721', 'generic']);
+
+  if (!name) {
+    throw new Error('Token ecosystem project name is required');
+  }
+
+  if (!allowedContractTypes.has(contractType)) {
+    throw new Error('Contract type must be erc20, erc721, or generic');
+  }
+
+  return {
+    contractSpecId: contractSpecId ? Number(contractSpecId) : null,
+    name,
+    targetChain,
+    contractType,
+    featureSelections: featureSelections.length ? featureSelections : DEFAULT_TOKEN_FEATURE_SELECTIONS,
+    nftUtilityNotes: cleanProjectText(input.nftUtilityNotes ?? input.nft_utility_notes ?? existing.nft_utility_notes ?? existing.nftUtilityNotes, '', 2000),
+    ecosystemNotes: cleanProjectText(input.ecosystemNotes ?? input.ecosystem_notes ?? existing.ecosystem_notes ?? existing.ecosystemNotes, '', 4000),
+    status: cleanProjectText(input.status ?? existing.status ?? 'draft', 'draft', 40),
+    localOnly: true,
+    externalActionsEnabled: false
+  };
+}
+
+function buildTokenEcosystemProjectSpec(project = {}) {
+  const features = [
+    `Feature selections: ${(project.featureSelections || []).join('; ')}`,
+    project.nftUtilityNotes ? `NFT utility notes: ${project.nftUtilityNotes}` : '',
+    project.ecosystemNotes ? `Ecosystem notes: ${project.ecosystemNotes}` : ''
+  ].filter(Boolean).join('\n');
+
+  return {
+    id: project.contractSpecId || project.id,
+    name: project.name,
+    contract_type: project.contractType || project.contract_type || 'erc20',
+    network: project.targetChain || project.target_chain || 'base',
+    solidity_version: '0.8.24',
+    features,
+    risk_notes: [
+      'Local-only token ecosystem project.',
+      'No wallet private keys, no deployment broadcast, no external posting, and no live trading.',
+      'Owner must review legal, tokenomics, listing, and security assumptions before any public action.'
+    ].join('\n')
+  };
+}
+
+function buildTokenEcosystemProjectBlueprint(project = {}) {
+  const spec = buildTokenEcosystemProjectSpec(project);
+
+  return {
+    ...buildTokenEcosystemBlueprint(spec),
+    project: {
+      id: project.id || null,
+      contractSpecId: project.contractSpecId || project.contract_spec_id || null,
+      featureSelections: project.featureSelections || [],
+      nftUtilityNotes: project.nftUtilityNotes || '',
+      ecosystemNotes: project.ecosystemNotes || '',
+      localOnly: true,
+      externalActionsEnabled: false
+    }
+  };
+}
+
+function parseTokenEcosystemProject(row = {}) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    contract_spec_id: row.contract_spec_id,
+    name: row.name,
+    target_chain: row.target_chain,
+    contract_type: row.contract_type,
+    featureSelections: JSON.parse(row.feature_selections_json || '[]'),
+    nft_utility_notes: row.nft_utility_notes || '',
+    ecosystem_notes: row.ecosystem_notes || '',
+    status: row.status,
+    blueprint: JSON.parse(row.blueprint_json || '{}'),
+    localOnly: row.local_only !== 0,
+    externalActionsEnabled: row.external_actions_enabled === 1,
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+}
+
+function markdownList(items = []) {
+  return items.length ? items.map(item => `- ${item}`).join('\n') : '- Pending owner input';
+}
+
+function buildTokenEcosystemWorkspaceFiles(project = {}) {
+  const blueprint = project.blueprint?.status ? project.blueprint : buildTokenEcosystemProjectBlueprint(project);
+  const website = blueprint.website || {};
+  const whitepaper = blueprint.whitepaper || {};
+  const listing = blueprint.listingReadiness || {};
+  const social = blueprint.socialCampaign || {};
+  const logo = blueprint.logo || {};
+  const multiChain = blueprint.multiChainTokenBuild || {};
+  const tokenName = project.name || blueprint.contract?.name || 'Token Ecosystem Project';
+
+  return [
+    {
+      relativePath: 'README.md',
+      content: `# ${tokenName}
+
+Local token ecosystem workspace generated by EtherealAI.
+
+## Boundary
+
+- Local planning and artifact generation only.
+- No wallet private keys or deployment keys in this workspace.
+- No social posting, listing submission, token deployment, or live trading from this workspace.
+
+## Project
+
+- Target chain: ${project.target_chain || project.targetChain || 'base'}
+- Contract type: ${project.contract_type || project.contractType || 'erc20'}
+- Status: ${project.status || 'draft'}
+
+## Feature Selections
+
+${markdownList(project.featureSelections || [])}
+`
+    },
+    {
+      relativePath: 'website/SITE_MAP.md',
+      content: `# Website Creation Center
+
+Template: ${website.template?.label || 'Token launch'}
+
+${(website.pages || []).map(page => `## ${page.label}\n\n${markdownList(page.sections || [])}`).join('\n\n')}
+
+## Roadmap
+
+${(website.roadmap || []).map(item => `- ${item.phase}: ${item.title} - ${item.output}`).join('\n')}
+`
+    },
+    {
+      relativePath: 'whitepaper/WHITEPAPER_DRAFT.md',
+      content: `# ${whitepaper.draft?.title || `${tokenName} Whitepaper Draft`}
+
+## Abstract
+
+${whitepaper.draft?.abstract || 'Draft pending.'}
+
+## Use Case
+
+${whitepaper.draft?.useCase || 'Define use case.'}
+
+## Token Mechanics
+
+${markdownList(whitepaper.draft?.tokenMechanics || [])}
+
+## Roadmap
+
+${(whitepaper.draft?.roadmap || []).map(item => `- ${item.phase}: ${item.title} - ${item.output}`).join('\n')}
+
+## Disclosures
+
+${markdownList(whitepaper.draft?.disclosures || [])}
+`
+    },
+    {
+      relativePath: 'social/SOCIAL_LAUNCH_PLAN.md',
+      content: `# Social Launch Bundle
+
+Status: ${social.status || 'draft_only'}
+
+## Channels
+
+${(social.channels || []).map(channel => `- ${channel.label}: ${channel.purpose} Boundary: ${channel.automationBoundary}`).join('\n')}
+
+## Launch Cadence
+
+${(social.launchCadence || []).map(phase => `## ${phase.phase}\n\n${markdownList(phase.outputs || [])}`).join('\n\n')}
+`
+    },
+    {
+      relativePath: 'listing/LISTING_EVIDENCE_PACKET.md',
+      content: `# Listing Evidence Packet
+
+Status: ${listing.status || 'evidence_required'}
+
+## Checklist
+
+${(listing.checklist || []).map(item => `- [ ] ${item.label} (${item.status}): ${item.evidence}`).join('\n')}
+
+## Sources
+
+${(listing.sources || []).map(source => `- ${source.platform}: ${source.title} - ${source.url}`).join('\n')}
+`
+    },
+    {
+      relativePath: 'tokenomics/TOKENOMICS_AND_NFT_UTILITY.md',
+      content: `# Tokenomics And NFT Utility
+
+## Multi-Chain Build
+
+- Selected chain: ${multiChain.selectedChain?.name || 'Base'}
+- Standard: ${multiChain.standardPlan?.primaryStandard || 'ERC20'}
+- Starter scaffold: ${multiChain.standardPlan?.starterScaffold || 'Local scaffold pending'}
+
+## Feature Matrix
+
+${(blueprint.tokenFeatureMatrix || []).map(row => `- ${row.label}: ${row.recommendation}`).join('\n')}
+
+## NFT Utility Designer
+
+- Status: ${blueprint.nftUtilityDesigner?.status || 'available'}
+- Formula: ${blueprint.nftUtilityDesigner?.formula || 'pending'}
+
+${markdownList(blueprint.nftUtilityDesigner?.upgradeAxes || [])}
+`
+    },
+    {
+      relativePath: 'brand/LOGO_BRIEF.md',
+      content: `# Logo Creation Brief
+
+## Prompts
+
+${markdownList(logo.prompts || [])}
+
+## Deliverables
+
+${markdownList(logo.deliverables || [])}
+
+## Checks
+
+${markdownList(logo.checks || [])}
+`
+    },
+    {
+      relativePath: 'automation/CROSS_CHAIN_ARBITRAGE_DESIGN.md',
+      content: `# Cross-Chain Arbitrage Design
+
+Status: ${blueprint.crossChainArbitrage?.status || 'design_only_no_live_orders'}
+
+## Objective
+
+${blueprint.crossChainArbitrage?.objective || 'Design only.'}
+
+## Modules
+
+${markdownList(blueprint.crossChainArbitrage?.modules || [])}
+
+## Required Safety Gates
+
+${markdownList(blueprint.crossChainArbitrage?.requiredSafetyGates || [])}
+`
+    }
+  ];
+}
+
 module.exports = {
   LISTING_SOURCES,
   SOCIAL_CHANNELS,
@@ -916,6 +1212,7 @@ module.exports = {
   WHITEPAPER_TEMPLATES,
   WEBSITE_TEMPLATES,
   LOW_FEE_LAUNCH_CHAIN_IDS,
+  DEFAULT_TOKEN_FEATURE_SELECTIONS,
   detectFeatureFlags,
   normalizeChainId,
   getChainOption,
@@ -934,5 +1231,10 @@ module.exports = {
   buildCrossChainArbitrageArchitecture,
   buildSocialCampaignPlan,
   buildTokenEcosystemCatalog,
-  buildTokenEcosystemBlueprint
+  buildTokenEcosystemBlueprint,
+  normalizeTokenEcosystemProjectInput,
+  buildTokenEcosystemProjectSpec,
+  buildTokenEcosystemProjectBlueprint,
+  buildTokenEcosystemWorkspaceFiles,
+  parseTokenEcosystemProject
 };

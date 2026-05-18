@@ -14,6 +14,10 @@ function registerSolidityLabRoutes(app, {
   reviewSoliditySource,
   buildTokenEcosystemCatalog,
   buildTokenEcosystemBlueprint,
+  buildTokenEcosystemProjectBlueprint,
+  buildTokenEcosystemWorkspaceFiles,
+  normalizeTokenEcosystemProjectInput,
+  parseTokenEcosystemProject,
   ensureWorkspacesDir,
   slugify,
   workspacesDir,
@@ -25,6 +29,206 @@ function registerSolidityLabRoutes(app, {
     try {
       res.json({
         catalog: buildTokenEcosystemCatalog()
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  async function getTokenEcosystemProject(id) {
+    return parseTokenEcosystemProject(await dbGet(
+      'SELECT * FROM token_ecosystem_projects WHERE id = ?',
+      [id]
+    ));
+  }
+
+  async function createWorkspaceForTokenProject(project) {
+    ensureWorkspacesDir();
+    const workspaceSlug = `token-ecosystem-${project.id}-${slugify(project.name) || 'project'}`.slice(0, 80);
+    const workspacePath = path.join(workspacesDir, workspaceSlug);
+    let workspace = await dbGet('SELECT * FROM workspaces WHERE slug = ?', [workspaceSlug]);
+
+    if (!workspace) {
+      fs.mkdirSync(workspacePath, { recursive: true });
+      const workspaceResult = await dbRun(
+        `INSERT INTO workspaces (name, slug, path)
+         VALUES (?, ?, ?)`,
+        [`${project.name} Token Ecosystem Workspace`, workspaceSlug, workspacePath]
+      );
+      workspace = await dbGet('SELECT * FROM workspaces WHERE id = ?', [workspaceResult.lastID]);
+    }
+
+    const policy = readAutomationPolicy();
+    const initialStatus = policy.localAutomation.autoApproveFileProposals ? 'approved' : 'pending';
+    const shouldApply = initialStatus === 'approved';
+    const files = buildTokenEcosystemWorkspaceFiles(project);
+    const proposals = [];
+    const applied = [];
+    const skipped = [];
+
+    for (const file of files) {
+      const { targetPath, relativePath: safePath } = resolveWorkspacePath(workspace, file.relativePath);
+      const existingProposal = await dbGet(
+        `SELECT *
+         FROM file_write_proposals
+         WHERE workspace_id = ? AND relative_path = ? AND status != 'rejected'
+         ORDER BY id DESC
+         LIMIT 1`,
+        [workspace.id, safePath]
+      );
+
+      if (existingProposal) {
+        skipped.push(parseFileProposal(existingProposal));
+        continue;
+      }
+
+      let currentContent = null;
+
+      if (fs.existsSync(targetPath)) {
+        const stats = fs.statSync(targetPath);
+
+        if (!stats.isFile()) {
+          throw new Error(`Token ecosystem workspace path points to an existing directory: ${safePath}`);
+        }
+
+        currentContent = fs.readFileSync(targetPath, 'utf8');
+      }
+
+      const result = await dbRun(
+        `INSERT INTO file_write_proposals
+         (task_id, workspace_id, relative_path, action, current_content, proposed_content, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          null,
+          workspace.id,
+          safePath,
+          'upsert',
+          currentContent,
+          file.content,
+          initialStatus
+        ]
+      );
+      const proposal = parseFileProposal(await dbGet(
+        'SELECT * FROM file_write_proposals WHERE id = ?',
+        [result.lastID]
+      ));
+      proposals.push(proposal);
+
+      if (shouldApply) {
+        applied.push(await applyFileProposalRecord(proposal));
+      }
+    }
+
+    await dbRun(
+      `UPDATE token_ecosystem_projects
+       SET status = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [shouldApply ? 'workspace_ready' : 'workspace_proposed', project.id]
+    );
+
+    return {
+      workspace,
+      proposals,
+      applied,
+      skipped,
+      initialStatus,
+      status: shouldApply ? 'workspace_ready' : 'workspace_proposed'
+    };
+  }
+
+  app.get('/api/v1/token-ecosystem-projects', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `SELECT *
+         FROM token_ecosystem_projects
+         ORDER BY updated_at DESC, id DESC
+         LIMIT 100`
+      );
+
+      res.json({ projects: rows.map(parseTokenEcosystemProject) });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/token-ecosystem-projects/:id', requireAuth, async (req, res) => {
+    try {
+      const project = await getTokenEcosystemProject(req.params.id);
+
+      if (!project) {
+        return res.status(404).json({ error: 'Token ecosystem project not found' });
+      }
+
+      res.json({ project });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/token-ecosystem-projects', requireAuth, async (req, res) => {
+    try {
+      const input = normalizeTokenEcosystemProjectInput(req.body || {});
+      const blueprint = buildTokenEcosystemProjectBlueprint({
+        ...input,
+        id: null
+      });
+      const result = await dbRun(
+        `INSERT INTO token_ecosystem_projects
+           (user_id, contract_spec_id, name, target_chain, contract_type, feature_selections_json,
+            nft_utility_notes, ecosystem_notes, status, blueprint_json, local_only, external_actions_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0)`,
+        [
+          req.session.userId || null,
+          input.contractSpecId,
+          input.name,
+          input.targetChain,
+          input.contractType,
+          JSON.stringify(input.featureSelections),
+          input.nftUtilityNotes,
+          input.ecosystemNotes,
+          input.status,
+          JSON.stringify(blueprint)
+        ]
+      );
+      let project = await getTokenEcosystemProject(result.lastID);
+      const updatedBlueprint = buildTokenEcosystemProjectBlueprint({
+        ...project,
+        contractSpecId: project.contract_spec_id,
+        contractType: project.contract_type,
+        targetChain: project.target_chain,
+        nftUtilityNotes: project.nft_utility_notes,
+        ecosystemNotes: project.ecosystem_notes
+      });
+      await dbRun(
+        `UPDATE token_ecosystem_projects
+         SET blueprint_json = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [JSON.stringify(updatedBlueprint), project.id]
+      );
+      project = await getTokenEcosystemProject(project.id);
+
+      res.status(201).json({ project });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/token-ecosystem-projects/:id/workspace', requireAuth, async (req, res) => {
+    try {
+      const project = await getTokenEcosystemProject(req.params.id);
+
+      if (!project) {
+        return res.status(404).json({ error: 'Token ecosystem project not found' });
+      }
+
+      const result = await createWorkspaceForTokenProject(project);
+      const updatedProject = await getTokenEcosystemProject(project.id);
+
+      res.status(201).json({
+        project: updatedProject,
+        ...result,
+        localOnly: true,
+        externalActionsEnabled: false
       });
     } catch (error) {
       res.status(500).json({ error: error.message });

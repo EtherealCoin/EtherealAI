@@ -529,6 +529,28 @@ function initializeDatabase(db) {
     `);
 
     db.run(`
+      CREATE TABLE IF NOT EXISTS token_ecosystem_projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        contract_spec_id INTEGER,
+        name TEXT NOT NULL,
+        target_chain TEXT NOT NULL DEFAULT 'base',
+        contract_type TEXT NOT NULL DEFAULT 'erc20',
+        feature_selections_json TEXT NOT NULL DEFAULT '[]',
+        nft_utility_notes TEXT,
+        ecosystem_notes TEXT,
+        status TEXT NOT NULL DEFAULT 'draft',
+        blueprint_json TEXT NOT NULL DEFAULT '{}',
+        local_only INTEGER NOT NULL DEFAULT 1,
+        external_actions_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(contract_spec_id) REFERENCES solidity_contract_specs(id)
+      )
+    `);
+
+    db.run(`
       CREATE TABLE IF NOT EXISTS social_posts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         platform TEXT NOT NULL,

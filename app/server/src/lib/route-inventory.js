@@ -190,7 +190,10 @@ function categorizeRoutePath(routePath) {
     };
   }
 
-  if (routePath.startsWith('/api/v1/solidity')) {
+  if (
+    routePath.startsWith('/api/v1/solidity')
+    || routePath.startsWith('/api/v1/token-ecosystem')
+  ) {
     return {
       category: 'Solidity Lab',
       moduleId: 'solidity-lab',

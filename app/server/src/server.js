@@ -78,8 +78,12 @@ const {
   reviewSoliditySource
 } = require('./lib/solidity-lab');
 const {
+  buildTokenEcosystemProjectBlueprint,
+  buildTokenEcosystemWorkspaceFiles,
   buildTokenEcosystemCatalog,
-  buildTokenEcosystemBlueprint
+  buildTokenEcosystemBlueprint,
+  normalizeTokenEcosystemProjectInput,
+  parseTokenEcosystemProject
 } = require('./lib/token-ecosystem');
 const {
   getJsonManifestStatus,
@@ -590,6 +594,7 @@ const ROUTE_PARSERS = {
   parseBotAutomationRun,
   parseBotAutomationSchedule,
   parseSolidityContractSpec,
+  parseTokenEcosystemProject,
   parseSocialPost,
   parseOwnerAcceptanceRecord,
   parseCompanyDnsTarget,
@@ -748,6 +753,9 @@ registerEtherealRoutes(app, {
   normalizeSelectedAgents,
   buildTokenEcosystemCatalog,
   buildTokenEcosystemBlueprint,
+  buildTokenEcosystemProjectBlueprint,
+  buildTokenEcosystemWorkspaceFiles,
+  normalizeTokenEcosystemProjectInput,
   commandTemplates,
   getGitStatusSnapshot,
   serializeCommandTemplate,

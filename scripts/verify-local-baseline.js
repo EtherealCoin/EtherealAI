@@ -1241,6 +1241,11 @@ function checkRouteRegistrationModule() {
     || !serverSource.includes('buildCompanySetupPlan')
     || !serverSource.includes('normalizeCompanyDnsTargetInput')
     || !serverSource.includes('parseCompanyDnsTarget')
+    || !serverSource.includes('normalizeTokenEcosystemProjectInput')
+    || !serverSource.includes('buildTokenEcosystemProjectBlueprint')
+    || !serverSource.includes('buildTokenEcosystemWorkspaceFiles')
+    || !serverSource.includes('parseTokenEcosystemProject')
+    || !routeRegistrationSource.includes('parseTokenEcosystemProject: parsers.parseTokenEcosystemProject')
     || !serverSource.includes('selects: ROW_LOOKUP_SELECTS')
     || !serverSource.includes('selects: ROUTE_SELECTS')
     || !serverSource.includes('parsers: ROUTE_PARSERS')
@@ -1337,6 +1342,8 @@ function checkDatabaseSchemaModule() {
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS multi_agent_contributions'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS company_dns_targets'))
     || !statements.some(statement => statement.includes('external_mutation_enabled INTEGER NOT NULL DEFAULT 0'))
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS token_ecosystem_projects'))
+    || !statements.some(statement => statement.includes('external_actions_enabled INTEGER NOT NULL DEFAULT 0'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS owner_acceptance_records'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS market_data_import_jobs'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS dev_server_logs'))
@@ -4416,7 +4423,11 @@ function checkSolidityLabModule() {
   const {
     buildTokenEcosystemCatalog,
     buildTokenEcosystemBlueprint,
-    buildMultiChainTokenBuildPlan
+    buildMultiChainTokenBuildPlan,
+    buildTokenEcosystemProjectBlueprint,
+    buildTokenEcosystemWorkspaceFiles,
+    normalizeTokenEcosystemProjectInput,
+    parseTokenEcosystemProject
   } = require(path.join(projectRoot, 'app/server/src/lib/token-ecosystem'));
   const spec = parseSolidityContractSpec({
     id: 9,
@@ -4442,6 +4453,43 @@ function checkSolidityLabModule() {
   const polygonBuildPlan = buildMultiChainTokenBuildPlan({
     ...spec,
     network: 'polygon'
+  });
+  const tokenProjectInput = normalizeTokenEcosystemProjectInput({
+    name: 'EtherealAI Fixture Ecosystem',
+    targetChain: 'base',
+    contractType: 'erc20',
+    featureSelections: [
+      'passive income reward model',
+      'NFT utility upgrades for profitability and access tiers',
+      'top 200 market cap rebalancing bot use case',
+      'arbitrage-aware strategy design',
+      'website, roadmap, logo, and whitepaper generation'
+    ],
+    nftUtilityNotes: 'NFT tiers unlock capped utility modules.',
+    ecosystemNotes: 'Local-only verifier project.'
+  });
+  const tokenProjectBlueprint = buildTokenEcosystemProjectBlueprint(tokenProjectInput);
+  const tokenProjectWorkspaceFiles = buildTokenEcosystemWorkspaceFiles({
+    id: 77,
+    ...tokenProjectInput,
+    blueprint: tokenProjectBlueprint
+  });
+  const parsedTokenProject = parseTokenEcosystemProject({
+    id: 77,
+    user_id: 3,
+    contract_spec_id: null,
+    name: tokenProjectInput.name,
+    target_chain: tokenProjectInput.targetChain,
+    contract_type: tokenProjectInput.contractType,
+    feature_selections_json: JSON.stringify(tokenProjectInput.featureSelections),
+    nft_utility_notes: tokenProjectInput.nftUtilityNotes,
+    ecosystem_notes: tokenProjectInput.ecosystemNotes,
+    status: 'draft',
+    blueprint_json: JSON.stringify(tokenProjectBlueprint),
+    local_only: 1,
+    external_actions_enabled: 0,
+    created_at: '2026-05-17T00:00:00.000Z',
+    updated_at: '2026-05-17T00:00:00.000Z'
   });
 
   if (spec.contract_type !== 'erc20' || spec.name !== 'Local Token') {
@@ -4490,8 +4538,35 @@ function checkSolidityLabModule() {
     || !blueprint.logo?.prompts?.length
     || !blueprint.listingReadiness?.checklist?.some(item => item.id === 'no_spam_no_bribes')
     || !blueprint.crossChainArbitrage?.requiredSafetyGates?.includes('no wallet private keys in EtherealAI')
+    || tokenProjectInput.targetChain !== 'base'
+    || tokenProjectInput.localOnly !== true
+    || tokenProjectInput.externalActionsEnabled !== false
+    || tokenProjectBlueprint.project?.externalActionsEnabled !== false
+    || tokenProjectBlueprint.safetyBoundary?.deploymentEnabled !== false
+    || tokenProjectBlueprint.safetyBoundary?.externalPostingEnabled !== false
+    || !tokenProjectBlueprint.project?.featureSelections?.includes('arbitrage-aware strategy design')
+    || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'website/SITE_MAP.md')
+    || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'whitepaper/WHITEPAPER_DRAFT.md')
+    || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'automation/CROSS_CHAIN_ARBITRAGE_DESIGN.md')
+    || !tokenProjectWorkspaceFiles.every(file => file.content.includes('No wallet private keys') || file.relativePath !== 'README.md')
+    || parsedTokenProject.localOnly !== true
+    || parsedTokenProject.externalActionsEnabled !== false
+    || parsedTokenProject.blueprint?.project?.externalActionsEnabled !== false
   ) {
     fail('token ecosystem blueprint did not preserve local-only token/social/listing/node/arbitrage planning behavior');
+  }
+
+  try {
+    normalizeTokenEcosystemProjectInput({
+      name: 'Unsafe Fixture',
+      targetChain: 'base',
+      apiKey: `sk-${'a'.repeat(40)}`
+    });
+    fail('token ecosystem project input accepted a secret-like payload');
+  } catch (error) {
+    if (!/cannot store private keys/i.test(error.message)) {
+      fail('token ecosystem project input rejected with an unexpected error');
+    }
   }
 
   pass('solidity lab module');
@@ -5335,6 +5410,9 @@ function checkOwnerProofPacketUi() {
     || !acceptanceRoute.includes('goLiveAllowed: false')
     || !route.includes('buildBotAutomationCapabilityPath')
     || !systemMemory.includes('buildBotAutomationCapabilityPath')
+    || !systemMemory.includes('token_ecosystem_projects')
+    || !systemMemory.includes('tokenEcosystemProjects')
+    || !systemMemory.includes('parsers.parseTokenEcosystemProject')
     || !route.includes('addOwnerProofPacketChecksum(buildOwnerProofPacket')
     || !systemMemory.includes('buildOwnerEvidenceSnapshot()')
     || !systemMemory.includes('buildOwnerAcceptanceSummary')
@@ -5566,6 +5644,11 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('draft, test, and audit before any future deploy phase')
     || !solidity.includes('Token Ecosystem Studio')
     || !solidity.includes('Token Creation Options')
+    || !solidity.includes('Token Ecosystem Projects')
+    || !solidity.includes('Save Ecosystem Project')
+    || !solidity.includes('Generate Workspace')
+    || !solidity.includes('/api/v1/token-ecosystem-projects')
+    || !solidity.includes('/workspace')
     || !solidity.includes('Passive income / rewards model')
     || !solidity.includes('NFT utility upgrades')
     || !solidity.includes('Top-200 rebalance bot')
@@ -6903,7 +6986,7 @@ async function runServerApiChecks() {
     },
     {
       path: '/solidity-lab',
-      requiredText: ['MVP 99% · Local E2E 95%', 'Proof packet', 'Deployment Boundary', 'no mainnet or testnet broadcast', 'Token Ecosystem Studio', 'Multi-Chain Token Builder', 'Listing Readiness']
+      requiredText: ['MVP 99% · Local E2E 95%', 'Proof packet', 'Deployment Boundary', 'no mainnet or testnet broadcast', 'Token Ecosystem Studio', 'Token Ecosystem Projects', 'Save Ecosystem Project', 'Multi-Chain Token Builder', 'Listing Readiness']
     },
     {
       path: '/social-ops',
@@ -6961,6 +7044,91 @@ async function runServerApiChecks() {
     || ecosystemCatalog.body.catalog?.nodeResearch?.status !== 'research_only_no_live_market_calls'
   ) {
     fail('Solidity ecosystem catalog did not expose local-only chain/social/listing/node/arbitrage planning data');
+  }
+
+  const tokenProject = await fetchJson(`${baseUrl}/api/v1/token-ecosystem-projects`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({
+      name: `Baseline fixture token ecosystem ${Date.now()}`,
+      targetChain: 'base',
+      contractType: 'erc20',
+      featureSelections: [
+        'passive income reward model',
+        'NFT utility upgrades for profitability and access tiers',
+        'top 200 market cap rebalancing bot use case',
+        'arbitrage-aware strategy design',
+        'website, roadmap, logo, and whitepaper generation'
+      ],
+      nftUtilityNotes: 'NFT tiers upgrade access and capped utility modules.',
+      ecosystemNotes: 'Verifier fixture only. Local project, local artifacts, no deployment, no posting, no live trading.'
+    })
+  });
+
+  if (
+    !tokenProject.body.project?.id
+    || tokenProject.body.project?.target_chain !== 'base'
+    || tokenProject.body.project?.contract_type !== 'erc20'
+    || tokenProject.body.project?.localOnly !== true
+    || tokenProject.body.project?.externalActionsEnabled !== false
+    || tokenProject.body.project?.blueprint?.safetyBoundary?.deploymentEnabled !== false
+    || tokenProject.body.project?.blueprint?.safetyBoundary?.externalPostingEnabled !== false
+    || !tokenProject.body.project?.blueprint?.project?.featureSelections?.includes('arbitrage-aware strategy design')
+  ) {
+    fail('token ecosystem project API did not create a local-only project blueprint');
+  }
+
+  const tokenProjectDetail = await fetchJson(`${baseUrl}/api/v1/token-ecosystem-projects/${tokenProject.body.project.id}`, {
+    headers: authHeaders
+  });
+  const tokenProjectList = await fetchJson(`${baseUrl}/api/v1/token-ecosystem-projects`, {
+    headers: authHeaders
+  });
+
+  if (
+    tokenProjectDetail.body.project?.id !== tokenProject.body.project.id
+    || !tokenProjectList.body.projects?.some(project => project.id === tokenProject.body.project.id)
+  ) {
+    fail('token ecosystem project API did not return persisted project detail/list rows');
+  }
+
+  const unsafeTokenProject = await fetchJsonExpectStatus(`${baseUrl}/api/v1/token-ecosystem-projects`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({
+      name: 'Unsafe token fixture',
+      targetChain: 'base',
+      apiKey: `sk-${'a'.repeat(40)}`
+    })
+  }, 400);
+
+  if (!/cannot store private keys/i.test(unsafeTokenProject.body.error || '')) {
+    fail('token ecosystem project API did not reject secret-like input');
+  }
+
+  const tokenWorkspace = await fetchJson(`${baseUrl}/api/v1/token-ecosystem-projects/${tokenProject.body.project.id}/workspace`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie)
+  });
+  const tokenWorkspaceFiles = [
+    ...(tokenWorkspace.body.proposals || []),
+    ...(tokenWorkspace.body.applied || []),
+    ...(tokenWorkspace.body.skipped || [])
+  ];
+
+  if (
+    tokenWorkspace.body.localOnly !== true
+    || tokenWorkspace.body.externalActionsEnabled !== false
+    || !tokenWorkspace.body.workspace?.path
+    || tokenWorkspaceFiles.length < 8
+    || !tokenWorkspaceFiles.some(file => file.relative_path === 'website/SITE_MAP.md')
+    || !tokenWorkspaceFiles.some(file => file.relative_path === 'whitepaper/WHITEPAPER_DRAFT.md')
+    || !tokenWorkspaceFiles.some(file => file.relative_path === 'social/SOCIAL_LAUNCH_PLAN.md')
+    || !tokenWorkspaceFiles.some(file => file.relative_path === 'listing/LISTING_EVIDENCE_PACKET.md')
+    || !tokenWorkspaceFiles.some(file => file.relative_path === 'automation/CROSS_CHAIN_ARBITRAGE_DESIGN.md')
+    || !['workspace_ready', 'workspace_proposed'].includes(tokenWorkspace.body.project?.status)
+  ) {
+    fail('token ecosystem project workspace generation did not produce the expected local artifact set');
   }
 
   const multiAgentRegistry = await fetchJson(`${baseUrl}/api/v1/multi-agent/registry`, { headers: authHeaders });
@@ -7272,6 +7440,10 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/api/v1/solidity-contracts/:id/ecosystem-blueprint' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.path === '/api/v1/solidity-contracts/:id/scaffold' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/solidity-ecosystem/catalog' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/token-ecosystem-projects' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/token-ecosystem-projects/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects/:id/workspace' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-capability-path' && route.file === 'app/server/src/routes/bot-automation.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-plans' && route.file === 'app/server/src/routes/bot-automation.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/bot-automation-plans' && route.file === 'app/server/src/routes/bot-automation.js')
@@ -7460,6 +7632,13 @@ async function runServerApiChecks() {
     || !systemMemory.body.snapshot?.botAutomationCapabilityPath?.futureLiveAutomation?.blockedGates?.includes('live_order_endpoint_enabled')
     || !isOwnerAcceptanceReadyOrAccepted(systemMemory.body.snapshot?.ownerAcceptance)
     || !Object.prototype.hasOwnProperty.call(systemMemory.body.snapshot?.counts || {}, 'owner_acceptance_records')
+    || !Number.isFinite(Number(systemMemory.body.snapshot?.counts?.token_ecosystem_projects))
+    || !Array.isArray(systemMemory.body.snapshot?.recent?.tokenEcosystemProjects)
+    || !systemMemory.body.snapshot?.recent?.tokenEcosystemProjects?.some(project => (
+      project.localOnly === true
+      && project.externalActionsEnabled === false
+      && project.blueprint?.safetyBoundary?.deploymentEnabled === false
+    ))
     || !Array.isArray(systemMemory.body.snapshot?.recent?.ownerAcceptanceRecords)
     || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
       surface.id === 'owner_proof_packet'

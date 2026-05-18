@@ -51,6 +51,7 @@ function registerSystemMemoryRoutes(app, {
         'bot_automation_schedules',
         'owner_acceptance_records',
         'company_dns_targets',
+        'token_ecosystem_projects',
         'solidity_contract_specs',
         'social_posts',
         'multi_agent_coordination_runs',
@@ -96,6 +97,7 @@ function registerSystemMemoryRoutes(app, {
         botLiveEnablementReviewRows,
         botRunRows,
         botScheduleRows,
+        tokenEcosystemProjectRows,
         solidityRows,
         socialRows,
         companyDnsTargetRows,
@@ -230,6 +232,7 @@ function registerSystemMemoryRoutes(app, {
            ORDER BY bot_automation_schedules.created_at DESC
            LIMIT 10`
         ),
+        dbAll('SELECT * FROM token_ecosystem_projects ORDER BY updated_at DESC, id DESC LIMIT 10'),
         dbAll('SELECT * FROM solidity_contract_specs ORDER BY created_at DESC LIMIT 10'),
         dbAll('SELECT * FROM social_posts ORDER BY created_at DESC LIMIT 10'),
         dbAll('SELECT * FROM company_dns_targets ORDER BY updated_at DESC, id DESC LIMIT 20'),
@@ -318,6 +321,7 @@ function registerSystemMemoryRoutes(app, {
             botLiveEnablementReviews: botLiveEnablementReviewRows.map(parsers.parseBotLiveEnablementReview),
             botAutomationRuns: parsedBotRuns,
             botAutomationSchedules: parsedBotSchedules,
+            tokenEcosystemProjects: tokenEcosystemProjectRows.map(parsers.parseTokenEcosystemProject),
             solidityContracts: solidityRows.map(parsers.parseSolidityContractSpec),
             socialPosts: socialRows.map(parsers.parseSocialPost),
             companyDnsTargets: companyDnsTargetRows.map(parsers.parseCompanyDnsTarget),

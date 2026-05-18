@@ -118,6 +118,7 @@
                     <div class="button-row">
                         <button id="apply-token-options" type="button">Apply Token Options To Spec</button>
                         <button id="select-low-fee-token-options" type="button">Select Low-Fee Launch Defaults</button>
+                        <button id="save-token-ecosystem-project" type="button">Save Ecosystem Project</button>
                     </div>
                 </section>
 
@@ -158,6 +159,15 @@
                 <button id="load-ecosystem-catalog" type="button">Load Ecosystem Catalog</button>
             </div>
             <div id="ecosystem-catalog" class="comparison-table">Loading ecosystem catalog...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Token Ecosystem Projects</h2>
+            <div class="button-row">
+                <button id="refresh-token-ecosystem-projects" type="button">Refresh Projects</button>
+            </div>
+            <div id="token-ecosystem-project-status" class="inline-status">Projects save website, whitepaper, social, listing, tokenomics, and arbitrage planning locally.</div>
+            <div id="token-ecosystem-projects" class="task-list">Loading token ecosystem projects...</div>
         </section>
 
         <section class="model-panel">
@@ -415,6 +425,110 @@
             document.getElementById('token-ecosystem-notes').value = 'Low-fee Base/Polygon/BNB/Avalanche/Solana launch path with website, whitepaper, social growth, listing evidence, NFT utility upgrades, and paper-only arbitrage strategy planning.';
         }
 
+        function buildTokenEcosystemProjectPayload() {
+            return {
+                name: document.getElementById('contract-name').value.trim() || 'EtherealAI Token Ecosystem',
+                targetChain: document.getElementById('contract-network').value.trim() || 'base',
+                contractType: document.getElementById('contract-type').value,
+                featureSelections: getSelectedTokenOptions(),
+                nftUtilityNotes: document.getElementById('nft-utility-notes').value.trim(),
+                ecosystemNotes: document.getElementById('token-ecosystem-notes').value.trim(),
+                status: 'draft'
+            };
+        }
+
+        function renderTokenEcosystemProjects(projects = []) {
+            const container = document.getElementById('token-ecosystem-projects');
+
+            if (!projects.length) {
+                container.textContent = 'No token ecosystem projects saved yet.';
+                return;
+            }
+
+            container.innerHTML = projects.map(project => `
+                <article class="task-card">
+                    <div>
+                        <h3>#${project.id} ${escapeHtml(project.name)}</h3>
+                        <p>${escapeHtml(project.target_chain)} · ${escapeHtml(project.contract_type)} · ${(project.featureSelections || []).length} feature option(s) · ${escapeHtml(project.status)}</p>
+                    </div>
+                    <div class="button-row">
+                        <button type="button" data-project-blueprint-id="${project.id}">Open Blueprint</button>
+                        <button type="button" data-project-workspace-id="${project.id}">Generate Workspace</button>
+                    </div>
+                </article>
+            `).join('');
+            container.querySelectorAll('button[data-project-blueprint-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const response = await fetch(`/api/v1/token-ecosystem-projects/${button.dataset.projectBlueprintId}`);
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        document.getElementById('ecosystem-output').textContent = data.error || 'Unable to load token ecosystem project.';
+                        return;
+                    }
+
+                    renderEcosystemBlueprint(data.project.blueprint || {});
+                    document.getElementById('ecosystem-output').textContent = JSON.stringify(data.project, null, 2);
+                });
+            });
+            container.querySelectorAll('button[data-project-workspace-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const status = document.getElementById('token-ecosystem-project-status');
+                    status.textContent = 'Generating local token ecosystem workspace...';
+                    const response = await fetch(`/api/v1/token-ecosystem-projects/${button.dataset.projectWorkspaceId}/workspace`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        status.textContent = data.error || 'Workspace generation failed.';
+                        return;
+                    }
+
+                    status.textContent = `Workspace ready: ${data.workspace.path} · applied ${data.applied?.length || 0} file(s).`;
+                    await loadTokenEcosystemProjects();
+                });
+            });
+        }
+
+        async function loadTokenEcosystemProjects() {
+            const response = await fetch('/api/v1/token-ecosystem-projects');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('token-ecosystem-projects').textContent = data.error || 'Unable to load token ecosystem projects.';
+                return;
+            }
+
+            renderTokenEcosystemProjects(data.projects || []);
+        }
+
+        async function saveTokenEcosystemProject() {
+            const status = document.getElementById('token-ecosystem-project-status');
+            status.textContent = 'Saving token ecosystem project...';
+            const response = await fetch('/api/v1/token-ecosystem-projects', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(buildTokenEcosystemProjectPayload())
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                status.textContent = data.error || 'Token ecosystem project save failed.';
+                return;
+            }
+
+            status.textContent = `Saved token ecosystem project #${data.project.id}.`;
+            renderEcosystemBlueprint(data.project.blueprint || {});
+            await loadTokenEcosystemProjects();
+        }
+
         function renderEcosystemBlueprint(blueprint = {}) {
             const website = blueprint.website || {};
             const whitepaper = blueprint.whitepaper || {};
@@ -600,11 +714,14 @@
         document.getElementById('load-ecosystem-catalog').addEventListener('click', loadEcosystemCatalog);
         document.getElementById('apply-token-options').addEventListener('click', applyTokenOptionsToSpec);
         document.getElementById('select-low-fee-token-options').addEventListener('click', selectLowFeeTokenDefaults);
+        document.getElementById('save-token-ecosystem-project').addEventListener('click', saveTokenEcosystemProject);
+        document.getElementById('refresh-token-ecosystem-projects').addEventListener('click', loadTokenEcosystemProjects);
 
         window.addEventListener('hashchange', openArtifactFromHash);
 
         loadContracts().then(openArtifactFromHash);
         loadEcosystemCatalog();
+        loadTokenEcosystemProjects();
     </script>
 </body>
 </html>
