@@ -1529,7 +1529,7 @@ Status: local planning only
 
 ## Suggested Domains
 
-- Primary site: project slug under etherealdigital.ai, or the root domain for the main EtherealAI token site.
+- Primary site: project slug under the configured token website domain, currently etherealdigit.ai, or the root domain for the main EtherealAI token site.
 - WWW companion: redirects or mirrors the primary site.
 - App subdomain: dapp shell and holder dashboard.
 - Docs subdomain: whitepaper, roadmap, and public documentation.

@@ -2244,6 +2244,9 @@ function checkCompanyIdentityModule() {
       legalName: 'Ethereal Digital',
       platformName: 'EtherealAI',
       primaryDomain: 'EtherealDigital.AI',
+      firstCreatedDomain: 'EtherealDigit.AI',
+      ownedDomains: ['EtherealDigit.AI', 'EtherealDigital.AI'],
+      cloudflareAccountEmail: 'Patrick@LakePowellFord.com',
       dnsProvider: 'Cloudflare',
       registrar: 'Cloudflare',
       status: 'owner_configured'
@@ -2255,7 +2258,8 @@ function checkCompanyIdentityModule() {
     },
     tokenIdentity: {
       name: 'EtherealAI',
-      preferredWebsiteDomain: 'EtherealDigital.AI',
+      preferredWebsiteDomain: 'EtherealDigit.AI',
+      fallbackWebsiteDomain: 'EtherealDigital.AI',
       status: 'identity_reserved'
     },
     email: {
@@ -2276,6 +2280,15 @@ function checkCompanyIdentityModule() {
     host: '_dmarc',
     value: 'v=DMARC1; p=none;',
     purpose: 'dmarc',
+    status: 'planned',
+    notes: 'owner will add manually in Cloudflare'
+  }, identity);
+  const websiteDnsTarget = normalizeCompanyDnsTargetInput({
+    domain: 'EtherealDigit.AI',
+    recordType: 'CNAME',
+    host: '@',
+    value: 'etherealai-etherealai.pages.dev',
+    purpose: 'website',
     status: 'planned',
     notes: 'owner will add manually in Cloudflare'
   }, identity);
@@ -2302,33 +2315,49 @@ function checkCompanyIdentityModule() {
     || identity.externalAccountCreationEnabled !== false
     || identity.purchaseEnabled !== false
     || identity.company.primaryDomain !== 'etherealdigital.ai'
+    || identity.company.firstCreatedDomain !== 'etherealdigit.ai'
+    || identity.company.cloudflareAccountEmail !== 'patrick@lakepowellford.com'
+    || !identity.company.ownedDomains.includes('etherealdigit.ai')
+    || !identity.company.ownedDomains.includes('etherealdigital.ai')
     || identity.owner.email !== 'patrick@etherealdigital.ai'
     || identity.tokenIdentity.name !== 'EtherealAI'
+    || identity.tokenIdentity.preferredWebsiteDomain !== 'etherealdigit.ai'
+    || identity.tokenIdentity.fallbackWebsiteDomain !== 'etherealdigital.ai'
     || !checklist.some(item => item.id === 'company_domain_recorded' && item.status === 'ready')
+    || !checklist.some(item => item.id === 'token_website_domain_recorded' && item.status === 'ready')
     || !checklist.some(item => item.id === 'ceo_email_recorded' && item.status === 'ready')
     || !checklist.some(item => item.id === 'dns_delegation_visible' && item.status === 'needs_propagation_or_setup')
     || !checklist.some(item => item.id === 'external_actions_blocked' && item.status === 'ready')
     || dnsTarget.domain !== 'etherealdigital.ai'
     || dnsTarget.recordType !== 'TXT'
     || dnsTarget.externalMutationEnabled !== false
+    || websiteDnsTarget.domain !== 'etherealdigit.ai'
+    || websiteDnsTarget.recordType !== 'CNAME'
     || parsedDnsTarget.localOnly !== true
     || parsedDnsTarget.externalMutationEnabled !== false
     || setupPlan.localOnly !== true
     || setupPlan.externalMutationEnabled !== false
+    || setupPlan.websitePrimaryDomain !== 'etherealdigit.ai'
+    || setupPlan.emailDomain !== 'etherealdigital.ai'
+    || !setupPlan.ownedDomains.includes('etherealdigit.ai')
     || setupPlan.summary.totalTargets !== 1
     || !setupPlan.recommendedManualSteps.some(step => step.id === 'email_dns_targets' && step.status === 'tracked')
     || setupPlan.cloudflareAccessPlan?.passwordLoginAllowed !== false
     || setupPlan.cloudflareAccessPlan?.tokenValuesAccepted !== false
     || setupPlan.cloudflareAccessPlan?.credentialLoadingImplemented !== false
-    || setupPlan.cloudflareAccessPlan?.recommendedToken?.resourceScope !== 'etherealdigital.ai zone only'
+    || setupPlan.cloudflareAccessPlan?.recommendedToken?.resourceScope !== 'etherealdigit.ai, etherealdigital.ai zones only'
+    || !setupPlan.cloudflareAccessPlan?.recommendedToken?.zoneScopes?.includes('etherealdigit.ai')
     || !setupPlan.cloudflareAccessPlan?.manualSteps?.some(step => step.id === 'rotate_password' && step.status === 'owner_action_required')
-    || setupPlan.cloudflareAccessPlan?.secretReferenceTemplate?.referenceName !== 'etherealai/cloudflare/dns/etherealdigital.ai'
-    || websitePlan.primaryFqdn !== 'etherealdigital.ai'
+    || setupPlan.cloudflareAccessPlan?.secretReferenceTemplate?.referenceName !== 'etherealai/cloudflare/dns/owned-domains'
+    || websitePlan.primaryDomain !== 'etherealdigit.ai'
+    || websitePlan.companyPrimaryDomain !== 'etherealdigital.ai'
+    || websitePlan.primaryFqdn !== 'etherealdigit.ai'
     || websitePlan.pagesDevTarget !== 'etherealai-etherealai.pages.dev'
     || websitePlan.dnsTargets?.length !== 4
     || !websitePlan.dnsTargets.some(target => target.host === '@' && target.purpose === 'website' && target.notes.includes('tokenProjectId:77'))
     || !websitePlan.dnsTargets.some(target => target.host === 'app' && target.purpose === 'app_backend')
     || websitePlan.emailRouting?.primaryMailbox !== 'patrick@etherealdigital.ai'
+    || !websitePlan.emailRouting?.suggestedAliases?.includes('support@etherealdigital.ai')
     || websitePlan.safetyBoundary?.cloudflareApiCallsEnabled !== false
   ) {
     fail('company identity module did not preserve local-only Cloudflare domain/email identity behavior');
@@ -5674,6 +5703,7 @@ function checkDashboardMvpReadinessUi() {
     || !html.includes('id="company-identity-checklist"')
     || !html.includes('Domain/Email Setup Center')
     || !html.includes('id="company-dns-target-form"')
+    || !html.includes('id="company-dns-domain"')
     || !html.includes('id="company-dns-targets"')
     || !html.includes('Cloudflare Access Gate')
     || !html.includes('id="cloudflare-secret-reference-form"')
@@ -5687,8 +5717,12 @@ function checkDashboardMvpReadinessUi() {
     || !html.includes('function renderCompanyDnsTargets(data = {})')
     || !html.includes('/api/v1/company-identity')
     || !html.includes('/api/v1/company-identity/dns-targets')
+    || !html.includes('Token Website Domain')
+    || !html.includes('Cloudflare Account')
+    || !html.includes('etherealdigit.ai')
     || !html.includes('etherealdigital.ai')
     || !html.includes('patrick@etherealdigital.ai')
+    || !html.includes('patrick@lakepowellford.com')
     || !html.includes('GitHub Publish Center')
     || !html.includes('id="github-publish-summary"')
     || !html.includes('id="github-publish-actions"')
@@ -7538,10 +7572,15 @@ async function runServerApiChecks() {
     || cloudflarePlan.body.cloudflareApiCallsEnabled !== false
     || cloudflarePlan.body.credentialLoadingEnabled !== false
     || cloudflarePlan.body.emailRoutingPreserved !== true
-    || cloudflarePlan.body.plan?.primaryDomain !== 'etherealdigital.ai'
+    || cloudflarePlan.body.plan?.primaryDomain !== 'etherealdigit.ai'
+    || cloudflarePlan.body.plan?.companyPrimaryDomain !== 'etherealdigital.ai'
+    || cloudflarePlan.body.plan?.emailRouting?.primaryMailbox !== 'patrick@etherealdigital.ai'
     || cloudflarePlan.body.plan?.dnsTargets?.length !== 4
     || cloudflareTrackedTargetCount < 4
-    || ![...(cloudflarePlan.body.savedTargets || []), ...(cloudflarePlan.body.skippedTargets || [])].some(target => target.host === 'app' && target.purpose === 'app_backend')
+    || ![...(cloudflarePlan.body.savedTargets || []), ...(cloudflarePlan.body.skippedTargets || [])].some(target => (
+      (target.host === 'app' || target.host?.startsWith('app.'))
+      && target.purpose === 'app_backend'
+    ))
   ) {
     fail('token ecosystem Cloudflare DNS plan route did not preserve local-only website DNS planning');
   }
@@ -7971,10 +8010,15 @@ async function runServerApiChecks() {
     || companyIdentity.body.externalAccountCreationEnabled !== false
     || companyIdentity.body.purchaseEnabled !== false
     || companyIdentity.body.identity?.company?.primaryDomain !== 'etherealdigital.ai'
+    || companyIdentity.body.identity?.company?.firstCreatedDomain !== 'etherealdigit.ai'
+    || !companyIdentity.body.identity?.company?.ownedDomains?.includes('etherealdigit.ai')
+    || companyIdentity.body.identity?.company?.cloudflareAccountEmail !== 'patrick@lakepowellford.com'
     || companyIdentity.body.identity?.owner?.email !== 'patrick@etherealdigital.ai'
     || companyIdentity.body.identity?.company?.dnsProvider !== 'Cloudflare'
     || companyIdentity.body.identity?.tokenIdentity?.name !== 'EtherealAI'
+    || companyIdentity.body.identity?.tokenIdentity?.preferredWebsiteDomain !== 'etherealdigit.ai'
     || !companyIdentity.body.checklist?.some(item => item.id === 'email_dns_visible')
+    || !companyIdentity.body.checklist?.some(item => item.id === 'token_website_domain_recorded' && item.status === 'ready')
     || !companyIdentity.body.checklist?.some(item => item.id === 'external_actions_blocked' && item.status === 'ready')
     || companyIdentity.body.setupPlan?.cloudflareAccessPlan?.recommendedToken?.provider !== 'Cloudflare'
     || companyIdentity.body.setupPlan?.cloudflareAccessPlan?.externalMutationEnabled !== false
@@ -7989,6 +8033,8 @@ async function runServerApiChecks() {
     || companyDnsTargets.body.externalMutationEnabled !== false
     || !Array.isArray(companyDnsTargets.body.targets)
     || companyDnsTargets.body.setupPlan?.primaryDomain !== 'etherealdigital.ai'
+    || companyDnsTargets.body.setupPlan?.websitePrimaryDomain !== 'etherealdigit.ai'
+    || !companyDnsTargets.body.setupPlan?.ownedDomains?.includes('etherealdigit.ai')
     || companyDnsTargets.body.setupPlan?.externalMutationEnabled !== false
     || companyDnsTargets.body.setupPlan?.cloudflareAccessPlan?.passwordLoginAllowed !== false
     || companyDnsTargets.body.setupPlan?.cloudflareAccessPlan?.tokenValuesAccepted !== false
@@ -8529,7 +8575,10 @@ async function runServerApiChecks() {
     || !Array.isArray(systemMemory.body.snapshot?.recent?.companyDnsTargets)
     || !systemMemory.body.snapshot?.recent?.multiAgentRuns?.some(run => run.summary?.localOnly === true)
     || systemMemory.body.snapshot?.companyIdentity?.identity?.company?.primaryDomain !== 'etherealdigital.ai'
+    || systemMemory.body.snapshot?.companyIdentity?.identity?.company?.firstCreatedDomain !== 'etherealdigit.ai'
+    || !systemMemory.body.snapshot?.companyIdentity?.identity?.company?.ownedDomains?.includes('etherealdigit.ai')
     || systemMemory.body.snapshot?.companyIdentity?.identity?.owner?.email !== 'patrick@etherealdigital.ai'
+    || systemMemory.body.snapshot?.companyIdentity?.identity?.tokenIdentity?.preferredWebsiteDomain !== 'etherealdigit.ai'
     || !systemMemory.body.snapshot?.companyIdentity?.checklist?.some(item => item.id === 'external_actions_blocked' && item.status === 'ready')
     || !systemMemory.body.snapshot?.ownerEvidence?.externalSurfaceBoundaries?.some(boundary => (
       boundary.moduleId === 'social-ops'

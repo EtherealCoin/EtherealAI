@@ -128,7 +128,7 @@
 
         <section class="model-panel">
             <h2>Company Identity</h2>
-            <p class="inline-status">Configured identity: etherealdigital.ai · patrick@etherealdigital.ai · Cloudflare</p>
+            <p class="inline-status">Configured identity: website etherealdigit.ai · email patrick@etherealdigital.ai · Cloudflare account patrick@lakepowellford.com metadata only</p>
             <div class="button-row">
                 <button id="refresh-company-identity" type="button">Refresh Identity</button>
             </div>
@@ -137,6 +137,12 @@
             <h3>Domain/Email Setup Center</h3>
             <div id="company-setup-plan" class="task-list">Loading DNS setup plan...</div>
             <form id="company-dns-target-form" class="model-test-form">
+                <label for="company-dns-domain">Domain</label>
+                <select id="company-dns-domain" name="domain">
+                    <option value="etherealdigit.ai">etherealdigit.ai</option>
+                    <option value="etherealdigital.ai">etherealdigital.ai</option>
+                </select>
+
                 <label for="company-dns-record-type">Record Type</label>
                 <select id="company-dns-record-type" name="recordType">
                     <option value="A">A</option>
@@ -190,7 +196,7 @@
             <div id="cloudflare-access-plan" class="task-list">Loading Cloudflare access plan...</div>
             <form id="cloudflare-secret-reference-form" class="model-test-form">
                 <label for="cloudflare-secret-label">Reference Label</label>
-                <input id="cloudflare-secret-label" name="label" maxlength="120" value="Cloudflare DNS token - etherealdigital.ai">
+                <input id="cloudflare-secret-label" name="label" maxlength="120" value="Cloudflare DNS token - owned domains">
 
                 <label for="cloudflare-secret-provider">Local Secret Provider</label>
                 <select id="cloudflare-secret-provider" name="providerType">
@@ -202,7 +208,7 @@
                 </select>
 
                 <label for="cloudflare-secret-reference-name">Reference Name</label>
-                <input id="cloudflare-secret-reference-name" name="referenceName" maxlength="180" value="etherealai/cloudflare/dns/etherealdigital.ai">
+                <input id="cloudflare-secret-reference-name" name="referenceName" maxlength="180" value="etherealai/cloudflare/dns/owned-domains">
 
                 <label for="cloudflare-secret-status">Reference Status</label>
                 <select id="cloudflare-secret-status" name="status">
@@ -213,7 +219,7 @@
                 </select>
 
                 <label for="cloudflare-secret-notes">Local Notes</label>
-                <textarea id="cloudflare-secret-notes" name="notes" rows="2" maxlength="1000">Local metadata only. Store the real scoped Cloudflare DNS API token in macOS Keychain under etherealai/cloudflare/dns/etherealdigital.ai; EtherealAI must store only this reference name.</textarea>
+                <textarea id="cloudflare-secret-notes" name="notes" rows="2" maxlength="1000">Local metadata only. Store the real scoped Cloudflare DNS API token in macOS Keychain under etherealai/cloudflare/dns/owned-domains; EtherealAI must store only this reference name.</textarea>
 
                 <input type="hidden" name="scope" value="generic">
                 <button type="submit">Save Cloudflare Reference</button>
@@ -807,11 +813,17 @@
             const email = identity.email || {};
             const dns = identity.dnsObservation || {};
             const checklist = data.checklist || [];
+            const ownedDomains = company.ownedDomains || [];
             const cards = [
                 {
                     label: 'Company Domain',
                     value: company.primaryDomain || 'not recorded',
                     note: `${company.registrar || 'registrar unknown'} · ${company.dnsProvider || 'DNS unknown'}`
+                },
+                {
+                    label: 'Token Website Domain',
+                    value: token.preferredWebsiteDomain || company.firstCreatedDomain || 'not recorded',
+                    note: ownedDomains.length ? `owned: ${ownedDomains.join(', ')}` : 'owned domains pending'
                 },
                 {
                     label: 'CEO Email',
@@ -821,7 +833,12 @@
                 {
                     label: 'Token Identity',
                     value: token.name || 'not recorded',
-                    note: token.preferredWebsiteDomain || 'website domain pending'
+                    note: token.fallbackWebsiteDomain ? `fallback ${token.fallbackWebsiteDomain}` : 'fallback pending'
+                },
+                {
+                    label: 'Cloudflare Account',
+                    value: company.cloudflareAccountEmail || 'metadata pending',
+                    note: 'passwords and token values blocked'
                 },
                 {
                     label: 'DNS Observation',
@@ -851,6 +868,16 @@
                     <span>${escapeHtml(item.status)}</span>
                 </article>
             `).join('');
+            const domainSelect = document.getElementById('company-dns-domain');
+            if (domainSelect && ownedDomains.length) {
+                const previousValue = domainSelect.value;
+                domainSelect.innerHTML = ownedDomains.map(domain => `
+                    <option value="${escapeHtml(domain)}">${escapeHtml(domain)}</option>
+                `).join('');
+                domainSelect.value = ownedDomains.includes(previousValue)
+                    ? previousValue
+                    : token.preferredWebsiteDomain || ownedDomains[0];
+            }
             renderCompanySetupPlan(data.setupPlan || {});
         }
 
@@ -867,12 +894,17 @@
                 {
                     label: 'Website DNS',
                     value: summary.websiteTargetTracked ? 'Tracked' : 'Planned',
-                    note: plan.primaryDomain || 'domain pending'
+                    note: plan.websitePrimaryDomain || plan.primaryDomain || 'domain pending'
                 },
                 {
                     label: 'Email DNS',
                     value: summary.emailTargetTracked ? 'Tracked' : 'Planned',
-                    note: plan.primaryMailbox || 'mailbox pending'
+                    note: `${plan.primaryMailbox || 'mailbox pending'} · ${plan.emailDomain || 'domain pending'}`
+                },
+                {
+                    label: 'Cloudflare Account',
+                    value: plan.cloudflareAccountEmail || 'metadata pending',
+                    note: plan.ownedDomains?.length ? plan.ownedDomains.join(', ') : 'owned domains pending'
                 }
             ];
             document.getElementById('company-setup-plan').innerHTML = `
@@ -1425,6 +1457,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
+                        domain: formData.get('domain'),
                         recordType: formData.get('recordType'),
                         host: formData.get('host'),
                         value: formData.get('value'),

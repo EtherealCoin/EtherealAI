@@ -36,6 +36,62 @@ function normalizeDnsLabel(value, fallback = 'site') {
   return cleaned || fallback;
 }
 
+function normalizeDomain(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/\/.*$/, '')
+    .replace(/^\.+|\.+$/g, '');
+}
+
+function normalizeEmail(value = '') {
+  return String(value || '').trim().toLowerCase();
+}
+
+function getEmailDomain(value = '') {
+  const email = normalizeEmail(value);
+  const [, domain = ''] = email.split('@');
+  return normalizeDomain(domain);
+}
+
+function normalizeDomainList(values = []) {
+  return [...new Set((Array.isArray(values) ? values : [values])
+    .map(normalizeDomain)
+    .filter(Boolean))];
+}
+
+function getOwnedDomains(identity = {}) {
+  return normalizeDomainList([
+    ...(identity.company?.ownedDomains || []),
+    ...(identity.company?.websiteDomains || []),
+    identity.company?.firstCreatedDomain,
+    identity.company?.primaryDomain,
+    identity.tokenIdentity?.preferredWebsiteDomain,
+    identity.tokenIdentity?.fallbackWebsiteDomain,
+    getEmailDomain(identity.owner?.email),
+    getEmailDomain(identity.email?.primaryMailbox)
+  ]);
+}
+
+function getWebsitePrimaryDomain(identity = {}) {
+  const ownedDomains = getOwnedDomains(identity);
+  const preferred = normalizeDomain(identity.tokenIdentity?.preferredWebsiteDomain)
+    || normalizeDomain(identity.company?.firstCreatedDomain)
+    || normalizeDomain(identity.company?.primaryDomain)
+    || ownedDomains[0]
+    || '';
+
+  return ownedDomains.includes(preferred) ? preferred : (ownedDomains[0] || preferred);
+}
+
+function getEmailRoutingDomain(identity = {}) {
+  return getEmailDomain(identity.email?.primaryMailbox)
+    || getEmailDomain(identity.owner?.email)
+    || normalizeDomain(identity.company?.primaryDomain)
+    || getWebsitePrimaryDomain(identity);
+}
+
 function normalizeCompanyIdentity(manifest = {}) {
   const company = manifest.company || {};
   const owner = manifest.owner || {};
@@ -43,6 +99,24 @@ function normalizeCompanyIdentity(manifest = {}) {
   const email = manifest.email || {};
   const dnsObservation = manifest.dnsObservation || {};
   const records = dnsObservation.records || {};
+  const ownerEmail = normalizeEmail(owner.email);
+  const primaryMailbox = normalizeEmail(email.primaryMailbox);
+  const primaryDomain = normalizeDomain(company.primaryDomain);
+  const firstCreatedDomain = normalizeDomain(company.firstCreatedDomain || company.first_created_domain);
+  const preferredWebsiteDomain = normalizeDomain(tokenIdentity.preferredWebsiteDomain);
+  const fallbackWebsiteDomain = normalizeDomain(tokenIdentity.fallbackWebsiteDomain);
+  const configuredOwnedDomains = Array.isArray(company.ownedDomains) ? company.ownedDomains : [];
+  const configuredWebsiteDomains = Array.isArray(company.websiteDomains) ? company.websiteDomains : [];
+  const ownedDomains = normalizeDomainList([
+    ...configuredOwnedDomains,
+    ...configuredWebsiteDomains,
+    primaryDomain,
+    firstCreatedDomain,
+    preferredWebsiteDomain,
+    fallbackWebsiteDomain,
+    getEmailDomain(ownerEmail),
+    getEmailDomain(primaryMailbox)
+  ]);
 
   return {
     version: Number(manifest.version || 1),
@@ -53,25 +127,30 @@ function normalizeCompanyIdentity(manifest = {}) {
     company: {
       legalName: String(company.legalName || '').trim(),
       platformName: String(company.platformName || 'EtherealAI').trim(),
-      primaryDomain: String(company.primaryDomain || '').trim().toLowerCase(),
+      primaryDomain,
+      firstCreatedDomain,
+      ownedDomains,
+      cloudflareAccountEmail: normalizeEmail(company.cloudflareAccountEmail || company.cloudflare_account_email),
       dnsProvider: String(company.dnsProvider || '').trim(),
       registrar: String(company.registrar || '').trim(),
-      status: String(company.status || 'planned').trim()
+      status: String(company.status || 'planned').trim(),
+      notes: String(company.notes || '').trim()
     },
     owner: {
       name: String(owner.name || '').trim(),
       role: String(owner.role || '').trim(),
-      email: String(owner.email || '').trim().toLowerCase()
+      email: ownerEmail
     },
     tokenIdentity: {
       name: String(tokenIdentity.name || '').trim(),
-      preferredWebsiteDomain: String(tokenIdentity.preferredWebsiteDomain || '').trim().toLowerCase(),
+      preferredWebsiteDomain,
+      fallbackWebsiteDomain,
       status: String(tokenIdentity.status || 'planned').trim(),
       notes: String(tokenIdentity.notes || '').trim()
     },
     email: {
       provider: String(email.provider || '').trim(),
-      primaryMailbox: String(email.primaryMailbox || '').trim().toLowerCase(),
+      primaryMailbox,
       status: String(email.status || 'planned').trim(),
       sendReceiveStatus: String(email.sendReceiveStatus || 'not_verified').trim(),
       notes: String(email.notes || '').trim()
@@ -87,6 +166,7 @@ function normalizeCompanyIdentity(manifest = {}) {
         NS: Array.isArray(records.NS) ? records.NS : [],
         CNAME: Array.isArray(records.CNAME) ? records.CNAME : []
       },
+      observedDomains: dnsObservation.observedDomains || {},
       status: String(dnsObservation.status || 'not_checked').trim(),
       notes: String(dnsObservation.notes || '').trim()
     },
@@ -95,21 +175,25 @@ function normalizeCompanyIdentity(manifest = {}) {
 }
 
 function normalizeCompanyDnsTargetInput(input = {}, identity = {}) {
-  const primaryDomain = identity.company?.primaryDomain || '';
-  const domain = cleanText(input.domain || input.domainName || primaryDomain, '', 160).toLowerCase();
   const recordType = cleanText(input.recordType || input.record_type, '', 16).toUpperCase();
   const host = cleanText(input.host || input.name || '@', '@', 160).toLowerCase();
   const value = cleanText(input.value || input.target, '', 1000);
   const purpose = cleanText(input.purpose, 'other', 80).toLowerCase();
   const status = cleanText(input.status, 'planned', 40).toLowerCase();
   const notes = cleanText(input.notes, '', 1000);
+  const ownedDomains = getOwnedDomains(identity);
+  const emailPurposes = ['email_routing', 'spf', 'dkim', 'dmarc'];
+  const fallbackDomain = emailPurposes.includes(purpose)
+    ? getEmailRoutingDomain(identity)
+    : getWebsitePrimaryDomain(identity) || identity.company?.primaryDomain || ownedDomains[0] || '';
+  const domain = normalizeDomain(cleanText(input.domain || input.domainName || fallbackDomain, '', 160));
 
   if (!domain) {
     throw new Error('Domain is required');
   }
 
-  if (primaryDomain && domain !== primaryDomain) {
-    throw new Error(`DNS targets are limited to the configured company domain: ${primaryDomain}`);
+  if (ownedDomains.length && !ownedDomains.includes(domain)) {
+    throw new Error(`DNS targets are limited to configured owned domains: ${ownedDomains.join(', ')}`);
   }
 
   if (!DNS_RECORD_TYPES.includes(recordType)) {
@@ -174,12 +258,19 @@ function buildCompanySetupPlan(identity = {}, dnsTargets = []) {
   const hasWebsiteTarget = targets.some(target => ['website', 'www_redirect', 'app_backend'].includes(target.purpose));
   const hasEmailTarget = targets.some(target => ['email_routing', 'spf', 'dkim', 'dmarc'].includes(target.purpose));
   const primaryDomain = identity.company?.primaryDomain || '';
+  const ownedDomains = getOwnedDomains(identity);
+  const websitePrimaryDomain = getWebsitePrimaryDomain(identity);
   const primaryMailbox = identity.email?.primaryMailbox || identity.owner?.email || '';
+  const emailDomain = getEmailRoutingDomain(identity);
 
   return {
     title: 'Domain/Email Setup Center',
     primaryDomain,
+    websitePrimaryDomain,
+    emailDomain,
+    ownedDomains,
     primaryMailbox,
+    cloudflareAccountEmail: identity.company?.cloudflareAccountEmail || '',
     localOnly: true,
     externalMutationEnabled: false,
     summary: {
@@ -217,14 +308,35 @@ function buildCompanySetupPlan(identity = {}, dnsTargets = []) {
       'Mark targets owner_added, propagating, or verified as DNS changes are made manually.',
       'Keep Cloudflare credentials and API tokens outside EtherealAI.'
     ],
-    cloudflareAccessPlan: buildCloudflareAccessPlan({ primaryDomain, primaryMailbox })
+    cloudflareAccessPlan: buildCloudflareAccessPlan({
+      primaryDomain,
+      primaryMailbox,
+      ownedDomains,
+      cloudflareAccountEmail: identity.company?.cloudflareAccountEmail || ''
+    })
   };
 }
 
-function buildCloudflareAccessPlan({ primaryDomain = '', primaryMailbox = '' } = {}) {
-  const referenceName = primaryDomain
+function buildCloudflareAccessPlan({
+  primaryDomain = '',
+  primaryMailbox = '',
+  ownedDomains = [],
+  cloudflareAccountEmail = ''
+} = {}) {
+  const zoneScopes = normalizeDomainList([
+    ...(Array.isArray(ownedDomains) ? ownedDomains : []),
+    primaryDomain
+  ]);
+  const referenceName = zoneScopes.length > 1
+    ? 'etherealai/cloudflare/dns/owned-domains'
+    : primaryDomain
     ? `etherealai/cloudflare/dns/${primaryDomain}`
     : 'etherealai/cloudflare/dns/company-domain';
+  const scopeLabel = zoneScopes.length > 1
+    ? `${zoneScopes.join(', ')} zones only`
+    : primaryDomain
+    ? `${primaryDomain} zone only`
+    : 'single Cloudflare zone only';
 
   return {
     title: 'Cloudflare Access Gate',
@@ -236,7 +348,8 @@ function buildCloudflareAccessPlan({ primaryDomain = '', primaryMailbox = '' } =
     recommendedToken: {
       provider: 'Cloudflare',
       tokenType: 'User API Token',
-      resourceScope: primaryDomain ? `${primaryDomain} zone only` : 'single Cloudflare zone only',
+      resourceScope: scopeLabel,
+      zoneScopes,
       permissions: [
         'Zone:Zone:Read',
         'Zone:DNS:Read',
@@ -249,7 +362,9 @@ function buildCloudflareAccessPlan({ primaryDomain = '', primaryMailbox = '' } =
       ]
     },
     secretReferenceTemplate: {
-      label: primaryDomain
+      label: zoneScopes.length > 1
+        ? 'Cloudflare DNS token - owned domains'
+        : primaryDomain
         ? `Cloudflare DNS token - ${primaryDomain}`
         : 'Cloudflare DNS token',
       providerType: 'macos_keychain',
@@ -275,8 +390,8 @@ function buildCloudflareAccessPlan({ primaryDomain = '', primaryMailbox = '' } =
         id: 'create_scoped_token',
         label: 'Create scoped DNS API token',
         status: 'owner_action_required',
-        detail: primaryDomain
-          ? `Limit the token to the ${primaryDomain} zone with DNS read/edit permissions only.`
+        detail: zoneScopes.length
+          ? `Limit the token to these Cloudflare zones only: ${zoneScopes.join(', ')}. Use DNS read/edit permissions only.`
           : 'Limit the token to one zone with DNS read/edit permissions only.'
       },
       {
@@ -293,6 +408,9 @@ function buildCloudflareAccessPlan({ primaryDomain = '', primaryMailbox = '' } =
       }
     ],
     nextOwnerActions: [
+      cloudflareAccountEmail
+        ? `Use the Cloudflare account ${cloudflareAccountEmail} only inside Cloudflare; EtherealAI stores this as metadata only.`
+        : 'Record the Cloudflare account email as metadata only if needed.',
       primaryMailbox
         ? `After rotating the password, confirm ${primaryMailbox} can receive Cloudflare security emails.`
         : 'After rotating the password, confirm the Cloudflare account email can receive security emails.',
@@ -303,8 +421,11 @@ function buildCloudflareAccessPlan({ primaryDomain = '', primaryMailbox = '' } =
 }
 
 function buildCloudflareWebsitePlan(project = {}, identity = {}) {
-  const primaryDomain = identity.company?.primaryDomain || 'etherealdigital.ai';
+  const primaryDomain = getWebsitePrimaryDomain(identity) || 'etherealdigit.ai';
+  const companyPrimaryDomain = identity.company?.primaryDomain || primaryDomain;
+  const ownedDomains = getOwnedDomains(identity);
   const primaryMailbox = identity.email?.primaryMailbox || identity.owner?.email || '';
+  const emailDomain = getEmailRoutingDomain(identity) || primaryDomain;
   const projectName = project.name || project.project?.name || 'Token Website';
   const tokenSlug = normalizeDnsLabel(projectName, 'token-site');
   const pagesProject = normalizeDnsLabel(`etherealai-${tokenSlug}`, 'etherealai-token-site');
@@ -329,7 +450,10 @@ function buildCloudflareWebsitePlan(project = {}, identity = {}) {
     projectId,
     projectName,
     primaryDomain,
+    companyPrimaryDomain,
+    ownedDomains,
     primaryMailbox,
+    emailDomain,
     tokenSlug,
     rootProject,
     pagesProject,
@@ -396,16 +520,19 @@ function buildCloudflareWebsitePlan(project = {}, identity = {}) {
     emailRouting: {
       provider: identity.email?.provider || 'Cloudflare',
       primaryMailbox,
+      emailDomain,
       status: 'owner_review',
       preserveExistingRecords: true,
       suggestedAliases: [
-        `support@${primaryDomain}`,
-        `media@${primaryDomain}`,
-        `token@${primaryDomain}`,
-        `legal@${primaryDomain}`
+        `support@${emailDomain}`,
+        `media@${emailDomain}`,
+        `token@${emailDomain}`,
+        `legal@${emailDomain}`
       ],
       ownerSteps: [
-        'Keep patrick@etherealdigital.ai active for company/owner operations.',
+        primaryMailbox
+          ? `Keep ${primaryMailbox} active for company/owner operations.`
+          : 'Keep the company mailbox active for owner operations.',
         'Use Cloudflare Email Routing for receive-only aliases if needed.',
         'Do not overwrite MX, SPF, DKIM, or DMARC records while adding website DNS.'
       ]
@@ -422,6 +549,8 @@ function buildCloudflareWebsitePlan(project = {}, identity = {}) {
 
 function buildCompanyIdentityChecklist(identity = {}) {
   const domain = identity.company?.primaryDomain || '';
+  const websiteDomain = getWebsitePrimaryDomain(identity);
+  const ownedDomains = getOwnedDomains(identity);
   const mailbox = identity.email?.primaryMailbox || '';
   const records = identity.dnsObservation?.records || {};
   const hasWebsiteRecord = Boolean(records.A?.length || records.AAAA?.length || records.CNAME?.length);
@@ -433,8 +562,15 @@ function buildCompanyIdentityChecklist(identity = {}) {
       id: 'company_domain_recorded',
       label: 'Company domain recorded',
       status: domain === 'etherealdigital.ai' ? 'ready' : 'review',
-      evidence: domain || 'No domain recorded',
+      evidence: ownedDomains.length ? `${domain} · owned: ${ownedDomains.join(', ')}` : domain || 'No domain recorded',
       nextStep: domain ? 'No action needed in EtherealAI.' : 'Record the owner-selected domain.'
+    },
+    {
+      id: 'token_website_domain_recorded',
+      label: 'Token website domain recorded',
+      status: websiteDomain === 'etherealdigit.ai' ? 'ready' : 'review',
+      evidence: websiteDomain || 'No token website domain recorded',
+      nextStep: websiteDomain ? 'Use this domain for generated token website plans.' : 'Record the owner-selected token website domain.'
     },
     {
       id: 'ceo_email_recorded',
