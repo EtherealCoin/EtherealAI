@@ -2,6 +2,8 @@
 
 EtherealAI is a local-first AI builder, strategy research lab, Solidity/token ecosystem studio, and automation control center.
 
+Codex Build.
+
 The current project is intentionally designed for owner-controlled local operation. It can draft plans, code scaffolds, social content, strategy research, token ecosystem blueprints, and paper automation workflows, but it does not execute live trading, external posting, wallet signing, blockchain deployment, or domain/account purchases.
 
 ## Current Stack
