@@ -249,6 +249,7 @@ const {
   evaluateOrderIntentRisk
 } = require('./lib/risk-safety');
 const {
+  parseArbitrageSimulationRun,
   simulateCrossExchangeArbitrage
 } = require('./lib/order-intent-simulator');
 const {
@@ -591,6 +592,7 @@ const ROUTE_PARSERS = {
   parseRiskProfile,
   parseRiskProfileAuditEvent,
   parseOrderIntent,
+  parseArbitrageSimulationRun,
   parseBotAutomationPlan,
   parseBotLiveReadinessEvent,
   parseBotLiveEnablementReview,

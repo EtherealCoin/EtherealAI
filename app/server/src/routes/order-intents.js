@@ -7,9 +7,31 @@ function registerOrderIntentRoutes(app, {
   getPositiveNumber,
   parseRiskProfile,
   parseOrderIntent,
+  parseArbitrageSimulationRun,
   evaluateOrderIntentRisk,
   simulateCrossExchangeArbitrage
 }) {
+  async function getOrderIntentRow(id) {
+    return dbGet(
+      `SELECT trade_order_intents.*, exchange_connectors.label AS connector_label,
+              exchange_connectors.exchange_name, risk_profiles.name AS risk_profile_name,
+              trading_strategies.name AS strategy_name
+       FROM trade_order_intents
+       LEFT JOIN exchange_connectors ON exchange_connectors.id = trade_order_intents.connector_id
+       LEFT JOIN risk_profiles ON risk_profiles.id = trade_order_intents.risk_profile_id
+       LEFT JOIN trading_strategies ON trading_strategies.id = trade_order_intents.strategy_id
+       WHERE trade_order_intents.id = ?`,
+      [id]
+    );
+  }
+
+  async function getArbitrageSimulationRun(id) {
+    return parseArbitrageSimulationRun(await dbGet(
+      'SELECT * FROM arbitrage_simulation_runs WHERE id = ?',
+      [id]
+    ));
+  }
+
   app.get('/api/v1/order-intents', requireAuth, async (req, res) => {
     try {
       const rows = await dbAll(
@@ -30,19 +52,121 @@ function registerOrderIntentRoutes(app, {
     }
   });
 
+  app.get('/api/v1/order-intents/arbitrage-simulations', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `SELECT *
+         FROM arbitrage_simulation_runs
+         ORDER BY created_at DESC, id DESC
+         LIMIT 100`
+      );
+
+      res.json({
+        runs: rows.map(parseArbitrageSimulationRun),
+        localOnly: true,
+        liveExecutionEnabled: false,
+        networkCallsEnabled: false
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/order-intents/arbitrage-simulations/:id', requireAuth, async (req, res) => {
+    try {
+      const run = await getArbitrageSimulationRun(req.params.id);
+
+      if (!run) {
+        return res.status(404).json({ error: 'Arbitrage simulation run not found' });
+      }
+
+      res.json({ run });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/order-intents/arbitrage-simulations/:id/draft-intents', requireAuth, async (req, res) => {
+    try {
+      const run = await getArbitrageSimulationRun(req.params.id);
+
+      if (!run) {
+        return res.status(404).json({ error: 'Arbitrage simulation run not found' });
+      }
+
+      const riskProfileId = req.body?.riskProfileId ? Number(req.body.riskProfileId) : null;
+      const strategyId = req.body?.strategyId ? Number(req.body.strategyId) : null;
+      const paperSessionId = req.body?.paperSessionId ? Number(req.body.paperSessionId) : null;
+      const currentOpenTrades = getPositiveNumber(req.body?.currentOpenTrades, 0);
+      const currentDailyLoss = getPositiveNumber(req.body?.currentDailyLoss, 0);
+      const riskProfile = riskProfileId
+        ? parseRiskProfile(await dbGet('SELECT * FROM risk_profiles WHERE id = ?', [riskProfileId]))
+        : null;
+
+      if (riskProfileId && !riskProfile) {
+        return res.status(400).json({ error: 'Risk profile not found' });
+      }
+
+      const intents = [];
+
+      for (const leg of run.result?.recommendedDraftIntents || []) {
+        const riskReview = evaluateOrderIntentRisk(riskProfile, {
+          quantity: Number(leg.quantity),
+          limitPrice: Number(leg.limitPrice),
+          currentOpenTrades,
+          currentDailyLoss
+        });
+        const payload = {
+          mode: 'arbitrage_simulation_draft_intent_v1',
+          warning: 'Draft order intent from a local arbitrage simulation only. This does not place live orders.',
+          createdBy: 'local-cross-exchange-simulator',
+          simulationRunId: run.id,
+          simulationStatus: run.status,
+          simulationLeg: leg,
+          liveExecution: {
+            enabled: false,
+            orderEndpointEnabled: false,
+            networkCallsEnabled: false
+          },
+          riskReview
+        };
+        const result = await dbRun(
+          `INSERT INTO trade_order_intents
+           (connector_id, risk_profile_id, strategy_id, paper_session_id, market_symbol, side, order_type, quantity, limit_price, status, reason, payload_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            null,
+            riskProfileId,
+            strategyId,
+            paperSessionId,
+            run.market_symbol,
+            leg.side,
+            leg.orderType,
+            Number(leg.quantity),
+            Number(leg.limitPrice),
+            'draft',
+            `${leg.reason} Venue: ${leg.venue}; chain: ${leg.chain}; simulation #${run.id}`.slice(0, 500),
+            JSON.stringify(payload)
+          ]
+        );
+        intents.push(parseOrderIntent(await getOrderIntentRow(result.lastID)));
+      }
+
+      res.status(201).json({
+        run,
+        intents,
+        localOnly: true,
+        liveExecutionEnabled: false,
+        networkCallsEnabled: false
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get('/api/v1/order-intents/:id', requireAuth, async (req, res) => {
     try {
-      const row = await dbGet(
-        `SELECT trade_order_intents.*, exchange_connectors.label AS connector_label,
-                exchange_connectors.exchange_name, risk_profiles.name AS risk_profile_name,
-                trading_strategies.name AS strategy_name
-         FROM trade_order_intents
-         LEFT JOIN exchange_connectors ON exchange_connectors.id = trade_order_intents.connector_id
-         LEFT JOIN risk_profiles ON risk_profiles.id = trade_order_intents.risk_profile_id
-         LEFT JOIN trading_strategies ON trading_strategies.id = trade_order_intents.strategy_id
-         WHERE trade_order_intents.id = ?`,
-        [req.params.id]
-      );
+      const row = await getOrderIntentRow(req.params.id);
 
       if (!row) {
         return res.status(404).json({ error: 'Order intent not found' });
@@ -65,8 +189,29 @@ function registerOrderIntentRoutes(app, {
         });
       }
 
-      res.json({
-        simulation: simulateCrossExchangeArbitrage(req.body || {})
+      const simulation = simulateCrossExchangeArbitrage(req.body || {});
+      const result = await dbRun(
+        `INSERT INTO arbitrage_simulation_runs
+         (user_id, market_symbol, strategy_type, status, input_json, result_json,
+          local_only, network_calls_enabled, live_execution_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, 1, 0, 0)`,
+        [
+          req.session.userId || null,
+          simulation.marketSymbol,
+          simulation.strategyType,
+          simulation.status,
+          JSON.stringify(req.body || {}),
+          JSON.stringify(simulation)
+        ]
+      );
+      const run = await getArbitrageSimulationRun(result.lastID);
+
+      res.status(201).json({
+        simulation,
+        run,
+        localOnly: true,
+        liveExecutionEnabled: false,
+        networkCallsEnabled: false
       });
     } catch (error) {
       res.status(400).json({ error: error.message });

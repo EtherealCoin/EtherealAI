@@ -550,6 +550,7 @@ function registerEtherealRoutes(app, options) {
     getPositiveNumber,
     parseRiskProfile: parsers.parseRiskProfile,
     parseOrderIntent: parsers.parseOrderIntent,
+    parseArbitrageSimulationRun: parsers.parseArbitrageSimulationRun,
     evaluateOrderIntentRisk,
     simulateCrossExchangeArbitrage
   });

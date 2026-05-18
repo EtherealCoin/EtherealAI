@@ -1247,8 +1247,10 @@ function checkRouteRegistrationModule() {
     || !serverSource.includes('buildTokenEcosystemWorkspaceFiles')
     || !serverSource.includes('parseTokenEcosystemProject')
     || !serverSource.includes('simulateCrossExchangeArbitrage')
+    || !serverSource.includes('parseArbitrageSimulationRun')
     || !routeRegistrationSource.includes('parseTokenEcosystemProject: parsers.parseTokenEcosystemProject')
     || !routeRegistrationSource.includes('simulateCrossExchangeArbitrage')
+    || !routeRegistrationSource.includes('parseArbitrageSimulationRun: parsers.parseArbitrageSimulationRun')
     || !serverSource.includes('selects: ROW_LOOKUP_SELECTS')
     || !serverSource.includes('selects: ROUTE_SELECTS')
     || !serverSource.includes('parsers: ROUTE_PARSERS')
@@ -1341,6 +1343,8 @@ function checkDatabaseSchemaModule() {
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS users'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS bot_automation_plans'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS bot_automation_schedules'))
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS arbitrage_simulation_runs'))
+    || !statements.some(statement => statement.includes('network_calls_enabled INTEGER NOT NULL DEFAULT 0'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS multi_agent_coordination_runs'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS multi_agent_contributions'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS company_dns_targets'))
@@ -4295,6 +4299,7 @@ function checkRiskSafetyModule() {
 function checkOrderIntentSimulatorModule() {
   const {
     normalizeCrossExchangeSimulationInput,
+    parseArbitrageSimulationRun,
     simulateCrossExchangeArbitrage
   } = require(path.join(projectRoot, 'app/server/src/lib/order-intent-simulator'));
   const input = normalizeCrossExchangeSimulationInput({
@@ -4326,6 +4331,20 @@ function checkOrderIntentSimulatorModule() {
     ]
   });
   const simulation = simulateCrossExchangeArbitrage(input);
+  const parsedRun = parseArbitrageSimulationRun({
+    id: 33,
+    user_id: 1,
+    market_symbol: simulation.marketSymbol,
+    strategy_type: simulation.strategyType,
+    status: simulation.status,
+    input_json: JSON.stringify(input),
+    result_json: JSON.stringify(simulation),
+    local_only: 1,
+    network_calls_enabled: 0,
+    live_execution_enabled: 0,
+    created_at: '2026-05-18T00:00:00.000Z',
+    updated_at: '2026-05-18T00:00:00.000Z'
+  });
 
   if (
     input.marketSymbol !== 'EAI/USDT'
@@ -4338,6 +4357,10 @@ function checkOrderIntentSimulatorModule() {
     || simulation.economics?.estimatedNetProfit <= 0
     || simulation.recommendedDraftIntents?.length !== 2
     || !simulation.blockingFailures?.includes('live_order_endpoint_enabled')
+    || parsedRun.localOnly !== true
+    || parsedRun.networkCallsEnabled !== false
+    || parsedRun.liveExecutionEnabled !== false
+    || parsedRun.result?.recommendedDraftIntents?.length !== 2
   ) {
     fail('order intent simulator module did not preserve local-only arbitrage route math');
   }
@@ -5252,8 +5275,13 @@ function checkStrategyLabSafetyDossierExportUi() {
     || !html.includes('Cross-Exchange Arbitrage Simulator')
     || !html.includes('id="arbitrage-simulator-form"')
     || !html.includes('Run Local Route Simulation')
+    || !html.includes('id="arbitrage-simulation-list"')
     || !html.includes('/api/v1/order-intents/simulate-cross-exchange')
+    || !html.includes('/api/v1/order-intents/arbitrage-simulations')
+    || !html.includes('/draft-intents')
     || !html.includes('function runArbitrageSimulation(event)')
+    || !html.includes('function loadArbitrageSimulationRuns()')
+    || !html.includes('function createDraftIntentsFromSimulation(runId)')
     || !html.includes('No arbitrage route simulation run yet.')
     || !html.includes('id="bot-plan-filter-form"')
     || !html.includes('id="bot-plan-filter-mode"')
@@ -7315,12 +7343,51 @@ async function runServerApiChecks() {
   if (
     arbitrageSimulation.body.simulation?.safetyBoundary?.liveExecutionEnabled !== false
     || arbitrageSimulation.body.simulation?.safetyBoundary?.networkCallsEnabled !== false
+    || arbitrageSimulation.body.run?.localOnly !== true
+    || arbitrageSimulation.body.run?.networkCallsEnabled !== false
+    || arbitrageSimulation.body.run?.liveExecutionEnabled !== false
     || arbitrageSimulation.body.simulation?.bestEntry?.venue !== 'binance'
     || arbitrageSimulation.body.simulation?.bestExit?.venue !== 'aerodrome'
     || arbitrageSimulation.body.simulation?.economics?.estimatedNetProfit <= 0
     || !arbitrageSimulation.body.simulation?.blockingFailures?.includes('live_order_endpoint_enabled')
   ) {
     fail('cross-exchange arbitrage simulator API did not return local-only route economics');
+  }
+
+  const arbitrageSimulationList = await fetchJson(`${baseUrl}/api/v1/order-intents/arbitrage-simulations`, {
+    headers: authHeaders
+  });
+  const arbitrageSimulationDetail = await fetchJson(`${baseUrl}/api/v1/order-intents/arbitrage-simulations/${arbitrageSimulation.body.run.id}`, {
+    headers: authHeaders
+  });
+
+  if (
+    arbitrageSimulationList.body.localOnly !== true
+    || arbitrageSimulationList.body.liveExecutionEnabled !== false
+    || !arbitrageSimulationList.body.runs?.some(run => String(run.id) === String(arbitrageSimulation.body.run.id))
+    || arbitrageSimulationDetail.body.run?.result?.bestEntry?.venue !== 'binance'
+  ) {
+    fail('cross-exchange arbitrage simulation history API did not return persisted local-only run data');
+  }
+
+  const simulationDraftIntents = await fetchJson(`${baseUrl}/api/v1/order-intents/arbitrage-simulations/${arbitrageSimulation.body.run.id}/draft-intents`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie),
+    body: JSON.stringify({})
+  });
+
+  if (
+    simulationDraftIntents.body.localOnly !== true
+    || simulationDraftIntents.body.liveExecutionEnabled !== false
+    || simulationDraftIntents.body.networkCallsEnabled !== false
+    || simulationDraftIntents.body.intents?.length !== 2
+    || !simulationDraftIntents.body.intents?.every(intent => (
+      intent.status === 'draft'
+      && intent.payload?.mode === 'arbitrage_simulation_draft_intent_v1'
+      && intent.payload?.liveExecution?.enabled === false
+    ))
+  ) {
+    fail('cross-exchange arbitrage simulation did not create local-only draft order intents');
   }
 
   await fetchJsonExpectStatus(`${baseUrl}/api/v1/order-intents/simulate-cross-exchange`, {
@@ -7612,6 +7679,9 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/order-intents' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/order-intents' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/order-intents/simulate-cross-exchange' && route.file === 'app/server/src/routes/order-intents.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/order-intents/arbitrage-simulations' && route.file === 'app/server/src/routes/order-intents.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/order-intents/arbitrage-simulations/:id' && route.file === 'app/server/src/routes/order-intents.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/order-intents/arbitrage-simulations/:id/draft-intents' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.path === '/api/v1/order-intents/:id' && route.file === 'app/server/src/routes/order-intents.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/social-posts' && route.file === 'app/server/src/routes/social-ops.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/social-posts' && route.file === 'app/server/src/routes/social-ops.js')
@@ -7819,6 +7889,14 @@ async function runServerApiChecks() {
     || !systemMemory.body.snapshot?.botAutomationCapabilityPath?.futureLiveAutomation?.blockedGates?.includes('live_order_endpoint_enabled')
     || !isOwnerAcceptanceReadyOrAccepted(systemMemory.body.snapshot?.ownerAcceptance)
     || !Object.prototype.hasOwnProperty.call(systemMemory.body.snapshot?.counts || {}, 'owner_acceptance_records')
+    || !Number.isFinite(Number(systemMemory.body.snapshot?.counts?.arbitrage_simulation_runs))
+    || !Array.isArray(systemMemory.body.snapshot?.recent?.arbitrageSimulationRuns)
+    || !systemMemory.body.snapshot?.recent?.arbitrageSimulationRuns?.some(run => (
+      run.localOnly === true
+      && run.networkCallsEnabled === false
+      && run.liveExecutionEnabled === false
+      && run.result?.safetyBoundary?.liveExecutionEnabled === false
+    ))
     || !Number.isFinite(Number(systemMemory.body.snapshot?.counts?.token_ecosystem_projects))
     || !Array.isArray(systemMemory.body.snapshot?.recent?.tokenEcosystemProjects)
     || !systemMemory.body.snapshot?.recent?.tokenEcosystemProjects?.some(project => (

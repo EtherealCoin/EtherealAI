@@ -256,8 +256,30 @@ function simulateCrossExchangeArbitrage(input = {}) {
   };
 }
 
+function parseArbitrageSimulationRun(row = {}) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    market_symbol: row.market_symbol,
+    strategy_type: row.strategy_type,
+    status: row.status,
+    input: JSON.parse(row.input_json || '{}'),
+    result: JSON.parse(row.result_json || '{}'),
+    localOnly: row.local_only !== 0,
+    networkCallsEnabled: row.network_calls_enabled === 1,
+    liveExecutionEnabled: row.live_execution_enabled === 1,
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  };
+}
+
 module.exports = {
   DEFAULT_VENUE_QUOTES,
   normalizeCrossExchangeSimulationInput,
-  simulateCrossExchangeArbitrage
+  simulateCrossExchangeArbitrage,
+  parseArbitrageSimulationRun
 };

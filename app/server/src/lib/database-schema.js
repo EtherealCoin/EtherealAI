@@ -514,6 +514,24 @@ function initializeDatabase(db) {
     db.run('ALTER TABLE trade_order_intents ADD COLUMN risk_profile_id INTEGER', () => {});
 
     db.run(`
+      CREATE TABLE IF NOT EXISTS arbitrage_simulation_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        market_symbol TEXT NOT NULL,
+        strategy_type TEXT NOT NULL DEFAULT 'arbitrage_route_check',
+        status TEXT NOT NULL DEFAULT 'review',
+        input_json TEXT NOT NULL DEFAULT '{}',
+        result_json TEXT NOT NULL DEFAULT '{}',
+        local_only INTEGER NOT NULL DEFAULT 1,
+        network_calls_enabled INTEGER NOT NULL DEFAULT 0,
+        live_execution_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+
+    db.run(`
       CREATE TABLE IF NOT EXISTS solidity_contract_specs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,

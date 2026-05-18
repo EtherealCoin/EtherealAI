@@ -512,6 +512,7 @@
                 <button type="submit">Run Local Route Simulation</button>
             </form>
             <pre id="arbitrage-simulator-output" class="model-output">No arbitrage route simulation run yet.</pre>
+            <div id="arbitrage-simulation-list" class="comparison-table">Loading local arbitrage simulation history...</div>
         </section>
 
         <section class="model-panel">
@@ -2703,6 +2704,60 @@
             renderOrderIntents(data.intents || []);
         }
 
+        function renderArbitrageSimulationRuns(runs = []) {
+            const output = document.getElementById('arbitrage-simulation-list');
+
+            if (!runs.length) {
+                output.textContent = 'No local arbitrage simulations yet.';
+                return;
+            }
+
+            output.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Run</th>
+                            <th>Market</th>
+                            <th>Status</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                            <th>Net Edge</th>
+                            <th>Draft Intents</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${runs.map(run => `
+                            <tr>
+                                <td>#${run.id}</td>
+                                <td>${escapeHtml(run.market_symbol)}</td>
+                                <td>${escapeHtml(run.status)}</td>
+                                <td>${escapeHtml(run.result?.bestEntry?.venue || '-')}</td>
+                                <td>${escapeHtml(run.result?.bestExit?.venue || '-')}</td>
+                                <td>${escapeHtml(`${run.result?.economics?.estimatedNetEdgePercent ?? '-'}%`)}</td>
+                                <td><button type="button" data-simulation-draft-id="${run.id}">Create Draft Intents</button></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            output.querySelectorAll('button[data-simulation-draft-id]').forEach(button => {
+                button.addEventListener('click', () => createDraftIntentsFromSimulation(button.dataset.simulationDraftId));
+            });
+        }
+
+        async function loadArbitrageSimulationRuns() {
+            const response = await fetch('/api/v1/order-intents/arbitrage-simulations');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('arbitrage-simulation-list').textContent = data.error || 'Unable to load arbitrage simulations.';
+                return;
+            }
+
+            renderArbitrageSimulationRuns(data.runs || []);
+        }
+
         async function runArbitrageSimulation(event) {
             event.preventDefault();
             const formData = new FormData(event.target);
@@ -2738,6 +2793,36 @@
             }
 
             output.textContent = JSON.stringify(data.simulation, null, 2);
+            await loadArbitrageSimulationRuns();
+        }
+
+        async function createDraftIntentsFromSimulation(runId) {
+            const output = document.getElementById('arbitrage-simulator-output');
+            output.textContent = `Creating draft order intents from simulation #${runId}...`;
+            const response = await fetch(`/api/v1/order-intents/arbitrage-simulations/${runId}/draft-intents`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    strategyId: selectedStrategyId,
+                    riskProfileId: selectedRiskProfileId
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Draft intent creation failed.';
+                return;
+            }
+
+            output.textContent = JSON.stringify({
+                simulationRun: data.run,
+                createdDraftIntents: data.intents,
+                liveExecutionEnabled: data.liveExecutionEnabled,
+                networkCallsEnabled: data.networkCallsEnabled
+            }, null, 2);
+            await loadOrderIntents();
         }
 
         function countSafetyRows(rows = [], predicate = () => true) {
@@ -6340,6 +6425,7 @@
                 loadRefreshRuns(),
                 loadRiskProfiles(),
                 loadOrderIntents(),
+                loadArbitrageSimulationRuns(),
                 loadLocalVerificationStatus(),
                 loadMvpReadinessChecklist(),
                 loadAutomationSafetySummary(),
