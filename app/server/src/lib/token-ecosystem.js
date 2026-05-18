@@ -1468,6 +1468,387 @@ function markdownList(items = []) {
   return items.length ? items.map(item => `- ${item}`).join('\n') : '- Pending owner input';
 }
 
+function escapeHtml(value = '') {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function plainTextList(items = [], fallback = 'Pending owner input') {
+  return (items || [])
+    .map(item => String(item || '').trim())
+    .filter(Boolean)
+    .length
+    ? items.map(item => String(item || '').trim()).filter(Boolean)
+    : [fallback];
+}
+
+function renderStaticTokenPage({
+  tokenName,
+  title,
+  subtitle,
+  nav = [],
+  sections = [],
+  currentPath = '/'
+}) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)} | ${escapeHtml(tokenName)}</title>
+  <meta name="description" content="${escapeHtml(subtitle)}">
+  <link rel="stylesheet" href="${currentPath === '/' ? './assets/site.css' : '../assets/site.css'}">
+  <link rel="manifest" href="${currentPath === '/' ? './site.webmanifest' : '../site.webmanifest'}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="${currentPath === '/' ? './' : '../'}">${escapeHtml(tokenName)}</a>
+    <nav aria-label="Primary">
+      ${nav.map(item => `<a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a>`).join('\n      ')}
+    </nav>
+  </header>
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Local launch package</p>
+      <h1>${escapeHtml(title)}</h1>
+      <p>${escapeHtml(subtitle)}</p>
+    </section>
+    ${sections.map(section => `
+    <section class="content-section">
+      <h2>${escapeHtml(section.title)}</h2>
+      ${section.body ? `<p>${escapeHtml(section.body)}</p>` : ''}
+      ${section.items?.length ? `<ul>${section.items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
+    </section>`).join('\n')}
+  </main>
+  <footer class="site-footer">
+    <p>Generated locally by EtherealAI. No deployment, posting, wallet signing, DNS mutation, or trading action has been performed.</p>
+  </footer>
+</body>
+</html>
+`;
+}
+
+function buildTokenWebsiteDeployPackageFiles(project = {}, cloudflarePlan = {}) {
+  const blueprint = project.blueprint?.status ? project.blueprint : buildTokenEcosystemProjectBlueprint(project);
+  const tokenName = project.name || blueprint.contract?.name || 'Token Ecosystem Project';
+  const website = blueprint.website || {};
+  const whitepaper = blueprint.whitepaper || {};
+  const social = blueprint.socialCampaign || {};
+  const listing = blueprint.listingReadiness || {};
+  const multiChain = blueprint.multiChainTokenBuild || {};
+  const primaryDomain = cloudflarePlan.primaryDomain || 'etherealdigit.ai';
+  const primaryFqdn = cloudflarePlan.primaryFqdn || primaryDomain;
+  const customDomains = cloudflarePlan.cloudflarePages?.customDomains || [primaryFqdn];
+  const pagesProject = cloudflarePlan.pagesProject || `etherealai-${normalizeChainId(tokenName)}`;
+  const nav = [
+    { label: 'Home', href: './' },
+    { label: 'Whitepaper', href: './whitepaper/' },
+    { label: 'Dapp', href: './app/' },
+    { label: 'Community', href: './community/' }
+  ];
+  const roadmapItems = (website.roadmap || []).map(item => `${item.phase}: ${item.title} - ${item.output}`);
+  const featureItems = [
+    `Target chain: ${multiChain.selectedChain?.name || project.target_chain || project.targetChain || 'Base'}`,
+    `Token standard: ${multiChain.standardPlan?.primaryStandard || project.contract_type || project.contractType || 'ERC20'}`,
+    ...plainTextList(project.featureSelections || [], 'Feature plan pending owner input')
+  ];
+  const whitepaperItems = [
+    whitepaper.draft?.abstract || 'Whitepaper abstract pending.',
+    whitepaper.draft?.useCase || 'Use case pending owner input.',
+    ...plainTextList(whitepaper.draft?.disclosures || [], 'Disclosures pending owner review')
+  ];
+  const communityItems = (social.channels || []).map(channel => `${channel.label}: ${channel.purpose}`);
+  const listingItems = (listing.checklist || []).map(item => `${item.label}: ${item.evidence}`);
+  const css = `:root {
+  color-scheme: light;
+  --ink: #172033;
+  --muted: #5b6577;
+  --line: #d7dce5;
+  --surface: #ffffff;
+  --accent: #0f766e;
+  --accent-soft: #d9f3ee;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: #f6f8fb;
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px clamp(20px, 5vw, 72px);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+}
+
+.brand {
+  font-weight: 800;
+  text-decoration: none;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+nav a {
+  text-decoration: none;
+}
+
+.hero {
+  padding: clamp(48px, 8vw, 92px) clamp(20px, 5vw, 72px) clamp(32px, 6vw, 60px);
+  background: linear-gradient(120deg, #ffffff, #e9f7f4);
+  border-bottom: 1px solid var(--line);
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--accent);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+h1 {
+  max-width: 920px;
+  margin: 0;
+  font-size: clamp(36px, 7vw, 76px);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.hero p:last-child {
+  max-width: 760px;
+  margin: 22px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+}
+
+.content-section {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 38px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.content-section h2 {
+  margin: 0 0 12px;
+  font-size: 24px;
+}
+
+.content-section p,
+.content-section li,
+.site-footer {
+  color: var(--muted);
+}
+
+.content-section ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.content-section li {
+  min-height: 64px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 8px;
+}
+
+.site-footer {
+  padding: 28px clamp(20px, 5vw, 72px);
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .site-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+`;
+  const packageManifest = {
+    status: 'local_pages_package_only',
+    generatedAt: new Date().toISOString(),
+    projectId: project.id || null,
+    projectName: tokenName,
+    pagesProject,
+    primaryDomain,
+    primaryFqdn,
+    customDomains,
+    outputDirectory: 'website/dist',
+    requiredOwnerSteps: [
+      'Review generated static website files locally.',
+      'Create or select the Cloudflare Pages project manually.',
+      'Upload or connect the website/dist output directory after owner approval.',
+      'Add custom domains in Cloudflare Pages.',
+      'Add DNS records only after reviewing the local Cloudflare DNS plan.'
+    ],
+    safetyBoundary: {
+      localOnly: true,
+      cloudflareApiCallsEnabled: false,
+      dnsMutationEnabled: false,
+      deploymentEnabled: false,
+      walletSigningEnabled: false,
+      publicPostingEnabled: false
+    }
+  };
+
+  return [
+    {
+      relativePath: 'website/dist/index.html',
+      content: renderStaticTokenPage({
+        tokenName,
+        title: tokenName,
+        subtitle: `Token website package planned for ${primaryFqdn}.`,
+        nav,
+        sections: [
+          { title: 'Token Plan', body: 'Local launch site generated from the Solidity Lab token ecosystem blueprint.', items: featureItems },
+          { title: 'Roadmap', body: 'Milestones generated from the token website and whitepaper plan.', items: roadmapItems },
+          { title: 'Listing Evidence', body: 'Evidence checklist for future owner-reviewed CoinMarketCap/CoinGecko readiness.', items: listingItems }
+        ]
+      })
+    },
+    {
+      relativePath: 'website/dist/whitepaper/index.html',
+      content: renderStaticTokenPage({
+        tokenName,
+        title: `${tokenName} Whitepaper`,
+        subtitle: 'Draft whitepaper page generated locally from the token ecosystem blueprint.',
+        nav,
+        currentPath: '/whitepaper/',
+        sections: [
+          { title: 'Whitepaper Draft', items: whitepaperItems },
+          { title: 'Token Mechanics', items: plainTextList(whitepaper.draft?.tokenMechanics || [], 'Token mechanics pending owner input') },
+          { title: 'Roadmap', items: roadmapItems }
+        ]
+      })
+    },
+    {
+      relativePath: 'website/dist/app/index.html',
+      content: renderStaticTokenPage({
+        tokenName,
+        title: `${tokenName} Dapp Shell`,
+        subtitle: 'Local dapp shell placeholder. Wallet connection and live chain calls are intentionally disabled.',
+        nav,
+        currentPath: '/app/',
+        sections: [
+          { title: 'Disabled Live Boundary', items: ['No wallet signing.', 'No RPC broadcast.', 'No live token deployment.', 'No live trading orders.'] },
+          { title: 'Future Modules', items: plainTextList(website.pages?.find(page => page.id === 'dapp')?.sections || [], 'Dapp modules pending owner input') }
+        ]
+      })
+    },
+    {
+      relativePath: 'website/dist/community/index.html',
+      content: renderStaticTokenPage({
+        tokenName,
+        title: `${tokenName} Community`,
+        subtitle: 'Community and social launch page generated locally. Public posting remains owner-gated.',
+        nav,
+        currentPath: '/community/',
+        sections: [
+          { title: 'Social Channels', items: communityItems },
+          { title: 'Launch Cadence', items: (social.launchCadence || []).flatMap(phase => (phase.outputs || []).map(output => `${phase.phase}: ${output}`)) },
+          { title: 'Posting Boundary', items: ['Draft locally.', 'Review manually.', 'Connect official accounts only after owner approval.'] }
+        ]
+      })
+    },
+    {
+      relativePath: 'website/dist/assets/site.css',
+      content: css
+    },
+    {
+      relativePath: 'website/dist/_headers',
+      content: `/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+`
+    },
+    {
+      relativePath: 'website/dist/_redirects',
+      content: `/whitepaper /whitepaper/ 301
+/app /app/ 301
+/community /community/ 301
+`
+    },
+    {
+      relativePath: 'website/dist/site.webmanifest',
+      content: `${JSON.stringify({
+        name: tokenName,
+        short_name: tokenName.slice(0, 24),
+        start_url: '/',
+        display: 'standalone',
+        background_color: '#f6f8fb',
+        theme_color: '#0f766e'
+      }, null, 2)}\n`
+    },
+    {
+      relativePath: 'website/CLOUDFLARE_PAGES_PACKAGE.json',
+      content: `${JSON.stringify(packageManifest, null, 2)}\n`
+    },
+    {
+      relativePath: 'website/DEPLOY_PACKAGE_REVIEW.md',
+      content: `# Website Deploy Package Review
+
+Status: local package only
+
+## Output Directory
+
+\`website/dist\`
+
+## Planned Cloudflare Pages Project
+
+- Project: ${pagesProject}
+- Primary domain: ${primaryFqdn}
+- Custom domains: ${customDomains.join(', ')}
+
+## Owner Review Checklist
+
+${packageManifest.requiredOwnerSteps.map(step => `- [ ] ${step}`).join('\n')}
+
+## Safety Boundary
+
+- No Cloudflare API call was made.
+- No DNS mutation was made.
+- No deployment was performed.
+- No wallet signing, social posting, or live trading was performed.
+`
+    }
+  ];
+}
+
 function buildTokenEcosystemWorkspaceFiles(project = {}) {
   const blueprint = project.blueprint?.status ? project.blueprint : buildTokenEcosystemProjectBlueprint(project);
   const website = blueprint.website || {};
@@ -1689,5 +2070,6 @@ module.exports = {
   buildTokenEcosystemProjectSpec,
   buildTokenEcosystemProjectBlueprint,
   buildTokenEcosystemWorkspaceFiles,
+  buildTokenWebsiteDeployPackageFiles,
   parseTokenEcosystemProject
 };

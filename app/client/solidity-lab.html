@@ -532,6 +532,7 @@
                         <button type="button" data-project-blueprint-id="${project.id}">Open Blueprint</button>
                         <button type="button" data-project-edit-id="${project.id}">Load For Edit</button>
                         <button type="button" data-project-workspace-id="${project.id}">Generate Workspace</button>
+                        <button type="button" data-project-website-package-id="${project.id}">Website Package</button>
                         <button type="button" data-project-cloudflare-id="${project.id}">Cloudflare Plan</button>
                         <button type="button" data-project-artifacts-id="${project.id}">Artifact Manifest</button>
                         <button type="button" data-project-archive-id="${project.id}">Archive Project</button>
@@ -608,6 +609,29 @@
 
                     status.textContent = `Cloudflare plan saved: ${data.savedTargets?.length || 0} new DNS target(s), ${data.skippedTargets?.length || 0} already tracked.`;
                     document.getElementById('ecosystem-output').textContent = JSON.stringify(data, null, 2);
+                });
+            });
+            container.querySelectorAll('button[data-project-website-package-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const status = document.getElementById('token-ecosystem-project-status');
+                    status.textContent = 'Generating local website deploy package...';
+                    const response = await fetch(`/api/v1/token-ecosystem-projects/${button.dataset.projectWebsitePackageId}/website-deploy-package`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        status.textContent = data.error || 'Website deploy package failed.';
+                        return;
+                    }
+
+                    status.textContent = `Website package ready: ${data.deployPackage.outputDirectory} · ${data.deployPackage.fileCount} local file(s), deployment disabled.`;
+                    document.getElementById('ecosystem-output').textContent = JSON.stringify(data.deployPackage, null, 2);
+                    await loadTokenEcosystemProjects();
                 });
             });
             container.querySelectorAll('button[data-project-artifacts-id]').forEach(button => {

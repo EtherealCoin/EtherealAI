@@ -6002,6 +6002,7 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('Update Selected Project')
     || !solidity.includes('Load For Edit')
     || !solidity.includes('Generate Workspace')
+    || !solidity.includes('Website Package')
     || !solidity.includes('Cloudflare Plan')
     || !solidity.includes('Artifact Manifest')
     || !solidity.includes('Archive Project')
@@ -6009,6 +6010,7 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes("method: 'PATCH'")
     || !solidity.includes("method: 'DELETE'")
     || !solidity.includes('/workspace')
+    || !solidity.includes('/website-deploy-package')
     || !solidity.includes('/cloudflare-dns-plan')
     || !solidity.includes('/artifacts')
     || !solidity.includes('Passive income / rewards model')
@@ -7585,6 +7587,35 @@ async function runServerApiChecks() {
     fail('token ecosystem Cloudflare DNS plan route did not preserve local-only website DNS planning');
   }
 
+  const websitePackage = await fetchJson(`${baseUrl}/api/v1/token-ecosystem-projects/${tokenProject.body.project.id}/website-deploy-package`, {
+    method: 'POST',
+    headers: authJsonHeaders(cookie)
+  });
+  const websitePackageFiles = [
+    ...(websitePackage.body.proposals || []),
+    ...(websitePackage.body.applied || []),
+    ...(websitePackage.body.skipped || [])
+  ];
+
+  if (
+    websitePackage.body.localOnly !== true
+    || websitePackage.body.externalActionsEnabled !== false
+    || websitePackage.body.cloudflareApiCallsEnabled !== false
+    || websitePackage.body.dnsMutationEnabled !== false
+    || websitePackage.body.deploymentEnabled !== false
+    || websitePackage.body.deployPackage?.outputDirectory !== 'website/dist'
+    || websitePackage.body.deployPackage?.fileCount < 9
+    || !websitePackage.body.deployPackage?.files?.includes('website/dist/index.html')
+    || !websitePackage.body.deployPackage?.files?.includes('website/dist/_headers')
+    || !websitePackage.body.deployPackage?.files?.includes('website/CLOUDFLARE_PAGES_PACKAGE.json')
+    || websitePackage.body.cloudflarePlan?.primaryDomain !== 'etherealdigit.ai'
+    || websitePackage.body.cloudflarePlan?.emailRouting?.primaryMailbox !== 'patrick@etherealdigital.ai'
+    || websitePackageFiles.length < 9
+    || !['website_package_ready', 'website_package_proposed'].includes(websitePackage.body.project?.status)
+  ) {
+    fail('token ecosystem website deploy package route did not produce local-only Cloudflare Pages files');
+  }
+
   const tokenArtifactManifest = await fetchJson(`${baseUrl}/api/v1/token-ecosystem-projects/${tokenProject.body.project.id}/artifacts`, {
     headers: authHeaders
   });
@@ -7595,7 +7626,7 @@ async function runServerApiChecks() {
     || tokenArtifactManifest.body.liveExecutionEnabled !== false
     || tokenArtifactManifest.body.manifest?.project?.id !== tokenProject.body.project.id
     || tokenArtifactManifest.body.manifest?.workspace?.id !== tokenWorkspace.body.workspace?.id
-    || tokenArtifactManifest.body.manifest?.counts?.fileProposals < 8
+    || tokenArtifactManifest.body.manifest?.counts?.fileProposals < 17
     || tokenArtifactManifest.body.manifest?.counts?.cloudflareDnsTargets < 4
     || tokenArtifactManifest.body.manifest?.safetyBoundary?.deploymentEnabled !== false
     || tokenArtifactManifest.body.manifest?.safetyBoundary?.publicPostingEnabled !== false
@@ -8297,6 +8328,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.method === 'PATCH' && route.path === '/api/v1/token-ecosystem-projects/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'DELETE' && route.path === '/api/v1/token-ecosystem-projects/:id' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects/:id/workspace' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects/:id/website-deploy-package' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects/:id/cloudflare-dns-plan' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-capability-path' && route.file === 'app/server/src/routes/bot-automation.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-plans' && route.file === 'app/server/src/routes/bot-automation.js')

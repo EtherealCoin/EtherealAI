@@ -81,6 +81,7 @@ const {
 const {
   buildTokenEcosystemProjectBlueprint,
   buildTokenEcosystemWorkspaceFiles,
+  buildTokenWebsiteDeployPackageFiles,
   buildTokenEcosystemCatalog,
   buildTokenEcosystemBlueprint,
   normalizeTokenEcosystemProjectInput,
@@ -770,6 +771,7 @@ registerEtherealRoutes(app, {
   buildTokenEcosystemBlueprint,
   buildTokenEcosystemProjectBlueprint,
   buildTokenEcosystemWorkspaceFiles,
+  buildTokenWebsiteDeployPackageFiles,
   buildCloudflareWebsitePlan,
   normalizeTokenEcosystemProjectInput,
   commandTemplates,

@@ -16,6 +16,7 @@ function registerSolidityLabRoutes(app, {
   buildTokenEcosystemBlueprint,
   buildTokenEcosystemProjectBlueprint,
   buildTokenEcosystemWorkspaceFiles,
+  buildTokenWebsiteDeployPackageFiles,
   buildCloudflareWebsitePlan,
   normalizeTokenEcosystemProjectInput,
   normalizeCompanyDnsTargetInput,
@@ -176,6 +177,7 @@ function registerSolidityLabRoutes(app, {
       },
       nextLocalActions: [
         'Generate or refresh the token ecosystem workspace.',
+        'Generate or refresh the local website deploy package.',
         'Generate or refresh the Cloudflare website DNS plan.',
         'Run a rebalance batch with this token ecosystem project ID.',
         'Create draft order intents from qualifying paper candidates.',
@@ -213,7 +215,10 @@ function registerSolidityLabRoutes(app, {
     return getTokenEcosystemProject(project.id);
   }
 
-  async function createWorkspaceForTokenProject(project) {
+  async function upsertTokenProjectWorkspaceFiles(project, files, {
+    readyStatus = 'workspace_ready',
+    proposedStatus = 'workspace_proposed'
+  } = {}) {
     ensureWorkspacesDir();
     const workspaceSlug = `token-ecosystem-${project.id}-${slugify(project.name) || 'project'}`.slice(0, 80);
     const workspacePath = path.join(workspacesDir, workspaceSlug);
@@ -232,7 +237,6 @@ function registerSolidityLabRoutes(app, {
     const policy = readAutomationPolicy();
     const initialStatus = policy.localAutomation.autoApproveFileProposals ? 'approved' : 'pending';
     const shouldApply = initialStatus === 'approved';
-    const files = buildTokenEcosystemWorkspaceFiles(project);
     const proposals = [];
     const applied = [];
     const skipped = [];
@@ -294,7 +298,7 @@ function registerSolidityLabRoutes(app, {
       `UPDATE token_ecosystem_projects
        SET status = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
-      [shouldApply ? 'workspace_ready' : 'workspace_proposed', project.id]
+      [shouldApply ? readyStatus : proposedStatus, project.id]
     );
 
     return {
@@ -303,7 +307,38 @@ function registerSolidityLabRoutes(app, {
       applied,
       skipped,
       initialStatus,
-      status: shouldApply ? 'workspace_ready' : 'workspace_proposed'
+      status: shouldApply ? readyStatus : proposedStatus
+    };
+  }
+
+  async function createWorkspaceForTokenProject(project) {
+    return upsertTokenProjectWorkspaceFiles(project, buildTokenEcosystemWorkspaceFiles(project), {
+      readyStatus: 'workspace_ready',
+      proposedStatus: 'workspace_proposed'
+    });
+  }
+
+  async function createWebsiteDeployPackageForTokenProject(project) {
+    const identity = readCompanyIdentity();
+    const cloudflarePlan = buildCloudflareWebsitePlan(project, identity);
+    const packageFiles = buildTokenWebsiteDeployPackageFiles(project, cloudflarePlan);
+    const result = await upsertTokenProjectWorkspaceFiles(project, packageFiles, {
+      readyStatus: 'website_package_ready',
+      proposedStatus: 'website_package_proposed'
+    });
+
+    return {
+      ...result,
+      cloudflarePlan,
+      deployPackage: {
+        outputDirectory: 'website/dist',
+        fileCount: packageFiles.length,
+        files: packageFiles.map(file => file.relativePath),
+        localOnly: true,
+        cloudflareApiCallsEnabled: false,
+        dnsMutationEnabled: false,
+        deploymentEnabled: false
+      }
     };
   }
 
@@ -483,6 +518,31 @@ function registerSolidityLabRoutes(app, {
         ...result,
         localOnly: true,
         externalActionsEnabled: false
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/token-ecosystem-projects/:id/website-deploy-package', requireAuth, async (req, res) => {
+    try {
+      const project = await getTokenEcosystemProject(req.params.id);
+
+      if (!project) {
+        return res.status(404).json({ error: 'Token ecosystem project not found' });
+      }
+
+      const result = await createWebsiteDeployPackageForTokenProject(project);
+      const updatedProject = await getTokenEcosystemProject(project.id);
+
+      res.status(201).json({
+        project: updatedProject,
+        ...result,
+        localOnly: true,
+        externalActionsEnabled: false,
+        cloudflareApiCallsEnabled: false,
+        dnsMutationEnabled: false,
+        deploymentEnabled: false
       });
     } catch (error) {
       res.status(500).json({ error: error.message });
