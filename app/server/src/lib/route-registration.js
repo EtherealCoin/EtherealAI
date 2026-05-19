@@ -24,6 +24,7 @@ const { registerSolidityLabRoutes } = require('../routes/solidity-lab');
 const { registerStrategyResearchRoutes } = require('../routes/strategy-research');
 const { registerSystemConfigRoutes } = require('../routes/system-config');
 const { registerSystemMemoryRoutes } = require('../routes/system-memory');
+const { registerWalletControlRoutes } = require('../routes/wallet-control');
 const { registerWorkspaceRoutes } = require('../routes/workspaces');
 
 function registerEtherealRoutes(app, options) {
@@ -188,6 +189,13 @@ function registerEtherealRoutes(app, options) {
     buildTokenWebsiteDeployPackageFiles,
     buildCloudflareWebsitePlan,
     normalizeTokenEcosystemProjectInput,
+    sanitizeWalletInput,
+    parseOwnerWallet,
+    parseWalletPermissionEvent,
+    evaluateWalletReadiness,
+    buildWalletOnboardingGuide,
+    buildOperatorControlSummary,
+    walletPermissionKeys,
     commandTemplates,
     getGitStatusSnapshot,
     getGitPublishStatus,
@@ -499,6 +507,21 @@ function registerEtherealRoutes(app, options) {
     getExchangeAdapterScaffolds,
     exchangeAdapterContractExchanges,
     selects
+  });
+
+  registerWalletControlRoutes(app, {
+    requireAuth,
+    dbGet,
+    dbAll,
+    dbRun,
+    sanitizeWalletInput,
+    parseOwnerWallet,
+    parseWalletPermissionEvent,
+    evaluateWalletReadiness,
+    buildWalletOnboardingGuide,
+    buildOperatorControlSummary,
+    walletPermissionKeys,
+    parseLocalSecretReference: parsers.parseLocalSecretReference
   });
 
   registerMarketDataRoutes(app, {

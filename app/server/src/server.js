@@ -281,6 +281,15 @@ const {
 const {
   parseOwnerAcceptanceRecord
 } = require('./lib/owner-acceptance');
+const {
+  sanitizeWalletInput,
+  parseOwnerWallet,
+  parseWalletPermissionEvent,
+  evaluateWalletReadiness,
+  buildWalletOnboardingGuide,
+  buildOperatorControlSummary,
+  WALLET_PERMISSION_KEYS
+} = require('./lib/wallet-control');
 
 const app = express();
 
@@ -613,7 +622,9 @@ const ROUTE_PARSERS = {
   parseOwnerAcceptanceRecord,
   parseCompanyDnsTarget,
   parseMultiAgentRun,
-  parseMultiAgentContribution
+  parseMultiAgentContribution,
+  parseOwnerWallet,
+  parseWalletPermissionEvent
 };
 
 registerEtherealRoutes(app, {
@@ -776,6 +787,13 @@ registerEtherealRoutes(app, {
   buildTokenWebsiteDeployPackageFiles,
   buildCloudflareWebsitePlan,
   normalizeTokenEcosystemProjectInput,
+  sanitizeWalletInput,
+  parseOwnerWallet,
+  parseWalletPermissionEvent,
+  evaluateWalletReadiness,
+  buildWalletOnboardingGuide,
+  buildOperatorControlSummary,
+  walletPermissionKeys: WALLET_PERMISSION_KEYS,
   commandTemplates,
   getGitStatusSnapshot,
   getGitPublishStatus,

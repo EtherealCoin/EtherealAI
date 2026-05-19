@@ -793,6 +793,44 @@ footer {
     min-height: auto;
 }
 
+.operator-shell {
+    max-width: 980px;
+}
+
+.operator-step-list {
+    display: grid;
+    gap: 12px;
+}
+
+.operator-step-list article,
+.wallet-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+    text-align: left;
+}
+
+.operator-step-list span,
+.operator-step-list em,
+.wallet-card span {
+    color: #4b5563;
+    font-size: 0.95rem;
+}
+
+.permission-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.permission-grid label {
+    display: grid;
+    gap: 6px;
+}
+
 .timeline-list {
     display: grid;
     gap: 10px;

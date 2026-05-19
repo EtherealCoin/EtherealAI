@@ -54,6 +54,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/routes/strategy-research.js',
     'app/server/src/routes/system-config.js',
     'app/server/src/routes/system-memory.js',
+    'app/server/src/routes/wallet-control.js',
     'app/server/src/routes/workspaces.js',
     'app/server/src/lib/bot-automation.js',
     'app/server/src/lib/command-safety.js',
@@ -89,6 +90,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/social-ops.js',
     'app/server/src/lib/solidity-lab.js',
     'app/server/src/lib/token-ecosystem.js',
+    'app/server/src/lib/wallet-control.js',
     'app/server/src/lib/strategy-research.js',
     'app/server/src/lib/strategy-decision-logs.js',
     'app/server/src/lib/bot-automation-actions.js',
@@ -167,12 +169,14 @@ function checkOwnerEvidenceModule() {
     || ownerEvidence.localOnly !== true
     || ownerEvidence.liveExecutionEnabled !== false
     || ownerEvidence.routeBoundary !== 'monitor_only_no_live_orders'
-    || ownerEvidence.proofSurfaces?.length !== 7
+    || ownerEvidence.proofSurfaces?.length < 8
     || ownerEvidence.exportSurfaces?.length !== 3
     || ownerEvidence.fullLiveBlockers?.length !== 4
     || !ownerEvidence.proofSurfaces.some(surface => surface.id === 'owner_proof_packet' && surface.location === '/owner-proof-packet')
+    || !ownerEvidence.proofSurfaces.some(surface => surface.id === 'operator_control_wallets' && surface.location === '/operator-control' && surface.signingEnabled === false)
     || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'social-ops' && boundary.externalPostingEnabled === false)
     || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'solidity-lab' && boundary.deploymentEnabled === false)
+    || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'wallet-control' && boundary.signingEnabled === false)
   ) {
     fail('owner evidence module did not expose the expected local-only proof contract');
   }
@@ -360,7 +364,7 @@ function checkOwnerProofPacketModule() {
     || packet.liveExecutionEnabled !== false
     || packet.ownerTestSummary?.readyForOwnerTesting !== true
     || packet.ownerTestSummary?.localMvpBlockers !== 0
-    || packet.ownerTestSummary?.proofSurfaceCount !== 7
+    || packet.ownerTestSummary?.proofSurfaceCount < 8
     || !isOwnerAcceptanceReadyOrAccepted(packet.ownerAcceptance)
     || buildOwnerAcceptanceSummary({ readyForOwnerTesting: false }).status !== 'needs_local_review'
     || packet.status.mvpCompletionPercent !== 99
@@ -376,7 +380,8 @@ function checkOwnerProofPacketModule() {
     || !packet.paperAutomationRunbook?.steps?.some(step => step.id === 'activate_or_review_paper_schedule')
     || !packet.paperAutomationRunbook?.blockedLiveActions?.some(action => action.id === 'live_order_endpoint_enabled')
     || buildPaperAutomationRunbook(packet.botAutomationCapabilityPath).ownerMode !== 'activate_ready_paper_schedule'
-    || packet.proofSurfaces.length !== 7
+    || packet.proofSurfaces.length < 8
+    || !packet.proofSurfaces.some(surface => surface.id === 'operator_control_wallets' && surface.location === '/operator-control')
     || packet.exportSurfaces.length !== 3
     || packet.fullLiveBlockers.length !== 1
     || packet.fullLiveBlockers[0].id !== 'live_order_endpoint_enabled'
@@ -1220,6 +1225,7 @@ function checkRouteRegistrationModule() {
     'registerOwnerAcceptanceRoutes',
     'registerDevServerRoutes',
     'registerSystemMemoryRoutes',
+    'registerWalletControlRoutes',
     'registerAutomationSafetyRoutes',
     'registerArtifactRoutes',
     'registerLocalModelRoutes',
@@ -1245,6 +1251,7 @@ function checkRouteRegistrationModule() {
     || !routeRegistrationSource.includes("require('../routes/company-identity')")
     || !routeRegistrationSource.includes("require('../routes/bot-automation')")
     || !routeRegistrationSource.includes("require('../routes/multi-agent')")
+    || !routeRegistrationSource.includes("require('../routes/wallet-control')")
     || !routeRegistrationSource.includes("require('../routes/strategy-research')")
     || !routeRegistrationSource.includes("require('../routes/pages')")
     || !expectedRouteRegistrars.every(name => routeRegistrationSource.includes(`${name}(app`))
@@ -1254,6 +1261,7 @@ function checkRouteRegistrationModule() {
     || !serverSource.includes('const ROW_LOOKUP_SELECTS = {')
     || !serverSource.includes('const ROUTE_PARSERS = {')
     || !serverSource.includes("require('./lib/live-execution-handoff')")
+    || !serverSource.includes("require('./lib/wallet-control')")
     || !serverSource.includes('buildCompanySetupPlan')
     || !serverSource.includes('normalizeCompanyDnsTargetInput')
     || !serverSource.includes('parseCompanyDnsTarget')
@@ -1261,6 +1269,10 @@ function checkRouteRegistrationModule() {
     || !serverSource.includes('buildTokenEcosystemProjectBlueprint')
     || !serverSource.includes('buildTokenEcosystemWorkspaceFiles')
     || !serverSource.includes('parseTokenEcosystemProject')
+    || !serverSource.includes('sanitizeWalletInput')
+    || !serverSource.includes('parseOwnerWallet')
+    || !serverSource.includes('parseWalletPermissionEvent')
+    || !serverSource.includes('buildOperatorControlSummary')
     || !serverSource.includes('simulateCrossExchangeArbitrage')
     || !serverSource.includes('parseArbitrageSimulationRun')
     || !serverSource.includes('simulateTopRebalanceBatch')
@@ -1275,6 +1287,8 @@ function checkRouteRegistrationModule() {
     || !routeRegistrationSource.includes('parseRebalanceCandidateCsv')
     || !routeRegistrationSource.includes('parseTokenEcosystemProject: parsers.parseTokenEcosystemProject')
     || !routeRegistrationSource.includes('getGitPublishStatus')
+    || !routeRegistrationSource.includes('registerWalletControlRoutes(app')
+    || !routeRegistrationSource.includes('parseWalletPermissionEvent')
     || !serverSource.includes('selects: ROW_LOOKUP_SELECTS')
     || !serverSource.includes('selects: ROUTE_SELECTS')
     || !serverSource.includes('parsers: ROUTE_PARSERS')
@@ -1377,6 +1391,11 @@ function checkDatabaseSchemaModule() {
     || !statements.some(statement => statement.includes('external_mutation_enabled INTEGER NOT NULL DEFAULT 0'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS token_ecosystem_projects'))
     || !statements.some(statement => statement.includes('external_actions_enabled INTEGER NOT NULL DEFAULT 0'))
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS owner_wallets'))
+    || !statements.some(statement => statement.includes('secret_reference_id INTEGER'))
+    || !statements.some(statement => statement.includes('signing_enabled INTEGER NOT NULL DEFAULT 0'))
+    || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS wallet_permission_events'))
+    || !statements.some(statement => statement.includes('evidence_json TEXT NOT NULL DEFAULT'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS owner_acceptance_records'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS market_data_import_jobs'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS dev_server_logs'))
@@ -2058,6 +2077,7 @@ function checkSecretSafetyModule() {
     findSensitiveFields,
     findLikelySecretValues,
     assertNoInlineSecretPayload,
+    createSecretSafetyError,
     sanitizeLocalSecretReferenceInput,
     sanitizeExchangeConnectorInput
   } = require(path.join(projectRoot, 'app/server/src/lib/secret-safety'));
@@ -2070,6 +2090,12 @@ function checkSecretSafetyModule() {
   });
   const likelySecretValues = findLikelySecretValues({
     referenceName: `sk-${'c'.repeat(40)}`
+  });
+  const walletPermissionFields = findSensitiveFields({
+    permissionScope: {
+      mint_token: 'owner_approval_each_time',
+      view_public_address: 'read_only'
+    }
   });
   const secretReference = sanitizeLocalSecretReferenceInput({
     label: 'Binance Paper Reference',
@@ -2095,6 +2121,7 @@ function checkSecretSafetyModule() {
     !sensitiveFields.includes('apiKey')
     || !sensitiveFields.includes('nested.private_key')
     || sensitiveFields.includes('secretReferenceId')
+    || walletPermissionFields.length !== 0
   ) {
     fail('secret safety module did not detect sensitive fields with metadata allowlist');
   }
@@ -2121,12 +2148,121 @@ function checkSecretSafetyModule() {
     || secretReference.status !== 'configured'
     || connector.exchangeName !== 'binance'
     || connector.secretReferenceId !== 12
+    || createSecretSafetyError('fixture').statusCode !== 400
     || !EXCHANGE_CONNECTOR_MODES.has(connector.mode)
   ) {
     fail('secret safety module did not sanitize secret reference and connector metadata');
   }
 
   pass('secret safety module');
+}
+
+function checkWalletControlModule() {
+  const {
+    WALLET_PERMISSION_KEYS,
+    sanitizeWalletInput,
+    parseOwnerWallet,
+    parseWalletPermissionEvent,
+    evaluateWalletReadiness,
+    buildWalletOnboardingGuide,
+    buildOperatorControlSummary
+  } = require(path.join(projectRoot, 'app/server/src/lib/wallet-control'));
+  const sanitized = sanitizeWalletInput({
+    label: 'Treasury Hardware Wallet',
+    walletKind: 'hardware',
+    chainFamily: 'evm',
+    network: 'base',
+    publicAddress: '0x000000000000000000000000000000000000dEaD',
+    connectionMethod: 'hardware',
+    assignments: ['etherealai-token', 'treasury'],
+    permissionScope: {
+      view_public_address: 'read_only',
+      request_signature: 'owner_approval_each_time',
+      deploy_contract: 'owner_approval_each_time',
+      trade_execution: 'paper_only',
+      transfer_assets: 'invalid_escalation'
+    },
+    notes: 'Metadata only.'
+  });
+  const wallet = parseOwnerWallet({
+    id: 10,
+    user_id: 2,
+    secret_reference_id: null,
+    label: sanitized.label,
+    wallet_kind: sanitized.walletKind,
+    chain_family: sanitized.chainFamily,
+    network: sanitized.network,
+    public_address: sanitized.publicAddress,
+    connection_method: sanitized.connectionMethod,
+    status: sanitized.status,
+    assignment_json: JSON.stringify(sanitized.assignments),
+    permission_scope_json: JSON.stringify(sanitized.permissionScope),
+    notes: sanitized.notes,
+    local_only: 1,
+    signing_enabled: 0,
+    live_execution_enabled: 0,
+    created_at: '2026-05-18 00:00:00',
+    updated_at: '2026-05-18 00:00:00'
+  });
+  const event = parseWalletPermissionEvent({
+    id: 20,
+    wallet_id: 10,
+    user_id: 2,
+    event_type: 'wallet.attached',
+    status: 'metadata_ready',
+    summary: 'fixture',
+    before_json: null,
+    after_json: JSON.stringify(wallet),
+    evidence_json: JSON.stringify({ localOnly: true }),
+    local_only: 1,
+    live_execution_enabled: 0,
+    created_at: '2026-05-18 00:00:00'
+  });
+  const readiness = evaluateWalletReadiness({ wallet });
+  const guide = buildWalletOnboardingGuide();
+  const summary = buildOperatorControlSummary({ wallets: [wallet], events: [event] });
+
+  try {
+    sanitizeWalletInput({
+      label: 'Unsafe Wallet',
+      walletKind: 'hardware',
+      chainFamily: 'evm',
+      notes: 'alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima'
+    });
+    fail('wallet control module allowed mnemonic-like wallet text');
+  } catch (error) {
+    if (error.statusCode !== 400 || !/Wallet records cannot contain/.test(error.message)) {
+      throw error;
+    }
+  }
+
+  if (
+    WALLET_PERMISSION_KEYS.length !== 9
+    || sanitized.localOnly !== true
+    || sanitized.signingEnabled !== false
+    || sanitized.liveExecutionEnabled !== false
+    || sanitized.permissionScope.view_public_address !== 'read_only'
+    || sanitized.permissionScope.transfer_assets !== 'blocked'
+    || sanitized.assignments.join(',') !== 'etherealai-token,treasury'
+    || wallet.localOnly !== true
+    || wallet.signingEnabled !== false
+    || wallet.liveExecutionEnabled !== false
+    || event.localOnly !== true
+    || event.liveExecutionEnabled !== false
+    || readiness.status !== 'metadata_ready'
+    || readiness.summary?.secretsStored !== false
+    || readiness.summary?.liveExecutionEnabled !== false
+    || !readiness.privilegedPermissions.includes('request_signature')
+    || guide.safetyBoundary?.secretsAccepted !== false
+    || guide.trainingContent?.length < 2
+    || summary.counts?.wallets !== 1
+    || summary.signingEnabled !== false
+    || !summary.boundaries?.includes('No seed phrase storage.')
+  ) {
+    fail('wallet control module did not preserve metadata-only wallet owner-control behavior');
+  }
+
+  pass('wallet control module');
 }
 
 function checkSystemConfigRuntimeModule() {
@@ -5766,6 +5902,58 @@ function checkDashboardMvpReadinessUi() {
   pass('dashboard MVP readiness owner evidence summary UI');
 }
 
+function checkOperatorControlCenterUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/operator-control.html'), 'utf8');
+  const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
+  const home = fs.readFileSync(path.join(projectRoot, 'app/client/index.html'), 'utf8');
+  const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+
+  if (
+    !pages.includes("app.get('/operator-control', requirePageAuth")
+    || !dashboard.includes('/operator-control')
+    || !home.includes('Operator Control Center')
+    || !html.includes('Operator Control Center')
+    || !html.includes('Wallet Onboarding Wizard')
+    || !html.includes('Attach Wallet Metadata')
+    || !html.includes('Connected Wallets')
+    || !html.includes('Recovery And Emergency Controls')
+    || !html.includes('YouTube-Style Training Content')
+    || !html.includes('Wallet Permission Events')
+    || !html.includes('take owner control of keys outside EtherealAI')
+    || !html.includes('no seed phrase storage')
+    || !html.includes('no private key storage')
+    || !html.includes('no automatic signing')
+    || !html.includes('no live execution')
+    || !html.includes('Hardware Wallet')
+    || !html.includes('Multisig')
+    || !html.includes('Solana')
+    || !html.includes('Custom / Other Blockchain')
+    || !html.includes('Owner Approval Each Time')
+    || !html.includes('data-permission-key')
+    || !html.includes('/api/v1/operator-control-center')
+    || !html.includes('/api/v1/wallets')
+    || !html.includes('/readiness')
+    || !html.includes('/revoke')
+    || !html.includes('Local Connector Reference ID')
+    || !html.includes('Emergency shutdown')
+    || !html.includes('Recovery procedure')
+    || !html.includes('Rollback protection')
+    || !html.includes('Do not paste seed phrases')
+    || !html.includes('function renderPermissionControls()')
+    || !html.includes('function loadOperatorCenter()')
+    || !html.includes('function submitWallet(event)')
+    || !styles.includes('.operator-shell')
+    || !styles.includes('.operator-step-list')
+    || !styles.includes('.permission-grid')
+    || !styles.includes('.wallet-card')
+  ) {
+    fail('operator control center UI is missing wallet onboarding, safety, or route wiring');
+  }
+
+  pass('operator control center owner wallet UI');
+}
+
 function checkOwnerProofPacketUi() {
   const html = fs.readFileSync(path.join(projectRoot, 'app/client/owner-proof-packet.html'), 'utf8');
   const route = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/owner-proof-packet.js'), 'utf8');
@@ -6102,7 +6290,11 @@ function checkMvpOwnerTestPassDoc() {
     || !doc.includes('`Record Local MVP Acceptance` remains disabled until the local test pass, proof-packet review, and live-disabled acknowledgement boxes are checked.')
     || !doc.includes('`Download Proof Packet JSON` is enabled after `/api/v1/owner-proof-packet` loads.')
     || !doc.includes('Packet Checksum shows a SHA-256 prefix and the downloaded JSON includes the full checksum.')
-    || !doc.includes('Proof Surfaces include owner proof packet, dashboard readiness, MVP Test Pass, route inventory, Strategy Lab, Social Ops, and Solidity Lab.')
+    || !doc.includes('Proof Surfaces include owner proof packet, dashboard readiness, MVP Test Pass, Operator Control, route inventory, Strategy Lab, Social Ops, and Solidity Lab.')
+    || !doc.includes('Open `/operator-control`')
+    || !doc.includes('Wallet Onboarding Wizard explains the owner key handoff in plain English.')
+    || !doc.includes('## Owner Wallet Control Workflow')
+    || !doc.includes('Revocation is the emergency shutdown path for a wallet record')
     || !doc.includes('Bot Automation Path shows Automated Paper Path, Ready Paper Plans, Active Paper Schedules, Future Live Automation blocked, Live Blocked Gates, and no live order endpoint.')
     || !doc.includes('Paper Automation Runbook lists the monitor-only owner steps')
     || !doc.includes('route boundary `monitor_only_no_live_orders`')
@@ -6144,7 +6336,7 @@ function checkProjectHandoffDoc() {
   const doc = fs.readFileSync(path.join(projectRoot, 'PROJECT_HANDOFF.md'), 'utf8');
 
   if (
-    !doc.includes('Date: 2026-05-16')
+    !doc.includes('Date: 2026-05-18')
     || !(
       doc.includes('Owner-test local MVP: about 99% complete.')
       || doc.includes('Owner-test local MVP: 100% after the local owner acceptance record; 99% before owner acceptance in a fresh database.')
@@ -6175,7 +6367,12 @@ function checkProjectHandoffDoc() {
     || !doc.includes('owner proof surfaces')
     || !doc.includes('`ownerAcceptance`')
     || !doc.includes('`botAutomationCapabilityPath`')
-    || !doc.includes('owner proof packet, dashboard readiness, MVP test pass, route inventory, Strategy Lab, Social Ops, and Solidity Lab')
+    || !doc.includes('owner proof packet, dashboard readiness, MVP test pass, Operator Control, route inventory, Strategy Lab, Social Ops, and Solidity Lab')
+    || !doc.includes('/operator-control` is the non-coder Operator Control Center')
+    || !doc.includes('/api/v1/operator-control-center')
+    || !doc.includes('owner_wallets')
+    || !doc.includes('wallet_permission_events')
+    || !doc.includes('metadata_only_no_wallet_secrets')
     || !doc.includes('Owner Proof Packet added at `/owner-proof-packet`')
     || !doc.includes('Owner Proof Packet and System Memory now include the automated bot capability path')
     || !doc.includes('Owner Proof Packet now includes a monitor-only Paper Automation Runbook')
@@ -6185,7 +6382,7 @@ function checkProjectHandoffDoc() {
     || !doc.includes('Dashboard System Memory export now includes owner-evidence references, owner acceptance pending status')
     || !doc.includes('Owner Proof Coverage counts, owner acceptance pending status, and local acceptance record count from System Memory')
     || !doc.includes('Route Inventory now cross-checks Owner Proof Coverage, owner acceptance pending status, and local acceptance record count from System Memory')
-    || !doc.includes('external-surface boundaries for Social Ops and Solidity Lab')
+    || !doc.includes('external-surface boundaries for Social Ops, Solidity Lab, and wallet control')
     || !doc.includes('Social Ops remains local draft-only')
     || !doc.includes('Solidity Lab remains local scaffold/review only')
     || !doc.includes('Solidity Lab now includes a local Token Ecosystem Studio')
@@ -7231,6 +7428,247 @@ async function runSecretReferenceConnectorChecks(baseUrl, cookie) {
   pass('secret-reference edit/connector readiness/adapter-contract filter fixture checks with cleanup');
 }
 
+async function runWalletControlFixtureChecks(baseUrl, cookie) {
+  const now = Date.now();
+  const fixtureTag = `wallet-control-${now}`;
+  const headers = authJsonHeaders(cookie);
+  const fixture = {};
+  let primaryError = null;
+
+  async function cleanup() {
+    const errors = [];
+
+    if (fixture.walletId) {
+      const result = await fetchJsonForCleanup(`${baseUrl}/api/v1/wallets/${fixture.walletId}/revoke`, {
+        method: 'POST',
+        headers
+      });
+
+      if (!result.ok && result.status !== 404) {
+        errors.push(`wallet #${fixture.walletId} revoke failed with HTTP ${result.status}: ${JSON.stringify(result.body)}`);
+      }
+    }
+
+    for (const secretReferenceId of [fixture.secretReferenceId, fixture.badScopeSecretReferenceId].filter(Boolean)) {
+      const result = await fetchJsonForCleanup(`${baseUrl}/api/v1/local-secret-references/${secretReferenceId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ status: 'disabled', notes: 'Verification fixture disabled after wallet-control checks.' })
+      });
+
+      if (!result.ok && result.status !== 404) {
+        errors.push(`secret reference #${secretReferenceId} disable failed with HTTP ${result.status}: ${JSON.stringify(result.body)}`);
+      }
+    }
+
+    return errors;
+  }
+
+  try {
+    const operatorCenter = await fetchJson(`${baseUrl}/api/v1/operator-control-center`, { headers });
+
+    if (
+      operatorCenter.body.localOnly !== true
+      || operatorCenter.body.signingEnabled !== false
+      || operatorCenter.body.liveExecutionEnabled !== false
+      || operatorCenter.body.secretsStored !== false
+      || !Array.isArray(operatorCenter.body.guide?.steps)
+      || !Array.isArray(operatorCenter.body.wallets)
+      || !Array.isArray(operatorCenter.body.events)
+    ) {
+      fail('operator control center did not return local-only wallet summary');
+    }
+
+    await fetchJsonExpectStatus(`${baseUrl}/api/v1/wallets`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        label: `Unsafe wallet ${fixtureTag}`,
+        walletKind: 'hardware',
+        chainFamily: 'evm',
+        seedPhrase: 'never store wallet secrets here'
+      })
+    }, 400);
+
+    const secretReference = await fetchJson(`${baseUrl}/api/v1/local-secret-references`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        label: `Wallet connector fixture ${fixtureTag}`,
+        providerType: 'macos_keychain',
+        referenceName: `ethereal/wallet/${fixtureTag}`,
+        scope: 'wallet_connector',
+        status: 'configured',
+        notes: 'Metadata-only wallet connector fixture. No secret value.'
+      })
+    });
+    fixture.secretReferenceId = secretReference.body.reference.id;
+
+    const badScopeSecretReference = await fetchJson(`${baseUrl}/api/v1/local-secret-references`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        label: `Wallet bad scope fixture ${fixtureTag}`,
+        providerType: 'macos_keychain',
+        referenceName: `ethereal/wallet-bad-scope/${fixtureTag}`,
+        scope: 'exchange_connector',
+        status: 'configured',
+        notes: 'Metadata-only fixture used to verify wallet scope rejection.'
+      })
+    });
+    fixture.badScopeSecretReferenceId = badScopeSecretReference.body.reference.id;
+
+    await fetchJsonExpectStatus(`${baseUrl}/api/v1/wallets`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        label: `Bad scope wallet ${fixtureTag}`,
+        walletKind: 'hardware',
+        chainFamily: 'evm',
+        network: 'base',
+        secretReferenceId: fixture.badScopeSecretReferenceId
+      })
+    }, 400);
+
+    const wallet = await fetchJson(`${baseUrl}/api/v1/wallets`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        label: `Treasury hardware wallet ${fixtureTag}`,
+        walletKind: 'hardware',
+        chainFamily: 'evm',
+        network: 'base',
+        publicAddress: '0x000000000000000000000000000000000000dEaD',
+        connectionMethod: 'hardware',
+        secretReferenceId: fixture.secretReferenceId,
+        assignments: ['etherealai-token', 'trading-lab'],
+        status: 'configured',
+        permissionScope: {
+          view_public_address: 'read_only',
+          request_signature: 'owner_approval_each_time',
+          deploy_contract: 'owner_approval_each_time',
+          mint_token: 'owner_approval_each_time',
+          transfer_assets: 'blocked',
+          trade_execution: 'paper_only',
+          bridge_assets: 'blocked',
+          treasury_spend: 'blocked',
+          admin_recovery: 'blocked'
+        },
+        notes: 'Metadata-only verification wallet. No wallet secrets.'
+      })
+    });
+    fixture.walletId = wallet.body.wallet.id;
+
+    if (
+      wallet.body.wallet.localOnly !== true
+      || wallet.body.wallet.signingEnabled !== false
+      || wallet.body.wallet.liveExecutionEnabled !== false
+      || wallet.body.secretsStored !== false
+      || wallet.body.readiness?.summary?.liveExecutionEnabled !== false
+      || wallet.body.readiness?.status !== 'metadata_ready'
+      || !wallet.body.event
+    ) {
+      fail('wallet create endpoint did not preserve metadata-only wallet boundaries');
+    }
+
+    const walletRead = await fetchJson(`${baseUrl}/api/v1/wallets/${fixture.walletId}`, { headers });
+
+    if (
+      walletRead.body.wallet?.id !== fixture.walletId
+      || walletRead.body.readiness?.summary?.secretsStored !== false
+      || walletRead.body.signingEnabled !== false
+    ) {
+      fail('wallet detail endpoint did not return wallet readiness and disabled signing boundary');
+    }
+
+    const patched = await fetchJson(`${baseUrl}/api/v1/wallets/${fixture.walletId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        label: `Treasury hardware wallet updated ${fixtureTag}`,
+        walletKind: 'hardware',
+        chainFamily: 'evm',
+        network: 'polygon',
+        publicAddress: '0x000000000000000000000000000000000000dEaD',
+        connectionMethod: 'hardware',
+        secretReferenceId: fixture.secretReferenceId,
+        assignments: ['etherealai-token', 'treasury'],
+        status: 'review_required',
+        permissionScope: {
+          view_public_address: 'read_only',
+          request_signature: 'owner_approval_each_time',
+          deploy_contract: 'owner_approval_each_time',
+          mint_token: 'owner_approval_each_time',
+          transfer_assets: 'blocked',
+          trade_execution: 'paper_only',
+          bridge_assets: 'blocked',
+          treasury_spend: 'blocked',
+          admin_recovery: 'blocked'
+        },
+        notes: 'Updated metadata-only wallet.'
+      })
+    });
+
+    if (
+      patched.body.wallet.network !== 'polygon'
+      || patched.body.wallet.signingEnabled !== false
+      || patched.body.wallet.liveExecutionEnabled !== false
+    ) {
+      fail('wallet patch endpoint did not update metadata while keeping signing disabled');
+    }
+
+    const readiness = await fetchJson(`${baseUrl}/api/v1/wallets/${fixture.walletId}/readiness`, {
+      method: 'POST',
+      headers
+    });
+
+    if (
+      readiness.body.readiness?.summary?.secretsStored !== false
+      || readiness.body.readiness?.summary?.liveExecutionEnabled !== false
+      || !Array.isArray(readiness.body.readiness?.checks)
+    ) {
+      fail('wallet readiness endpoint did not return wallet checks with live execution disabled');
+    }
+
+    const events = await fetchJson(`${baseUrl}/api/v1/wallet-permission-events`, { headers });
+
+    if (!events.body.events?.some(event => event.wallet_id === fixture.walletId && event.localOnly === true)) {
+      fail('wallet permission events endpoint did not return local wallet event history');
+    }
+
+    const revoked = await fetchJson(`${baseUrl}/api/v1/wallets/${fixture.walletId}/revoke`, {
+      method: 'POST',
+      headers
+    });
+
+    if (
+      revoked.body.wallet.status !== 'revoked'
+      || Object.values(revoked.body.wallet.permissionScope || {}).some(value => value !== 'blocked')
+      || revoked.body.wallet.signingEnabled !== false
+      || revoked.body.wallet.liveExecutionEnabled !== false
+    ) {
+      fail('wallet revoke endpoint did not block all permissions and keep signing disabled');
+    }
+  } catch (error) {
+    primaryError = error;
+  }
+
+  const cleanupErrors = await cleanup();
+
+  if (primaryError) {
+    if (cleanupErrors.length) {
+      primaryError.message = `${primaryError.message}; cleanup also failed: ${cleanupErrors.join('; ')}`;
+    }
+    throw primaryError;
+  }
+
+  if (cleanupErrors.length) {
+    fail(`wallet-control fixture cleanup failed: ${cleanupErrors.join('; ')}`);
+  }
+
+  pass('authenticated wallet control owner onboarding fixture checks with cleanup');
+}
+
 async function runServerApiChecks() {
   if (process.env.ETHEREALAI_VERIFY_SERVER !== '1') {
     console.log('[skip] authenticated API checks (set ETHEREALAI_VERIFY_SERVER=1)');
@@ -7322,7 +7760,7 @@ async function runServerApiChecks() {
     || ownerProofPacket.body.packet?.liveExecutionEnabled !== false
     || ownerProofPacket.body.packet?.ownerTestSummary?.readyForOwnerTesting !== true
     || ownerProofPacket.body.packet?.ownerTestSummary?.localMvpBlockers !== 0
-    || ownerProofPacket.body.packet?.ownerTestSummary?.proofSurfaceCount !== 7
+    || ownerProofPacket.body.packet?.ownerTestSummary?.proofSurfaceCount < 8
     || !isOwnerAcceptanceReadyOrAccepted(ownerProofPacket.body.packet?.ownerAcceptance)
     || ownerProofPacket.body.packet?.status?.mvpStatus !== 'ready_for_owner_testing'
     || ownerProofPacket.body.packet?.completionLedger?.percentages?.mvp?.current < 99
@@ -7334,7 +7772,8 @@ async function runServerApiChecks() {
     || ownerProofPacket.body.packet?.paperAutomationRunbook?.liveExecutionEnabled !== false
     || !ownerProofPacket.body.packet?.paperAutomationRunbook?.steps?.some(step => step.id === 'export_local_evidence')
     || !ownerProofPacket.body.packet?.paperAutomationRunbook?.blockedLiveActions?.some(action => action.id === 'live_order_endpoint_enabled')
-    || ownerProofPacket.body.packet?.proofSurfaces?.length !== 7
+    || ownerProofPacket.body.packet?.proofSurfaces?.length < 8
+    || !ownerProofPacket.body.packet?.proofSurfaces?.some(surface => surface.id === 'operator_control_wallets' && surface.location === '/operator-control')
     || ownerProofPacket.body.packet?.exportSurfaces?.length !== 3
     || ownerProofPacket.body.packet?.fullLiveBlockers?.length < 4
     || ownerProofPacket.body.packet?.routeSafety?.safetyCriticalModules < 6
@@ -8190,6 +8629,7 @@ async function runServerApiChecks() {
     || !inventory.modules.some(module => module.moduleId === 'commands' && module.files?.includes('app/server/src/routes/commands.js'))
     || !inventory.modules.some(module => module.moduleId === 'creator' && module.files?.includes('app/server/src/routes/creator.js'))
     || !inventory.modules.some(module => module.moduleId === 'exchange-metadata' && module.files?.includes('app/server/src/routes/exchange-metadata.js'))
+    || !inventory.modules.some(module => module.moduleId === 'wallet-control' && module.files?.includes('app/server/src/routes/wallet-control.js') && module.safetyProfile?.boundary === 'metadata_only_no_wallet_secrets')
     || !inventory.modules.some(module => module.moduleId === 'file-proposals' && module.files?.includes('app/server/src/routes/file-proposals.js'))
     || !inventory.modules.some(module => module.moduleId === 'local-models' && module.files?.includes('app/server/src/routes/local-models.js'))
     || !inventory.modules.some(module => module.moduleId === 'multi-agent' && module.files?.includes('app/server/src/routes/multi-agent.js') && module.safetyProfile?.boundary === 'local_coordination_no_external_actions')
@@ -8199,6 +8639,7 @@ async function runServerApiChecks() {
     || !inventory.modules.some(module => module.moduleId === 'bot-automation' && module.safetyProfile?.boundary === 'monitor_only_no_live_orders' && module.safetyProfile?.liveExecutionEnabled === false)
     || !inventory.modules.some(module => module.moduleId === 'automation-safety' && module.safetyProfile?.boundary === 'blocks_live_launch')
     || !inventory.modules.some(module => module.moduleId === 'exchange-metadata' && module.safetyProfile?.boundary === 'metadata_only_no_credentials')
+    || !inventory.modules.some(module => module.moduleId === 'wallet-control' && module.safetyProfile?.signingEnabled === false && module.safetyProfile?.secretsStored === false)
     || !inventory.modules.some(module => module.moduleId === 'order-intents' && module.safetyProfile?.boundary === 'risk_review_no_execution')
     || !inventory.modules.some(module => module.moduleId === 'social-ops' && module.safetyProfile?.boundary === 'local_drafts_no_external_posting' && module.safetyProfile?.externalPostingEnabled === false)
     || !inventory.modules.some(module => module.moduleId === 'solidity-lab' && module.safetyProfile?.boundary === 'local_scaffold_no_deployment' && module.safetyProfile?.deploymentEnabled === false)
@@ -8285,6 +8726,14 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/api/v1/exchange-connectors/:id/adapter-contract-check' && route.file === 'app/server/src/routes/exchange-metadata.js')
     || !inventory.routes.some(route => route.path === '/api/v1/exchange-connectors/:id/adapter-contract-events' && route.file === 'app/server/src/routes/exchange-metadata.js')
     || !inventory.routes.some(route => route.path === '/api/v1/exchange-adapter-contract-events/:id' && route.file === 'app/server/src/routes/exchange-metadata.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/operator-control-center' && route.file === 'app/server/src/routes/wallet-control.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/wallets' && route.file === 'app/server/src/routes/wallet-control.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/wallets' && route.file === 'app/server/src/routes/wallet-control.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/wallets/:id' && route.file === 'app/server/src/routes/wallet-control.js')
+    || !inventory.routes.some(route => route.method === 'PATCH' && route.path === '/api/v1/wallets/:id' && route.file === 'app/server/src/routes/wallet-control.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/wallets/:id/readiness' && route.file === 'app/server/src/routes/wallet-control.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/wallets/:id/revoke' && route.file === 'app/server/src/routes/wallet-control.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/wallet-permission-events' && route.file === 'app/server/src/routes/wallet-control.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/market-data/providers' && route.file === 'app/server/src/routes/market-data.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/market-data/providers' && route.file === 'app/server/src/routes/market-data.js')
     || !inventory.routes.some(route => route.path === '/api/v1/market-data/providers/:id' && route.file === 'app/server/src/routes/market-data.js')
@@ -8397,6 +8846,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/api/v1/server-route-inventory' && route.file === 'app/server/src/routes/route-inventory.js')
     || !inventory.routes.some(route => route.path === '/api/v1/auth/login' && route.file === 'app/server/src/routes/auth.js')
     || !inventory.routes.some(route => route.path === '/dashboard' && route.file === 'app/server/src/routes/pages.js')
+    || !inventory.routes.some(route => route.path === '/operator-control' && route.file === 'app/server/src/routes/pages.js')
     || !inventory.routes.some(route => route.path === '/owner-proof-packet' && route.file === 'app/server/src/routes/pages.js')
   ) {
     fail('server route inventory did not expose expected modularization inventory data');
@@ -8536,6 +8986,7 @@ async function runServerApiChecks() {
   }, 400);
 
   await runSecretReferenceConnectorChecks(baseUrl, cookie);
+  await runWalletControlFixtureChecks(baseUrl, cookie);
   await runBotAutomationFixtureChecks(baseUrl, cookie);
 
   const systemMemory = await fetchJson(`${baseUrl}/api/v1/system-memory`, { headers: authHeaders });
@@ -8550,6 +9001,14 @@ async function runServerApiChecks() {
 
   if (!Object.prototype.hasOwnProperty.call(systemMemory.body.snapshot?.counts || {}, 'bot_live_enablement_reviews')) {
     fail('system memory did not include bot live enablement review counts');
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(systemMemory.body.snapshot?.counts || {}, 'owner_wallets')) {
+    fail('system memory did not include owner wallet counts');
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(systemMemory.body.snapshot?.counts || {}, 'wallet_permission_events')) {
+    fail('system memory did not include wallet permission event counts');
   }
 
   if (
@@ -8591,6 +9050,8 @@ async function runServerApiChecks() {
       && project.blueprint?.safetyBoundary?.deploymentEnabled === false
     ))
     || !Array.isArray(systemMemory.body.snapshot?.recent?.ownerAcceptanceRecords)
+    || !Array.isArray(systemMemory.body.snapshot?.recent?.ownerWallets)
+    || !Array.isArray(systemMemory.body.snapshot?.recent?.walletPermissionEvents)
     || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
       surface.id === 'owner_proof_packet'
       && surface.location === '/owner-proof-packet'
@@ -8608,6 +9069,11 @@ async function runServerApiChecks() {
       && surface.location === '/mvp-test-pass'
       && surface.localOnly === true
       && surface.liveExecutionEnabled === false
+    ))
+    || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
+      surface.id === 'operator_control_wallets'
+      && surface.location === '/operator-control'
+      && surface.signingEnabled === false
     ))
     || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
       surface.id === 'social_ops_drafts'
@@ -8648,6 +9114,11 @@ async function runServerApiChecks() {
       && boundary.boundary === 'local_scaffold_no_deployment'
       && boundary.deploymentEnabled === false
     ))
+    || !systemMemory.body.snapshot?.ownerEvidence?.externalSurfaceBoundaries?.some(boundary => (
+      boundary.moduleId === 'wallet-control'
+      && boundary.boundary === 'metadata_only_no_wallet_secrets'
+      && boundary.signingEnabled === false
+    ))
   ) {
     fail('system memory did not include owner evidence manifest and live-blocker references');
   }
@@ -8682,6 +9153,7 @@ async function main() {
   await checkMlxLifecycleModule();
   checkMultiAgentCoordinationModule();
   checkSecretSafetyModule();
+  checkWalletControlModule();
   checkSystemConfigRuntimeModule();
   await checkCompanyIdentityModule();
   checkExchangeMetadataModule();
@@ -8713,12 +9185,14 @@ async function main() {
   checkInlineScripts('app/client/index.html');
   checkInlineScripts('app/client/creator.html');
   checkInlineScripts('app/client/dashboard.html');
+  checkInlineScripts('app/client/operator-control.html');
   checkInlineScripts('app/client/owner-proof-packet.html');
   checkInlineScripts('app/client/mvp-test-pass.html');
   checkInlineScripts('app/client/server-route-inventory.html');
   checkStrategyLabSafetyDossierExportUi();
   checkMvpTestPassOwnerWorkflowUi();
   checkDashboardMvpReadinessUi();
+  checkOperatorControlCenterUi();
   checkOwnerProofPacketUi();
   checkHomeLocalProofUi();
   checkAuthenticatedProofBanners();

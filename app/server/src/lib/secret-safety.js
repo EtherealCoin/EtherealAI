@@ -15,7 +15,18 @@ const SECRET_METADATA_FIELD_ALLOWLIST = new Set([
   'secretreferenceprovidertype',
   'secret_reference_provider_type',
   'secretstoragenote',
-  'secret_storage_note'
+  'secret_storage_note',
+  'permission_scope_json',
+  'permissionscope',
+  'view_public_address',
+  'request_signature',
+  'deploy_contract',
+  'mint_token',
+  'transfer_assets',
+  'trade_execution',
+  'bridge_assets',
+  'treasury_spend',
+  'admin_recovery'
 ]);
 const LOCAL_SECRET_PROVIDER_TYPES = new Set(['macos_keychain', 'onepassword', 'env_var_name', 'local_vault_path', 'other_reference']);
 const LOCAL_SECRET_SCOPES = new Set(['exchange_connector', 'wallet_connector', 'deployment_key', 'generic']);
@@ -204,6 +215,7 @@ module.exports = {
   LOCAL_SECRET_STATUSES,
   EXCHANGE_CONNECTOR_MODES,
   EXCHANGE_CONNECTOR_STATUSES,
+  createSecretSafetyError,
   findSensitiveFields,
   findLikelySecretValues,
   assertNoInlineSecretPayload,

@@ -32,6 +32,15 @@ function buildOwnerEvidenceSnapshot() {
         liveExecutionEnabled: false
       },
       {
+        id: 'operator_control_wallets',
+        label: 'Operator Control wallet onboarding',
+        location: '/operator-control',
+        evidence: 'Wallet metadata, permission scopes, readiness checks, revocation events, and no wallet secret storage',
+        localOnly: true,
+        signingEnabled: false,
+        liveExecutionEnabled: false
+      },
+      {
         id: 'route_inventory_boundaries',
         label: 'Route Inventory safety boundaries',
         location: '/server-route-inventory',
@@ -106,6 +115,13 @@ function buildOwnerEvidenceSnapshot() {
         moduleId: 'solidity-lab',
         boundary: 'local_scaffold_no_deployment',
         deploymentEnabled: false,
+        ownerReviewRequired: true
+      },
+      {
+        moduleId: 'wallet-control',
+        boundary: 'metadata_only_no_wallet_secrets',
+        signingEnabled: false,
+        liveExecutionEnabled: false,
         ownerReviewRequired: true
       }
     ]

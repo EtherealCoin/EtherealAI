@@ -43,6 +43,7 @@ function categorizeRoutePath(routePath) {
     || routePath.startsWith('/api/v1/mvp-readiness-checklist')
     || routePath.startsWith('/api/v1/owner-acceptance')
     || routePath.startsWith('/api/v1/owner-proof-packet')
+    || routePath.startsWith('/api/v1/operator-control-center')
     || routePath.startsWith('/api/v1/server-route-inventory')
     || routePath.startsWith('/api/v1/dev-server')
     || routePath.startsWith('/api/v1/system-memory')
@@ -144,11 +145,14 @@ function categorizeRoutePath(routePath) {
   if (
     routePath.startsWith('/api/v1/local-secret')
     || routePath.startsWith('/api/v1/exchange')
+    || routePath.startsWith('/api/v1/wallet')
   ) {
     return {
-      category: 'Exchange Metadata',
-      moduleId: 'exchange-metadata',
-      suggestedFile: 'app/server/src/routes/exchange-metadata.js'
+      category: routePath.startsWith('/api/v1/wallet') ? 'Owner Wallet Control' : 'Exchange Metadata',
+      moduleId: routePath.startsWith('/api/v1/wallet') ? 'wallet-control' : 'exchange-metadata',
+      suggestedFile: routePath.startsWith('/api/v1/wallet')
+        ? 'app/server/src/routes/wallet-control.js'
+        : 'app/server/src/routes/exchange-metadata.js'
     };
   }
 
@@ -259,6 +263,17 @@ function getModuleSafetyProfile(moduleId) {
       level: 'sensitive_metadata',
       boundary: 'metadata_only_no_credentials',
       liveExecutionEnabled: false,
+      ownerReviewRequired: true
+    };
+  }
+
+  if (moduleId === 'wallet-control') {
+    return {
+      level: 'safety_critical',
+      boundary: 'metadata_only_no_wallet_secrets',
+      liveExecutionEnabled: false,
+      signingEnabled: false,
+      secretsStored: false,
       ownerReviewRequired: true
     };
   }

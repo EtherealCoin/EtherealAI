@@ -471,6 +471,50 @@ function initializeDatabase(db) {
     `);
 
     db.run(`
+      CREATE TABLE IF NOT EXISTS owner_wallets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        secret_reference_id INTEGER,
+        label TEXT NOT NULL,
+        wallet_kind TEXT NOT NULL DEFAULT 'hardware',
+        chain_family TEXT NOT NULL DEFAULT 'evm',
+        network TEXT NOT NULL DEFAULT 'base',
+        public_address TEXT,
+        connection_method TEXT NOT NULL DEFAULT 'hardware',
+        status TEXT NOT NULL DEFAULT 'onboarding',
+        assignment_json TEXT NOT NULL DEFAULT '[]',
+        permission_scope_json TEXT NOT NULL DEFAULT '{}',
+        notes TEXT,
+        local_only INTEGER NOT NULL DEFAULT 1,
+        signing_enabled INTEGER NOT NULL DEFAULT 0,
+        live_execution_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(secret_reference_id) REFERENCES local_secret_references(id)
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS wallet_permission_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        wallet_id INTEGER,
+        user_id INTEGER,
+        event_type TEXT NOT NULL,
+        status TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        before_json TEXT,
+        after_json TEXT,
+        evidence_json TEXT NOT NULL DEFAULT '{}',
+        local_only INTEGER NOT NULL DEFAULT 1,
+        live_execution_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(wallet_id) REFERENCES owner_wallets(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+
+    db.run(`
       CREATE TABLE IF NOT EXISTS bot_automation_schedules (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         plan_id INTEGER NOT NULL,

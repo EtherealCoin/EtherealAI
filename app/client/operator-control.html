@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator Control Center</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/owner-proof-packet">Proof Packet</a>
+        <a href="/mvp-test-pass">MVP Test Pass</a>
+        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/solidity-lab">Solidity Lab</a>
+        <a href="/social-ops">Social Ops</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main class="container operator-shell">
+        <h1>Operator Control Center</h1>
+        <p>Use this control center to attach wallet metadata, take owner control of keys outside EtherealAI, scope permissions, review safety blockers, and revoke access without writing code.</p>
+
+        <div class="auth-proof-banner" role="status">
+            <strong>Wallet Safety Boundary</strong>
+            <span>Local metadata only · no seed phrase storage · no private key storage · no automatic signing · no live execution</span>
+        </div>
+
+        <section class="model-panel">
+            <h2>Owner Control Summary</h2>
+            <div class="button-row">
+                <button id="refresh-operator-center" type="button">Refresh Control Center</button>
+                <a class="cta-button" href="/owner-proof-packet">Review Proof Packet</a>
+            </div>
+            <div id="operator-summary" class="artifact-grid">Loading operator control summary...</div>
+            <div id="operator-boundaries" class="task-list">Loading safety boundaries...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Wallet Onboarding Wizard</h2>
+            <div id="wallet-guide-steps" class="operator-step-list">Loading wallet onboarding guide...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Attach Wallet Metadata</h2>
+            <p class="inline-status">Enter only public metadata. Do not paste seed phrases, recovery phrases, private keys, API tokens, passphrases, or wallet passwords.</p>
+            <form id="wallet-form" class="model-test-form">
+                <label for="wallet-label">Wallet Label</label>
+                <input id="wallet-label" name="label" maxlength="120" placeholder="Example: Trading research wallet 1" required>
+
+                <label for="wallet-kind">Wallet Type</label>
+                <select id="wallet-kind" name="walletKind">
+                    <option value="hardware">Hardware Wallet</option>
+                    <option value="multisig">Multisig</option>
+                    <option value="browser_extension">Browser Extension</option>
+                    <option value="mobile_wallet">Mobile Wallet</option>
+                    <option value="watch_only">Watch Only</option>
+                    <option value="custody_reference">Custody Reference</option>
+                    <option value="other_reference">Other Reference</option>
+                </select>
+
+                <label for="wallet-chain-family">Chain Family</label>
+                <select id="wallet-chain-family" name="chainFamily">
+                    <option value="evm">EVM: Base, Polygon, BNB, Avalanche, Ethereum, Arbitrum</option>
+                    <option value="solana">Solana</option>
+                    <option value="bitcoin">Bitcoin</option>
+                    <option value="cosmos">Cosmos / IBC</option>
+                    <option value="move">Move: Sui / Aptos</option>
+                    <option value="cardano">Cardano</option>
+                    <option value="algorand">Algorand</option>
+                    <option value="stellar">Stellar</option>
+                    <option value="xrp">XRP Ledger</option>
+                    <option value="hedera">Hedera</option>
+                    <option value="near">NEAR</option>
+                    <option value="substrate">Polkadot / Substrate</option>
+                    <option value="ton">TON</option>
+                    <option value="custom">Custom / Other Blockchain</option>
+                </select>
+
+                <label for="wallet-network">Network</label>
+                <input id="wallet-network" name="network" maxlength="120" value="base" placeholder="base, polygon, solana, bnb-chain, avalanche">
+
+                <label for="wallet-public-address">Public Address</label>
+                <input id="wallet-public-address" name="publicAddress" maxlength="180" placeholder="Public address only">
+
+                <label for="wallet-connection-method">Connection Method</label>
+                <select id="wallet-connection-method" name="connectionMethod">
+                    <option value="hardware">Hardware wallet confirmation</option>
+                    <option value="walletconnect">WalletConnect approval</option>
+                    <option value="browser_extension">Browser extension prompt</option>
+                    <option value="multisig">Multisig signer threshold</option>
+                    <option value="watch_only">Watch-only tracking</option>
+                    <option value="external_custody">External custody approval</option>
+                    <option value="manual_reference">Manual reference only</option>
+                </select>
+
+                <label for="wallet-secret-reference-id">Local Connector Reference ID</label>
+                <input id="wallet-secret-reference-id" name="secretReferenceId" type="number" min="1" placeholder="Optional metadata reference ID from Local Secret References">
+
+                <label for="wallet-assignments">Project Assignments</label>
+                <input id="wallet-assignments" name="assignments" maxlength="500" placeholder="Example: etherealai-token, trading-lab, recovery">
+
+                <label for="wallet-status">Wallet Status</label>
+                <select id="wallet-status" name="status">
+                    <option value="onboarding">Onboarding</option>
+                    <option value="configured">Configured Metadata</option>
+                    <option value="review_required">Review Required</option>
+                    <option value="disabled">Disabled</option>
+                    <option value="archived">Archived</option>
+                </select>
+
+                <section class="inline-tool-panel" aria-label="Wallet permission scope">
+                    <h3>Permission Scope</h3>
+                    <p class="inline-status">Default is blocked. Risky permissions should stay blocked or require owner approval each time.</p>
+                    <div id="wallet-permission-controls" class="permission-grid"></div>
+                </section>
+
+                <label for="wallet-notes">Owner Notes</label>
+                <textarea id="wallet-notes" name="notes" rows="3" maxlength="1200" placeholder="Local notes only. Never paste wallet secrets."></textarea>
+
+                <button type="submit">Attach Wallet Metadata</button>
+            </form>
+            <div id="wallet-form-status" class="inline-status">Waiting for wallet metadata.</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Connected Wallets</h2>
+            <div id="wallet-list" class="task-list">Loading wallet records...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Recovery And Emergency Controls</h2>
+            <div class="operator-step-list">
+                <article>
+                    <strong>Emergency shutdown</strong>
+                    <span>Use Revoke on the wallet card. EtherealAI sets status to revoked, blocks every permission, logs the action, and keeps signing disabled.</span>
+                </article>
+                <article>
+                    <strong>Recovery procedure</strong>
+                    <span>Recover the wallet outside EtherealAI using your hardware wallet, multisig, or written offline recovery plan. Add a new metadata record only after the recovered wallet is safe.</span>
+                </article>
+                <article>
+                    <strong>Rollback protection</strong>
+                    <span>Permission changes and revocations are recorded in wallet permission events. Live signing is not implemented in this phase.</span>
+                </article>
+            </div>
+        </section>
+
+        <section class="model-panel">
+            <h2>YouTube-Style Training Content</h2>
+            <div id="wallet-training-content" class="task-list">Loading training scripts...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Wallet Permission Events</h2>
+            <div id="wallet-event-list" class="timeline-list">Loading wallet events...</div>
+        </section>
+    </main>
+
+    <script>
+        const walletPermissionKeys = [
+            'view_public_address',
+            'request_signature',
+            'deploy_contract',
+            'mint_token',
+            'transfer_assets',
+            'trade_execution',
+            'bridge_assets',
+            'treasury_spend',
+            'admin_recovery'
+        ];
+        const permissionLabels = {
+            view_public_address: 'View Public Address',
+            request_signature: 'Request Signature',
+            deploy_contract: 'Deploy Contract',
+            mint_token: 'Mint Token',
+            transfer_assets: 'Transfer Assets',
+            trade_execution: 'Trade Execution',
+            bridge_assets: 'Bridge Assets',
+            treasury_spend: 'Treasury Spend',
+            admin_recovery: 'Admin Recovery'
+        };
+        const permissionStates = [
+            ['blocked', 'Blocked'],
+            ['owner_approval_each_time', 'Owner Approval Each Time'],
+            ['paper_only', 'Paper Only'],
+            ['read_only', 'Read Only']
+        ];
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const body = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(body.error || `Request failed: ${response.status}`);
+            }
+
+            return body;
+        }
+
+        function renderPermissionControls() {
+            const container = document.getElementById('wallet-permission-controls');
+            container.innerHTML = walletPermissionKeys.map(key => {
+                const defaultValue = key === 'view_public_address' ? 'read_only' : 'blocked';
+                const options = permissionStates.map(([value, label]) => (
+                    `<option value="${value}" ${value === defaultValue ? 'selected' : ''}>${label}</option>`
+                )).join('');
+
+                return `
+                    <label>
+                        <span>${permissionLabels[key]}</span>
+                        <select data-permission-key="${key}">
+                            ${options}
+                        </select>
+                    </label>
+                `;
+            }).join('');
+        }
+
+        function getPermissionScope() {
+            return Object.fromEntries([...document.querySelectorAll('[data-permission-key]')]
+                .map(select => [select.dataset.permissionKey, select.value]));
+        }
+
+        function renderSummary(summary = {}) {
+            const counts = summary.counts || {};
+            document.getElementById('operator-summary').innerHTML = [
+                ['Wallets', counts.wallets ?? 0],
+                ['Active Wallets', counts.activeWallets ?? 0],
+                ['Configured', counts.configuredWallets ?? 0],
+                ['Revoked', counts.revokedWallets ?? 0],
+                ['Recent Events', counts.recentEvents ?? 0],
+                ['Live Signing', summary.signingEnabled === false ? 'Disabled' : 'Review']
+            ].map(([label, value]) => `
+                <article class="artifact-stat">
+                    <strong>${escapeHtml(label)}</strong>
+                    <span>${escapeHtml(value)}</span>
+                </article>
+            `).join('');
+
+            document.getElementById('operator-boundaries').innerHTML = (summary.boundaries || []).map(boundary => `
+                <article class="task-card">
+                    <div>
+                        <h3>${escapeHtml(boundary)}</h3>
+                        <p>Owner-visible boundary. No silent execution.</p>
+                    </div>
+                </article>
+            `).join('') || '<p>No safety boundaries loaded.</p>';
+        }
+
+        function renderGuide(guide = {}) {
+            document.getElementById('wallet-guide-steps').innerHTML = (guide.steps || []).map((step, index) => `
+                <article>
+                    <strong>${index + 1}. ${escapeHtml(step.label)}</strong>
+                    <span>${escapeHtml(step.plainEnglish)}</span>
+                    <em>${escapeHtml(step.ownerDecision)}</em>
+                </article>
+            `).join('') || '<p>No onboarding steps loaded.</p>';
+
+            document.getElementById('wallet-training-content').innerHTML = (guide.trainingContent || []).map(item => `
+                <article class="task-card">
+                    <div>
+                        <h3>${escapeHtml(item.title)}</h3>
+                        <p>${escapeHtml(item.format)}</p>
+                        <ul>${(item.outline || []).map(line => `<li>${escapeHtml(line)}</li>`).join('')}</ul>
+                    </div>
+                </article>
+            `).join('') || '<p>No training content loaded.</p>';
+        }
+
+        function formatPermissionScope(permissionScope = {}) {
+            return walletPermissionKeys.map(key => (
+                `${permissionLabels[key]}: ${permissionScope[key] || 'blocked'}`
+            )).join(' · ');
+        }
+
+        function renderWallets(wallets = []) {
+            document.getElementById('wallet-list').innerHTML = wallets.map(wallet => `
+                <article class="wallet-card">
+                    <div>
+                        <strong>${escapeHtml(wallet.label)}</strong>
+                        <span>${escapeHtml(wallet.wallet_kind)} · ${escapeHtml(wallet.chain_family)} · ${escapeHtml(wallet.network)} · ${escapeHtml(wallet.status)}</span>
+                        <span>Address: ${escapeHtml(wallet.public_address || 'not recorded')}</span>
+                        <span>Assignments: ${escapeHtml((wallet.assignments || []).join(', ') || 'none')}</span>
+                        <span>${escapeHtml(formatPermissionScope(wallet.permissionScope || {}))}</span>
+                        <span>Signing disabled: ${wallet.signingEnabled === false ? 'yes' : 'review'} · live execution disabled: ${wallet.liveExecutionEnabled === false ? 'yes' : 'review'}</span>
+                    </div>
+                    <div class="button-row">
+                        <button type="button" data-readiness-wallet="${wallet.id}">Review Readiness</button>
+                        <button type="button" data-revoke-wallet="${wallet.id}">Revoke</button>
+                    </div>
+                </article>
+            `).join('') || '<p>No wallet metadata records yet. Attach one wallet to begin the owner key handoff workflow.</p>';
+        }
+
+        function renderEvents(events = []) {
+            document.getElementById('wallet-event-list').innerHTML = events.map(event => `
+                <article class="timeline-item">
+                    <strong>${escapeHtml(event.event_type)} · ${escapeHtml(event.status)}</strong>
+                    <span>${escapeHtml(event.created_at)}</span>
+                    <p>${escapeHtml(event.summary)}</p>
+                    <span>Local only: ${event.localOnly === true ? 'yes' : 'review'} · live execution: ${event.liveExecutionEnabled === false ? 'disabled' : 'review'}</span>
+                </article>
+            `).join('') || '<p>No wallet permission events recorded yet.</p>';
+        }
+
+        async function loadOperatorCenter() {
+            const data = await fetchJson('/api/v1/operator-control-center');
+            renderSummary(data.summary || {});
+            renderGuide(data.guide || {});
+            renderWallets(data.wallets || []);
+            renderEvents(data.events || []);
+        }
+
+        async function submitWallet(event) {
+            event.preventDefault();
+            const form = new FormData(event.target);
+            const secretReferenceId = form.get('secretReferenceId');
+            const payload = {
+                label: form.get('label'),
+                walletKind: form.get('walletKind'),
+                chainFamily: form.get('chainFamily'),
+                network: form.get('network'),
+                publicAddress: form.get('publicAddress'),
+                connectionMethod: form.get('connectionMethod'),
+                secretReferenceId: secretReferenceId ? Number(secretReferenceId) : null,
+                assignments: String(form.get('assignments') || '').split(',').map(item => item.trim()).filter(Boolean),
+                status: form.get('status'),
+                permissionScope: getPermissionScope(),
+                notes: form.get('notes')
+            };
+
+            document.getElementById('wallet-form-status').textContent = 'Saving wallet metadata locally...';
+
+            try {
+                const data = await fetchJson('/api/v1/wallets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                document.getElementById('wallet-form-status').textContent = `Attached ${data.wallet.label}. Readiness: ${data.readiness.status}. No secrets stored.`;
+                event.target.reset();
+                renderPermissionControls();
+                await loadOperatorCenter();
+            } catch (error) {
+                document.getElementById('wallet-form-status').textContent = error.message;
+            }
+        }
+
+        async function reviewWalletReadiness(walletId) {
+            const data = await fetchJson(`/api/v1/wallets/${walletId}/readiness`, { method: 'POST' });
+            alert(`Readiness: ${data.readiness.status}\n\n${data.readiness.nextOwnerActions.join('\n')}`);
+            await loadOperatorCenter();
+        }
+
+        async function revokeWallet(walletId) {
+            if (!confirm('Revoke this wallet metadata record and block all permissions?')) {
+                return;
+            }
+
+            const data = await fetchJson(`/api/v1/wallets/${walletId}/revoke`, { method: 'POST' });
+            alert(`${data.wallet.label} revoked. All permissions blocked. Live signing remains disabled.`);
+            await loadOperatorCenter();
+        }
+
+        document.getElementById('refresh-operator-center').addEventListener('click', () => {
+            loadOperatorCenter().catch(error => {
+                document.getElementById('operator-summary').textContent = error.message;
+            });
+        });
+        document.getElementById('wallet-form').addEventListener('submit', submitWallet);
+        document.addEventListener('click', event => {
+            const readinessWalletId = event.target.dataset.readinessWallet;
+            const revokeWalletId = event.target.dataset.revokeWallet;
+
+            if (readinessWalletId) {
+                reviewWalletReadiness(readinessWalletId).catch(error => alert(error.message));
+            }
+
+            if (revokeWalletId) {
+                revokeWallet(revokeWalletId).catch(error => alert(error.message));
+            }
+        });
+
+        renderPermissionControls();
+        loadOperatorCenter().catch(error => {
+            document.getElementById('operator-summary').textContent = error.message;
+        });
+    </script>
+</body>
+</html>

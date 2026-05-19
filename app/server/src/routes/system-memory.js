@@ -41,6 +41,8 @@ function registerSystemMemoryRoutes(app, {
         'exchange_connector_readiness_events',
         'exchange_adapter_contract_events',
         'local_secret_references',
+        'owner_wallets',
+        'wallet_permission_events',
         'risk_profiles',
         'risk_profile_audit_events',
         'trade_order_intents',
@@ -91,6 +93,8 @@ function registerSystemMemoryRoutes(app, {
         connectorReadinessRows,
         adapterContractRows,
         secretReferenceRows,
+        ownerWalletRows,
+        walletPermissionEventRows,
         riskProfileRows,
         riskProfileAuditRows,
         orderIntentRows,
@@ -192,6 +196,8 @@ function registerSystemMemoryRoutes(app, {
            LIMIT 10`
         ),
         dbAll('SELECT * FROM local_secret_references ORDER BY created_at DESC, id DESC LIMIT 10'),
+        dbAll('SELECT * FROM owner_wallets ORDER BY updated_at DESC, id DESC LIMIT 20'),
+        dbAll('SELECT * FROM wallet_permission_events ORDER BY created_at DESC, id DESC LIMIT 20'),
         dbAll('SELECT * FROM risk_profiles ORDER BY updated_at DESC LIMIT 10'),
         dbAll(
           `SELECT risk_profile_audit_events.*, risk_profiles.name AS risk_profile_name
@@ -319,6 +325,8 @@ function registerSystemMemoryRoutes(app, {
             exchangeConnectorReadinessEvents: connectorReadinessRows.map(parsers.parseExchangeConnectorReadinessEvent),
             exchangeAdapterContractEvents: adapterContractRows.map(parsers.parseExchangeAdapterContractEvent),
             localSecretReferences: secretReferenceRows.map(parsers.parseLocalSecretReference),
+            ownerWallets: ownerWalletRows.map(parsers.parseOwnerWallet),
+            walletPermissionEvents: walletPermissionEventRows.map(parsers.parseWalletPermissionEvent),
             riskProfiles: riskProfileRows.map(parsers.parseRiskProfile),
             riskProfileAuditEvents: riskProfileAuditRows.map(parsers.parseRiskProfileAuditEvent),
             orderIntents: orderIntentRows.map(parsers.parseOrderIntent),

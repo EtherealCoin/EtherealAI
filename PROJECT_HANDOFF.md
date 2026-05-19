@@ -1,6 +1,6 @@
 # EtherealAI Project Handoff
 
-Date: 2026-05-16
+Date: 2026-05-18
 
 ## Project Identity And Location
 
@@ -38,10 +38,11 @@ Current rough completion estimate:
 - `/owner-proof-packet` uses `/api/v1/owner-proof-packet` to aggregate owner-test gate status, owner acceptance pending status, readiness, the completion ledger, owner proof surfaces, export surfaces, route safety, the bot automation capability path, the monitor-only paper automation runbook, full-live blockers, a SHA-256 packet checksum, and the authenticated verification command into one local JSON-downloadable packet.
 - `/api/v1/owner-acceptance` and `/owner-proof-packet` can record a local-only owner acceptance record after manual testing; the proof packet page also shows recent local acceptance records from the protected API. The record is evidence only and keeps `liveExecution.enabled`, `orderEndpointEnabled`, and `goLiveAllowed` false.
 - Owner acceptance remains `pending_owner_review`; the local MVP gate is ready, and the last MVP percent is reserved for manual owner testing/acceptance rather than live execution.
+- `/operator-control` is the non-coder Operator Control Center for owner wallet onboarding. It attaches wallet metadata only, scopes wallet permissions, shows guided key-handoff steps, displays recovery/emergency shutdown procedures, records wallet permission events, and keeps wallet signing/live execution disabled.
 - `/mvp-test-pass` shows Bot Automation Smoke, the completion ledger, Owner Evidence Manifest, the Owner Evidence Review Checklist, local JSON export, the manifest `sha256` checksum prefix, and the current local owner acceptance record state.
-- `/server-route-inventory` includes safety profiles for bot automation, automation safety, exchange metadata, order intents, Social Ops, and Solidity Lab, plus Owner Proof Coverage counts, owner acceptance pending status, and local acceptance record count from System Memory.
+- `/server-route-inventory` includes safety profiles for bot automation, automation safety, exchange metadata, wallet control, order intents, Social Ops, and Solidity Lab, plus Owner Proof Coverage counts, owner acceptance pending status, and local acceptance record count from System Memory.
 - `/strategy-lab#bot-automation` includes an automated bot capability path backed by `/api/v1/bot-automation-capability-path`; it shows active paper automation capability, latest paper-run evidence, and future live automation blockers while keeping live execution disabled.
-- `/api/v1/system-memory` includes `ownerEvidence`, `ownerAcceptance`, `botAutomationCapabilityPath`, owner proof surfaces for the owner proof packet, dashboard readiness, MVP test pass, route inventory, Strategy Lab, Social Ops, and Solidity Lab, export-surface references, full-live blocker IDs, and external-surface boundaries for Social Ops and Solidity Lab.
+- `/api/v1/system-memory` includes `ownerEvidence`, `ownerAcceptance`, `botAutomationCapabilityPath`, owner proof surfaces for the owner proof packet, dashboard readiness, MVP test pass, Operator Control, route inventory, Strategy Lab, Social Ops, and Solidity Lab, export-surface references, wallet-control counts/recent events, full-live blocker IDs, and external-surface boundaries for Social Ops, Solidity Lab, and wallet control.
 - Social Ops remains local draft-only: no public posting endpoint and no social network API calls.
 - Solidity Lab remains local scaffold/review only: no mainnet/testnet broadcast and no wallet private-key acceptance.
 - Solidity Lab now includes a local Token Ecosystem Studio backed by `/api/v1/solidity-ecosystem/catalog` and `/api/v1/solidity-contracts/:id/ecosystem-blueprint`. It plans token/NFT utility, website sections, whitepaper templates, logo briefs, Discord/Telegram/YouTube/Medium/X/docs campaigns, CoinMarketCap/CoinGecko readiness, chain-builder options, node research, and cross-chain arbitrage architecture without deploying, posting, handling wallet keys, or placing trades.
@@ -103,6 +104,8 @@ npm test
 - Home, authenticated work pages, Social Ops, and Solidity Lab now show explicit proof/local-only status cues.
 - Route Inventory marks Social Ops as `local_drafts_no_external_posting` and Solidity Lab as `local_scaffold_no_deployment`.
 - Route Inventory now cross-checks Owner Proof Coverage, owner acceptance pending status, and local acceptance record count from System Memory beside route safety counts.
+- Operator Control Center added at `/operator-control` with APIs `/api/v1/operator-control-center`, `/api/v1/wallets`, `/api/v1/wallets/:id`, `/api/v1/wallets/:id/readiness`, `/api/v1/wallets/:id/revoke`, and `/api/v1/wallet-permission-events`. It creates `owner_wallets` and `wallet_permission_events` records, rejects wallet secrets, supports multi-chain wallet metadata, scopes permissions per wallet/project, and keeps signing/live execution disabled.
+- Owner proof surfaces now include `operator_control_wallets`, and route inventory marks wallet control as `metadata_only_no_wallet_secrets`.
 
 ## Important Files
 
@@ -405,7 +408,7 @@ I am not a coder. Please help me continue building EtherealAI without losing wor
 Project folder:
 /Users/ethereal/test-ai-project
 
-First, inspect the files and Git status. Do not reset, delete, or discard anything. EtherealAI is now running from app/server/src/server.js with protected app/client pages, including /dashboard, /owner-proof-packet, /mvp-test-pass, /strategy-lab, /creator, /server-route-inventory, /solidity-lab, and /social-ops. node_modules is ignored in .gitignore. Read ONBOARD_MEMORY.md, PROJECT_HANDOFF.md, MVP_OWNER_TEST_PASS.md, and LOCAL_AI_BUILD_PLAN.md before adding major features.
+First, inspect the files and Git status. Do not reset, delete, or discard anything. EtherealAI is now running from app/server/src/server.js with protected app/client pages, including /dashboard, /operator-control, /owner-proof-packet, /mvp-test-pass, /strategy-lab, /creator, /server-route-inventory, /solidity-lab, and /social-ops. node_modules is ignored in .gitignore. Read ONBOARD_MEMORY.md, PROJECT_HANDOFF.md, MVP_OWNER_TEST_PASS.md, and LOCAL_AI_BUILD_PLAN.md before adding major features.
 
 Please:
 1. Save/preserve the current work.
