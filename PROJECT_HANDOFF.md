@@ -32,9 +32,12 @@ Current rough completion estimate:
 - Local paper-automation end-to-end path: about 95% complete.
 - Full live end-to-end path: about 72% complete because credential loading, live exchange adapters, live order endpoint, external posting, deployment, and executable go-live acceptance are intentionally blocked.
 
+The `/owner-setup` wizard has separate setup-readiness math: it can show paper setup moving from `95%` to `100%` and full E2E setup readiness moving from `72%` to `100%` while live trading remains disabled. That wizard-specific `100%` means owner setup gates are satisfied for a future high-security live approval phase; it does not enable live orders, wallet signing, deployment, DNS mutation, or public posting.
+
 ## Current Owner-Test Snapshot
 
 - `/dashboard` shows MVP readiness, the completion ledger explaining why MVP/local paper/full live percentages are gated, owner acceptance pending status, local paper automation readiness, full-live blockers, System Memory export, and `Owner evidence included · owner acceptance pending · live disabled`.
+- `/owner-setup` is the non-coder Owner Setup Wizard. It uses `/api/v1/owner-setup-wizard` to show paper trading progress from `95%` to `100%` and full E2E setup readiness from `72%` to `100%` while keeping live trading, wallet signing, seed phrases, private keys, and secret-value display disabled. It reads approved credential names/presence from `~/EtherealAI_Secrets/.env`, creates a `.env.example` template, verifies each blocked gate with one click, can run one paper-only verification cycle, and saves public wallet metadata through `/api/v1/wallets`.
 - `/owner-proof-packet` uses `/api/v1/owner-proof-packet` to aggregate owner-test gate status, owner acceptance pending status, readiness, the completion ledger, owner proof surfaces, export surfaces, route safety, the bot automation capability path, the monitor-only paper automation runbook, full-live blockers, a SHA-256 packet checksum, and the authenticated verification command into one local JSON-downloadable packet.
 - `/api/v1/owner-acceptance` and `/owner-proof-packet` can record a local-only owner acceptance record after manual testing; the proof packet page also shows recent local acceptance records from the protected API. The record is evidence only and keeps `liveExecution.enabled`, `orderEndpointEnabled`, and `goLiveAllowed` false.
 - Owner acceptance remains `pending_owner_review`; the local MVP gate is ready, and the last MVP percent is reserved for manual owner testing/acceptance rather than live execution.
@@ -43,7 +46,7 @@ Current rough completion estimate:
 - `/mvp-test-pass` shows Bot Automation Smoke, the completion ledger, Owner Evidence Manifest, the Owner Evidence Review Checklist, local JSON export, the manifest `sha256` checksum prefix, and the current local owner acceptance record state.
 - `/server-route-inventory` includes safety profiles for bot automation, automation safety, exchange metadata, wallet control, order intents, Social Ops, and Solidity Lab, plus Owner Proof Coverage counts, owner acceptance pending status, and local acceptance record count from System Memory.
 - `/strategy-lab#bot-automation` includes an automated bot capability path backed by `/api/v1/bot-automation-capability-path`; it shows active paper automation capability, latest paper-run evidence, and future live automation blockers while keeping live execution disabled.
-- `/api/v1/system-memory` includes `ownerEvidence`, `ownerAcceptance`, `botAutomationCapabilityPath`, owner proof surfaces for the owner proof packet, dashboard readiness, MVP test pass, Operator Control, Mac Security Lockdown, route inventory, Strategy Lab, Social Ops, and Solidity Lab, export-surface references, wallet-control counts/recent events, full-live blocker IDs, and external-surface boundaries for Social Ops, Solidity Lab, wallet control, and Mac security.
+- `/api/v1/system-memory` includes `ownerEvidence`, `ownerAcceptance`, `botAutomationCapabilityPath`, owner proof surfaces for the owner proof packet, dashboard readiness, MVP test pass, Owner Setup Wizard, Operator Control, Mac Security Lockdown, route inventory, Strategy Lab, Social Ops, and Solidity Lab, export-surface references, wallet-control counts/recent events, full-live blocker IDs, and external-surface boundaries for Social Ops, Solidity Lab, owner setup, wallet control, and Mac security.
 - Social Ops remains local draft-only: no public posting endpoint and no social network API calls.
 - Solidity Lab remains local scaffold/review only: no mainnet/testnet broadcast and no wallet private-key acceptance.
 - Solidity Lab now includes a local Token Ecosystem Studio backed by `/api/v1/solidity-ecosystem/catalog` and `/api/v1/solidity-contracts/:id/ecosystem-blueprint`. It plans token/NFT utility, website sections, whitepaper templates, logo briefs, Discord/Telegram/YouTube/Medium/X/docs campaigns, CoinMarketCap/CoinGecko readiness, chain-builder options, node research, and cross-chain arbitrage architecture without deploying, posting, handling wallet keys, or placing trades.
@@ -117,6 +120,8 @@ npm test
 - Polygon-first token infrastructure added across Solidity Lab and Social Ops: Polygon operating profile, chain ID `137`, PolygonScan evidence, Polygon wallet/RPC no-secret boundary, QuickSwap/Uniswap/Sushi route planning, Polygon launch defaults, workspace file `polygon/POLYGON_OPERATING_PROFILE.md`, and website-package Polygon sections.
 - CoinMarketCap/CoinGecko support expanded into a compliant application workflow: local official-source packets, phase checklist, platform-specific evidence packets, community growth path, and blocked shortcuts for bribery, duplicate spam, fake volume, fake followers, paid guarantees, impersonation, and inaccurate supply/liquidity claims.
 - Social Ops now includes Token Community Manager drafts for token ecosystem projects, with moderation, announcements, support, listing evidence management, and community-operations runbooks. External posting and listing submission remain disabled.
+- Owner Setup Wizard added at `/owner-setup` with APIs `/api/v1/owner-setup-wizard`, `/api/v1/owner-setup-wizard/verify/:gateId`, `/api/v1/owner-setup-wizard/paper-verification-run`, and `/api/v1/owner-setup-wizard/env-template`. It gives a plain-English path for a non-coder owner to complete paper setup and full E2E setup readiness without live wallet signing or live trading.
+- Owner evidence and Route Inventory now include the `owner_setup_wizard` proof surface and `setup_wizard_no_secret_values_no_live_execution` safety boundary.
 
 ## Important Files
 
@@ -419,7 +424,7 @@ I am not a coder. Please help me continue building EtherealAI without losing wor
 Project folder:
 /Users/ethereal/test-ai-project
 
-First, inspect the files and Git status. Do not reset, delete, or discard anything. EtherealAI is now running from app/server/src/server.js with protected app/client pages, including /dashboard, /operator-control, /owner-proof-packet, /mvp-test-pass, /strategy-lab, /creator, /server-route-inventory, /solidity-lab, and /social-ops. node_modules is ignored in .gitignore. Read ONBOARD_MEMORY.md, PROJECT_HANDOFF.md, MVP_OWNER_TEST_PASS.md, and LOCAL_AI_BUILD_PLAN.md before adding major features.
+First, inspect the files and Git status. Do not reset, delete, or discard anything. EtherealAI is now running from app/server/src/server.js with protected app/client pages, including /dashboard, /owner-setup, /operator-control, /security-lockdown, /owner-proof-packet, /mvp-test-pass, /strategy-lab, /creator, /server-route-inventory, /solidity-lab, and /social-ops. node_modules is ignored in .gitignore. Read ONBOARD_MEMORY.md, PROJECT_HANDOFF.md, MVP_OWNER_TEST_PASS.md, and LOCAL_AI_BUILD_PLAN.md before adding major features.
 
 Please:
 1. Save/preserve the current work.

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Setup Wizard</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/owner-setup">Owner Setup</a>
+        <a href="/operator-control">Operator Control</a>
+        <a href="/security-lockdown">Security Lockdown</a>
+        <a href="/owner-proof-packet">Proof Packet</a>
+        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/solidity-lab">Solidity Lab</a>
+        <a href="/social-ops">Social Ops</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>Owner Setup Wizard</h1>
+        <p>Finish the blocked setup gates without developer workflows. Live trading and wallet signing stay disabled.</p>
+        <div class="auth-proof-banner" role="status">
+            <strong>MVP 100% · Paper 95→100 · Full E2E 72→100</strong>
+            <span>Live execution disabled · no seed phrases · no private keys · credentials read from <code>~/EtherealAI_Secrets/.env</code></span>
+        </div>
+
+        <section class="model-panel">
+            <h2>Progress</h2>
+            <div id="owner-setup-progress" class="owner-progress-grid">Loading setup progress...</div>
+            <div class="button-row">
+                <button id="refresh-owner-setup" type="button">Refresh / Verify All</button>
+                <button id="run-paper-verification" type="button">Run Paper Verification</button>
+                <button id="create-env-template" type="button">Create .env Template</button>
+            </div>
+            <pre id="owner-setup-output" class="model-output">No setup action selected.</pre>
+        </section>
+
+        <section class="model-panel">
+            <h2>Blocked Paper Trading Gates</h2>
+            <div id="paper-gates" class="owner-gate-list">Loading paper gates...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Blocked Full E2E Gates</h2>
+            <div id="full-e2e-gates" class="owner-gate-list">Loading full E2E gates...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Local Secrets File</h2>
+            <p>Put API/RPC credentials in <code>~/EtherealAI_Secrets/.env</code>. The app checks names and presence only; it never displays values.</p>
+            <div id="env-status" class="comparison-table">Loading local secrets status...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Add Public Wallet Address</h2>
+            <p>Public addresses are allowed. Do not enter a seed phrase, recovery phrase, private key, wallet password, or passphrase.</p>
+            <form id="wallet-form" class="model-test-form">
+                <label for="wallet-label">Wallet Label</label>
+                <input id="wallet-label" name="label" type="text" required placeholder="Example: Polygon trading research wallet">
+
+                <label for="wallet-kind">Wallet Type</label>
+                <select id="wallet-kind" name="walletKind">
+                    <option value="hardware">Hardware wallet</option>
+                    <option value="watch_only">Watch-only address</option>
+                    <option value="browser_extension">Browser extension</option>
+                    <option value="mobile_wallet">Mobile wallet</option>
+                    <option value="multisig">Multisig</option>
+                    <option value="other_reference">Other reference</option>
+                </select>
+
+                <label for="wallet-chain-family">Chain Family</label>
+                <select id="wallet-chain-family" name="chainFamily">
+                    <option value="evm">EVM: Polygon, Base, BNB, Ethereum, Avalanche</option>
+                    <option value="solana">Solana</option>
+                    <option value="bitcoin">Bitcoin</option>
+                    <option value="cosmos">Cosmos</option>
+                    <option value="custom">Custom</option>
+                </select>
+
+                <label for="wallet-network">Network</label>
+                <input id="wallet-network" name="network" type="text" value="polygon" required>
+
+                <label for="wallet-public-address">Public Address Only</label>
+                <input id="wallet-public-address" name="publicAddress" type="text" required placeholder="0x... or public wallet address">
+
+                <label for="wallet-assignments">Assignments</label>
+                <input id="wallet-assignments" name="assignments" type="text" value="trading-research,token-deployment" placeholder="Comma-separated labels">
+
+                <button type="submit">Save Public Wallet Metadata</button>
+            </form>
+        </section>
+    </main>
+
+    <script>
+        let currentWizard = null;
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function progressCard(item) {
+            const percent = Number(item.current || 0);
+            return `
+                <article class="owner-progress-card">
+                    <h3>${escapeHtml(item.label)}</h3>
+                    <strong>${percent}%</strong>
+                    <div class="owner-progress-bar" aria-label="${escapeHtml(item.label)} progress">
+                        <span style="width: ${Math.max(0, Math.min(100, percent))}%"></span>
+                    </div>
+                    <p>${escapeHtml(item.note || (item.liveSigningRequired === false ? 'No live wallet signing required.' : ''))}</p>
+                </article>
+            `;
+        }
+
+        function renderGate(gate) {
+            return `
+                <article class="owner-gate-card ${gate.passed ? 'owner-gate-pass' : 'owner-gate-blocked'}">
+                    <div>
+                        <h3>${escapeHtml(gate.label)}</h3>
+                        <strong>${gate.passed ? 'Complete' : 'Blocked'}</strong>
+                    </div>
+                    <dl>
+                        <dt>What is missing</dt>
+                        <dd>${escapeHtml(gate.missing)}</dd>
+                        <dt>Why it is needed</dt>
+                        <dd>${escapeHtml(gate.whyNeeded)}</dd>
+                        <dt>Is it safe?</dt>
+                        <dd>${escapeHtml(gate.safe)}</dd>
+                        <dt>Exactly what I must enter</dt>
+                        <dd><pre>${escapeHtml(gate.exactlyEnter)}</pre></dd>
+                        <dt>Evidence</dt>
+                        <dd>${escapeHtml(gate.evidence || '-')}</dd>
+                    </dl>
+                    <button type="button" data-verify-gate="${escapeHtml(gate.id)}">Verify</button>
+                </article>
+            `;
+        }
+
+        function renderGateList(elementId, gates = []) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = gates.length ? gates.map(renderGate).join('') : 'No gates available.';
+            element.querySelectorAll('button[data-verify-gate]').forEach(button => {
+                button.addEventListener('click', () => verifyGate(button.dataset.verifyGate));
+            });
+        }
+
+        function renderEnvStatus(env = {}) {
+            const rows = (env.variables || []).map(variable => `
+                <tr>
+                    <td>${escapeHtml(variable.name)}</td>
+                    <td>${variable.present && !variable.empty ? 'Present' : 'Missing'}</td>
+                    <td>${escapeHtml(variable.label)}</td>
+                    <td><code>${escapeHtml(variable.example)}</code></td>
+                    <td>${escapeHtml(variable.why)}</td>
+                </tr>
+            `).join('');
+            const problems = [
+                ...(env.permissionSafe ? [] : [`File permissions need owner-only mode. Current mode: ${env.permissionMode || 'unknown'}`]),
+                ...(env.forbiddenWalletSecretNames || []).map(name => `Forbidden wallet secret variable: ${name}`),
+                ...(env.forbiddenValueFindings || []).map(item => `Forbidden value pattern in ${item.variable}: ${item.label}`)
+            ];
+
+            document.getElementById('env-status').innerHTML = `
+                <p><strong>Path:</strong> <code>${escapeHtml(env.path || '~/EtherealAI_Secrets/.env')}</code></p>
+                <p><strong>Status:</strong> ${env.safeToUse ? 'Ready' : 'Needs owner setup'} · values hidden · live trading disabled</p>
+                ${problems.length ? `<ul>${problems.map(problem => `<li>${escapeHtml(problem)}</li>`).join('')}</ul>` : ''}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Variable</th>
+                            <th>Status</th>
+                            <th>Purpose</th>
+                            <th>Exactly what to enter</th>
+                            <th>Why</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        function renderWizard(wizard = {}) {
+            currentWizard = wizard;
+            document.getElementById('owner-setup-progress').innerHTML = [
+                progressCard(wizard.progress?.paperTrading || {}),
+                progressCard(wizard.progress?.fullEndToEnd || {})
+            ].join('');
+            renderGateList('paper-gates', wizard.gates?.paperTrading || []);
+            renderGateList('full-e2e-gates', wizard.gates?.fullEndToEnd || []);
+            renderEnvStatus(wizard.env || {});
+        }
+
+        async function loadWizard() {
+            const response = await fetch('/api/v1/owner-setup-wizard');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('owner-setup-output').textContent = data.error || 'Owner setup wizard failed to load.';
+                return;
+            }
+
+            renderWizard(data.wizard || {});
+        }
+
+        async function verifyGate(gateId) {
+            const output = document.getElementById('owner-setup-output');
+            output.textContent = `Verifying ${gateId}...`;
+            const response = await fetch(`/api/v1/owner-setup-wizard/verify/${gateId}`, { method: 'POST' });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Gate verification failed.';
+                return;
+            }
+
+            output.textContent = JSON.stringify(data.gate, null, 2);
+            await loadWizard();
+        }
+
+        document.getElementById('refresh-owner-setup').addEventListener('click', loadWizard);
+
+        document.getElementById('run-paper-verification').addEventListener('click', async () => {
+            const output = document.getElementById('owner-setup-output');
+            output.textContent = 'Running one paper verification cycle...';
+            const response = await fetch('/api/v1/owner-setup-wizard/paper-verification-run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Paper verification could not run yet.';
+                return;
+            }
+
+            output.textContent = JSON.stringify({
+                run: data.run,
+                liveTradingEnabled: data.liveTradingEnabled,
+                walletSigningEnabled: data.walletSigningEnabled
+            }, null, 2);
+            renderWizard(data.wizard || {});
+        });
+
+        document.getElementById('create-env-template').addEventListener('click', async () => {
+            const output = document.getElementById('owner-setup-output');
+            output.textContent = 'Creating local .env template...';
+            const response = await fetch('/api/v1/owner-setup-wizard/env-template', { method: 'POST' });
+            const data = await response.json();
+
+            output.textContent = response.ok
+                ? JSON.stringify(data, null, 2)
+                : (data.error || 'Template creation failed.');
+            await loadWizard();
+        });
+
+        document.getElementById('wallet-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const assignments = String(formData.get('assignments') || '')
+                .split(',')
+                .map(item => item.trim())
+                .filter(Boolean);
+            const payload = {
+                label: formData.get('label'),
+                walletKind: formData.get('walletKind'),
+                chainFamily: formData.get('chainFamily'),
+                network: formData.get('network'),
+                publicAddress: formData.get('publicAddress'),
+                connectionMethod: formData.get('walletKind'),
+                assignments,
+                status: 'configured',
+                permissionScope: {
+                    view_public_address: 'read_only',
+                    request_signature: 'blocked',
+                    deploy_contract: 'blocked',
+                    mint_token: 'blocked',
+                    transfer_assets: 'blocked',
+                    trade_execution: 'paper_only',
+                    bridge_assets: 'blocked',
+                    treasury_spend: 'blocked',
+                    admin_recovery: 'blocked'
+                },
+                notes: 'Added through Owner Setup Wizard as public metadata only.'
+            };
+            const response = await fetch('/api/v1/wallets', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            const output = document.getElementById('owner-setup-output');
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Wallet metadata save failed.';
+                return;
+            }
+
+            output.textContent = JSON.stringify({
+                wallet: data.wallet,
+                readiness: data.readiness,
+                signingEnabled: data.signingEnabled,
+                liveExecutionEnabled: data.liveExecutionEnabled
+            }, null, 2);
+            event.target.reset();
+            document.getElementById('wallet-network').value = 'polygon';
+            document.getElementById('wallet-assignments').value = 'trading-research,token-deployment';
+            await loadWizard();
+        });
+
+        loadWizard();
+    </script>
+</body>
+</html>

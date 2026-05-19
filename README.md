@@ -21,6 +21,9 @@ The current project is intentionally designed for owner-controlled local operati
 ## Key Pages
 
 - `/dashboard` - system status, model roles, MLX lifecycle, multi-agent coordination, system memory
+- `/owner-setup` - non-coder setup wizard for paper 95 to 100 and full E2E readiness 72 to 100 with live trading disabled
+- `/operator-control` - wallet metadata, owner key-control guidance, permissions, and revoke workflows
+- `/security-lockdown` - read-only Mac/network security audit and owner hardening checklist
 - `/owner-proof-packet` - local proof packet, owner acceptance, live-blocker evidence
 - `/mvp-test-pass` - owner test pass and evidence checklist
 - `/server-route-inventory` - route map and safety boundaries
@@ -95,7 +98,11 @@ Hermes Agent is treated as an optional benchmark lane only. It is not installed,
 
 ## GitHub Publishing Notes
 
-Before publishing, confirm the target GitHub owner/repository. This workspace currently has no configured remote.
+Before publishing, confirm the target GitHub owner/repository. This workspace is configured for the private GitHub target:
+
+```text
+git@github.com:EtherealCoin/EtherealAI.git
+```
 
 Recommended private repo name:
 

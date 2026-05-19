@@ -1035,6 +1035,88 @@ footer {
     grid-template-columns: 120px 1fr;
 }
 
+.owner-progress-grid,
+.owner-gate-list {
+    display: grid;
+    gap: 14px;
+}
+
+.owner-progress-grid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.owner-progress-card,
+.owner-gate-card {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+}
+
+.owner-progress-card h3,
+.owner-gate-card h3 {
+    margin: 0;
+}
+
+.owner-progress-card strong {
+    color: #111827;
+    font-size: 2rem;
+}
+
+.owner-progress-bar {
+    background: #e5e7eb;
+    border-radius: 999px;
+    height: 12px;
+    overflow: hidden;
+}
+
+.owner-progress-bar span {
+    background: #2563eb;
+    display: block;
+    height: 100%;
+}
+
+.owner-gate-card > div:first-child {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.owner-gate-pass {
+    border-left: 4px solid #16a34a;
+}
+
+.owner-gate-blocked {
+    border-left: 4px solid #dc2626;
+}
+
+.owner-gate-card dl {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+}
+
+.owner-gate-card dt {
+    color: #374151;
+    font-weight: 700;
+}
+
+.owner-gate-card dd {
+    margin: 0;
+}
+
+.owner-gate-card pre {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin: 0;
+    padding: 10px;
+    white-space: pre-wrap;
+}
+
 .checklist-item select {
     border: 1px solid #d1d5db;
     border-radius: 6px;
@@ -1057,8 +1139,14 @@ footer {
     .task-card,
     .checklist-item,
     .compact-form,
-    .artifact-controls {
+    .artifact-controls,
+    .owner-gate-card > div:first-child {
         grid-template-columns: 1fr;
+    }
+
+    .owner-gate-card > div:first-child {
+        align-items: flex-start;
+        display: grid;
     }
 }
 

@@ -16,6 +16,7 @@ const { registerMultiAgentRoutes } = require('../routes/multi-agent');
 const { registerOrderIntentRoutes } = require('../routes/order-intents');
 const { registerOwnerAcceptanceRoutes } = require('../routes/owner-acceptance');
 const { registerOwnerProofPacketRoutes } = require('../routes/owner-proof-packet');
+const { registerOwnerSetupWizardRoutes } = require('../routes/owner-setup-wizard');
 const { registerPageRoutes } = require('../routes/pages');
 const { registerReadinessRoutes } = require('../routes/readiness');
 const { registerRiskProfileRoutes } = require('../routes/risk-profiles');
@@ -202,6 +203,11 @@ function registerEtherealRoutes(app, options) {
     commandTemplates,
     getGitStatusSnapshot,
     getGitPublishStatus,
+    buildOwnerSetupWizard,
+    readOwnerEnvStatus,
+    buildOwnerEnvTemplate,
+    ownerSecretsDir,
+    ownerEnvPath,
     serializeCommandTemplate,
     getCommandTemplate,
     isCommandAllowed,
@@ -312,6 +318,29 @@ function registerEtherealRoutes(app, options) {
     port,
     projectRoot,
     serverFile
+  });
+
+  registerOwnerSetupWizardRoutes(app, {
+    fs,
+    requireAuth,
+    dbAll,
+    dbRun,
+    parseOwnerWallet: parsers.parseOwnerWallet,
+    parseBotAutomationPlan: parsers.parseBotAutomationPlan,
+    parseBotAutomationRun: parsers.parseBotAutomationRun,
+    parseBotAutomationSchedule: parsers.parseBotAutomationSchedule,
+    parseStrategy: parsers.parseStrategy,
+    parseRiskProfile: parsers.parseRiskProfile,
+    parsePaperSession: parsers.parsePaperSession,
+    parseMarketImport: parsers.parseMarketImport,
+    parseExchangeConnector: parsers.parseExchangeConnector,
+    parseLocalSecretReference: parsers.parseLocalSecretReference,
+    createBotAutomationPaperRun,
+    buildOwnerSetupWizard,
+    readOwnerEnvStatus,
+    buildOwnerEnvTemplate,
+    ownerSecretsDir,
+    ownerEnvPath
   });
 
   registerOwnerAcceptanceRoutes(app, {

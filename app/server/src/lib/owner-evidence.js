@@ -32,6 +32,16 @@ function buildOwnerEvidenceSnapshot() {
         liveExecutionEnabled: false
       },
       {
+        id: 'owner_setup_wizard',
+        label: 'Owner Setup Wizard',
+        location: '/owner-setup',
+        evidence: 'Non-coder setup gates for paper 95 to 100 and full E2E readiness 72 to 100, with local .env presence checks, public wallet metadata, one-click verification, and no secret values returned',
+        localOnly: true,
+        signingEnabled: false,
+        liveExecutionEnabled: false,
+        secretValuesReturned: false
+      },
+      {
         id: 'operator_control_wallets',
         label: 'Operator Control wallet onboarding',
         location: '/operator-control',
@@ -125,6 +135,14 @@ function buildOwnerEvidenceSnapshot() {
         moduleId: 'solidity-lab',
         boundary: 'local_scaffold_no_deployment',
         deploymentEnabled: false,
+        ownerReviewRequired: true
+      },
+      {
+        moduleId: 'owner-setup',
+        boundary: 'setup_wizard_no_secret_values_no_live_execution',
+        signingEnabled: false,
+        liveExecutionEnabled: false,
+        secretValuesReturned: false,
         ownerReviewRequired: true
       },
       {

@@ -46,6 +46,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/routes/order-intents.js',
     'app/server/src/routes/owner-acceptance.js',
     'app/server/src/routes/owner-proof-packet.js',
+    'app/server/src/routes/owner-setup-wizard.js',
     'app/server/src/routes/pages.js',
     'app/server/src/routes/readiness.js',
     'app/server/src/routes/risk-profiles.js',
@@ -83,6 +84,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/owner-acceptance.js',
     'app/server/src/lib/owner-evidence.js',
     'app/server/src/lib/owner-proof-packet.js',
+    'app/server/src/lib/owner-setup-wizard.js',
     'app/server/src/lib/readiness.js',
     'app/server/src/lib/system-config-runtime.js',
     'app/server/src/lib/risk-safety.js',
@@ -175,10 +177,12 @@ function checkOwnerEvidenceModule() {
     || ownerEvidence.exportSurfaces?.length !== 3
     || ownerEvidence.fullLiveBlockers?.length !== 4
     || !ownerEvidence.proofSurfaces.some(surface => surface.id === 'owner_proof_packet' && surface.location === '/owner-proof-packet')
+    || !ownerEvidence.proofSurfaces.some(surface => surface.id === 'owner_setup_wizard' && surface.location === '/owner-setup' && surface.secretValuesReturned === false)
     || !ownerEvidence.proofSurfaces.some(surface => surface.id === 'operator_control_wallets' && surface.location === '/operator-control' && surface.signingEnabled === false)
     || !ownerEvidence.proofSurfaces.some(surface => surface.id === 'mac_security_lockdown' && surface.location === '/security-lockdown' && surface.readOnlyAudit === true)
     || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'social-ops' && boundary.externalPostingEnabled === false)
     || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'solidity-lab' && boundary.deploymentEnabled === false)
+    || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'owner-setup' && boundary.secretValuesReturned === false)
     || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'wallet-control' && boundary.signingEnabled === false)
     || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'mac-security' && boundary.readOnlyAudit === true)
   ) {
@@ -385,6 +389,7 @@ function checkOwnerProofPacketModule() {
     || !packet.paperAutomationRunbook?.blockedLiveActions?.some(action => action.id === 'live_order_endpoint_enabled')
     || buildPaperAutomationRunbook(packet.botAutomationCapabilityPath).ownerMode !== 'activate_ready_paper_schedule'
     || packet.proofSurfaces.length < 8
+    || !packet.proofSurfaces.some(surface => surface.id === 'owner_setup_wizard' && surface.location === '/owner-setup' && surface.secretValuesReturned === false)
     || !packet.proofSurfaces.some(surface => surface.id === 'operator_control_wallets' && surface.location === '/operator-control')
     || !packet.proofSurfaces.some(surface => surface.id === 'mac_security_lockdown' && surface.location === '/security-lockdown')
     || packet.exportSurfaces.length !== 3
@@ -1229,6 +1234,7 @@ function checkRouteRegistrationModule() {
     'registerReadinessRoutes',
     'registerRouteInventoryRoutes',
     'registerOwnerAcceptanceRoutes',
+    'registerOwnerSetupWizardRoutes',
     'registerDevServerRoutes',
     'registerSystemMemoryRoutes',
     'registerWalletControlRoutes',
@@ -1255,6 +1261,7 @@ function checkRouteRegistrationModule() {
   if (
     !routeRegistrationSource.includes('function registerEtherealRoutes')
     || !routeRegistrationSource.includes("require('../routes/owner-acceptance')")
+    || !routeRegistrationSource.includes("require('../routes/owner-setup-wizard')")
     || !routeRegistrationSource.includes("require('../routes/company-identity')")
     || !routeRegistrationSource.includes("require('../routes/bot-automation')")
     || !routeRegistrationSource.includes("require('../routes/multi-agent')")
@@ -1269,6 +1276,7 @@ function checkRouteRegistrationModule() {
     || !serverSource.includes('const ROW_LOOKUP_SELECTS = {')
     || !serverSource.includes('const ROUTE_PARSERS = {')
     || !serverSource.includes("require('./lib/live-execution-handoff')")
+    || !serverSource.includes("require('./lib/owner-setup-wizard')")
     || !serverSource.includes("require('./lib/wallet-control')")
     || !serverSource.includes("require('./lib/mac-security')")
     || !serverSource.includes("const SERVER_HOST = String(process.env.ETHEREALAI_HOST || '127.0.0.1')")
@@ -1289,6 +1297,8 @@ function checkRouteRegistrationModule() {
     || !serverSource.includes('parseRebalanceSimulationBatch')
     || !serverSource.includes('parseRebalanceCandidateCsv')
     || !serverSource.includes('getGitPublishStatus')
+    || !serverSource.includes('buildOwnerSetupWizard')
+    || !serverSource.includes('OWNER_ENV_PATH')
     || !routeRegistrationSource.includes('parseTokenEcosystemProject: parsers.parseTokenEcosystemProject')
     || !routeRegistrationSource.includes('simulateCrossExchangeArbitrage')
     || !routeRegistrationSource.includes('parseArbitrageSimulationRun: parsers.parseArbitrageSimulationRun')
@@ -2277,6 +2287,92 @@ function checkWalletControlModule() {
   }
 
   pass('wallet control module');
+}
+
+function checkOwnerSetupWizardModule() {
+  const {
+    parseEnvLine,
+    readOwnerEnvStatus,
+    buildOwnerSetupWizard,
+    buildOwnerEnvTemplate
+  } = require(path.join(projectRoot, 'app/server/src/lib/owner-setup-wizard'));
+  const safeEnv = [
+    'POLYGON_RPC_URL=https://polygon.example',
+    'POLYGONSCAN_API_KEY=polygonscan-fixture',
+    'COINBASE_API_KEY=coinbase-key-fixture',
+    'COINBASE_API_SECRET=coinbase-secret-fixture',
+    'GITHUB_TOKEN=github-fixture',
+    'CLOUDFLARE_API_TOKEN=cloudflare-token-fixture',
+    'CLOUDFLARE_ACCOUNT_ID=cloudflare-account-fixture',
+    'DISCORD_BOT_TOKEN=discord-token-fixture'
+  ].join('\n');
+  const unsafeEnv = [
+    'POLYGON_RPC_URL=https://polygon.example',
+    'WALLET_PRIVATE_KEY=never',
+    'OWNER_SEED_PHRASE=alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima'
+  ].join('\n');
+  const safeFs = {
+    statSync: () => ({ mode: 0o600 }),
+    readFileSync: () => safeEnv
+  };
+  const unsafeFs = {
+    statSync: () => ({ mode: 0o644 }),
+    readFileSync: () => unsafeEnv
+  };
+  const safeStatus = readOwnerEnvStatus({ fsModule: safeFs, envPath: '/tmp/ethereal-owner.env' });
+  const unsafeStatus = readOwnerEnvStatus({ fsModule: unsafeFs, envPath: '/tmp/ethereal-owner.env' });
+  const wizard = buildOwnerSetupWizard({
+    envStatus: safeStatus,
+    wallets: [{
+      status: 'configured',
+      public_address: '0x000000000000000000000000000000000000dEaD',
+      signingEnabled: false,
+      liveExecutionEnabled: false
+    }],
+    strategies: [{ id: 1 }],
+    riskProfiles: [{
+      id: 1,
+      status: 'active',
+      max_order_value: 100,
+      max_position_value: 500,
+      max_daily_loss: 50,
+      max_open_trades: 2,
+      kill_switch_enabled: false
+    }],
+    paperSessions: [{ id: 1, status: 'completed' }],
+    marketImports: [{ id: 1, status: 'active' }],
+    plans: [{ id: 1, mode: 'paper', status: 'ready_for_paper', readiness: { status: 'ready_for_paper' } }],
+    runs: [{ id: 1, mode: 'paper', status: 'completed' }],
+    schedules: [],
+    exchangeConnectors: [{ id: 1, mode: 'paper', status: 'configured' }],
+    localSecretReferences: [{ id: 1, status: 'configured' }],
+    liveExecution: {
+      enabled: false,
+      orderEndpointEnabled: false,
+      goLiveAllowed: false
+    }
+  });
+  const template = buildOwnerEnvTemplate();
+
+  if (
+    parseEnvLine('export POLYGON_RPC_URL=\"https://polygon.example\"')?.key !== 'POLYGON_RPC_URL'
+    || safeStatus.safeToUse !== true
+    || safeStatus.foundAllowedNames.includes('coinbase-secret-fixture')
+    || unsafeStatus.safeToUse !== false
+    || !unsafeStatus.forbiddenWalletSecretNames.includes('OWNER_SEED_PHRASE')
+    || wizard.progress?.paperTrading?.current !== 100
+    || wizard.progress?.fullEndToEnd?.current !== 100
+    || wizard.safetyBoundary?.liveTradingEnabled !== false
+    || wizard.safetyBoundary?.seedPhrasesAccepted !== false
+    || !wizard.gates?.fullEndToEnd?.some(gate => gate.id === 'high_security_live_approval_locked' && gate.passed)
+    || !wizard.gates?.paperTrading?.some(gate => gate.id === 'paper_verification_run_completed' && gate.passed)
+    || !template.includes('Do not add seed phrases')
+    || !template.includes('POLYGON_RPC_URL=')
+  ) {
+    fail('owner setup wizard module did not preserve safe env, progress, and live-disabled behavior');
+  }
+
+  pass('owner setup wizard module');
 }
 
 async function checkMacSecurityModule() {
@@ -6206,6 +6302,65 @@ function checkOperatorControlCenterUi() {
   pass('operator control center owner wallet UI');
 }
 
+function checkOwnerSetupWizardUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/owner-setup.html'), 'utf8');
+  const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
+  const home = fs.readFileSync(path.join(projectRoot, 'app/client/index.html'), 'utf8');
+  const header = fs.readFileSync(path.join(projectRoot, 'components/header.html'), 'utf8');
+  const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
+  const route = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/owner-setup-wizard.js'), 'utf8');
+  const lib = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/owner-setup-wizard.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+
+  if (
+    !pages.includes("app.get('/owner-setup', requirePageAuth")
+    || !dashboard.includes('/owner-setup')
+    || !dashboard.includes('Open Owner Setup Wizard')
+    || !home.includes('/owner-setup')
+    || !home.includes('Owner Setup Wizard')
+    || !header.includes('/owner-setup')
+    || !html.includes('Owner Setup Wizard')
+    || !html.includes('Paper 95→100')
+    || !html.includes('Full E2E 72→100')
+    || !html.includes('Live execution disabled')
+    || !html.includes('no seed phrases')
+    || !html.includes('no private keys')
+    || !html.includes('~/EtherealAI_Secrets/.env')
+    || !html.includes('Blocked Paper Trading Gates')
+    || !html.includes('Blocked Full E2E Gates')
+    || !html.includes('Local Secrets File')
+    || !html.includes('Public Address Only')
+    || !html.includes('Save Public Wallet Metadata')
+    || !html.includes('Run Paper Verification')
+    || !html.includes('Create .env Template')
+    || !html.includes("fetch('/api/v1/owner-setup-wizard')")
+    || !html.includes('/api/v1/owner-setup-wizard/verify/')
+    || !html.includes("fetch('/api/v1/owner-setup-wizard/paper-verification-run'")
+    || !html.includes("fetch('/api/v1/owner-setup-wizard/env-template'")
+    || !html.includes("fetch('/api/v1/wallets'")
+    || !html.includes('request_signature')
+    || !html.includes('trade_execution')
+    || !route.includes("app.get('/api/v1/owner-setup-wizard'")
+    || !route.includes("app.post('/api/v1/owner-setup-wizard/verify/:gateId'")
+    || !route.includes("app.post('/api/v1/owner-setup-wizard/paper-verification-run'")
+    || !route.includes("app.post('/api/v1/owner-setup-wizard/env-template'")
+    || !route.includes('createBotAutomationPaperRun')
+    || !lib.includes('POLYGON_RPC_URL')
+    || !lib.includes('POLYGONSCAN_API_KEY')
+    || !lib.includes('seedPhrasesAccepted: false')
+    || !lib.includes('privateKeysAccepted: false')
+    || !lib.includes('secretValuesReturnedByApi: false')
+    || !styles.includes('.owner-progress-grid')
+    || !styles.includes('.owner-gate-list')
+    || !styles.includes('.owner-gate-card')
+    || !styles.includes('.owner-progress-bar')
+  ) {
+    fail('owner setup wizard UI is missing non-coder gate, safe credential, wallet metadata, or route wiring');
+  }
+
+  pass('owner setup wizard UI');
+}
+
 function checkMacSecurityLockdownUi() {
   const html = fs.readFileSync(path.join(projectRoot, 'app/client/security-lockdown.html'), 'utf8');
   const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
@@ -6595,6 +6750,11 @@ function checkMvpOwnerTestPassDoc() {
     || !doc.includes('`Download Proof Packet JSON` is enabled after `/api/v1/owner-proof-packet` loads.')
     || !doc.includes('Packet Checksum shows a SHA-256 prefix and the downloaded JSON includes the full checksum.')
     || !doc.includes('Proof Surfaces include owner proof packet, dashboard readiness, MVP Test Pass, Operator Control, Mac Security Lockdown, route inventory, Strategy Lab, Social Ops, and Solidity Lab.')
+    || !doc.includes('Owner Setup Wizard is included as a local proof surface with no secret values returned and live execution disabled.')
+    || !doc.includes('Open `/owner-setup`')
+    || !doc.includes('Paper 95→100')
+    || !doc.includes('Full E2E 72→100')
+    || !doc.includes('~/EtherealAI_Secrets/.env')
     || !doc.includes('Open `/operator-control`')
     || !doc.includes('Wallet Onboarding Wizard explains the owner key handoff in plain English and shows the simplest safe key-control path.')
     || !doc.includes('Owner Key Takeover Mode shows Trading Research, Token Deployment, Treasury, and Recovery templates')
@@ -6603,6 +6763,8 @@ function checkMvpOwnerTestPassDoc() {
     || !doc.includes('## Mac Security Lockdown Workflow')
     || !doc.includes('Safe user-level hardening applied in this session')
     || !doc.includes('## Owner Wallet Control Workflow')
+    || !doc.includes('## Owner Setup Wizard Workflow')
+    || !doc.includes('Full E2E setup readiness `100%` is not live trading.')
     || !doc.includes('Revocation is the emergency shutdown path for a wallet record')
     || !doc.includes('Bot Automation Path shows Automated Paper Path, Ready Paper Plans, Active Paper Schedules, Future Live Automation blocked, Live Blocked Gates, and no live order endpoint.')
     || !doc.includes('Paper Automation Runbook lists the monitor-only owner steps')
@@ -6655,6 +6817,9 @@ function checkProjectHandoffDoc() {
     || !doc.includes('## Current Owner-Test Snapshot')
     || !doc.includes('Owner evidence included · owner acceptance pending · live disabled')
     || !doc.includes('the completion ledger explaining why MVP/local paper/full live percentages are gated')
+    || !doc.includes('/owner-setup` is the non-coder Owner Setup Wizard')
+    || !doc.includes('/api/v1/owner-setup-wizard')
+    || !doc.includes('setup_wizard_no_secret_values_no_live_execution')
     || !doc.includes('owner-test gate status')
     || !doc.includes('owner acceptance pending status')
     || !doc.includes('the bot automation capability path')
@@ -6676,7 +6841,7 @@ function checkProjectHandoffDoc() {
     || !doc.includes('owner proof surfaces')
     || !doc.includes('`ownerAcceptance`')
     || !doc.includes('`botAutomationCapabilityPath`')
-    || !doc.includes('owner proof packet, dashboard readiness, MVP test pass, Operator Control, Mac Security Lockdown, route inventory, Strategy Lab, Social Ops, and Solidity Lab')
+    || !doc.includes('owner proof packet, dashboard readiness, MVP test pass, Owner Setup Wizard, Operator Control, Mac Security Lockdown, route inventory, Strategy Lab, Social Ops, and Solidity Lab')
     || !doc.includes('/operator-control` is the non-coder Operator Control Center')
     || !doc.includes('/security-lockdown` is the non-coder Mac Security Lockdown Center')
     || !doc.includes('/api/v1/operator-control-center')
@@ -6694,7 +6859,8 @@ function checkProjectHandoffDoc() {
     || !doc.includes('Dashboard System Memory export now includes owner-evidence references, owner acceptance pending status')
     || !doc.includes('Owner Proof Coverage counts, owner acceptance pending status, and local acceptance record count from System Memory')
     || !doc.includes('Route Inventory now cross-checks Owner Proof Coverage, owner acceptance pending status, and local acceptance record count from System Memory')
-    || !doc.includes('external-surface boundaries for Social Ops, Solidity Lab, wallet control, and Mac security')
+    || !doc.includes('Owner Setup Wizard added at `/owner-setup`')
+    || !doc.includes('external-surface boundaries for Social Ops, Solidity Lab, owner setup, wallet control, and Mac security')
     || !doc.includes('Social Ops remains local draft-only')
     || !doc.includes('Solidity Lab remains local scaffold/review only')
     || !doc.includes('Solidity Lab now includes a local Token Ecosystem Studio')
@@ -8065,6 +8231,59 @@ async function runServerApiChecks() {
     fail('owner proof packet page did not load for an authenticated user');
   }
 
+  const ownerSetupPage = await fetch(`${baseUrl}/owner-setup`, { headers: authHeaders });
+  const ownerSetupHtml = await ownerSetupPage.text();
+
+  if (
+    !ownerSetupPage.ok
+    || !ownerSetupHtml.includes('Owner Setup Wizard')
+    || !ownerSetupHtml.includes('Paper 95→100')
+    || !ownerSetupHtml.includes('Full E2E 72→100')
+    || !ownerSetupHtml.includes('Run Paper Verification')
+    || !ownerSetupHtml.includes('Public Address Only')
+    || !ownerSetupHtml.includes('~/EtherealAI_Secrets/.env')
+  ) {
+    fail('owner setup wizard page did not load for an authenticated user');
+  }
+
+  const ownerSetup = await fetchJson(`${baseUrl}/api/v1/owner-setup-wizard`, { headers: authHeaders });
+
+  if (
+    ownerSetup.body.wizard?.audience !== 'non_technical_owner'
+    || ownerSetup.body.wizard?.progress?.paperTrading?.from !== 95
+    || ownerSetup.body.wizard?.progress?.paperTrading?.target !== 100
+    || ownerSetup.body.wizard?.progress?.paperTrading?.current < 95
+    || ownerSetup.body.wizard?.progress?.paperTrading?.current > 100
+    || ownerSetup.body.wizard?.progress?.fullEndToEnd?.from !== 72
+    || ownerSetup.body.wizard?.progress?.fullEndToEnd?.target !== 100
+    || ownerSetup.body.wizard?.progress?.fullEndToEnd?.current < 72
+    || ownerSetup.body.wizard?.progress?.fullEndToEnd?.current > 100
+    || ownerSetup.body.wizard?.safetyBoundary?.liveTradingEnabled !== false
+    || ownerSetup.body.wizard?.safetyBoundary?.walletSigningEnabled !== false
+    || ownerSetup.body.wizard?.safetyBoundary?.seedPhrasesAccepted !== false
+    || ownerSetup.body.wizard?.safetyBoundary?.privateKeysAccepted !== false
+    || ownerSetup.body.wizard?.safetyBoundary?.secretValuesReturnedByApi !== false
+    || !ownerSetup.body.wizard?.gates?.paperTrading?.some(gate => gate.id === 'paper_verification_run_completed')
+    || !ownerSetup.body.wizard?.gates?.fullEndToEnd?.some(gate => gate.id === 'high_security_live_approval_locked')
+    || ownerSetup.body.wizard?.env?.note !== 'Only variable names and non-empty status are reported. Secret values are never returned.'
+  ) {
+    fail('owner setup wizard API did not expose safe non-coder setup progress');
+  }
+
+  const liveLockedGate = await fetchJson(`${baseUrl}/api/v1/owner-setup-wizard/verify/high_security_live_approval_locked`, {
+    method: 'POST',
+    headers: authHeaders
+  });
+
+  if (
+    liveLockedGate.body.gate?.id !== 'high_security_live_approval_locked'
+    || liveLockedGate.body.gate?.passed !== true
+    || liveLockedGate.body.safetyBoundary?.liveTradingEnabled !== false
+    || liveLockedGate.body.safetyBoundary?.walletSigningEnabled !== false
+  ) {
+    fail('owner setup wizard gate verification did not keep live trading locked');
+  }
+
   const ownerProofPacket = await fetchJson(`${baseUrl}/api/v1/owner-proof-packet`, { headers: authHeaders });
 
   if (
@@ -9159,11 +9378,17 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/api/v1/system-memory' && route.file === 'app/server/src/routes/system-memory.js')
     || !inventory.routes.some(route => route.path === '/api/v1/owner-proof-packet' && route.file === 'app/server/src/routes/owner-proof-packet.js')
     || !inventory.routes.some(route => route.path === '/api/v1/owner-acceptance' && route.file === 'app/server/src/routes/owner-acceptance.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/owner-setup-wizard' && route.file === 'app/server/src/routes/owner-setup-wizard.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/owner-setup-wizard/verify/:gateId' && route.file === 'app/server/src/routes/owner-setup-wizard.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/owner-setup-wizard/paper-verification-run' && route.file === 'app/server/src/routes/owner-setup-wizard.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/owner-setup-wizard/env-template' && route.file === 'app/server/src/routes/owner-setup-wizard.js')
+    || !inventory.modules.some(module => module.moduleId === 'owner-setup' && module.safetyProfile?.boundary === 'setup_wizard_no_secret_values_no_live_execution')
     || !inventory.routes.some(route => route.path === '/api/v1/server-route-inventory' && route.file === 'app/server/src/routes/route-inventory.js')
     || !inventory.routes.some(route => route.path === '/api/v1/auth/login' && route.file === 'app/server/src/routes/auth.js')
     || !inventory.routes.some(route => route.path === '/dashboard' && route.file === 'app/server/src/routes/pages.js')
     || !inventory.routes.some(route => route.path === '/operator-control' && route.file === 'app/server/src/routes/pages.js')
     || !inventory.routes.some(route => route.path === '/security-lockdown' && route.file === 'app/server/src/routes/pages.js')
+    || !inventory.routes.some(route => route.path === '/owner-setup' && route.file === 'app/server/src/routes/pages.js')
     || !inventory.routes.some(route => route.path === '/owner-proof-packet' && route.file === 'app/server/src/routes/pages.js')
   ) {
     fail('server route inventory did not expose expected modularization inventory data');
@@ -9423,6 +9648,12 @@ async function runServerApiChecks() {
       && surface.liveExecutionEnabled === false
     ))
     || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
+      surface.id === 'owner_setup_wizard'
+      && surface.location === '/owner-setup'
+      && surface.secretValuesReturned === false
+      && surface.liveExecutionEnabled === false
+    ))
+    || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
       surface.id === 'operator_control_wallets'
       && surface.location === '/operator-control'
       && surface.signingEnabled === false
@@ -9472,6 +9703,11 @@ async function runServerApiChecks() {
       && boundary.deploymentEnabled === false
     ))
     || !systemMemory.body.snapshot?.ownerEvidence?.externalSurfaceBoundaries?.some(boundary => (
+      boundary.moduleId === 'owner-setup'
+      && boundary.boundary === 'setup_wizard_no_secret_values_no_live_execution'
+      && boundary.secretValuesReturned === false
+    ))
+    || !systemMemory.body.snapshot?.ownerEvidence?.externalSurfaceBoundaries?.some(boundary => (
       boundary.moduleId === 'wallet-control'
       && boundary.boundary === 'metadata_only_no_wallet_secrets'
       && boundary.signingEnabled === false
@@ -9516,6 +9752,7 @@ async function main() {
   checkMultiAgentCoordinationModule();
   checkSecretSafetyModule();
   checkWalletControlModule();
+  checkOwnerSetupWizardModule();
   checkSystemConfigRuntimeModule();
   await checkCompanyIdentityModule();
   checkExchangeMetadataModule();
@@ -9549,6 +9786,7 @@ async function main() {
   checkInlineScripts('app/client/creator.html');
   checkInlineScripts('app/client/dashboard.html');
   checkInlineScripts('app/client/operator-control.html');
+  checkInlineScripts('app/client/owner-setup.html');
   checkInlineScripts('app/client/security-lockdown.html');
   checkInlineScripts('app/client/owner-proof-packet.html');
   checkInlineScripts('app/client/mvp-test-pass.html');
@@ -9557,6 +9795,7 @@ async function main() {
   checkMvpTestPassOwnerWorkflowUi();
   checkDashboardMvpReadinessUi();
   checkOperatorControlCenterUi();
+  checkOwnerSetupWizardUi();
   checkMacSecurityLockdownUi();
   checkOwnerProofPacketUi();
   checkHomeLocalProofUi();

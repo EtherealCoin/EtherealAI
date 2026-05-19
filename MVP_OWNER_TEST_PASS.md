@@ -39,6 +39,15 @@ patrick@etherealAI
    - Pass condition: MVP Readiness shows Owner Acceptance as `Pending Review`.
    - Pass condition: System Memory export shows owner evidence included, owner acceptance pending, and live disabled.
 
+2. Open `/owner-setup`.
+   - Pass condition: Owner Setup Wizard loads without developer workflows and shows `Paper 95→100` and `Full E2E 72→100`.
+   - Pass condition: every blocked gate shows what is missing, why it is needed, whether it is safe, exactly what the owner must enter, current evidence, and a one-click `Verify` button.
+   - Pass condition: Local Secrets File reads from `~/EtherealAI_Secrets/.env`, reports approved variable names as present/missing only, and never displays credential values.
+   - Pass condition: `.env` setup rejects seed phrases, recovery phrases, private keys, wallet passwords, PEM private keys, and seed-like values.
+   - Pass condition: Add Public Wallet Address accepts label, wallet type, chain family, network, assignments, and public address only, then saves metadata through `/api/v1/wallets` with signing and live execution disabled.
+   - Pass condition: `Run Paper Verification` can run one paper-only cycle when a ready paper bot plan exists, and does not require live wallet signing.
+   - Pass condition: full E2E setup readiness can reach `100%` only as live-disabled setup readiness; it does not enable live trading, wallet signing, deployment, DNS mutation, external posting, or live orders.
+
 2. Open `/operator-control`.
    - Pass condition: Owner Control Summary loads and reports local-only, no secret storage, signing disabled, and live execution disabled.
    - Pass condition: Wallet Onboarding Wizard explains the owner key handoff in plain English and shows the simplest safe key-control path.
@@ -75,6 +84,7 @@ patrick@etherealAI
    - Pass condition: `Download Proof Packet JSON` is enabled after `/api/v1/owner-proof-packet` loads.
    - Pass condition: Packet Checksum shows a SHA-256 prefix and the downloaded JSON includes the full checksum.
    - Pass condition: Proof Surfaces include owner proof packet, dashboard readiness, MVP Test Pass, Operator Control, Mac Security Lockdown, route inventory, Strategy Lab, Social Ops, and Solidity Lab.
+   - Pass condition: Owner Setup Wizard is included as a local proof surface with no secret values returned and live execution disabled.
    - Pass condition: Bot Automation Path shows Automated Paper Path, Ready Paper Plans, Active Paper Schedules, Future Live Automation blocked, Live Blocked Gates, and no live order endpoint.
    - Pass condition: Paper Automation Runbook lists the monitor-only owner steps to review ready paper plans, activate or review a paper schedule, inspect the latest paper run, export local evidence, record local MVP acceptance, and keep blocked live actions disabled.
 
@@ -147,6 +157,15 @@ patrick@etherealAI
 - Live execution is intentionally unavailable: no credential loading, no live exchange adapter, no live order endpoint, and no exchange order placement.
 - Owner go-live commands are recorded for blocked review only until a future reviewed implementation phase adds every live execution gate.
 
+## Owner Setup Wizard Workflow
+
+- `/owner-setup` is the current non-coder setup-completion surface.
+- Paper progress starts from `95%` and reaches `100%` when strategy/data, risk profile, replay/run evidence, paper bot plan, and one paper verification cycle or active paper schedule are present.
+- Full E2E setup readiness starts from `72%` and reaches `100%` when the local `.env` file is safe, Polygon RPC/provider keys are present, at least one exchange key pair is present, public wallet metadata is attached, connector metadata exists, GitHub/Cloudflare/social credential presence is verified, and live execution remains locked.
+- The wizard reads credential presence from `~/EtherealAI_Secrets/.env` only. It returns variable names and present/missing status, never secret values.
+- The wizard never requests or accepts seed phrases, recovery phrases, private keys, wallet passwords, deployer private keys, owner private keys, or wallet secret values.
+- Full E2E setup readiness `100%` is not live trading. It means the owner setup gates are ready for a future separate high-security live approval process.
+
 ## Owner Wallet Control Workflow
 
 - `/operator-control` is the current non-coder owner key handoff surface.
@@ -202,3 +221,5 @@ npm test
 - Full live end-to-end completion: about `72%`
 
 The Completion Ledger explains these caps in the app. MVP moves from `99%` to `100%` only after the owner records local acceptance. Local paper automation moves beyond `95%` after active paper schedule review. Full live stays at `72%` until a separate reviewed live-execution phase implements credential loading, live adapters, a live order endpoint, production-grade safety review, and go-live acceptance.
+
+The Owner Setup Wizard has its own setup-readiness percentages: paper setup can move from `95%` to `100%`, and full E2E setup readiness can move from `72%` to `100%` while live trading remains disabled. That wizard-specific `100%` is readiness for a later high-security approval process, not permission to trade live.

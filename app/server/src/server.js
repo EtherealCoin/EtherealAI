@@ -108,6 +108,13 @@ const {
   buildLiveExecutionHandoff
 } = require('./lib/live-execution-handoff');
 const {
+  OWNER_SECRETS_DIR,
+  OWNER_ENV_PATH,
+  buildOwnerSetupWizard,
+  readOwnerEnvStatus,
+  buildOwnerEnvTemplate
+} = require('./lib/owner-setup-wizard');
+const {
   createMlxLifecycleRuntime
 } = require('./lib/mlx-lifecycle');
 const {
@@ -808,6 +815,11 @@ registerEtherealRoutes(app, {
   commandTemplates,
   getGitStatusSnapshot,
   getGitPublishStatus,
+  buildOwnerSetupWizard,
+  readOwnerEnvStatus,
+  buildOwnerEnvTemplate,
+  ownerSecretsDir: OWNER_SECRETS_DIR,
+  ownerEnvPath: OWNER_ENV_PATH,
   serializeCommandTemplate,
   getCommandTemplate,
   isCommandAllowed,

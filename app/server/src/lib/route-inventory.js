@@ -42,6 +42,14 @@ function categorizeRoutePath(routePath) {
     };
   }
 
+  if (routePath.startsWith('/api/v1/owner-setup-wizard')) {
+    return {
+      category: 'Owner Setup',
+      moduleId: 'owner-setup',
+      suggestedFile: 'app/server/src/routes/owner-setup-wizard.js'
+    };
+  }
+
   if (
     routePath.startsWith('/api/v1/model-roles')
     || routePath.startsWith('/api/v1/policy')
@@ -282,6 +290,17 @@ function getModuleSafetyProfile(moduleId) {
       liveExecutionEnabled: false,
       signingEnabled: false,
       secretsStored: false,
+      ownerReviewRequired: true
+    };
+  }
+
+  if (moduleId === 'owner-setup') {
+    return {
+      level: 'safety_critical',
+      boundary: 'setup_wizard_no_secret_values_no_live_execution',
+      liveExecutionEnabled: false,
+      signingEnabled: false,
+      secretsReturned: false,
       ownerReviewRequired: true
     };
   }
