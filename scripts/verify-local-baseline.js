@@ -2335,8 +2335,10 @@ async function checkMacSecurityModule() {
     ['/usr/bin/profiles status -type enrollment', 'Enrolled via DEP: No\nMDM enrollment: No'],
     ['/usr/bin/crontab -l', 'crontab: no crontab for ethereal'],
     ['/usr/bin/systemextensionsctl list', '0 extension(s)'],
-    ['/usr/sbin/systemsetup -getremotelogin', 'Remote Login: Off'],
-    ['/usr/sbin/systemsetup -getremoteappleevents', 'Remote Apple Events: Off'],
+    ['/bin/launchctl print-disabled system', [
+      '\t\t"com.openssh.sshd" => disabled',
+      '\t\t"com.apple.AEServer" => disabled'
+    ].join('\n')],
     ['/usr/bin/defaults read com.apple.NetworkBrowser DisableAirDrop', '1'],
     ['/usr/bin/defaults -currentHost read com.apple.coreservices.useractivityd ActivityAdvertisingAllowed', '0'],
     ['/usr/bin/defaults -currentHost read com.apple.coreservices.useractivityd ActivityReceivingAllowed', '0'],
@@ -2452,6 +2454,7 @@ async function checkMacSecurityModule() {
     || !guide.cleanRoomRecoveryPlan.some(item => item.includes('DFU restore/revive'))
     || !guide.airbnbNetworkPlan.some(item => item.includes('Airbnb router as hostile infrastructure'))
     || !guide.ownerSettingsChecklist.some(item => item.area.includes('General > Sharing'))
+    || !guide.ownerApprovedAdminChangesAppliedByCodex?.some(item => item.includes('Remote Login / SSH launch service'))
     || !guide.adminOnlyActions.some(item => item.includes('Remote Login'))
     || !guide.adminOnlyActions.some(item => item.includes('firewall allowance'))
     || !guide.adminOnlyActions.some(item => item.includes('LaunchAgents'))

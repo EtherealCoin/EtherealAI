@@ -138,21 +138,25 @@ const MAC_SECURITY_COMMANDS = [
     id: 'remote_login',
     category: 'Remote Access',
     label: 'Remote Login / SSH',
-    command: '/usr/sbin/systemsetup',
-    args: ['-getremotelogin'],
+    command: '/bin/launchctl',
+    args: ['print-disabled', 'system'],
     severity: 'block',
     ownerAction: 'Turn Remote Login off in System Settings > General > Sharing unless you are actively using SSH on a trusted network.',
-    parse: output => parseOnOffOutput(output, 'Remote Login is off.', 'Remote Login appears to be on.')
+    parse: output => /"com\.openssh\.sshd"\s*=>\s*disabled/i.test(output)
+      ? pass('Remote Login / SSH launch service is disabled.')
+      : fail('Remote Login / SSH launch service is not confirmed disabled.')
   },
   {
     id: 'remote_apple_events',
     category: 'Remote Access',
     label: 'Remote Apple Events',
-    command: '/usr/sbin/systemsetup',
-    args: ['-getremoteappleevents'],
+    command: '/bin/launchctl',
+    args: ['print-disabled', 'system'],
     severity: 'block',
     ownerAction: 'Turn Remote Apple Events off in System Settings > General > Sharing.',
-    parse: output => parseOnOffOutput(output, 'Remote Apple Events are off.', 'Remote Apple Events appear to be on.')
+    parse: output => /"com\.apple\.AEServer"\s*=>\s*disabled/i.test(output)
+      ? pass('Remote Apple Events launch service is disabled.')
+      : fail('Remote Apple Events launch service is not confirmed disabled.')
   },
   {
     id: 'airdrop_disabled',
@@ -1188,12 +1192,18 @@ function buildMacSecurityGuide() {
       'Filename extensions were set visible for this user.',
       'Finder file-extension change warning was set on for this user.'
     ],
+    ownerApprovedAdminChangesAppliedByCodex: [
+      'Automatic firewall allowance for built-in signed software was disabled after owner authorization.',
+      'Automatic firewall allowance for downloaded signed software was disabled after owner authorization.',
+      'Remote Login / SSH launch service was disabled after owner authorization.',
+      'Remote Apple Events launch service was disabled after owner authorization.'
+    ],
     adminOnlyActions: [
       'Confirm all admin users are expected, including hidden or setup-created accounts.',
       'Confirm MDM/device-management enrollment is absent unless intentionally owned by you.',
       'Review LaunchAgents, LaunchDaemons, user crontab, Login Items, Background Items, and system extensions.',
-      'Disable Remote Login and Remote Apple Events if the audit cannot confirm them without admin access.',
-      'Disable automatic firewall allowance for signed built-in/downloaded apps if it does not break required work.',
+      'Confirm Remote Login and Remote Apple Events remain disabled after reboots and macOS updates.',
+      'Confirm automatic firewall allowance for signed built-in/downloaded apps remains disabled after reboots and macOS updates.',
       'Disable AirPlay Receiver and other Continuity features from System Settings when operating on a shared network.',
       'Review and remove unnecessary Login Items and Background Items.',
       'Review Full Disk Access, Accessibility, Screen Recording, and Input Monitoring permissions.',
