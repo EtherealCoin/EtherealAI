@@ -46,6 +46,7 @@ The `/owner-setup` wizard has separate setup-readiness math: it can show paper s
 - `/mvp-test-pass` shows Bot Automation Smoke, the completion ledger, Owner Evidence Manifest, the Owner Evidence Review Checklist, local JSON export, the manifest `sha256` checksum prefix, and the current local owner acceptance record state.
 - `/server-route-inventory` includes safety profiles for bot automation, automation safety, exchange metadata, wallet control, order intents, Social Ops, and Solidity Lab, plus Owner Proof Coverage counts, owner acceptance pending status, and local acceptance record count from System Memory.
 - `/strategy-lab#bot-automation` includes an automated bot capability path backed by `/api/v1/bot-automation-capability-path`; it shows active paper automation capability, latest paper-run evidence, and future live automation blockers while keeping live execution disabled.
+- `/strategy-lab#risk-profile-configuration` is the non-coder Risk Profile Configuration panel. It has safe paper defaults, editable max order/position/daily-loss/open-trade limits, Current Profile Status, Save Risk Profile, Activate Profile, Kill Switch off guidance, and Verify Paper Risk Gate wired to the owner setup gate verifier.
 - `/api/v1/system-memory` includes `ownerEvidence`, `ownerAcceptance`, `botAutomationCapabilityPath`, owner proof surfaces for the owner proof packet, dashboard readiness, MVP test pass, Owner Setup Wizard, Operator Control, Mac Security Lockdown, route inventory, Strategy Lab, Social Ops, and Solidity Lab, export-surface references, wallet-control counts/recent events, full-live blocker IDs, and external-surface boundaries for Social Ops, Solidity Lab, owner setup, wallet control, and Mac security.
 - Social Ops remains local draft-only: no public posting endpoint and no social network API calls.
 - Solidity Lab remains local scaffold/review only: no mainnet/testnet broadcast and no wallet private-key acceptance.
@@ -81,7 +82,7 @@ npm test
 - Social Ops can generate local AI drafts and advisory review flags.
 - Strategy Lab parser now supports MACD cross/histogram rules and Bollinger Band upper/lower rules.
 - Artifact Browser now includes exchange connectors, order intents, Solidity contracts, and social posts.
-- Strategy Lab now has local risk profiles for paper/live limits, including max order value, max position value, max daily loss, max open trades, and kill-switch state.
+- Strategy Lab now has local risk profiles for paper/live limits, including max order value, max position value, max daily loss, max open trades, and kill-switch state. The Risk quick nav lands on the Risk Profile Configuration panel so the owner can complete the `paper_risk_profile_ready` gate without terminal commands.
 - Draft order intents can be reviewed against a selected risk profile. Passing and failing risk reviews are stored in the order-intent payload.
 - Risk profiles now appear in the Artifact Browser and `/api/v1/system-memory` snapshot.
 - Candle backtests and paper replays now create decision logs that record wait, enter, hold, and exit decisions with rule reasons and candle context.

@@ -33,7 +33,8 @@
                 <a href="#strategy-entry">Strategy</a>
                 <a href="#research-suite">Research</a>
                 <a href="#exchange-connectors">Connectors</a>
-                <a href="#risk-management">Risk</a>
+                <a href="#risk-management">Backtests</a>
+                <a href="#risk-profile-configuration">Risk</a>
                 <a href="#automation-safety">Safety</a>
                 <a href="#bot-automation">Bots</a>
                 <a href="#market-data">Market Data</a>
@@ -377,13 +378,18 @@
             <div id="connector-list" class="comparison-table">Loading connectors...</div>
         </section>
 
-        <section class="model-panel">
-            <h2>Risk Profiles</h2>
+        <section class="model-panel" id="risk-profile-configuration">
+            <h2>Risk Profile Configuration</h2>
+            <p class="inline-status">This panel completes the paper-trading risk gate. Paper trading needs one active local risk profile with positive limits and the kill switch off. No wallet signing, exchange order, or live trading is enabled here.</p>
+            <div id="risk-profile-current-status" class="risk-profile-current-status" aria-live="polite">
+                <strong>Current Profile Status</strong>
+                <span>No risk profile selected yet.</span>
+            </div>
             <form id="risk-profile-form" class="model-test-form">
                 <input type="hidden" id="risk-profile-id" name="id">
 
                 <label for="risk-profile-name">Name</label>
-                <input type="text" id="risk-profile-name" name="name" placeholder="Paper trading limits" required>
+                <input type="text" id="risk-profile-name" name="name" placeholder="Paper Trading Safe Defaults" required>
 
                 <label for="risk-profile-mode">Mode</label>
                 <select id="risk-profile-mode" name="mode">
@@ -400,27 +406,33 @@
                 </select>
 
                 <label for="max-order-value">Max Order Value</label>
-                <input type="number" id="max-order-value" name="maxOrderValue" min="0" step="0.01" value="1000">
+                <input type="number" id="max-order-value" name="maxOrderValue" min="0" step="0.01" value="100">
 
                 <label for="max-position-value">Max Position Value</label>
-                <input type="number" id="max-position-value" name="maxPositionValue" min="0" step="0.01" value="2500">
+                <input type="number" id="max-position-value" name="maxPositionValue" min="0" step="0.01" value="500">
 
                 <label for="max-daily-loss">Max Daily Loss</label>
-                <input type="number" id="max-daily-loss" name="maxDailyLoss" min="0" step="0.01" value="500">
+                <input type="number" id="max-daily-loss" name="maxDailyLoss" min="0" step="0.01" value="50">
 
                 <label for="max-open-trades">Max Open Trades</label>
-                <input type="number" id="max-open-trades" name="maxOpenTrades" min="0" step="1" value="3">
+                <input type="number" id="max-open-trades" name="maxOpenTrades" min="0" step="1" value="2">
 
                 <label class="checkbox-row">
                     <input id="risk-kill-switch" name="killSwitchEnabled" type="checkbox">
-                    Kill switch enabled
+                    Kill Switch enabled. Must be OFF for paper trading completion.
                 </label>
+                <p class="inline-status">The kill switch is the emergency stop. Turn it on to block automation. Leave it off only when you want paper trading to pass the setup gate.</p>
 
                 <label for="risk-profile-notes">Notes</label>
                 <textarea id="risk-profile-notes" name="notes" rows="3"></textarea>
 
-                <button type="submit">Save Risk Profile</button>
-                <button type="button" id="risk-profile-new">New Risk Profile</button>
+                <div class="button-row">
+                    <button type="submit">Save Risk Profile</button>
+                    <button type="button" id="risk-profile-safe-defaults">Use Safe Paper Defaults</button>
+                    <button type="button" id="risk-profile-activate">Activate Profile</button>
+                    <button type="button" id="risk-profile-verify-gate">Verify Paper Risk Gate</button>
+                    <button type="button" id="risk-profile-new">New Risk Profile</button>
+                </div>
             </form>
             <pre id="risk-profile-status" class="model-output">No risk profile selected.</pre>
             <div id="risk-profile-list" class="comparison-table">Loading risk profiles...</div>
@@ -935,6 +947,17 @@
             offset: 0,
             limit: 500,
             page: null
+        };
+        const safePaperRiskDefaults = {
+            name: 'Paper Trading Safe Defaults',
+            mode: 'paper',
+            status: 'active',
+            maxOrderValue: 100,
+            maxPositionValue: 500,
+            maxDailyLoss: 50,
+            maxOpenTrades: 2,
+            killSwitchEnabled: false,
+            notes: 'Owner-safe paper trading limits. Local simulation only. Live trading and wallet signing remain disabled.'
         };
         const refreshPresets = {
             'scalp-15m-7d': { timeframe: '15m', lookbackCandles: 672, intervalMinutes: 60 },
@@ -2471,6 +2494,253 @@
             renderRefreshRuns(data.runs || []);
         }
 
+        function isPaperReadyRiskProfile(profile = null) {
+            return Boolean(
+                profile
+                && profile.status === 'active'
+                && Number(profile.max_order_value) > 0
+                && Number(profile.max_position_value) > 0
+                && Number(profile.max_daily_loss) > 0
+                && Number(profile.max_open_trades) > 0
+                && !profile.kill_switch_enabled
+            );
+        }
+
+        function getRiskProfilePayloadFromForm() {
+            const formData = new FormData(document.getElementById('risk-profile-form'));
+
+            return {
+                id: formData.get('id'),
+                name: formData.get('name'),
+                mode: formData.get('mode'),
+                status: formData.get('status'),
+                maxOrderValue: Number(formData.get('maxOrderValue')),
+                maxPositionValue: Number(formData.get('maxPositionValue')),
+                maxDailyLoss: Number(formData.get('maxDailyLoss')),
+                maxOpenTrades: Number(formData.get('maxOpenTrades')),
+                killSwitchEnabled: formData.get('killSwitchEnabled') === 'on',
+                notes: formData.get('notes')
+            };
+        }
+
+        function getRiskProfileDraftFromForm() {
+            const payload = getRiskProfilePayloadFromForm();
+
+            return {
+                id: payload.id || null,
+                name: payload.name || 'Unsaved risk profile',
+                mode: payload.mode || 'paper',
+                status: payload.status || 'active',
+                max_order_value: payload.maxOrderValue,
+                max_position_value: payload.maxPositionValue,
+                max_daily_loss: payload.maxDailyLoss,
+                max_open_trades: payload.maxOpenTrades,
+                kill_switch_enabled: Boolean(payload.killSwitchEnabled),
+                notes: payload.notes || ''
+            };
+        }
+
+        function getRiskProfileGateChecks(profile = null) {
+            return [
+                {
+                    label: 'max order value',
+                    passed: Number(profile?.max_order_value) > 0,
+                    current: profile?.max_order_value ?? 'missing',
+                    needed: 'greater than 0'
+                },
+                {
+                    label: 'max position value',
+                    passed: Number(profile?.max_position_value) > 0,
+                    current: profile?.max_position_value ?? 'missing',
+                    needed: 'greater than 0'
+                },
+                {
+                    label: 'max daily loss',
+                    passed: Number(profile?.max_daily_loss) > 0,
+                    current: profile?.max_daily_loss ?? 'missing',
+                    needed: 'greater than 0'
+                },
+                {
+                    label: 'max open trades',
+                    passed: Number(profile?.max_open_trades) > 0,
+                    current: profile?.max_open_trades ?? 'missing',
+                    needed: 'greater than 0'
+                },
+                {
+                    label: 'status active',
+                    passed: profile?.status === 'active',
+                    current: profile?.status || 'missing',
+                    needed: 'active'
+                },
+                {
+                    label: 'kill switch off',
+                    passed: profile ? !profile.kill_switch_enabled : false,
+                    current: profile?.kill_switch_enabled ? 'on' : 'off',
+                    needed: 'off'
+                }
+            ];
+        }
+
+        function renderRiskProfileCurrentStatus(profile = null, gate = null) {
+            const element = document.getElementById('risk-profile-current-status');
+            const activateButton = document.getElementById('risk-profile-activate');
+            const verifyButton = document.getElementById('risk-profile-verify-gate');
+
+            if (!element) {
+                return;
+            }
+
+            const currentProfile = profile || getRiskProfileDraftFromForm();
+            const checks = getRiskProfileGateChecks(currentProfile);
+            const checksPassed = checks.every(check => check.passed);
+            const saved = Boolean(currentProfile?.id);
+            const gateComplete = Boolean(gate?.passed || (saved && checksPassed));
+            const statusLabel = gateComplete
+                ? 'complete'
+                : checksPassed
+                    ? 'ready to save and verify'
+                    : 'blocked';
+            const statusClass = gateComplete ? 'risk-status-ready' : 'risk-status-blocked';
+            const profileLabel = saved
+                ? `Profile #${currentProfile.id}: ${currentProfile.name || 'Unnamed'}`
+                : `${currentProfile.name || 'Unsaved profile'} (not saved yet)`;
+
+            if (activateButton) {
+                activateButton.disabled = !saved;
+            }
+
+            if (verifyButton) {
+                verifyButton.disabled = false;
+            }
+
+            element.innerHTML = `
+                <div class="risk-profile-status-header">
+                    <div>
+                        <strong>Current Profile Status</strong>
+                        <span>${escapeHtml(profileLabel)}</span>
+                    </div>
+                    <span class="${statusClass}">${escapeHtml(statusLabel)}</span>
+                </div>
+                <div class="risk-status-grid">
+                    <div class="artifact-stat">
+                        <strong>${saved ? 'Saved' : 'Not Saved'}</strong>
+                        <span>Save the profile before the gate can complete.</span>
+                    </div>
+                    <div class="artifact-stat">
+                        <strong>${escapeHtml(currentProfile.status || 'missing')}</strong>
+                        <span>Status must be active.</span>
+                    </div>
+                    <div class="artifact-stat">
+                        <strong>${currentProfile.kill_switch_enabled ? 'ON' : 'OFF'}</strong>
+                        <span>Kill Switch must be OFF for paper trading completion.</span>
+                    </div>
+                    <div class="artifact-stat">
+                        <strong>${gateComplete ? 'Paper Gate Complete' : 'Paper Gate Blocked'}</strong>
+                        <span>${gate?.evidence ? escapeHtml(gate.evidence) : 'Click Verify Paper Risk Gate to re-check local state.'}</span>
+                    </div>
+                </div>
+                <ul class="risk-check-list">
+                    ${checks.map(check => `
+                        <li class="${check.passed ? 'risk-check-pass' : 'risk-check-blocked'}">
+                            <strong>${escapeHtml(check.label)}</strong>
+                            <span>Current: ${escapeHtml(check.current)} · Needed: ${escapeHtml(check.needed)}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+                <p class="risk-profile-explainer">${gateComplete
+                    ? 'The paper risk profile gate is complete. Paper trading still remains local-only and cannot place live orders.'
+                    : 'Use Safe Paper Defaults, Save Risk Profile, Activate Profile, then Verify Paper Risk Gate. This creates only local safety limits and does not request seed phrases, private keys, wallet signatures, or exchange orders.'}</p>
+            `;
+        }
+
+        function applyRiskProfileSafeDefaults() {
+            document.getElementById('risk-profile-name').value = safePaperRiskDefaults.name;
+            document.getElementById('risk-profile-mode').value = safePaperRiskDefaults.mode;
+            document.getElementById('risk-profile-record-status').value = safePaperRiskDefaults.status;
+            document.getElementById('max-order-value').value = safePaperRiskDefaults.maxOrderValue;
+            document.getElementById('max-position-value').value = safePaperRiskDefaults.maxPositionValue;
+            document.getElementById('max-daily-loss').value = safePaperRiskDefaults.maxDailyLoss;
+            document.getElementById('max-open-trades').value = safePaperRiskDefaults.maxOpenTrades;
+            document.getElementById('risk-kill-switch').checked = safePaperRiskDefaults.killSwitchEnabled;
+            document.getElementById('risk-profile-notes').value = safePaperRiskDefaults.notes;
+            renderRiskProfileCurrentStatus(getRiskProfileDraftFromForm());
+        }
+
+        async function verifyRiskProfileGate({ quiet = false } = {}) {
+            const output = document.getElementById('risk-profile-status');
+
+            if (!quiet) {
+                output.textContent = 'Verifying the paper risk profile gate...';
+            }
+
+            const response = await fetch('/api/v1/owner-setup-wizard/verify/paper_risk_profile_ready', {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Paper risk gate verification failed.';
+                renderRiskProfileCurrentStatus(getRiskProfileDraftFromForm());
+                return false;
+            }
+
+            const readyProfile = availableRiskProfiles.find(isPaperReadyRiskProfile)
+                || availableRiskProfiles.find(profile => String(profile.id) === String(editingRiskProfileId))
+                || getRiskProfileDraftFromForm();
+            renderRiskProfileCurrentStatus(readyProfile, data.gate);
+            output.textContent = [
+                data.gate.passed ? 'Paper risk profile gate complete.' : 'Paper risk profile gate still blocked.',
+                `Owner Setup paper progress: ${data.progress?.paperTrading?.current ?? '?'}%`,
+                `Gate status: ${data.gate.status}`,
+                `Evidence: ${data.gate.evidence}`,
+                '',
+                data.gate.passed
+                    ? 'No live wallet signing or live trading was enabled.'
+                    : data.gate.exactlyEnter
+            ].join('\n');
+
+            return Boolean(data.gate.passed);
+        }
+
+        async function activateRiskProfile() {
+            const output = document.getElementById('risk-profile-status');
+            const payload = getRiskProfilePayloadFromForm();
+            const riskProfileId = payload.id || editingRiskProfileId;
+
+            if (!riskProfileId) {
+                output.textContent = 'Save the risk profile first, then click Activate Profile.';
+                renderRiskProfileCurrentStatus(getRiskProfileDraftFromForm());
+                return;
+            }
+
+            payload.status = 'active';
+            payload.killSwitchEnabled = false;
+            document.getElementById('risk-profile-record-status').value = 'active';
+            document.getElementById('risk-kill-switch').checked = false;
+            output.textContent = `Activating risk profile #${riskProfileId} and keeping Kill Switch off...`;
+
+            const response = await fetch(`/api/v1/risk-profiles/${riskProfileId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Risk profile activation failed.';
+                return;
+            }
+
+            setRiskProfileForm(data.profile);
+            await loadRiskProfiles();
+            await loadRiskProfileAuditEvents(data.profile.id);
+            await loadBotPlans();
+            await reviewPlansForRiskProfile(data.profile.id);
+            await verifyRiskProfileGate({ quiet: true });
+        }
+
         function setRiskProfileForm(profile = null) {
             const form = document.getElementById('risk-profile-form');
 
@@ -2479,21 +2749,18 @@
             document.getElementById('risk-profile-name').value = profile?.name || '';
             document.getElementById('risk-profile-mode').value = profile?.mode || 'paper';
             document.getElementById('risk-profile-record-status').value = profile?.status || 'active';
-            document.getElementById('max-order-value').value = profile?.max_order_value ?? 1000;
-            document.getElementById('max-position-value').value = profile?.max_position_value ?? 2500;
-            document.getElementById('max-daily-loss').value = profile?.max_daily_loss ?? 500;
-            document.getElementById('max-open-trades').value = profile?.max_open_trades ?? 3;
+            document.getElementById('max-order-value').value = profile?.max_order_value ?? safePaperRiskDefaults.maxOrderValue;
+            document.getElementById('max-position-value').value = profile?.max_position_value ?? safePaperRiskDefaults.maxPositionValue;
+            document.getElementById('max-daily-loss').value = profile?.max_daily_loss ?? safePaperRiskDefaults.maxDailyLoss;
+            document.getElementById('max-open-trades').value = profile?.max_open_trades ?? safePaperRiskDefaults.maxOpenTrades;
             document.getElementById('risk-kill-switch').checked = Boolean(profile?.kill_switch_enabled);
             document.getElementById('risk-profile-notes').value = profile?.notes || '';
 
             if (!profile) {
                 form.reset();
-                document.getElementById('risk-profile-mode').value = 'paper';
-                document.getElementById('risk-profile-record-status').value = 'active';
-                document.getElementById('max-order-value').value = '1000';
-                document.getElementById('max-position-value').value = '2500';
-                document.getElementById('max-daily-loss').value = '500';
-                document.getElementById('max-open-trades').value = '3';
+                applyRiskProfileSafeDefaults();
+            } else {
+                renderRiskProfileCurrentStatus(profile);
             }
         }
 
@@ -2642,8 +2909,13 @@
 
             if (!profiles.length) {
                 output.textContent = 'No risk profiles yet.';
+                renderRiskProfileCurrentStatus(getRiskProfileDraftFromForm());
                 return;
             }
+
+            const readyProfile = profiles.find(isPaperReadyRiskProfile);
+            const selectedProfile = profiles.find(profile => String(profile.id) === String(editingRiskProfileId));
+            renderRiskProfileCurrentStatus(selectedProfile || readyProfile || profiles[0]);
 
             output.innerHTML = `
                 <table>
@@ -2671,6 +2943,7 @@
                                 <td>${escapeHtml(profile.status)}</td>
                                 <td>
                                     <button type="button" data-risk-edit-id="${profile.id}">Edit</button>
+                                    <button type="button" data-risk-activate-id="${profile.id}">Activate</button>
                                     <button type="button" data-risk-review-id="${profile.id}">Review Plans</button>
                                     <a href="/strategy-lab#artifact=risk-profile:${profile.id}">Open</a>
                                 </td>
@@ -2689,6 +2962,16 @@
                         document.getElementById('risk-profile-status').textContent = `Editing Risk Profile #${profile.id}`;
                         await loadRiskProfileAuditEvents(profile.id);
                         await loadEmergencyStopImpact(profile.id);
+                    }
+                });
+            });
+            output.querySelectorAll('button[data-risk-activate-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const profile = availableRiskProfiles.find(item => String(item.id) === String(button.dataset.riskActivateId));
+
+                    if (profile) {
+                        setRiskProfileForm(profile);
+                        await activateRiskProfile();
                     }
                 });
             });
@@ -6355,12 +6638,20 @@
             await loadRefreshSchedules();
         });
 
+        document.getElementById('risk-profile-form').addEventListener('input', () => {
+            renderRiskProfileCurrentStatus(getRiskProfileDraftFromForm());
+        });
+
+        document.getElementById('risk-profile-form').addEventListener('change', () => {
+            renderRiskProfileCurrentStatus(getRiskProfileDraftFromForm());
+        });
+
         document.getElementById('risk-profile-form').addEventListener('submit', async event => {
             event.preventDefault();
 
-            const formData = new FormData(event.target);
             const output = document.getElementById('risk-profile-status');
-            const riskProfileId = formData.get('id');
+            const payload = getRiskProfilePayloadFromForm();
+            const riskProfileId = payload.id;
             const method = riskProfileId ? 'PATCH' : 'POST';
             const endpoint = riskProfileId
                 ? `/api/v1/risk-profiles/${riskProfileId}`
@@ -6373,17 +6664,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    name: formData.get('name'),
-                    mode: formData.get('mode'),
-                    status: formData.get('status'),
-                    maxOrderValue: Number(formData.get('maxOrderValue')),
-                    maxPositionValue: Number(formData.get('maxPositionValue')),
-                    maxDailyLoss: Number(formData.get('maxDailyLoss')),
-                    maxOpenTrades: Number(formData.get('maxOpenTrades')),
-                    killSwitchEnabled: formData.get('killSwitchEnabled') === 'on',
-                    notes: formData.get('notes')
-                })
+                body: JSON.stringify(payload)
             });
             const data = await response.json();
 
@@ -6398,6 +6679,25 @@
             await loadRiskProfileAuditEvents(data.profile.id);
             await loadBotPlans();
             await reviewPlansForRiskProfile(data.profile.id);
+
+            if (isPaperReadyRiskProfile(data.profile)) {
+                await verifyRiskProfileGate({ quiet: true });
+            } else {
+                renderRiskProfileCurrentStatus(data.profile);
+            }
+        });
+
+        document.getElementById('risk-profile-safe-defaults').addEventListener('click', () => {
+            applyRiskProfileSafeDefaults();
+            document.getElementById('risk-profile-status').textContent = 'Safe paper defaults loaded. Click Save Risk Profile, then Activate Profile or Verify Paper Risk Gate.';
+        });
+
+        document.getElementById('risk-profile-activate').addEventListener('click', async () => {
+            await activateRiskProfile();
+        });
+
+        document.getElementById('risk-profile-verify-gate').addEventListener('click', async () => {
+            await verifyRiskProfileGate();
         });
 
         document.getElementById('risk-profile-new').addEventListener('click', () => {

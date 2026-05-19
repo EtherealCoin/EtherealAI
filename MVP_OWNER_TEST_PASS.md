@@ -93,6 +93,7 @@ patrick@etherealAI
 6. Open `/strategy-lab`.
    - Pass condition: Local Verification, MVP Readiness, Automation Safety, and Launch Readiness panels load.
    - Pass condition: launch status remains blocked and `live_order_endpoint_enabled` remains blocked.
+   - Pass condition: Strategy Lab → Risk opens Risk Profile Configuration with safe paper defaults, editable limits, Current Profile Status, Save Risk Profile, Activate Profile, Kill Switch off guidance, and Verify Paper Risk Gate wired to `/api/v1/owner-setup-wizard/verify/paper_risk_profile_ready`.
 
 7. Test Strategy Lab research locally.
    - Save a strategy.
@@ -165,6 +166,7 @@ patrick@etherealAI
 - The visual `.env` picker is for non-technical owner confirmation. It checks selected file contents in the browser, does not send secret values to the server, and explains that the browser hides the real path.
 - The server still checks `~/EtherealAI_Secrets/.env` because that fixed path is what EtherealAI can load automatically.
 - Paper progress starts from `95%` and reaches `100%` when strategy/data, risk profile, replay/run evidence, paper bot plan, and one paper verification cycle or active paper schedule are present.
+- The paper risk profile gate can be completed without terminal commands from Strategy Lab → Risk by using safe paper defaults, saving the profile, activating it, keeping Kill Switch off, and clicking Verify Paper Risk Gate.
 - Full E2E setup readiness starts from `72%` and reaches `100%` when the local `.env` file is safe, Polygon RPC/provider keys are present, at least one exchange key pair is present, public wallet metadata is attached, connector metadata exists, GitHub/Cloudflare/social credential presence is verified, and live execution remains locked.
 - The wizard reads credential presence from `~/EtherealAI_Secrets/.env` only. It returns variable names and present/missing status, never secret values.
 - Public wallet addresses are the only `.env` values the wizard may display, and only when they match safe public address formats.

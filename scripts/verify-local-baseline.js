@@ -6053,6 +6053,51 @@ function checkStrategyLabSafetyDossierExportUi() {
   pass('Strategy Lab safety dossier export/filter UI');
 }
 
+function checkStrategyLabRiskProfileSetupUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+
+  if (
+    !html.includes('id="risk-profile-configuration"')
+    || !html.includes('Risk Profile Configuration')
+    || !html.includes('id="risk-profile-current-status"')
+    || !html.includes('Current Profile Status')
+    || !html.includes('id="risk-profile-safe-defaults"')
+    || !html.includes('Use Safe Paper Defaults')
+    || !html.includes('id="risk-profile-activate"')
+    || !html.includes('Activate Profile')
+    || !html.includes('id="risk-profile-verify-gate"')
+    || !html.includes('Verify Paper Risk Gate')
+    || !html.includes('max order value')
+    || !html.includes('max position value')
+    || !html.includes('max daily loss')
+    || !html.includes('max open trades')
+    || !html.includes('status active')
+    || !html.includes('kill switch off')
+    || !html.includes('Kill Switch must be OFF for paper trading completion.')
+    || !html.includes('function isPaperReadyRiskProfile(profile = null)')
+    || !html.includes('function getRiskProfilePayloadFromForm()')
+    || !html.includes('function renderRiskProfileCurrentStatus(profile = null, gate = null)')
+    || !html.includes('function applyRiskProfileSafeDefaults()')
+    || !html.includes('async function verifyRiskProfileGate({ quiet = false } = {})')
+    || !html.includes('async function activateRiskProfile()')
+    || !html.includes('/api/v1/owner-setup-wizard/verify/paper_risk_profile_ready')
+    || !html.includes('Owner Setup paper progress:')
+    || !html.includes('No live wallet signing or live trading was enabled.')
+    || !html.includes('button type="button" data-risk-activate-id=')
+    || !styles.includes('.risk-profile-current-status')
+    || !styles.includes('.risk-profile-status-header')
+    || !styles.includes('.risk-status-grid')
+    || !styles.includes('.risk-check-list')
+    || !styles.includes('.risk-check-pass')
+    || !styles.includes('.risk-check-blocked')
+  ) {
+    fail('Strategy Lab risk profile setup UI is missing gate completion controls or verifier wiring');
+  }
+
+  pass('Strategy Lab risk profile setup UI');
+}
+
 function checkMvpTestPassOwnerWorkflowUi() {
   const html = fs.readFileSync(path.join(projectRoot, 'app/client/mvp-test-pass.html'), 'utf8');
 
@@ -9831,6 +9876,7 @@ async function main() {
   checkInlineScripts('app/client/mvp-test-pass.html');
   checkInlineScripts('app/client/server-route-inventory.html');
   checkStrategyLabSafetyDossierExportUi();
+  checkStrategyLabRiskProfileSetupUi();
   checkMvpTestPassOwnerWorkflowUi();
   checkDashboardMvpReadinessUi();
   checkOperatorControlCenterUi();
