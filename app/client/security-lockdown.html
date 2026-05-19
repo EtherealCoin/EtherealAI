@@ -41,6 +41,11 @@
         </section>
 
         <section class="model-panel">
+            <h2>Admin Account Review</h2>
+            <div id="admin-accounts" class="task-list">Loading admin account details...</div>
+        </section>
+
+        <section class="model-panel">
             <h2>Suspected Admin Or Kernel Compromise</h2>
             <div id="compromised-host-protocol" class="operator-step-list">Loading compromised-host protocol...</div>
         </section>
@@ -191,6 +196,60 @@
             `).join('') || '<p>No audit checks returned.</p>';
         }
 
+        function accountKindLabel(classification) {
+            if (classification === 'human_admin') {
+                return 'Human Admin';
+            }
+            if (classification === 'system_builtin') {
+                return 'Built-In System';
+            }
+            if (classification === 'system_hidden') {
+                return 'Hidden System';
+            }
+            if (classification === 'system_service') {
+                return 'System Service';
+            }
+            return 'Review';
+        }
+
+        function renderAccountList(title, accounts = []) {
+            return `
+                <article class="task-card security-check-card">
+                    <div>
+                        <h3>${escapeHtml(title)} <span>${escapeHtml(accounts.length)} account(s)</span></h3>
+                        ${accounts.length
+                            ? accounts.map(account => `
+                                <p><strong>${escapeHtml(account.member)}</strong> · ${escapeHtml(accountKindLabel(account.classification))} · UID ${escapeHtml(account.uid ?? 'unknown')} · SecureToken ${escapeHtml(account.secureToken || 'unknown')}</p>
+                                <p>${escapeHtml(account.realName || account.member)} · ${escapeHtml(account.homeDirectory || 'No home directory reported')} · ${escapeHtml(account.hidden ? 'Hidden account' : 'Visible account')}</p>
+                            `).join('')
+                            : '<p>No accounts in this group.</p>'}
+                    </div>
+                </article>
+            `;
+        }
+
+        function renderAdminAccounts(adminAccounts = {}) {
+            const humanAdmins = adminAccounts.humanAdmins || [];
+            const systemAdmins = adminAccounts.systemAdmins || [];
+            const accounts = adminAccounts.accounts || [];
+            const ownerSummary = humanAdmins.length === 1
+                ? `One visible human admin account was found: ${humanAdmins[0].member}.`
+                : `${humanAdmins.length} visible human admin accounts were found.`;
+
+            document.getElementById('admin-accounts').innerHTML = `
+                <article class="task-card security-check-card security-status-review">
+                    <div>
+                        <h3>Owner Interpretation <span>Review</span></h3>
+                        <p>${escapeHtml(ownerSummary)} Built-in/system entries such as root or setup service users can appear in the admin group without being a second normal login user.</p>
+                        <p>Do not delete built-in/system members from this screen. Use this as evidence for owner review, backup, and clean-room planning.</p>
+                    </div>
+                </article>
+                ${renderAccountList('Visible Human Admin Accounts', humanAdmins)}
+                ${renderAccountList('Built-In Or System Admin Members', systemAdmins)}
+                ${accounts.length ? '' : '<p>No admin account details were returned by the local audit.</p>'}
+            `;
+        }
+
         function renderListeningPorts(ports = []) {
             document.getElementById('listening-ports').innerHTML = ports.map(port => `
                 <article class="task-card security-check-card">
@@ -253,6 +312,7 @@
             const audit = data.audit || {};
             renderSummary(audit);
             renderPriorityActions(audit.checks || []);
+            renderAdminAccounts(audit.adminAccounts || {});
             renderChecks(audit.checks || []);
             renderStartupItems(audit.startupItems || []);
             renderListeningPorts(audit.listeningPorts || []);

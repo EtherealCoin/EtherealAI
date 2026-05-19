@@ -99,22 +99,6 @@ const MAC_SECURITY_COMMANDS = [
       : review('Automatic update checks were not confirmed on.')
   },
   {
-    id: 'admin_group_membership',
-    category: 'Admin Control',
-    label: 'Local admin accounts',
-    command: '/usr/bin/dscl',
-    args: ['.', '-read', '/Groups/admin', 'GroupMembership'],
-    severity: 'review',
-    ownerAction: 'Confirm every local admin account is expected. Remove unknown admins only after backup and owner review.',
-    parse: output => {
-      const members = parseAdminMembers(output);
-
-      return members.length
-        ? review(`Admin members visible to this audit: ${members.join(', ')}.`)
-        : unknown('Admin group membership could not be parsed.');
-    }
-  },
-  {
     id: 'mdm_enrollment',
     category: 'Admin Control',
     label: 'MDM / device management enrollment',
@@ -269,6 +253,194 @@ function parseAdminMembers(output = '') {
   }
 
   return match[1].split(/\s+/).map(item => item.trim()).filter(Boolean);
+}
+
+function isSafeAccountName(member = '') {
+  return /^[A-Za-z0-9._-]+$/.test(member);
+}
+
+function parseDsclAttribute(output = '', key = '') {
+  const lines = String(output || '').split(/\r?\n/);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+
+    if (!line.startsWith(`${key}:`)) {
+      continue;
+    }
+
+    const values = [];
+    const firstValue = line.slice(`${key}:`.length).trim();
+
+    if (firstValue) {
+      values.push(firstValue);
+    }
+
+    for (let nextIndex = index + 1; nextIndex < lines.length; nextIndex += 1) {
+      const nextLine = lines[nextIndex];
+
+      if (/^\S[^:]*:\s*/.test(nextLine) || /^No such key:/i.test(nextLine)) {
+        break;
+      }
+
+      const nextValue = nextLine.trim();
+
+      if (nextValue) {
+        values.push(nextValue);
+      }
+    }
+
+    return values.join(' ').trim();
+  }
+
+  return '';
+}
+
+function parseSecureTokenStatus(output = '') {
+  if (/Secure token is ENABLED/i.test(output)) {
+    return 'enabled';
+  }
+
+  if (/Secure token is DISABLED/i.test(output)) {
+    return 'disabled';
+  }
+
+  return 'unknown';
+}
+
+function classifyAdminAccount({ member, uid, hidden }) {
+  const normalized = String(member || '').toLowerCase();
+
+  if (normalized === 'root') {
+    return 'system_builtin';
+  }
+
+  if (normalized.startsWith('_')) {
+    return 'system_hidden';
+  }
+
+  if (hidden === true) {
+    return 'system_hidden';
+  }
+
+  if (Number.isFinite(uid) && uid < 500) {
+    return 'system_service';
+  }
+
+  return 'human_admin';
+}
+
+function buildAdminAccountRecord(member, dsclOutput = '', secureTokenOutput = '') {
+  const uidValue = Number(parseDsclAttribute(dsclOutput, 'UniqueID'));
+  const realName = parseDsclAttribute(dsclOutput, 'RealName') || member;
+  const homeDirectory = parseDsclAttribute(dsclOutput, 'NFSHomeDirectory');
+  const shell = parseDsclAttribute(dsclOutput, 'UserShell');
+  const hiddenValue = parseDsclAttribute(dsclOutput, 'dsAttrTypeNative:IsHidden')
+    || parseDsclAttribute(dsclOutput, 'IsHidden');
+  const hidden = /^yes|true|1$/i.test(hiddenValue);
+  const classification = classifyAdminAccount({
+    member,
+    uid: uidValue,
+    hidden
+  });
+
+  return {
+    member,
+    realName,
+    uid: Number.isFinite(uidValue) ? uidValue : null,
+    hidden,
+    homeDirectory,
+    shell,
+    classification,
+    secureToken: parseSecureTokenStatus(secureTokenOutput),
+    hasAuthenticationAuthority: /AuthenticationAuthority:/i.test(dsclOutput)
+  };
+}
+
+async function getAdminAccountAudit(execFileCapture) {
+  const groupResult = normalizeCommandResult(await execFileCapture('/usr/bin/dscl', [
+    '.',
+    '-read',
+    '/Groups/admin',
+    'GroupMembership'
+  ], {
+    timeout: COMMAND_TIMEOUT_MS,
+    maxBuffer: 1024 * 1024
+  }));
+  const members = parseAdminMembers(groupResult.output).filter(isSafeAccountName);
+
+  if (!members.length) {
+    return {
+      check: {
+        id: 'admin_group_membership',
+        category: 'Admin Control',
+        label: 'Local admin accounts',
+        severity: 'review',
+        status: 'unknown',
+        passed: false,
+        message: 'Admin group membership could not be parsed.',
+        ownerAction: 'Open System Settings > Users & Groups and confirm only expected admins exist.',
+        commandLabel: '/usr/bin/dscl . -read /Groups/admin GroupMembership',
+        localOnly: true,
+        privilegedMutation: false
+      },
+      accounts: []
+    };
+  }
+
+  const accounts = [];
+
+  for (const member of members) {
+    const detailResult = normalizeCommandResult(await execFileCapture('/usr/bin/dscl', [
+      '.',
+      '-read',
+      `/Users/${member}`,
+      'UniqueID',
+      'RealName',
+      'RecordName',
+      'NFSHomeDirectory',
+      'UserShell',
+      'IsHidden',
+      'AuthenticationAuthority'
+    ], {
+      timeout: COMMAND_TIMEOUT_MS,
+      maxBuffer: 1024 * 1024
+    }));
+    const secureTokenResult = normalizeCommandResult(await execFileCapture('/usr/sbin/sysadminctl', [
+      '-secureTokenStatus',
+      member
+    ], {
+      timeout: COMMAND_TIMEOUT_MS,
+      maxBuffer: 1024 * 1024
+    }));
+
+    accounts.push(buildAdminAccountRecord(member, detailResult.output, secureTokenResult.output));
+  }
+
+  const humanAdmins = accounts.filter(account => account.classification === 'human_admin');
+  const systemAdmins = accounts.filter(account => account.classification !== 'human_admin');
+
+  return {
+    check: {
+      id: 'admin_group_membership',
+      category: 'Admin Control',
+      label: 'Local admin accounts',
+      severity: 'review',
+      status: 'review',
+      passed: false,
+      message: [
+        `${humanAdmins.length} visible human admin account(s): ${humanAdmins.map(account => account.member).join(', ') || 'none'}.`,
+        `${systemAdmins.length} built-in/system admin member(s): ${systemAdmins.map(account => account.member).join(', ') || 'none'}.`
+      ].join(' '),
+      ownerAction: 'Confirm the human admin list is expected. Do not remove built-in/system admin members without backup and Apple/macOS recovery planning.',
+      commandLabel: '/usr/bin/dscl . -read /Groups/admin GroupMembership',
+      localOnly: true,
+      privilegedMutation: false
+    },
+    accounts,
+    humanAdmins,
+    systemAdmins
+  };
 }
 
 function normalizeCommandResult(result = {}) {
@@ -526,6 +698,24 @@ async function buildMacSecurityAudit({
       privilegedMutation: false
     }))
   )));
+  const adminAccounts = await getAdminAccountAudit(execFileCapture).catch(error => ({
+    check: {
+      id: 'admin_group_membership',
+      category: 'Admin Control',
+      label: 'Local admin accounts',
+      severity: 'review',
+      status: 'unknown',
+      passed: false,
+      message: cleanOutput(error.message || 'Unable to inspect admin account membership.'),
+      ownerAction: 'Open System Settings > Users & Groups and confirm only expected admins exist.',
+      commandLabel: '/usr/bin/dscl . -read /Groups/admin GroupMembership',
+      localOnly: true,
+      privilegedMutation: false
+    },
+    accounts: [],
+    humanAdmins: [],
+    systemAdmins: []
+  }));
   const listeningPorts = await getListeningPortAudit(execFileCapture).catch(error => ({
     id: 'listening_ports',
     category: 'Network Exposure',
@@ -553,13 +743,18 @@ async function buildMacSecurityAudit({
     privilegedMutation: false
   }));
   const serverBind = getServerBindCheck({ serverHost, port });
-  const checks = [...commandChecks, listeningPorts, startupItems, serverBind];
+  const checks = [...commandChecks, adminAccounts.check, listeningPorts, startupItems, serverBind];
 
   return {
     supported: true,
     platform,
     summary: summarizeChecks(checks),
     checks,
+    adminAccounts: {
+      accounts: adminAccounts.accounts || [],
+      humanAdmins: adminAccounts.humanAdmins || [],
+      systemAdmins: adminAccounts.systemAdmins || []
+    },
     listeningPorts: listeningPorts.ports || [],
     startupItems: startupItems.folders || [],
     safetyBoundary: {
@@ -668,6 +863,9 @@ module.exports = {
   MAC_SECURITY_COMMANDS,
   buildMacSecurityAudit,
   buildMacSecurityGuide,
+  buildAdminAccountRecord,
+  getAdminAccountAudit,
+  parseAdminMembers,
   parseListeningPorts,
   getServerBindCheck,
   summarizeChecks

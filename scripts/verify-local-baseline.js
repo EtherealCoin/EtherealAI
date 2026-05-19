@@ -2297,6 +2297,39 @@ async function checkMacSecurityModule() {
     ['/usr/bin/csrutil status', 'System Integrity Protection status: enabled.'],
     ['/usr/sbin/softwareupdate --schedule', 'Automatic checking for updates is turned on'],
     ['/usr/bin/dscl . -read /Groups/admin GroupMembership', 'GroupMembership: root ethereal _mbsetupuser'],
+    ['/usr/bin/dscl . -read /Users/root UniqueID RealName RecordName NFSHomeDirectory UserShell IsHidden AuthenticationAuthority', [
+      'No such key: AuthenticationAuthority',
+      'No such key: IsHidden',
+      'NFSHomeDirectory: /var/root /private/var/root',
+      'RealName:',
+      ' System Administrator',
+      'RecordName: root',
+      'UniqueID: 0',
+      'UserShell: /bin/sh'
+    ].join('\n')],
+    ['/usr/bin/dscl . -read /Users/ethereal UniqueID RealName RecordName NFSHomeDirectory UserShell IsHidden AuthenticationAuthority', [
+      'No such key: IsHidden',
+      'AuthenticationAuthority: ;ShadowHash;HASHLIST:<SALTED-SHA512-PBKDF2> ;SecureToken;',
+      'NFSHomeDirectory: /Users/ethereal',
+      'RealName:',
+      ' Owner User',
+      'RecordName: ethereal',
+      'UniqueID: 501',
+      'UserShell: /bin/zsh'
+    ].join('\n')],
+    ['/usr/bin/dscl . -read /Users/_mbsetupuser UniqueID RealName RecordName NFSHomeDirectory UserShell IsHidden AuthenticationAuthority', [
+      'No such key: AuthenticationAuthority',
+      'dsAttrTypeNative:IsHidden: YES',
+      'NFSHomeDirectory: /var/setup',
+      'RealName:',
+      ' Setup User',
+      'RecordName: _mbsetupuser',
+      'UniqueID: 248',
+      'UserShell: /bin/bash'
+    ].join('\n')],
+    ['/usr/sbin/sysadminctl -secureTokenStatus root', 'Secure token is DISABLED for user System Administrator'],
+    ['/usr/sbin/sysadminctl -secureTokenStatus ethereal', 'Secure token is ENABLED for user Owner User'],
+    ['/usr/sbin/sysadminctl -secureTokenStatus _mbsetupuser', 'Secure token is DISABLED for user Setup User'],
     ['/usr/bin/profiles status -type enrollment', 'Enrolled via DEP: No\nMDM enrollment: No'],
     ['/usr/bin/crontab -l', 'crontab: no crontab for ethereal'],
     ['/usr/bin/systemextensionsctl list', '0 extension(s)'],
@@ -2352,6 +2385,11 @@ async function checkMacSecurityModule() {
     || !audit.checks.some(check => check.id === 'firewall_global' && check.status === 'pass')
     || !audit.checks.some(check => check.id === 'firewall_allow_signed_builtin' && check.status === 'review')
     || !audit.checks.some(check => check.id === 'admin_group_membership' && check.status === 'review')
+    || audit.adminAccounts?.humanAdmins?.length !== 1
+    || audit.adminAccounts.humanAdmins[0]?.member !== 'ethereal'
+    || !audit.adminAccounts?.systemAdmins?.some(account => account.member === 'root' && account.classification === 'system_builtin')
+    || !audit.adminAccounts?.systemAdmins?.some(account => account.member === '_mbsetupuser' && account.classification === 'system_hidden')
+    || !audit.adminAccounts?.accounts?.some(account => account.member === 'ethereal' && account.secureToken === 'enabled')
     || !audit.checks.some(check => check.id === 'mdm_enrollment' && check.status === 'pass')
     || !audit.checks.some(check => check.id === 'user_crontab' && check.status === 'pass')
     || !audit.checks.some(check => check.id === 'system_extensions' && check.status === 'pass')
@@ -9182,6 +9220,9 @@ async function runServerApiChecks() {
     || !macSecurityAudit.body.audit.checks.some(check => check.id === 'mdm_enrollment')
     || !macSecurityAudit.body.audit.checks.some(check => check.id === 'startup_persistence_items')
     || !macSecurityAudit.body.audit.checks.some(check => check.id === 'etherealai_bind_host' && check.status === 'pass')
+    || !Array.isArray(macSecurityAudit.body.audit?.adminAccounts?.accounts)
+    || !Array.isArray(macSecurityAudit.body.audit?.adminAccounts?.humanAdmins)
+    || !Array.isArray(macSecurityAudit.body.audit?.adminAccounts?.systemAdmins)
     || !Array.isArray(macSecurityAudit.body.audit?.startupItems)
     || !macSecurityAudit.body.guide?.rules?.some(rule => rule.includes('VPNs can improve transport privacy'))
     || !macSecurityAudit.body.guide?.compromisedHostProtocol?.some(item => item.includes('admin rights, MDM'))
