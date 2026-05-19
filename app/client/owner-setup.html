@@ -39,6 +39,27 @@
         </section>
 
         <section class="model-panel">
+            <h2>Select .env File Visually</h2>
+            <p>Use this if you do not want terminal commands. The browser checks the selected file locally and does not send secret values anywhere. The server also checks <code>~/EtherealAI_Secrets/.env</code> separately because browsers hide the real file path.</p>
+            <div class="owner-file-picker">
+                <label for="selected-env-file">Choose your secure .env file</label>
+                <input id="selected-env-file" type="file" accept=".env,text/plain">
+                <button id="verify-selected-env-file" type="button">Verify Selected .env File</button>
+            </div>
+            <div id="selected-env-status" class="owner-file-status">No .env file selected yet.</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Paper Trading Configuration</h2>
+            <div id="paper-configuration" class="owner-progress-grid">Loading paper trading configuration...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Step-by-Step Completion Guide</h2>
+            <div id="owner-setup-guide" class="operator-step-list">Loading setup guide...</div>
+        </section>
+
+        <section class="model-panel">
             <h2>Blocked Paper Trading Gates</h2>
             <div id="paper-gates" class="owner-gate-list">Loading paper gates...</div>
         </section>
@@ -96,6 +117,13 @@
 
     <script>
         let currentWizard = null;
+        let lastSelectedEnvStatus = null;
+        const publicWalletVariableNames = new Set(['OWNER_PUBLIC_WALLET_ADDRESS', 'POLYGON_PUBLIC_WALLET_ADDRESS']);
+        const forbiddenWalletSecretKeyPattern = /(seed|mnemonic|recovery|wallet.*private|private.*wallet|deployer_private_key|owner_private_key|wallet_secret|wallet_password)/i;
+        const forbiddenValuePatterns = [
+            { id: 'pem_private_key', label: 'PEM private key block', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/i },
+            { id: 'seed_phrase_like_value', label: 'seed phrase-like value', pattern: /\b([a-z]{3,}\s+){11,}[a-z]{3,}\b/i }
+        ];
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -118,6 +146,119 @@
                     <p>${escapeHtml(item.note || (item.liveSigningRequired === false ? 'No live wallet signing required.' : ''))}</p>
                 </article>
             `;
+        }
+
+        function parseEnvLineClient(line = '') {
+            const trimmed = String(line || '').trim();
+
+            if (!trimmed || trimmed.startsWith('#')) {
+                return null;
+            }
+
+            const withoutExport = trimmed.startsWith('export ') ? trimmed.slice(7).trim() : trimmed;
+            const separator = withoutExport.indexOf('=');
+
+            if (separator <= 0) {
+                return null;
+            }
+
+            const key = withoutExport.slice(0, separator).trim();
+            let value = withoutExport.slice(separator + 1).trim();
+
+            if (
+                (value.startsWith('"') && value.endsWith('"'))
+                || (value.startsWith("'") && value.endsWith("'"))
+            ) {
+                value = value.slice(1, -1);
+            }
+
+            return { key, value };
+        }
+
+        function getPublicWalletAddressType(value = '') {
+            const trimmed = String(value || '').trim();
+
+            if (/^0x[a-fA-F0-9]{40}$/.test(trimmed)) {
+                return 'evm';
+            }
+
+            if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(trimmed)) {
+                return 'solana';
+            }
+
+            return null;
+        }
+
+        function buildSelectedEnvStatus(file, rawText) {
+            const allowedVariables = currentWizard?.env?.variables || [];
+            const allowedByName = new Map(allowedVariables.map(variable => [variable.name, variable]));
+            const parsed = String(rawText || '')
+                .split(/\r?\n/)
+                .map(parseEnvLineClient)
+                .filter(Boolean);
+            const valueByKey = new Map(parsed.map(item => [item.key, item.value]));
+            const unknownNames = [];
+            const forbiddenWalletSecretNames = [];
+            const forbiddenValueFindings = [];
+            const publicWalletAddresses = [];
+
+            for (const item of parsed) {
+                if (forbiddenWalletSecretKeyPattern.test(item.key)) {
+                    forbiddenWalletSecretNames.push(item.key);
+                }
+
+                if (!allowedByName.has(item.key)) {
+                    unknownNames.push(item.key);
+                }
+
+                for (const pattern of forbiddenValuePatterns) {
+                    if (pattern.pattern.test(item.value)) {
+                        forbiddenValueFindings.push({ variable: item.key, id: pattern.id, label: pattern.label });
+                    }
+                }
+
+                if (publicWalletVariableNames.has(item.key)) {
+                    const addressType = getPublicWalletAddressType(item.value);
+                    publicWalletAddresses.push({
+                        variable: item.key,
+                        address: addressType ? item.value.trim() : null,
+                        addressType,
+                        valid: Boolean(addressType),
+                        safeToDisplay: Boolean(addressType),
+                        note: addressType
+                            ? 'Public wallet address detected. It is safe to display.'
+                            : 'Value was not displayed because it did not match a public wallet address format.'
+                    });
+                }
+            }
+
+            return {
+                fileName: file?.name || 'selected file',
+                fileSize: file?.size || 0,
+                lastModified: file?.lastModified ? new Date(file.lastModified).toISOString() : null,
+                browserPathHidden: true,
+                valuesSentToServer: false,
+                valuesDisplayed: false,
+                parsedLineCount: parsed.length,
+                variables: allowedVariables.map(variable => {
+                    const value = valueByKey.get(variable.name);
+                    return {
+                        ...variable,
+                        present: valueByKey.has(variable.name),
+                        empty: !String(value || '').trim()
+                    };
+                }),
+                unknownNames: Array.from(new Set(unknownNames)).sort(),
+                forbiddenWalletSecretNames: Array.from(new Set(forbiddenWalletSecretNames)).sort(),
+                forbiddenValueFindings,
+                publicWalletAddresses,
+                safeToUse: !forbiddenWalletSecretNames.length && !forbiddenValueFindings.length,
+                note: 'Visual verification only. The selected file path is hidden by the browser; the server check below confirms ~/EtherealAI_Secrets/.env.'
+            };
+        }
+
+        function statusBadge(value) {
+            return `<span class="${value ? 'owner-gate-pass' : 'owner-gate-blocked'}">${value ? 'Ready' : 'Needs setup'}</span>`;
         }
 
         function renderGate(gate) {
@@ -167,11 +308,16 @@
                 ...(env.forbiddenWalletSecretNames || []).map(name => `Forbidden wallet secret variable: ${name}`),
                 ...(env.forbiddenValueFindings || []).map(item => `Forbidden value pattern in ${item.variable}: ${item.label}`)
             ];
+            const detectedWallets = (env.publicWalletAddresses || []).map(renderDetectedWallet).join('');
+            const discovery = currentWizard?.envDiscovery || {};
 
             document.getElementById('env-status').innerHTML = `
+                <p><strong>How discovery works:</strong> ${escapeHtml((discovery.explanation || [])[0] || 'The server checks the secure local path automatically.')}</p>
                 <p><strong>Path:</strong> <code>${escapeHtml(env.path || '~/EtherealAI_Secrets/.env')}</code></p>
                 <p><strong>Status:</strong> ${env.safeToUse ? 'Ready' : 'Needs owner setup'} · values hidden · live trading disabled</p>
                 ${problems.length ? `<ul>${problems.map(problem => `<li>${escapeHtml(problem)}</li>`).join('')}</ul>` : ''}
+                <h3>Detected Public Wallet Address</h3>
+                ${detectedWallets || '<p>No public wallet address detected in the server-readable .env file.</p>'}
                 <table>
                     <thead>
                         <tr>
@@ -187,15 +333,145 @@
             `;
         }
 
+        function renderDetectedWallet(wallet = {}) {
+            if (!wallet.safeToDisplay || !wallet.address) {
+                return `<p>${escapeHtml(wallet.variable || 'Public wallet variable')}: ${escapeHtml(wallet.note || 'Not displayed.')}</p>`;
+            }
+
+            return `
+                <article class="owner-detected-wallet">
+                    <strong>${escapeHtml(wallet.variable)}</strong>
+                    <code>${escapeHtml(wallet.address)}</code>
+                    <span>${escapeHtml(wallet.addressType || 'public')}</span>
+                    <button type="button" data-use-public-wallet="${escapeHtml(wallet.address)}" data-wallet-source="${escapeHtml(wallet.variable)}">Use Detected Public Wallet</button>
+                </article>
+            `;
+        }
+
+        function bindDetectedWalletButtons(root = document) {
+            root.querySelectorAll('button[data-use-public-wallet]').forEach(button => {
+                button.onclick = () => {
+                    useDetectedWallet(button.dataset.usePublicWallet, button.dataset.walletSource);
+                };
+            });
+        }
+
+        function renderSelectedEnvStatus(status = null) {
+            const element = document.getElementById('selected-env-status');
+
+            if (!status) {
+                element.textContent = 'No .env file selected yet.';
+                return;
+            }
+
+            const rows = (status.variables || []).map(variable => `
+                <tr>
+                    <td>${escapeHtml(variable.name)}</td>
+                    <td>${variable.present && !variable.empty ? 'Present' : 'Missing'}</td>
+                    <td>${escapeHtml(variable.label)}</td>
+                </tr>
+            `).join('');
+            const problems = [
+                ...(status.unknownNames || []).map(name => `Unknown variable name: ${name}`),
+                ...(status.forbiddenWalletSecretNames || []).map(name => `Forbidden wallet secret variable: ${name}`),
+                ...(status.forbiddenValueFindings || []).map(item => `Forbidden value pattern in ${item.variable}: ${item.label}`)
+            ];
+            const walletCards = (status.publicWalletAddresses || []).map(renderDetectedWallet).join('');
+
+            element.innerHTML = `
+                <div class="owner-file-summary">
+                    <p><strong>Selected file:</strong> ${escapeHtml(status.fileName)} · ${Number(status.fileSize || 0)} bytes</p>
+                    <p><strong>Visual content check:</strong> ${status.safeToUse ? 'Safe' : 'Needs correction'} · values hidden · values not sent to server</p>
+                    <p>${escapeHtml(status.note)}</p>
+                    ${problems.length ? `<ul>${problems.map(problem => `<li>${escapeHtml(problem)}</li>`).join('')}</ul>` : ''}
+                </div>
+                <h3>Detected Public Wallet Address</h3>
+                ${walletCards || '<p>No public wallet address was detected in the selected file.</p>'}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Variable</th>
+                            <th>Status</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+            bindDetectedWalletButtons(element);
+        }
+
+        function renderPaperConfiguration(config = {}) {
+            document.getElementById('paper-configuration').innerHTML = [
+                progressCard({
+                    label: 'Paper Trading Configuration',
+                    current: config.progress || currentWizard?.progress?.paperTrading?.current || 95,
+                    note: config.explanation || 'No live wallet signing required.',
+                    liveSigningRequired: false
+                }),
+                `
+                    <article class="owner-progress-card">
+                        <h3>Paper Evidence</h3>
+                        <dl>
+                            <dt>Ready paper plans</dt><dd>${Number(config.readyPaperPlans || 0)}</dd>
+                            <dt>Completed paper runs</dt><dd>${Number(config.completedPaperRuns || 0)}</dd>
+                            <dt>Active paper schedules</dt><dd>${Number(config.activePaperSchedules || 0)}</dd>
+                            <dt>Risk profiles</dt><dd>${Number(config.activeRiskProfiles || 0)}</dd>
+                            <dt>Market imports</dt><dd>${Number(config.usableMarketImports || 0)}</dd>
+                        </dl>
+                    </article>
+                `
+            ].join('');
+        }
+
+        function renderSetupGuide(steps = []) {
+            const element = document.getElementById('owner-setup-guide');
+
+            if (!steps.length) {
+                element.innerHTML = `
+                    <article class="operator-step">
+                        <strong>Setup gates complete</strong>
+                        <p>Paper setup and full E2E setup readiness are complete. Live trading remains disabled until a separate high-security approval process is built and manually enabled.</p>
+                    </article>
+                `;
+                return;
+            }
+
+            element.innerHTML = steps.map(step => `
+                <article class="operator-step">
+                    <strong>Step ${Number(step.step || 0)}: ${escapeHtml(step.label)}</strong>
+                    <p><strong>What to do:</strong> ${escapeHtml(step.ownerAction)}</p>
+                    <p><strong>Why:</strong> ${escapeHtml(step.why)}</p>
+                    <p><strong>Safety:</strong> ${escapeHtml(step.safety)}</p>
+                    <p><strong>Verify:</strong> ${escapeHtml(step.verifyAction)}</p>
+                    <p><strong>Evidence now:</strong> ${escapeHtml(step.evidence || '-')}</p>
+                </article>
+            `).join('');
+        }
+
+        function useDetectedWallet(address, source = 'selected .env file') {
+            document.getElementById('wallet-public-address').value = address || '';
+            document.getElementById('wallet-label').value = source.includes('POLYGON')
+                ? 'Polygon owner public wallet'
+                : 'Owner public wallet';
+            document.getElementById('wallet-chain-family').value = String(address || '').startsWith('0x') ? 'evm' : 'solana';
+            document.getElementById('wallet-network').value = source.includes('POLYGON') || String(address || '').startsWith('0x') ? 'polygon' : 'solana';
+            document.getElementById('wallet-assignments').value = 'trading-research,token-deployment,treasury';
+            document.getElementById('owner-setup-output').textContent = `Public wallet address copied into the safe metadata form from ${source}. Review it, then click Save Public Wallet Metadata.`;
+        }
+
         function renderWizard(wizard = {}) {
             currentWizard = wizard;
             document.getElementById('owner-setup-progress').innerHTML = [
                 progressCard(wizard.progress?.paperTrading || {}),
                 progressCard(wizard.progress?.fullEndToEnd || {})
             ].join('');
+            renderPaperConfiguration(wizard.paperConfiguration || {});
+            renderSetupGuide(wizard.setupGuide || []);
             renderGateList('paper-gates', wizard.gates?.paperTrading || []);
             renderGateList('full-e2e-gates', wizard.gates?.fullEndToEnd || []);
             renderEnvStatus(wizard.env || {});
+            bindDetectedWalletButtons();
         }
 
         async function loadWizard() {
@@ -226,6 +502,30 @@
         }
 
         document.getElementById('refresh-owner-setup').addEventListener('click', loadWizard);
+
+        document.getElementById('verify-selected-env-file').addEventListener('click', async () => {
+            const output = document.getElementById('owner-setup-output');
+            const file = document.getElementById('selected-env-file').files?.[0];
+
+            if (!file) {
+                output.textContent = 'Choose your .env file first, then click Verify Selected .env File.';
+                return;
+            }
+
+            output.textContent = 'Verifying selected .env file locally in the browser...';
+            const rawText = await file.text();
+            lastSelectedEnvStatus = buildSelectedEnvStatus(file, rawText);
+            renderSelectedEnvStatus(lastSelectedEnvStatus);
+            output.textContent = lastSelectedEnvStatus.safeToUse
+                ? 'Selected .env file passed visual safety verification. Server secure-path verification is shown in Local Secrets File.'
+                : 'Selected .env file needs correction. Remove forbidden wallet secret material before using it.';
+        });
+
+        document.getElementById('selected-env-file').addEventListener('change', () => {
+            lastSelectedEnvStatus = null;
+            renderSelectedEnvStatus(null);
+            document.getElementById('owner-setup-output').textContent = 'File selected. Click Verify Selected .env File to inspect it safely.';
+        });
 
         document.getElementById('run-paper-verification').addEventListener('click', async () => {
             const output = document.getElementById('owner-setup-output');

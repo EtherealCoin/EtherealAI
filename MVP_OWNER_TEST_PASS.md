@@ -41,8 +41,10 @@ patrick@etherealAI
 
 2. Open `/owner-setup`.
    - Pass condition: Owner Setup Wizard loads without developer workflows and shows `Paper 95→100` and `Full E2E 72→100`.
+   - Pass condition: `Select .env File Visually` lets the owner browse for a `.env` file, then `Verify Selected .env File` checks it locally in the browser without sending secret values to the server.
    - Pass condition: every blocked gate shows what is missing, why it is needed, whether it is safe, exactly what the owner must enter, current evidence, and a one-click `Verify` button.
    - Pass condition: Local Secrets File reads from `~/EtherealAI_Secrets/.env`, reports approved variable names as present/missing only, and never displays credential values.
+   - Pass condition: detected public wallet addresses from `OWNER_PUBLIC_WALLET_ADDRESS` or `POLYGON_PUBLIC_WALLET_ADDRESS` are visible and can prefill the safe wallet metadata form.
    - Pass condition: `.env` setup rejects seed phrases, recovery phrases, private keys, wallet passwords, PEM private keys, and seed-like values.
    - Pass condition: Add Public Wallet Address accepts label, wallet type, chain family, network, assignments, and public address only, then saves metadata through `/api/v1/wallets` with signing and live execution disabled.
    - Pass condition: `Run Paper Verification` can run one paper-only cycle when a ready paper bot plan exists, and does not require live wallet signing.
@@ -160,9 +162,12 @@ patrick@etherealAI
 ## Owner Setup Wizard Workflow
 
 - `/owner-setup` is the current non-coder setup-completion surface.
+- The visual `.env` picker is for non-technical owner confirmation. It checks selected file contents in the browser, does not send secret values to the server, and explains that the browser hides the real path.
+- The server still checks `~/EtherealAI_Secrets/.env` because that fixed path is what EtherealAI can load automatically.
 - Paper progress starts from `95%` and reaches `100%` when strategy/data, risk profile, replay/run evidence, paper bot plan, and one paper verification cycle or active paper schedule are present.
 - Full E2E setup readiness starts from `72%` and reaches `100%` when the local `.env` file is safe, Polygon RPC/provider keys are present, at least one exchange key pair is present, public wallet metadata is attached, connector metadata exists, GitHub/Cloudflare/social credential presence is verified, and live execution remains locked.
 - The wizard reads credential presence from `~/EtherealAI_Secrets/.env` only. It returns variable names and present/missing status, never secret values.
+- Public wallet addresses are the only `.env` values the wizard may display, and only when they match safe public address formats.
 - The wizard never requests or accepts seed phrases, recovery phrases, private keys, wallet passwords, deployer private keys, owner private keys, or wallet secret values.
 - Full E2E setup readiness `100%` is not live trading. It means the owner setup gates are ready for a future separate high-security live approval process.
 

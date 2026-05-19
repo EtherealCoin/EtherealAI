@@ -22,6 +22,22 @@ const ENV_VARIABLES = [
     why: 'Needed to verify Polygon contracts and collect explorer evidence for token/listing workflows.'
   },
   {
+    id: 'owner_public_wallet',
+    name: 'OWNER_PUBLIC_WALLET_ADDRESS',
+    group: 'wallet_public',
+    label: 'Owner public wallet address',
+    example: 'OWNER_PUBLIC_WALLET_ADDRESS=0xYourPublicWalletAddress',
+    why: 'Optional public wallet address that can be displayed and used to prefill wallet metadata. It must never be a private key or seed phrase.'
+  },
+  {
+    id: 'polygon_public_wallet',
+    name: 'POLYGON_PUBLIC_WALLET_ADDRESS',
+    group: 'wallet_public',
+    label: 'Polygon public wallet address',
+    example: 'POLYGON_PUBLIC_WALLET_ADDRESS=0xYourPolygonPublicAddress',
+    why: 'Optional public Polygon address for token deployment, treasury, or trading metadata. It is public metadata only.'
+  },
+  {
     id: 'coinbase_key',
     name: 'COINBASE_API_KEY',
     group: 'exchange_coinbase',
@@ -135,11 +151,18 @@ const ENV_VARIABLES = [
   }
 ];
 
+const PUBLIC_WALLET_ADDRESS_NAMES = new Set([
+  'OWNER_PUBLIC_WALLET_ADDRESS',
+  'POLYGON_PUBLIC_WALLET_ADDRESS'
+]);
+
 const FORBIDDEN_WALLET_SECRET_KEY_PATTERN = /(seed|mnemonic|recovery|wallet.*private|private.*wallet|deployer_private_key|owner_private_key|wallet_secret|wallet_password)/i;
 const FORBIDDEN_VALUE_PATTERNS = [
   { id: 'pem_private_key', label: 'PEM private key block', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/i },
   { id: 'seed_phrase_like_value', label: 'seed phrase-like value', pattern: /\b([a-z]{3,}\s+){11,}[a-z]{3,}\b/i }
 ];
+const EVM_PUBLIC_ADDRESS_PATTERN = /^0x[a-fA-F0-9]{40}$/;
+const SOLANA_PUBLIC_ADDRESS_PATTERN = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 function parseEnvLine(line = '') {
   const trimmed = String(line || '').trim();
@@ -168,6 +191,39 @@ function parseEnvLine(line = '') {
   return { key, value };
 }
 
+function getPublicWalletAddressType(value = '') {
+  const trimmed = String(value || '').trim();
+
+  if (EVM_PUBLIC_ADDRESS_PATTERN.test(trimmed)) {
+    return 'evm';
+  }
+
+  if (SOLANA_PUBLIC_ADDRESS_PATTERN.test(trimmed)) {
+    return 'solana';
+  }
+
+  return null;
+}
+
+function detectPublicWalletAddresses(parsed = []) {
+  return parsed
+    .filter(item => PUBLIC_WALLET_ADDRESS_NAMES.has(item.key))
+    .map(item => {
+      const addressType = getPublicWalletAddressType(item.value);
+
+      return {
+        variable: item.key,
+        address: addressType ? String(item.value || '').trim() : null,
+        addressType,
+        valid: Boolean(addressType),
+        safeToDisplay: Boolean(addressType),
+        note: addressType
+          ? 'Public wallet address detected. This value is safe to display because it is not a signing secret.'
+          : 'Value was not displayed because it did not match a supported public wallet address format.'
+      };
+    });
+}
+
 function readOwnerEnvStatus({
   fsModule = fs,
   envPath = OWNER_ENV_PATH
@@ -189,6 +245,7 @@ function readOwnerEnvStatus({
     unknownNames: [],
     forbiddenWalletSecretNames: [],
     forbiddenValueFindings: [],
+    publicWalletAddresses: [],
     safeToUse: false,
     note: 'Only variable names and non-empty status are reported. Secret values are never returned.'
   };
@@ -240,6 +297,7 @@ function readOwnerEnvStatus({
     status.unknownNames = Array.from(new Set(unknownNames)).sort();
     status.forbiddenWalletSecretNames = Array.from(new Set(forbiddenWalletSecretNames)).sort();
     status.forbiddenValueFindings = forbiddenValueFindings;
+    status.publicWalletAddresses = detectPublicWalletAddresses(parsed);
     status.safeToUse = status.exists
       && status.readable
       && status.permissionSafe
@@ -348,6 +406,7 @@ function buildOwnerSetupWizard({
   const paperState = summarizePaperState({ plans, runs, schedules, strategies, riskProfiles, paperSessions, marketImports });
   const activeWallets = wallets.filter(wallet => !['revoked', 'archived', 'disabled'].includes(wallet.status));
   const publicWallets = activeWallets.filter(wallet => String(wallet.public_address || '').trim());
+  const detectedEnvPublicWallets = (envStatus.publicWalletAddresses || []).filter(item => item.safeToDisplay && item.address);
   const connectorReady = exchangeConnectors.some(connector => (
     ['paper', 'read_only', 'live_disabled'].includes(connector.mode)
     && ['configured', 'planned', 'disabled'].includes(connector.status)
@@ -422,12 +481,12 @@ function buildOwnerSetupWizard({
       passed: envStatus.safeToUse,
       missing: envStatus.exists ? 'Fix file permissions or remove forbidden wallet secret material.' : 'Create ~/EtherealAI_Secrets/.env.',
       whyNeeded: 'The app needs a local place to check credentials without storing them in the database or asking through the UI.',
-      safe: 'Safe when the file is owner-only and contains API/RPC credentials only. Do not put seed phrases or private keys in it.',
+      safe: 'Safe when the file is owner-only and contains API/RPC credentials plus optional public wallet addresses only. Do not put seed phrases or private keys in it.',
       exactlyEnter: [
-        'Create folder: ~/EtherealAI_Secrets',
-        'Create file: ~/EtherealAI_Secrets/.env',
-        'Set permissions: chmod 600 ~/EtherealAI_Secrets/.env',
-        'Enter only approved variable names shown in this wizard.'
+        'Click Select .env File in this wizard to visually inspect the file contents.',
+        'The server also checks ~/EtherealAI_Secrets/.env automatically.',
+        'Enter only approved variable names shown in this wizard.',
+        'Never add seed phrases, private keys, wallet passwords, or recovery phrases.'
       ].join('\n'),
       evidence: envStatus.exists ? `mode ${envStatus.permissionMode || 'unknown'}, ${envStatus.foundAllowedNames.length} approved variable(s)` : 'file missing'
     }),
@@ -467,11 +526,13 @@ function buildOwnerSetupWizard({
       lane: 'full_e2e',
       label: 'Public wallet addresses attached',
       passed: publicWallets.length > 0,
-      missing: 'Add at least one public wallet address through this wizard.',
+      missing: detectedEnvPublicWallets.length
+        ? 'A public wallet address was detected in the .env file. Click Use Detected Public Wallet, then save it as wallet metadata.'
+        : 'Add at least one public wallet address through this wizard.',
       whyNeeded: 'EtherealAI needs labels and public addresses to assign wallets to trading, deployment, treasury, or recovery roles without holding keys.',
       safe: 'Safe. Public addresses are allowed. Seed phrases and private keys are never allowed.',
       exactlyEnter: 'Wallet label, wallet type, chain family, network, and public address only.',
-      evidence: `${publicWallets.length} public wallet metadata record(s)`
+      evidence: `${publicWallets.length} public wallet metadata record(s), ${detectedEnvPublicWallets.length} detected public .env address(es)`
     }),
     gate({
       id: 'connector_metadata_ready',
@@ -522,12 +583,55 @@ function buildOwnerSetupWizard({
   ];
   const paperProgress = computeProgress(95, paperGates);
   const fullE2eProgress = computeProgress(72, fullE2eGates);
+  const blockedGates = [...paperGates, ...fullE2eGates].filter(item => !item.passed);
 
   return {
     status: paperProgress === 100 && fullE2eProgress === 100 ? 'owner_setup_complete_live_disabled' : 'owner_setup_in_progress',
     generatedAt: new Date().toISOString(),
     audience: 'non_technical_owner',
     env: envStatus,
+    envDiscovery: {
+      secureServerPath: OWNER_ENV_PATH,
+      visualPickerSupported: true,
+      browserPathHidden: true,
+      explanation: [
+        'The server automatically looks for ~/EtherealAI_Secrets/.env on this Mac.',
+        'The visual picker lets you select the file so the page can verify names and safety without terminal commands.',
+        'Browsers hide the real file path for security, so the picker confirms file contents while the server confirms the fixed secure path.',
+        'Secret values are not displayed. Public wallet addresses are the only values the wizard is allowed to show.'
+      ]
+    },
+    paperConfiguration: {
+      progress: paperProgress,
+      readyPaperPlans: paperState.readyPlans.length,
+      completedPaperRuns: paperState.completedRuns.length,
+      activePaperSchedules: paperState.activeSchedules.length,
+      activeRiskProfiles: paperState.activeRiskProfiles.length,
+      completedPaperSessions: paperState.completedPaperSessions.length,
+      usableMarketImports: paperState.usableImports.length,
+      status: paperProgress === 100 ? 'paper_ready' : 'paper_setup_needed',
+      liveSigningRequired: false,
+      explanation: paperProgress === 100
+        ? 'Paper trading has the local evidence needed for setup completion. No live wallet signing was used.'
+        : 'Paper trading still needs the blocked paper gates below. No live wallet signing is required.'
+    },
+    walletMetadata: {
+      savedPublicWallets: publicWallets.map(wallet => ({
+        id: wallet.id,
+        label: wallet.label,
+        network: wallet.network,
+        chainFamily: wallet.chain_family,
+        publicAddress: wallet.public_address,
+        signingEnabled: false,
+        liveExecutionEnabled: false
+      })),
+      detectedEnvPublicWallets,
+      nextAction: publicWallets.length
+        ? 'Review saved wallet metadata and keep signing disabled.'
+        : detectedEnvPublicWallets.length
+          ? 'Use the detected public wallet address to prefill the wallet form, then save metadata.'
+          : 'Add a public wallet address manually or add OWNER_PUBLIC_WALLET_ADDRESS/POLYGON_PUBLIC_WALLET_ADDRESS to the .env file.'
+    },
     progress: {
       paperTrading: {
         current: paperProgress,
@@ -559,6 +663,18 @@ function buildOwnerSetupWizard({
       separateHighSecurityApprovalRequired: true
     },
     exactEnvTemplate: ENV_VARIABLES.map(variable => variable.example),
+    setupGuide: blockedGates.map((item, index) => ({
+      step: index + 1,
+      lane: item.lane,
+      gateId: item.id,
+      label: item.label,
+      status: item.status,
+      ownerAction: item.exactlyEnter,
+      why: item.whyNeeded,
+      safety: item.safe,
+      verifyAction: item.verifyAction,
+      evidence: item.evidence
+    })),
     nextOwnerStep: paperProgress < 100
       ? 'Complete the paper trading gates first. No wallet signing is required.'
       : fullE2eProgress < 100
@@ -581,7 +697,10 @@ module.exports = {
   OWNER_SECRETS_DIR,
   OWNER_ENV_PATH,
   ENV_VARIABLES,
+  PUBLIC_WALLET_ADDRESS_NAMES,
   parseEnvLine,
+  getPublicWalletAddressType,
+  detectPublicWalletAddresses,
   readOwnerEnvStatus,
   buildOwnerSetupWizard,
   buildOwnerEnvTemplate

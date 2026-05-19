@@ -1046,13 +1046,55 @@ footer {
 }
 
 .owner-progress-card,
-.owner-gate-card {
+.owner-gate-card,
+.owner-file-status,
+.owner-detected-wallet {
     background: #ffffff;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     display: grid;
     gap: 12px;
     padding: 16px;
+}
+
+.owner-file-picker {
+    align-items: end;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr auto;
+}
+
+.owner-file-picker label {
+    color: #374151;
+    font-weight: 700;
+}
+
+.owner-file-picker input[type="file"] {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font: inherit;
+    padding: 10px;
+}
+
+.owner-file-status {
+    margin-top: 12px;
+}
+
+.owner-file-summary {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.owner-detected-wallet {
+    align-items: center;
+    grid-template-columns: minmax(150px, 1fr) minmax(220px, 2fr) auto auto;
+    margin: 10px 0;
+}
+
+.owner-detected-wallet code {
+    overflow-wrap: anywhere;
 }
 
 .owner-progress-card h3,
@@ -1140,6 +1182,8 @@ footer {
     .checklist-item,
     .compact-form,
     .artifact-controls,
+    .owner-file-picker,
+    .owner-detected-wallet,
     .owner-gate-card > div:first-child {
         grid-template-columns: 1fr;
     }

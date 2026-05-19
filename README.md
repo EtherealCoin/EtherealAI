@@ -21,7 +21,7 @@ The current project is intentionally designed for owner-controlled local operati
 ## Key Pages
 
 - `/dashboard` - system status, model roles, MLX lifecycle, multi-agent coordination, system memory
-- `/owner-setup` - non-coder setup wizard for paper 95 to 100 and full E2E readiness 72 to 100 with live trading disabled
+- `/owner-setup` - non-coder setup wizard for paper 95 to 100 and full E2E readiness 72 to 100 with live trading disabled, including visual `.env` file selection, safe credential presence checks, detected public wallet address display, and step-by-step blocked-gate guidance
 - `/operator-control` - wallet metadata, owner key-control guidance, permissions, and revoke workflows
 - `/security-lockdown` - read-only Mac/network security audit and owner hardening checklist
 - `/owner-proof-packet` - local proof packet, owner acceptance, live-blocker evidence

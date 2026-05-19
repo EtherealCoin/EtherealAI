@@ -2292,6 +2292,7 @@ function checkWalletControlModule() {
 function checkOwnerSetupWizardModule() {
   const {
     parseEnvLine,
+    getPublicWalletAddressType,
     readOwnerEnvStatus,
     buildOwnerSetupWizard,
     buildOwnerEnvTemplate
@@ -2299,6 +2300,7 @@ function checkOwnerSetupWizardModule() {
   const safeEnv = [
     'POLYGON_RPC_URL=https://polygon.example',
     'POLYGONSCAN_API_KEY=polygonscan-fixture',
+    'OWNER_PUBLIC_WALLET_ADDRESS=0x000000000000000000000000000000000000dEaD',
     'COINBASE_API_KEY=coinbase-key-fixture',
     'COINBASE_API_SECRET=coinbase-secret-fixture',
     'GITHUB_TOKEN=github-fixture',
@@ -2356,12 +2358,18 @@ function checkOwnerSetupWizardModule() {
 
   if (
     parseEnvLine('export POLYGON_RPC_URL=\"https://polygon.example\"')?.key !== 'POLYGON_RPC_URL'
+    || getPublicWalletAddressType('0x000000000000000000000000000000000000dEaD') !== 'evm'
     || safeStatus.safeToUse !== true
     || safeStatus.foundAllowedNames.includes('coinbase-secret-fixture')
+    || !safeStatus.publicWalletAddresses?.some(item => item.variable === 'OWNER_PUBLIC_WALLET_ADDRESS' && item.address === '0x000000000000000000000000000000000000dEaD')
     || unsafeStatus.safeToUse !== false
     || !unsafeStatus.forbiddenWalletSecretNames.includes('OWNER_SEED_PHRASE')
     || wizard.progress?.paperTrading?.current !== 100
     || wizard.progress?.fullEndToEnd?.current !== 100
+    || wizard.envDiscovery?.visualPickerSupported !== true
+    || wizard.paperConfiguration?.status !== 'paper_ready'
+    || wizard.walletMetadata?.detectedEnvPublicWallets?.length !== 1
+    || !Array.isArray(wizard.setupGuide)
     || wizard.safetyBoundary?.liveTradingEnabled !== false
     || wizard.safetyBoundary?.seedPhrasesAccepted !== false
     || !wizard.gates?.fullEndToEnd?.some(gate => gate.id === 'high_security_live_approval_locked' && gate.passed)
@@ -6326,6 +6334,14 @@ function checkOwnerSetupWizardUi() {
     || !html.includes('no seed phrases')
     || !html.includes('no private keys')
     || !html.includes('~/EtherealAI_Secrets/.env')
+    || !html.includes('Select .env File Visually')
+    || !html.includes('id="selected-env-file"')
+    || !html.includes('id="verify-selected-env-file"')
+    || !html.includes('No .env file selected yet.')
+    || !html.includes('Detected Public Wallet Address')
+    || !html.includes('Use Detected Public Wallet')
+    || !html.includes('Paper Trading Configuration')
+    || !html.includes('Step-by-Step Completion Guide')
     || !html.includes('Blocked Paper Trading Gates')
     || !html.includes('Blocked Full E2E Gates')
     || !html.includes('Local Secrets File')
@@ -6340,6 +6356,12 @@ function checkOwnerSetupWizardUi() {
     || !html.includes("fetch('/api/v1/wallets'")
     || !html.includes('request_signature')
     || !html.includes('trade_execution')
+    || !html.includes('function buildSelectedEnvStatus(file, rawText)')
+    || !html.includes('function renderSelectedEnvStatus(status = null)')
+    || !html.includes('function renderPaperConfiguration(config = {})')
+    || !html.includes('function renderSetupGuide(steps = [])')
+    || !html.includes('function useDetectedWallet(address, source =')
+    || !html.includes('values not sent to server')
     || !route.includes("app.get('/api/v1/owner-setup-wizard'")
     || !route.includes("app.post('/api/v1/owner-setup-wizard/verify/:gateId'")
     || !route.includes("app.post('/api/v1/owner-setup-wizard/paper-verification-run'")
@@ -6347,6 +6369,10 @@ function checkOwnerSetupWizardUi() {
     || !route.includes('createBotAutomationPaperRun')
     || !lib.includes('POLYGON_RPC_URL')
     || !lib.includes('POLYGONSCAN_API_KEY')
+    || !lib.includes('OWNER_PUBLIC_WALLET_ADDRESS')
+    || !lib.includes('POLYGON_PUBLIC_WALLET_ADDRESS')
+    || !lib.includes('detectPublicWalletAddresses')
+    || !lib.includes('visualPickerSupported: true')
     || !lib.includes('seedPhrasesAccepted: false')
     || !lib.includes('privateKeysAccepted: false')
     || !lib.includes('secretValuesReturnedByApi: false')
@@ -6354,6 +6380,9 @@ function checkOwnerSetupWizardUi() {
     || !styles.includes('.owner-gate-list')
     || !styles.includes('.owner-gate-card')
     || !styles.includes('.owner-progress-bar')
+    || !styles.includes('.owner-file-picker')
+    || !styles.includes('.owner-file-status')
+    || !styles.includes('.owner-detected-wallet')
   ) {
     fail('owner setup wizard UI is missing non-coder gate, safe credential, wallet metadata, or route wiring');
   }
@@ -8239,6 +8268,11 @@ async function runServerApiChecks() {
     || !ownerSetupHtml.includes('Owner Setup Wizard')
     || !ownerSetupHtml.includes('Paper 95→100')
     || !ownerSetupHtml.includes('Full E2E 72→100')
+    || !ownerSetupHtml.includes('Select .env File Visually')
+    || !ownerSetupHtml.includes('Verify Selected .env File')
+    || !ownerSetupHtml.includes('Detected Public Wallet Address')
+    || !ownerSetupHtml.includes('Paper Trading Configuration')
+    || !ownerSetupHtml.includes('Step-by-Step Completion Guide')
     || !ownerSetupHtml.includes('Run Paper Verification')
     || !ownerSetupHtml.includes('Public Address Only')
     || !ownerSetupHtml.includes('~/EtherealAI_Secrets/.env')
@@ -8263,6 +8297,11 @@ async function runServerApiChecks() {
     || ownerSetup.body.wizard?.safetyBoundary?.seedPhrasesAccepted !== false
     || ownerSetup.body.wizard?.safetyBoundary?.privateKeysAccepted !== false
     || ownerSetup.body.wizard?.safetyBoundary?.secretValuesReturnedByApi !== false
+    || ownerSetup.body.wizard?.envDiscovery?.visualPickerSupported !== true
+    || ownerSetup.body.wizard?.envDiscovery?.browserPathHidden !== true
+    || ownerSetup.body.wizard?.paperConfiguration?.liveSigningRequired !== false
+    || !Array.isArray(ownerSetup.body.wizard?.setupGuide)
+    || !Array.isArray(ownerSetup.body.wizard?.walletMetadata?.detectedEnvPublicWallets)
     || !ownerSetup.body.wizard?.gates?.paperTrading?.some(gate => gate.id === 'paper_verification_run_completed')
     || !ownerSetup.body.wizard?.gates?.fullEndToEnd?.some(gate => gate.id === 'high_security_live_approval_locked')
     || ownerSetup.body.wizard?.env?.note !== 'Only variable names and non-empty status are reported. Secret values are never returned.'
