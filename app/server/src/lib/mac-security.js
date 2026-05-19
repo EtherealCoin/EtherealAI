@@ -167,6 +167,66 @@ const MAC_SECURITY_COMMANDS = [
       : review('AirDrop disable preference was not confirmed.')
   },
   {
+    id: 'handoff_advertising_disabled',
+    category: 'Nearby Sharing',
+    label: 'Handoff advertising disabled for this user',
+    command: '/usr/bin/defaults',
+    args: ['-currentHost', 'read', 'com.apple.coreservices.useractivityd', 'ActivityAdvertisingAllowed'],
+    severity: 'review',
+    ownerAction: 'Keep Handoff disabled while using a shared or hostile network.',
+    parse: output => parseDisabledBooleanOutput(output, 'Handoff advertising is disabled for this user.', 'Handoff advertising was not confirmed disabled.')
+  },
+  {
+    id: 'handoff_receiving_disabled',
+    category: 'Nearby Sharing',
+    label: 'Handoff receiving disabled for this user',
+    command: '/usr/bin/defaults',
+    args: ['-currentHost', 'read', 'com.apple.coreservices.useractivityd', 'ActivityReceivingAllowed'],
+    severity: 'review',
+    ownerAction: 'Keep Handoff receiving disabled while using a shared or hostile network.',
+    parse: output => parseDisabledBooleanOutput(output, 'Handoff receiving is disabled for this user.', 'Handoff receiving was not confirmed disabled.')
+  },
+  {
+    id: 'wifi_dns_servers',
+    category: 'Network Trust',
+    label: 'Wi-Fi DNS resolvers',
+    command: '/usr/sbin/networksetup',
+    args: ['-getdnsservers', 'Wi-Fi'],
+    severity: 'review',
+    ownerAction: 'Use owner-chosen public DNS or encrypted DNS. Avoid accepting DNS from an untrusted shared router.',
+    parse: output => parseDnsServerOutput(output)
+  },
+  {
+    id: 'wifi_web_proxy',
+    category: 'Network Trust',
+    label: 'Wi-Fi HTTP proxy',
+    command: '/usr/sbin/networksetup',
+    args: ['-getwebproxy', 'Wi-Fi'],
+    severity: 'block',
+    ownerAction: 'Turn off unexpected HTTP proxies in System Settings > Network > Wi-Fi > Details > Proxies.',
+    parse: output => parseProxyOutput(output, 'HTTP proxy is disabled for Wi-Fi.', 'HTTP proxy is enabled or could not be ruled out.')
+  },
+  {
+    id: 'wifi_secure_web_proxy',
+    category: 'Network Trust',
+    label: 'Wi-Fi HTTPS proxy',
+    command: '/usr/sbin/networksetup',
+    args: ['-getsecurewebproxy', 'Wi-Fi'],
+    severity: 'block',
+    ownerAction: 'Turn off unexpected HTTPS proxies in System Settings > Network > Wi-Fi > Details > Proxies.',
+    parse: output => parseProxyOutput(output, 'HTTPS proxy is disabled for Wi-Fi.', 'HTTPS proxy is enabled or could not be ruled out.')
+  },
+  {
+    id: 'wifi_socks_proxy',
+    category: 'Network Trust',
+    label: 'Wi-Fi SOCKS proxy',
+    command: '/usr/sbin/networksetup',
+    args: ['-getsocksfirewallproxy', 'Wi-Fi'],
+    severity: 'block',
+    ownerAction: 'Turn off unexpected SOCKS proxies in System Settings > Network > Wi-Fi > Details > Proxies.',
+    parse: output => parseProxyOutput(output, 'SOCKS proxy is disabled for Wi-Fi.', 'SOCKS proxy is enabled or could not be ruled out.')
+  },
+  {
     id: 'password_after_sleep',
     category: 'Screen Lock',
     label: 'Password required after sleep/screensaver',
@@ -243,6 +303,66 @@ function parseOnOffOutput(output, offMessage, onMessage) {
   }
 
   return unknown('This setting could not be confirmed from the local audit.');
+}
+
+function parseDisabledBooleanOutput(output, passMessage, reviewMessage) {
+  const normalized = cleanOutput(output).toLowerCase();
+
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return pass(passMessage);
+  }
+
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return review(reviewMessage);
+  }
+
+  if (/does not exist|not found|domain.*does not exist/i.test(output)) {
+    return review('Preference was not set explicitly; confirm manually in System Settings.');
+  }
+
+  return unknown('This preference could not be confirmed from the local audit.');
+}
+
+function parseProxyOutput(output, passMessage, failMessage) {
+  if (/Enabled:\s*No/i.test(output)) {
+    return pass(passMessage);
+  }
+
+  if (/Enabled:\s*Yes/i.test(output)) {
+    return fail(failMessage);
+  }
+
+  return unknown('Proxy state could not be confirmed from the local audit.');
+}
+
+function parseDnsServerOutput(output = '') {
+  const text = String(output || '');
+
+  if (/There aren't any DNS Servers set/i.test(text)) {
+    return review('Wi-Fi is accepting DNS from the current network instead of explicit owner-chosen resolvers.');
+  }
+
+  const servers = text
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => /^\d{1,3}(?:\.\d{1,3}){3}$/.test(line));
+  const privateResolvers = servers.filter(server => (
+    /^10\./.test(server)
+    || /^192\.168\./.test(server)
+    || /^172\.(1[6-9]|2\d|3[0-1])\./.test(server)
+  ));
+  const ownerChosenResolvers = new Set(['1.1.1.1', '1.0.0.1', '9.9.9.9', '149.112.112.112']);
+  const hasOwnerChosenResolver = servers.some(server => ownerChosenResolvers.has(server));
+
+  if (privateResolvers.length) {
+    return review(`Wi-Fi DNS includes private/router resolver(s): ${privateResolvers.join(', ')}.`);
+  }
+
+  if (hasOwnerChosenResolver) {
+    return pass(`Wi-Fi DNS is set to explicit public resolvers: ${servers.join(', ')}.`);
+  }
+
+  return review(`Wi-Fi DNS uses resolver(s) that need owner review: ${servers.join(', ') || 'none parsed'}.`);
 }
 
 function parseAdminMembers(output = '') {
@@ -521,6 +641,175 @@ function parseListeningPorts(output = '') {
     });
 }
 
+function parseEstablishedConnections(output = '') {
+  const seen = new Set();
+
+  return String(output || '')
+    .split(/\r?\n/)
+    .slice(1)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .filter(line => /\(ESTABLISHED\)|\sESTABLISHED\s/i.test(line))
+    .map(line => {
+      const columns = line.split(/\s+/);
+      const command = columns[0] || 'unknown';
+      const pid = columns[1] || 'unknown';
+      const user = columns[2] || 'unknown';
+      const name = columns.slice(8).join(' ') || columns[8] || '';
+      const remote = name.includes('->') ? name.split('->').slice(1).join('->') : '';
+      const loopbackOnly = /127\.0\.0\.1|localhost|\[::1\]|::1/.test(name);
+      const encryptedCommonPort = /:(443|993|5223|5228)(?:\s|\(|$)|\.(443|993|5223|5228)(?:\s|\(|$)/.test(remote);
+
+      return {
+        command,
+        pid,
+        user,
+        name,
+        remote,
+        exposure: loopbackOnly ? 'loopback_only' : encryptedCommonPort ? 'common_encrypted_outbound' : 'review_outbound',
+        ownerAction: 'Review unfamiliar outbound apps or destinations. Normal browser, mail, Apple push, and Codex HTTPS connections are expected during active use.'
+      };
+    })
+    .filter(connection => {
+      const key = `${connection.command}:${connection.pid}:${connection.remote}`;
+
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 120);
+}
+
+async function getEstablishedConnectionAudit(execFileCapture) {
+  const result = normalizeCommandResult(await execFileCapture('/usr/sbin/lsof', [
+    '-nP',
+    '-iTCP'
+  ], {
+    timeout: COMMAND_TIMEOUT_MS,
+    maxBuffer: 1024 * 1024
+  }));
+  const connections = parseEstablishedConnections(result.output);
+  const reviewConnections = connections.filter(connection => connection.exposure === 'review_outbound');
+
+  return {
+    id: 'established_connections',
+    category: 'Network Exposure',
+    label: 'Outbound network connections',
+    severity: 'review',
+    status: connections.length ? 'review' : 'pass',
+    passed: connections.length === 0,
+    message: connections.length
+      ? `${connections.length} outbound TCP connection(s) were visible during this audit; ${reviewConnections.length} use less-common ports or need closer review.`
+      : 'No outbound TCP connections were visible at the audit moment.',
+    ownerAction: 'Review unfamiliar outbound connections, especially remote-control tools, tunnels, proxies, or non-browser traffic.',
+    connections,
+    localOnly: true,
+    privilegedMutation: false
+  };
+}
+
+function parseProcessActivity(output = '') {
+  const remoteToolPattern = /(anydesk|teamviewer|rustdesk|ngrok|cloudflared|tailscale|zerotier|frpc|frps|openvpn|wireguard)/i;
+
+  return String(output || '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const match = line.match(/^(\d+)\s+(\S+)\s+([\d.]+)\s+([\d.]+)\s+(.+)$/);
+
+      if (!match) {
+        return null;
+      }
+
+      const commandPath = match[5];
+      const command = commandPath.split('/').filter(Boolean).pop() || commandPath;
+
+      return {
+        pid: Number(match[1]),
+        user: match[2],
+        cpuPercent: Number(match[3]),
+        memoryPercent: Number(match[4]),
+        command,
+        commandPath,
+        remoteAccessReview: remoteToolPattern.test(commandPath)
+      };
+    })
+    .filter(Boolean);
+}
+
+async function getProcessActivityAudit(execFileCapture) {
+  const result = normalizeCommandResult(await execFileCapture('/bin/ps', [
+    '-axo',
+    'pid=,user=,%cpu=,%mem=,comm='
+  ], {
+    timeout: COMMAND_TIMEOUT_MS,
+    maxBuffer: 1024 * 1024
+  }));
+  const processes = parseProcessActivity(result.output);
+  const remoteAccessReview = processes.filter(process => process.remoteAccessReview);
+  const topCpu = [...processes]
+    .sort((left, right) => right.cpuPercent - left.cpuPercent)
+    .slice(0, 20);
+  const topMemory = [...processes]
+    .sort((left, right) => right.memoryPercent - left.memoryPercent)
+    .slice(0, 20);
+
+  return {
+    check: {
+      id: 'activity_monitor_review',
+      category: 'Process Activity',
+      label: 'Activity Monitor remote-access process scan',
+      severity: 'review',
+      status: remoteAccessReview.length ? 'review' : 'pass',
+      passed: remoteAccessReview.length === 0,
+      message: remoteAccessReview.length
+        ? `${remoteAccessReview.length} process(es) match common remote-access or tunnel tool names.`
+        : 'No common third-party remote-access or tunnel process names were visible to this audit.',
+      ownerAction: 'Review top CPU/memory processes and remove any remote-control, tunnel, or proxy tool you did not install.',
+      localOnly: true,
+      privilegedMutation: false
+    },
+    topCpu,
+    topMemory,
+    remoteAccessReview
+  };
+}
+
+function parseTopSummary(output = '') {
+  const lines = String(output || '').split(/\r?\n/);
+  const findLine = label => cleanOutput(lines.find(line => line.startsWith(label)) || '');
+
+  return {
+    processes: findLine('Processes:'),
+    loadAverage: findLine('Load Avg:'),
+    cpuUsage: findLine('CPU usage:'),
+    physicalMemory: findLine('PhysMem:'),
+    virtualMemory: findLine('VM:'),
+    networks: findLine('Networks:'),
+    disks: findLine('Disks:')
+  };
+}
+
+async function getSystemResourceSnapshot(execFileCapture) {
+  const result = normalizeCommandResult(await execFileCapture('/usr/bin/top', [
+    '-l',
+    '1',
+    '-n',
+    '0',
+    '-stats',
+    'pid'
+  ], {
+    timeout: COMMAND_TIMEOUT_MS,
+    maxBuffer: 1024 * 1024
+  }));
+
+  return parseTopSummary(result.output);
+}
+
 async function getListeningPortAudit(execFileCapture) {
   const result = normalizeCommandResult(await execFileCapture('/usr/sbin/lsof', [
     '-nP',
@@ -716,6 +1005,39 @@ async function buildMacSecurityAudit({
     humanAdmins: [],
     systemAdmins: []
   }));
+  const processActivity = await getProcessActivityAudit(execFileCapture).catch(error => ({
+    check: {
+      id: 'activity_monitor_review',
+      category: 'Process Activity',
+      label: 'Activity Monitor remote-access process scan',
+      severity: 'review',
+      status: 'unknown',
+      passed: false,
+      message: cleanOutput(error.message || 'Unable to inspect process activity.'),
+      ownerAction: 'Manually review Activity Monitor CPU, Memory, Disk, and Network tabs for unknown remote-control tools or tunnels.',
+      localOnly: true,
+      privilegedMutation: false
+    },
+    topCpu: [],
+    topMemory: [],
+    remoteAccessReview: []
+  }));
+  const establishedConnections = await getEstablishedConnectionAudit(execFileCapture).catch(error => ({
+    id: 'established_connections',
+    category: 'Network Exposure',
+    label: 'Outbound network connections',
+    severity: 'review',
+    status: 'unknown',
+    passed: false,
+    message: cleanOutput(error.message || 'Unable to inspect outbound network connections.'),
+    ownerAction: 'Manually review Activity Monitor > Network and close unfamiliar apps.',
+    connections: [],
+    localOnly: true,
+    privilegedMutation: false
+  }));
+  const systemResources = await getSystemResourceSnapshot(execFileCapture).catch(error => ({
+    error: cleanOutput(error.message || 'Unable to inspect system resource summary.')
+  }));
   const listeningPorts = await getListeningPortAudit(execFileCapture).catch(error => ({
     id: 'listening_ports',
     category: 'Network Exposure',
@@ -743,7 +1065,15 @@ async function buildMacSecurityAudit({
     privilegedMutation: false
   }));
   const serverBind = getServerBindCheck({ serverHost, port });
-  const checks = [...commandChecks, adminAccounts.check, listeningPorts, startupItems, serverBind];
+  const checks = [
+    ...commandChecks,
+    adminAccounts.check,
+    processActivity.check,
+    establishedConnections,
+    listeningPorts,
+    startupItems,
+    serverBind
+  ];
 
   return {
     supported: true,
@@ -755,6 +1085,13 @@ async function buildMacSecurityAudit({
       humanAdmins: adminAccounts.humanAdmins || [],
       systemAdmins: adminAccounts.systemAdmins || []
     },
+    systemResources,
+    processActivity: {
+      topCpu: processActivity.topCpu || [],
+      topMemory: processActivity.topMemory || [],
+      remoteAccessReview: processActivity.remoteAccessReview || []
+    },
+    establishedConnections: establishedConnections.connections || [],
     listeningPorts: listeningPorts.ports || [],
     startupItems: startupItems.folders || [],
     safetyBoundary: {
@@ -802,6 +1139,13 @@ function buildMacSecurityGuide() {
       'Put cameras, TVs, tablets, Apple TV, and IoT devices on an isolated guest or IoT network that cannot reach this Mac.',
       'Use encrypted offline backups before OS updates or hardware migration.'
     ],
+    airbnbNetworkPlan: [
+      'Until you control the internet circuit, treat the Airbnb router as hostile infrastructure. Do not trust router DNS, router admin pages, or other devices on the LAN.',
+      'Use this Mac firewall in block-all incoming mode, keep EtherealAI bound to 127.0.0.1, and keep AirDrop, Handoff, Remote Login, Screen Sharing, Remote Management, and AirPlay Receiver off.',
+      'Use owner-chosen DNS resolvers or encrypted DNS. This session set Wi-Fi DNS to Cloudflare and Quad9 resolvers so DNS is not taken from the shared router.',
+      'For higher assurance before the dedicated circuit arrives, use a travel router you own between the Airbnb network and your devices. Put the Mac behind that router firewall, use WPA3/WPA2 with a new strong passphrase, disable WPS/UPnP/remote admin, and do not bridge guest devices into the Mac network.',
+      'When the dedicated internet is installed, use your own modem/ONT/router account, update firmware, disable ISP/router remote admin where possible, separate work/IoT/guest networks, and prefer wired Ethernet from your router to the Mac.'
+    ],
     ownerSettingsChecklist: [
       {
         area: 'Suspected admin/kernel compromise',
@@ -835,6 +1179,12 @@ function buildMacSecurityGuide() {
     safeUserLevelChangesAppliedByCodex: [
       'Password required immediately after sleep/screensaver was set for this user.',
       'AirDrop disable preference was set for this user.',
+      'Handoff advertising and Handoff receiving were disabled for this user.',
+      'Wi-Fi DNS was set to explicit Cloudflare and Quad9 resolvers.',
+      'Wi-Fi HTTP, HTTPS, and SOCKS proxy settings were checked and confirmed off.',
+      'SSH file permissions were tightened for this user.',
+      'Finder was configured not to write .DS_Store metadata to network or USB volumes.',
+      'Apple personalized advertising preference was disabled for this user.',
       'Filename extensions were set visible for this user.',
       'Finder file-extension change warning was set on for this user.'
     ],
@@ -843,6 +1193,8 @@ function buildMacSecurityGuide() {
       'Confirm MDM/device-management enrollment is absent unless intentionally owned by you.',
       'Review LaunchAgents, LaunchDaemons, user crontab, Login Items, Background Items, and system extensions.',
       'Disable Remote Login and Remote Apple Events if the audit cannot confirm them without admin access.',
+      'Disable automatic firewall allowance for signed built-in/downloaded apps if it does not break required work.',
+      'Disable AirPlay Receiver and other Continuity features from System Settings when operating on a shared network.',
       'Review and remove unnecessary Login Items and Background Items.',
       'Review Full Disk Access, Accessibility, Screen Recording, and Input Monitoring permissions.',
       'Use Firewall Options to remove unknown allowed apps.',
@@ -866,7 +1218,10 @@ module.exports = {
   buildAdminAccountRecord,
   getAdminAccountAudit,
   parseAdminMembers,
+  parseEstablishedConnections,
   parseListeningPorts,
+  parseProcessActivity,
+  parseTopSummary,
   getServerBindCheck,
   summarizeChecks
 };

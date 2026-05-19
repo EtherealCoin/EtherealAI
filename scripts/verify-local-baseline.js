@@ -2284,7 +2284,9 @@ async function checkMacSecurityModule() {
     buildMacSecurityAudit,
     buildMacSecurityGuide,
     getServerBindCheck,
+    parseEstablishedConnections,
     parseListeningPorts,
+    parseProcessActivity,
     summarizeChecks
   } = require(path.join(projectRoot, 'app/server/src/lib/mac-security'));
   const responses = new Map([
@@ -2336,8 +2338,33 @@ async function checkMacSecurityModule() {
     ['/usr/sbin/systemsetup -getremotelogin', 'Remote Login: Off'],
     ['/usr/sbin/systemsetup -getremoteappleevents', 'Remote Apple Events: Off'],
     ['/usr/bin/defaults read com.apple.NetworkBrowser DisableAirDrop', '1'],
+    ['/usr/bin/defaults -currentHost read com.apple.coreservices.useractivityd ActivityAdvertisingAllowed', '0'],
+    ['/usr/bin/defaults -currentHost read com.apple.coreservices.useractivityd ActivityReceivingAllowed', '0'],
+    ['/usr/sbin/networksetup -getdnsservers Wi-Fi', '1.1.1.1\n1.0.0.1\n9.9.9.9\n149.112.112.112'],
+    ['/usr/sbin/networksetup -getwebproxy Wi-Fi', 'Enabled: No\nServer:\nPort: 0\nAuthenticated Proxy Enabled: 0'],
+    ['/usr/sbin/networksetup -getsecurewebproxy Wi-Fi', 'Enabled: No\nServer:\nPort: 0\nAuthenticated Proxy Enabled: 0'],
+    ['/usr/sbin/networksetup -getsocksfirewallproxy Wi-Fi', 'Enabled: No\nServer:\nPort: 0\nAuthenticated Proxy Enabled: 0'],
     ['/usr/bin/defaults read com.apple.screensaver askForPassword', '1'],
     ['/usr/bin/defaults read com.apple.screensaver askForPasswordDelay', '0'],
+    ['/bin/ps -axo pid=,user=,%cpu=,%mem=,comm=', [
+      '100 ethereal 10.0 0.2 /Applications/Codex.app/Contents/MacOS/Codex',
+      '200 ethereal 2.0 0.1 /Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '300 root 0.0 0.0 /usr/sbin/bluetoothd'
+    ].join('\n')],
+    ['/usr/bin/top -l 1 -n 0 -stats pid', [
+      'Processes: 120 total, 2 running, 118 sleeping, 800 threads',
+      'Load Avg: 1.10, 1.20, 1.30',
+      'CPU usage: 5.00% user, 3.00% sys, 92.00% idle',
+      'PhysMem: 32G used, 96G unused.',
+      'VM: 300T vsize, 0(0) swapins, 0(0) swapouts.',
+      'Networks: packets: 100/10M in, 50/5M out.',
+      'Disks: 1000/1G read, 2000/2G written.'
+    ].join('\n')],
+    ['/usr/sbin/lsof -nP -iTCP', [
+      'COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME',
+      'Code 300 ethereal 24u IPv4 0x3 0t0 TCP 192.168.40.2:50000->13.107.5.93:443 (ESTABLISHED)',
+      'node 100 ethereal 20u IPv4 0x1 0t0 TCP 127.0.0.1:3000 (LISTEN)'
+    ].join('\n')],
     ['/usr/sbin/lsof -nP -iTCP -sTCP:LISTEN', [
       'COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME',
       'node 100 ethereal 20u IPv4 0x1 0t0 TCP 127.0.0.1:3000 (LISTEN)',
@@ -2367,6 +2394,8 @@ async function checkMacSecurityModule() {
   const bindPass = getServerBindCheck({ serverHost: '127.0.0.1', port: 3000 });
   const bindFail = getServerBindCheck({ serverHost: '0.0.0.0', port: 3000 });
   const parsedPorts = parseListeningPorts(responses.get('/usr/sbin/lsof -nP -iTCP -sTCP:LISTEN'));
+  const parsedConnections = parseEstablishedConnections(responses.get('/usr/sbin/lsof -nP -iTCP'));
+  const parsedProcesses = parseProcessActivity(responses.get('/bin/ps -axo pid=,user=,%cpu=,%mem=,comm='));
   const summary = summarizeChecks([
     { status: 'pass' },
     { status: 'fail' },
@@ -2376,9 +2405,9 @@ async function checkMacSecurityModule() {
 
   if (
     audit.supported !== true
-    || audit.summary?.totalChecks < 19
+    || audit.summary?.totalChecks < 27
     || audit.summary?.failCount !== 0
-    || audit.summary?.reviewCount < 3
+    || audit.summary?.reviewCount < 4
     || audit.safetyBoundary?.readOnlyAudit !== true
     || audit.safetyBoundary?.privilegedMutation !== false
     || !audit.checks.some(check => check.id === 'filevault' && check.status === 'pass')
@@ -2393,22 +2422,38 @@ async function checkMacSecurityModule() {
     || !audit.checks.some(check => check.id === 'mdm_enrollment' && check.status === 'pass')
     || !audit.checks.some(check => check.id === 'user_crontab' && check.status === 'pass')
     || !audit.checks.some(check => check.id === 'system_extensions' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'handoff_advertising_disabled' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'handoff_receiving_disabled' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'wifi_dns_servers' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'wifi_web_proxy' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'wifi_secure_web_proxy' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'wifi_socks_proxy' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'activity_monitor_review' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'established_connections' && check.status === 'review')
     || !audit.checks.some(check => check.id === 'startup_persistence_items' && check.status === 'review')
     || !audit.checks.some(check => check.id === 'etherealai_bind_host' && check.status === 'pass')
     || !audit.checks.some(check => check.id === 'listening_ports' && check.status === 'review')
+    || audit.processActivity?.topCpu?.[0]?.command !== 'Codex'
+    || audit.processActivity?.remoteAccessReview?.length !== 0
+    || audit.systemResources?.cpuUsage !== 'CPU usage: 5.00% user, 3.00% sys, 92.00% idle'
+    || !audit.establishedConnections.some(connection => connection.command === 'Code' && connection.exposure === 'common_encrypted_outbound')
     || !audit.listeningPorts.some(port => port.command === 'node' && port.exposure === 'loopback_only')
     || !audit.listeningPorts.some(port => port.command === 'ControlCe' && port.exposure === 'all_interfaces')
     || !audit.startupItems.some(folder => folder.id === 'user_launch_agents' && folder.items.includes('com.google.GoogleUpdater.wake.plist'))
     || bindPass.status !== 'pass'
     || bindFail.status !== 'fail'
     || parsedPorts.length !== 2
+    || parsedConnections.length !== 1
+    || parsedProcesses.length !== 3
     || summary.failCount !== 1
     || guide.operatingMode !== 'assume_home_network_hostile'
     || !guide.rules.some(rule => rule.includes('VPNs can improve transport privacy'))
     || !guide.compromisedHostProtocol.some(item => item.includes('admin rights, MDM, system extensions, kernel-level tampering'))
     || !guide.cleanRoomRecoveryPlan.some(item => item.includes('DFU restore/revive'))
+    || !guide.airbnbNetworkPlan.some(item => item.includes('Airbnb router as hostile infrastructure'))
     || !guide.ownerSettingsChecklist.some(item => item.area.includes('General > Sharing'))
     || !guide.adminOnlyActions.some(item => item.includes('Remote Login'))
+    || !guide.adminOnlyActions.some(item => item.includes('firewall allowance'))
     || !guide.adminOnlyActions.some(item => item.includes('LaunchAgents'))
     || guide.etherealAiSecurityBoundary?.bindsToLoopbackByDefault !== true
   ) {
@@ -6137,15 +6182,20 @@ function checkMacSecurityLockdownUi() {
     || !html.includes('Suspected Admin Or Kernel Compromise')
     || !html.includes('Clean-Room Recovery Plan')
     || !html.includes('Audit Checks')
+    || !html.includes('Activity Monitor Snapshot')
     || !html.includes('Startup Persistence Review')
+    || !html.includes('Outbound Network Connections')
     || !html.includes('Listening Network Services')
     || !html.includes('Manual Mac Lockdown Checklist')
     || !html.includes('Emergency Containment')
     || !html.includes('Network And Router Plan')
+    || !html.includes('airbnb-network-plan')
     || !html.includes('VPN reality check')
     || !html.includes('/api/v1/mac-security/audit')
     || !html.includes('function renderPriorityActions')
     || !html.includes('function renderStartupItems')
+    || !html.includes('function renderProcessActivity')
+    || !html.includes('function renderOutboundConnections')
     || !html.includes('function renderListeningPorts')
     || !styles.includes('.security-shell')
     || !styles.includes('.security-status-pass')
@@ -9218,15 +9268,23 @@ async function runServerApiChecks() {
     || !macSecurityAudit.body.audit.checks.some(check => check.id === 'filevault')
     || !macSecurityAudit.body.audit.checks.some(check => check.id === 'admin_group_membership')
     || !macSecurityAudit.body.audit.checks.some(check => check.id === 'mdm_enrollment')
+    || !macSecurityAudit.body.audit.checks.some(check => check.id === 'activity_monitor_review')
+    || !macSecurityAudit.body.audit.checks.some(check => check.id === 'established_connections')
+    || !macSecurityAudit.body.audit.checks.some(check => check.id === 'wifi_dns_servers')
+    || !macSecurityAudit.body.audit.checks.some(check => check.id === 'wifi_web_proxy')
     || !macSecurityAudit.body.audit.checks.some(check => check.id === 'startup_persistence_items')
     || !macSecurityAudit.body.audit.checks.some(check => check.id === 'etherealai_bind_host' && check.status === 'pass')
     || !Array.isArray(macSecurityAudit.body.audit?.adminAccounts?.accounts)
     || !Array.isArray(macSecurityAudit.body.audit?.adminAccounts?.humanAdmins)
     || !Array.isArray(macSecurityAudit.body.audit?.adminAccounts?.systemAdmins)
+    || !Array.isArray(macSecurityAudit.body.audit?.processActivity?.topCpu)
+    || !Array.isArray(macSecurityAudit.body.audit?.processActivity?.topMemory)
+    || !Array.isArray(macSecurityAudit.body.audit?.establishedConnections)
     || !Array.isArray(macSecurityAudit.body.audit?.startupItems)
     || !macSecurityAudit.body.guide?.rules?.some(rule => rule.includes('VPNs can improve transport privacy'))
     || !macSecurityAudit.body.guide?.compromisedHostProtocol?.some(item => item.includes('admin rights, MDM'))
     || !macSecurityAudit.body.guide?.cleanRoomRecoveryPlan?.some(item => item.includes('DFU restore/revive'))
+    || !macSecurityAudit.body.guide?.airbnbNetworkPlan?.some(item => item.includes('Airbnb router as hostile infrastructure'))
     || !macSecurityAudit.body.guide?.ownerSettingsChecklist?.some(item => item.area.includes('General > Sharing'))
     || macSecurityAudit.body.guide?.etherealAiSecurityBoundary?.bindsToLoopbackByDefault !== true
   ) {
