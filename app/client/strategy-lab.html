@@ -630,7 +630,127 @@
         </section>
 
         <section class="model-panel" id="bot-automation">
-            <h2>Bot Automation Readiness</h2>
+            <h2>Bot Operator Wizard</h2>
+            <div id="bot-operator-wizard" class="operator-wizard">
+                <div class="operator-wizard-header">
+                    <div>
+                        <strong>Finish Paper Trading Safely</strong>
+                        <span>This guided setup creates only local paper-trading records. It does not enable live trading, wallet signing, exchange orders, token deployment, or social posting.</span>
+                    </div>
+                    <div class="button-row">
+                        <button type="button" id="bot-operator-safe-finish">Use Safe Defaults and Finish Paper Setup</button>
+                        <button type="button" id="bot-operator-refresh">Refresh Wizard</button>
+                    </div>
+                </div>
+                <div id="bot-operator-progress" class="operator-progress-checklist">Loading paper setup checklist...</div>
+                <pre id="bot-operator-status" class="model-output owner-proof-command">Choose Step 1 to begin. Paper mode only.</pre>
+                <div class="operator-step-list">
+                    <article class="operator-step" id="bot-operator-step-strategy">
+                        <div class="operator-step-heading">
+                            <strong>Step 1: Select Strategy</strong>
+                            <span id="bot-operator-strategy-state">Required</span>
+                        </div>
+                        <p>A strategy tells EtherealAI what logic to simulate. Paper trading cannot be verified until one is selected.</p>
+                        <label for="bot-operator-strategy">Required Strategy</label>
+                        <select id="bot-operator-strategy" required>
+                            <option value="">Loading strategies...</option>
+                        </select>
+                        <div id="bot-operator-strategy-note" class="operator-step-note">The recommended strategy will be marked after records load.</div>
+                    </article>
+
+                    <article class="operator-step" id="bot-operator-step-session">
+                        <div class="operator-step-heading">
+                            <strong>Step 2: Select Paper Session</strong>
+                            <span id="bot-operator-session-state">Waiting for strategy</span>
+                        </div>
+                        <p>A paper session is a completed simulation. It does not use real money, wallets, or exchange orders.</p>
+                        <label for="bot-operator-paper-session">Passed Paper Session</label>
+                        <select id="bot-operator-paper-session">
+                            <option value="">Select a strategy first</option>
+                        </select>
+                        <div class="operator-step-actions">
+                            <button type="button" id="bot-operator-create-paper-session">Create Safe Paper Replay</button>
+                        </div>
+                        <div id="bot-operator-session-note" class="operator-step-note">Only passed paper sessions are shown by default.</div>
+                    </article>
+
+                    <article class="operator-step" id="bot-operator-step-risk">
+                        <div class="operator-step-heading">
+                            <strong>Step 3: Select Risk Profile</strong>
+                            <span id="bot-operator-risk-state">Required</span>
+                        </div>
+                        <p>The risk profile supplies paper-only safety limits. The Kill Switch must be off for paper setup completion.</p>
+                        <label for="bot-operator-risk-profile">Active Paper Risk Profile</label>
+                        <select id="bot-operator-risk-profile">
+                            <option value="">Loading risk profiles...</option>
+                        </select>
+                        <div class="operator-step-actions">
+                            <button type="button" id="bot-operator-create-risk-profile">Create Safe Risk Profile</button>
+                        </div>
+                        <div id="bot-operator-risk-note" class="operator-step-note">Recommended: Paper Trading Safe Defaults.</div>
+                    </article>
+
+                    <article class="operator-step" id="bot-operator-step-connector">
+                        <div class="operator-step-heading">
+                            <strong>Step 4: Select Execution Connector</strong>
+                            <span id="bot-operator-connector-state">Required</span>
+                        </div>
+                        <p>The connector records where a paper plan would route locally. Safe paper connectors cannot place live orders.</p>
+                        <label for="bot-operator-connector">Safe Paper Connector</label>
+                        <select id="bot-operator-connector">
+                            <option value="">Loading connectors...</option>
+                        </select>
+                        <label class="checkbox-row">
+                            <input id="bot-operator-show-archived-connectors" type="checkbox">
+                            Show archived connectors
+                        </label>
+                        <div class="operator-step-actions">
+                            <button type="button" id="bot-operator-create-connector">Create Local Paper Connector</button>
+                        </div>
+                        <div id="bot-operator-connector-note" class="operator-step-note">Archived connectors stay hidden unless you choose to show them.</div>
+                    </article>
+
+                    <article class="operator-step" id="bot-operator-step-plan">
+                        <div class="operator-step-heading">
+                            <strong>Step 5: Create Ready Paper Plan</strong>
+                            <span id="bot-operator-plan-state">Waiting for selections</span>
+                        </div>
+                        <p>A ready paper plan connects the strategy, passed paper session, safe risk profile, and local paper connector.</p>
+                        <div id="bot-operator-plan-counts" class="operator-count-change">Ready Paper Plans: loading...</div>
+                        <div class="operator-step-actions">
+                            <button type="button" id="bot-operator-create-plan">Create Safe Paper Plan</button>
+                        </div>
+                    </article>
+
+                    <article class="operator-step" id="bot-operator-step-schedule">
+                        <div class="operator-step-heading">
+                            <strong>Step 6: Create/Activate Paper Schedule</strong>
+                            <span id="bot-operator-schedule-state">Waiting for ready plan</span>
+                        </div>
+                        <p>A local paper schedule lets EtherealAI run the paper plan automatically on this computer only.</p>
+                        <div id="bot-operator-schedule-counts" class="operator-count-change">Active Paper Schedules: loading...</div>
+                        <div class="operator-step-actions">
+                            <button type="button" id="bot-operator-create-schedule">Create Local Paper Schedule</button>
+                            <button type="button" id="bot-operator-activate-schedule">Activate Paper Schedule</button>
+                        </div>
+                    </article>
+
+                    <article class="operator-step" id="bot-operator-step-verify">
+                        <div class="operator-step-heading">
+                            <strong>Step 7: Final Verification</strong>
+                            <span id="bot-operator-verify-state">Not verified</span>
+                        </div>
+                        <p>This checks Owner Setup and reports exactly which paper requirement is still missing if completion fails.</p>
+                        <div class="operator-step-actions">
+                            <button type="button" id="bot-operator-verify">Verify Paper Trading 100%</button>
+                        </div>
+                        <div id="bot-operator-verification" class="operator-step-note">Verification has not run yet.</div>
+                    </article>
+                </div>
+            </div>
+
+            <details class="compact-details advanced-bot-records">
+                <summary>Advanced Bot Records and Evidence Exports</summary>
             <form id="bot-plan-form" class="model-test-form">
                 <input type="hidden" id="bot-plan-id" name="id">
 
@@ -788,6 +908,7 @@
                 <span id="bot-schedule-filter-count" class="inline-status">Loading paper schedules...</span>
             </form>
             <div id="bot-schedule-list" class="comparison-table">Loading paper schedules...</div>
+            </details>
         </section>
 
         <section class="model-panel" id="market-data">
@@ -916,6 +1037,7 @@
     <script>
         let selectedStrategyId = null;
         let selectedStrategy = null;
+        let availableStrategies = [];
         let availableImports = [];
         let strategyCandidateImports = [];
         let availableConnectors = [];
@@ -929,9 +1051,13 @@
         let availableBotRuns = [];
         let availableBotSchedules = [];
         let latestBotSafetyDossier = null;
+        let latestBotAutomationCapabilityPath = null;
+        let latestOwnerSetupWizard = null;
         let latestVisibleBotPlans = [];
         let latestVisibleBotRuns = [];
         let latestVisibleBotSchedules = [];
+        let botOperatorCreatedPlanId = null;
+        let botOperatorCreatedScheduleId = null;
         let selectedRiskProfileId = null;
         let editingRiskProfileId = null;
         let editingBotPlanId = null;
@@ -1051,6 +1177,8 @@
 
         function renderStrategies(strategies) {
             const list = document.getElementById('strategy-list');
+            availableStrategies = strategies;
+            renderBotOperatorWizard();
 
             if (!strategies.length) {
                 list.innerHTML = '<p>No strategies saved yet.</p>';
@@ -1090,6 +1218,7 @@
             }
 
             renderBotPlanSelectors();
+            selectBotOperatorStrategy(data.strategy.id);
 
             const latestBacktest = data.backtests[0];
             document.getElementById('backtest-results').textContent = [
@@ -1570,6 +1699,808 @@
                     `<option value="${connector.id}">#${connector.id} ${escapeHtml(connector.label)} · ${escapeHtml(connector.mode)} · ${escapeHtml(connector.status)}</option>`
                 ))
             ].join('');
+            renderBotOperatorWizard();
+        }
+
+        function normalizeId(value) {
+            const number = Number(value);
+
+            return Number.isInteger(number) && number > 0 ? number : null;
+        }
+
+        function sortNewestFirst(items = []) {
+            return [...items].sort((left, right) => {
+                const rightTime = Date.parse(right.updated_at || right.created_at || '') || 0;
+                const leftTime = Date.parse(left.updated_at || left.created_at || '') || 0;
+
+                return rightTime - leftTime || Number(right.id || 0) - Number(left.id || 0);
+            });
+        }
+
+        function getPaperRiskGateStatus(session = null) {
+            return String(
+                session?.result?.riskGate?.status
+                || session?.result?.risk_gate?.status
+                || ''
+            ).trim().toLowerCase();
+        }
+
+        function isPassedPaperSession(session = null) {
+            return Boolean(
+                session
+                && session.status === 'completed'
+                && ['pass', 'passed', 'ready', 'ready_for_paper'].includes(getPaperRiskGateStatus(session))
+            );
+        }
+
+        function isActivePaperRiskProfile(profile = null) {
+            return Boolean(profile && profile.mode === 'paper' && isPaperReadyRiskProfile(profile));
+        }
+
+        function isSafePaperConnector(connector = null, { includeArchived = false } = {}) {
+            return Boolean(
+                connector
+                && connector.mode === 'paper'
+                && (includeArchived || connector.status !== 'archived')
+            );
+        }
+
+        function getPlanReadinessStatus(plan = null) {
+            if (!plan) {
+                return 'missing';
+            }
+
+            return plan.status === 'archived'
+                ? 'archived'
+                : (plan.readiness?.status || plan.status || 'unknown');
+        }
+
+        function isReadyPaperPlan(plan = null) {
+            return Boolean(
+                plan
+                && plan.mode === 'paper'
+                && plan.status !== 'archived'
+                && getPlanReadinessStatus(plan) === 'ready_for_paper'
+            );
+        }
+
+        function getReadyPaperPlans() {
+            return sortNewestFirst(availableBotPlans.filter(isReadyPaperPlan));
+        }
+
+        function getActivePaperSchedules(planId = null) {
+            return sortNewestFirst(availableBotSchedules.filter(schedule => (
+                schedule.status === 'active'
+                && (!planId || String(schedule.plan_id) === String(planId))
+            )));
+        }
+
+        function getOperatorSelectValue(id) {
+            return normalizeId(document.getElementById(id)?.value);
+        }
+
+        function getOperatorStrategyId() {
+            return getOperatorSelectValue('bot-operator-strategy') || selectedStrategyId;
+        }
+
+        function getOperatorPaperSessionId() {
+            return getOperatorSelectValue('bot-operator-paper-session');
+        }
+
+        function getOperatorRiskProfileId() {
+            return getOperatorSelectValue('bot-operator-risk-profile');
+        }
+
+        function getOperatorConnectorId() {
+            return getOperatorSelectValue('bot-operator-connector');
+        }
+
+        function getSelectedOperatorStrategy() {
+            const strategyId = getOperatorStrategyId();
+
+            return availableStrategies.find(strategy => String(strategy.id) === String(strategyId)) || selectedStrategy || null;
+        }
+
+        function getPassedSessionsForStrategy(strategyId = null) {
+            return sortNewestFirst(availablePaperSessions.filter(session => (
+                isPassedPaperSession(session)
+                && (!strategyId || String(session.strategy_id) === String(strategyId))
+            )));
+        }
+
+        function getRecommendedStrategy() {
+            const latestPassedSession = sortNewestFirst(availablePaperSessions.filter(isPassedPaperSession))[0];
+
+            if (latestPassedSession) {
+                const matchingStrategy = availableStrategies.find(strategy => String(strategy.id) === String(latestPassedSession.strategy_id));
+
+                if (matchingStrategy) {
+                    return matchingStrategy;
+                }
+            }
+
+            return sortNewestFirst(availableStrategies)[0] || null;
+        }
+
+        function getRecommendedPaperSession(strategyId = null) {
+            return getPassedSessionsForStrategy(strategyId)[0] || null;
+        }
+
+        function getRecommendedRiskProfile() {
+            const activePaperProfiles = sortNewestFirst(availableRiskProfiles.filter(isActivePaperRiskProfile));
+
+            return activePaperProfiles.find(profile => profile.name === safePaperRiskDefaults.name)
+                || activePaperProfiles[0]
+                || null;
+        }
+
+        function getSafePaperConnectors(includeArchived = false) {
+            return sortNewestFirst(availableConnectors.filter(connector => isSafePaperConnector(connector, { includeArchived })));
+        }
+
+        function getRecommendedConnector() {
+            const safeConnectors = getSafePaperConnectors(false);
+
+            return safeConnectors.find(connector => connector.status === 'configured')
+                || safeConnectors[0]
+                || null;
+        }
+
+        function getMatchingReadyPaperPlan({
+            strategyId = getOperatorStrategyId(),
+            paperSessionId = getOperatorPaperSessionId(),
+            riskProfileId = getOperatorRiskProfileId(),
+            connectorId = getOperatorConnectorId()
+        } = {}) {
+            return getReadyPaperPlans().find(plan => (
+                (!strategyId || String(plan.strategy_id) === String(strategyId))
+                && (!paperSessionId || String(plan.paper_session_id) === String(paperSessionId))
+                && (!riskProfileId || String(plan.risk_profile_id) === String(riskProfileId))
+                && (!connectorId || String(plan.connector_id) === String(connectorId))
+            )) || null;
+        }
+
+        function setOperatorStatus(message, detail = '') {
+            const output = document.getElementById('bot-operator-status');
+
+            if (!output) {
+                return;
+            }
+
+            output.textContent = [message, detail].filter(Boolean).join('\n\n');
+        }
+
+        function setOperatorSelectOptions(select, options, {
+            emptyLabel,
+            currentValue,
+            recommendedValue,
+            optionLabel
+        }) {
+            if (!select) {
+                return '';
+            }
+
+            const normalizedCurrent = currentValue ? String(currentValue) : '';
+            const normalizedRecommended = recommendedValue ? String(recommendedValue) : '';
+            const validCurrent = normalizedCurrent && options.some(option => String(option.value) === normalizedCurrent);
+            const nextValue = validCurrent ? normalizedCurrent : normalizedRecommended;
+
+            select.innerHTML = [
+                `<option value="">${escapeHtml(emptyLabel)}</option>`,
+                ...options.map(option => {
+                    const recommendedMarker = String(option.value) === normalizedRecommended ? ' Recommended' : '';
+
+                    return `<option value="${option.value}">${escapeHtml(optionLabel(option))}${recommendedMarker}</option>`;
+                })
+            ].join('');
+            select.value = nextValue || '';
+
+            return select.value;
+        }
+
+        function updateOperatorStepState(stepId, stateId, passed, readyLabel, blockedLabel) {
+            const step = document.getElementById(stepId);
+            const state = document.getElementById(stateId);
+
+            if (step) {
+                step.classList.toggle('operator-step-ready', Boolean(passed));
+                step.classList.toggle('operator-step-blocked', !passed);
+            }
+
+            if (state) {
+                state.textContent = passed ? readyLabel : blockedLabel;
+                state.className = passed ? 'operator-state-ready' : 'operator-state-blocked';
+            }
+        }
+
+        function renderBotOperatorProgress({ verified = false } = {}) {
+            const output = document.getElementById('bot-operator-progress');
+
+            if (!output) {
+                return;
+            }
+
+            const strategyId = getOperatorStrategyId();
+            const paperSession = availablePaperSessions.find(session => String(session.id) === String(getOperatorPaperSessionId()));
+            const riskProfile = availableRiskProfiles.find(profile => String(profile.id) === String(getOperatorRiskProfileId()));
+            const connector = availableConnectors.find(item => String(item.id) === String(getOperatorConnectorId()));
+            const readyPlan = getMatchingReadyPaperPlan();
+            const activeSchedule = readyPlan
+                ? getActivePaperSchedules(readyPlan.id)[0]
+                : getActivePaperSchedules()[0];
+            const checks = [
+                {
+                    label: 'Strategy selected',
+                    passed: Boolean(strategyId),
+                    fix: 'Use Step 1 and choose the recommended strategy.'
+                },
+                {
+                    label: 'Paper session selected',
+                    passed: Boolean(paperSession && isPassedPaperSession(paperSession)),
+                    fix: 'Use Step 2 and choose a passed paper session or click Create Safe Paper Replay.'
+                },
+                {
+                    label: 'Risk profile active',
+                    passed: Boolean(riskProfile && isActivePaperRiskProfile(riskProfile)),
+                    fix: 'Use Step 3 and choose an active paper risk profile or click Create Safe Risk Profile.'
+                },
+                {
+                    label: 'Connector safe',
+                    passed: Boolean(connector && isSafePaperConnector(connector)),
+                    fix: 'Use Step 4 and choose a safe paper connector or click Create Local Paper Connector.'
+                },
+                {
+                    label: 'Ready paper plan created',
+                    passed: Boolean(readyPlan || getReadyPaperPlans().length),
+                    fix: 'Use Step 5 and click Create Safe Paper Plan.'
+                },
+                {
+                    label: 'Paper schedule active',
+                    passed: Boolean(activeSchedule),
+                    fix: 'Use Step 6 and click Create Local Paper Schedule, then Activate Paper Schedule.'
+                },
+                {
+                    label: 'Paper trading verified 100%',
+                    passed: Boolean(verified),
+                    fix: 'Use Step 7 and click Verify Paper Trading 100%.'
+                }
+            ];
+
+            output.innerHTML = checks.map(check => `
+                <article class="${check.passed ? 'operator-check-pass' : 'operator-check-blocked'}">
+                    <strong>${escapeHtml(check.label)}</strong>
+                    <span>${check.passed ? 'Complete' : escapeHtml(check.fix)}</span>
+                </article>
+            `).join('');
+        }
+
+        function renderBotOperatorWizard(wizard = latestOwnerSetupWizard) {
+            const container = document.getElementById('bot-operator-wizard');
+
+            if (!container) {
+                return;
+            }
+
+            const strategySelect = document.getElementById('bot-operator-strategy');
+            const sessionSelect = document.getElementById('bot-operator-paper-session');
+            const riskSelect = document.getElementById('bot-operator-risk-profile');
+            const connectorSelect = document.getElementById('bot-operator-connector');
+            const showArchivedConnectors = Boolean(document.getElementById('bot-operator-show-archived-connectors')?.checked);
+            const recommendedStrategy = getRecommendedStrategy();
+            const strategyValue = setOperatorSelectOptions(strategySelect, availableStrategies.map(strategy => ({
+                value: strategy.id,
+                item: strategy
+            })), {
+                emptyLabel: 'Select required strategy',
+                currentValue: strategySelect?.value || selectedStrategyId,
+                recommendedValue: recommendedStrategy?.id || '',
+                optionLabel: option => `#${option.item.id} ${option.item.name} · ${option.item.market_symbol} · ${option.item.timeframe}`
+            });
+            const strategyId = normalizeId(strategyValue);
+            const passedSessions = getPassedSessionsForStrategy(strategyId);
+            const recommendedSession = getRecommendedPaperSession(strategyId);
+            const sessionValue = setOperatorSelectOptions(sessionSelect, passedSessions.map(session => ({
+                value: session.id,
+                item: session
+            })), {
+                emptyLabel: strategyId ? 'Select passed paper session' : 'Select a strategy first',
+                currentValue: sessionSelect?.value,
+                recommendedValue: recommendedSession?.id || '',
+                optionLabel: option => `#${option.item.id} ${option.item.name} · ${riskGateLabel(option.item.result)}`
+            });
+            const activeRiskProfiles = sortNewestFirst(availableRiskProfiles.filter(isActivePaperRiskProfile));
+            const recommendedRiskProfile = getRecommendedRiskProfile();
+            const riskValue = setOperatorSelectOptions(riskSelect, activeRiskProfiles.map(profile => ({
+                value: profile.id,
+                item: profile
+            })), {
+                emptyLabel: 'Select active paper risk profile',
+                currentValue: riskSelect?.value,
+                recommendedValue: recommendedRiskProfile?.id || '',
+                optionLabel: option => `#${option.item.id} ${option.item.name} · kill off · active`
+            });
+            const safeConnectors = getSafePaperConnectors(showArchivedConnectors);
+            const recommendedConnector = showArchivedConnectors
+                ? (safeConnectors.find(connector => connector.status === 'configured') || safeConnectors[0] || null)
+                : getRecommendedConnector();
+            const connectorValue = setOperatorSelectOptions(connectorSelect, safeConnectors.map(connector => ({
+                value: connector.id,
+                item: connector
+            })), {
+                emptyLabel: 'Select safe paper connector',
+                currentValue: connectorSelect?.value,
+                recommendedValue: recommendedConnector?.id || '',
+                optionLabel: option => `#${option.item.id} ${option.item.label} · ${option.item.mode} · ${option.item.status}`
+            });
+            const selectedSession = availablePaperSessions.find(session => String(session.id) === String(sessionValue));
+            const selectedRiskProfile = availableRiskProfiles.find(profile => String(profile.id) === String(riskValue));
+            const selectedConnector = availableConnectors.find(connector => String(connector.id) === String(connectorValue));
+            const selectedReadyPlan = getMatchingReadyPaperPlan({
+                strategyId,
+                paperSessionId: normalizeId(sessionValue),
+                riskProfileId: normalizeId(riskValue),
+                connectorId: normalizeId(connectorValue)
+            });
+            const readyPaperPlanCount = getReadyPaperPlans().length;
+            const activePaperScheduleCount = getActivePaperSchedules().length;
+            const selectedActiveSchedule = selectedReadyPlan ? getActivePaperSchedules(selectedReadyPlan.id)[0] : null;
+            const paperProgress = wizard?.progress?.paperTrading?.current || 0;
+            const verified = paperProgress >= 100;
+
+            if (strategyId) {
+                selectedStrategyId = strategyId;
+                selectedStrategy = availableStrategies.find(strategy => String(strategy.id) === String(strategyId)) || selectedStrategy;
+            }
+
+            if (sessionSelect) {
+                sessionSelect.disabled = !strategyId;
+            }
+
+            const planReady = Boolean(strategyId && selectedSession && selectedRiskProfile && selectedConnector);
+            document.getElementById('bot-operator-create-paper-session').disabled = !strategyId;
+            document.getElementById('bot-operator-create-plan').disabled = !planReady;
+            document.getElementById('bot-operator-create-schedule').disabled = !selectedReadyPlan;
+            document.getElementById('bot-operator-activate-schedule').disabled = !selectedReadyPlan;
+            document.getElementById('bot-operator-verify').disabled = false;
+            document.getElementById('bot-operator-safe-finish').disabled = !availableStrategies.length;
+
+            updateOperatorStepState('bot-operator-step-strategy', 'bot-operator-strategy-state', Boolean(strategyId), 'Selected', 'Required');
+            updateOperatorStepState('bot-operator-step-session', 'bot-operator-session-state', Boolean(selectedSession && isPassedPaperSession(selectedSession)), 'Passed session selected', strategyId ? 'Needs passed paper session' : 'Waiting for strategy');
+            updateOperatorStepState('bot-operator-step-risk', 'bot-operator-risk-state', Boolean(selectedRiskProfile && isActivePaperRiskProfile(selectedRiskProfile)), 'Active profile selected', 'Needs active paper profile');
+            updateOperatorStepState('bot-operator-step-connector', 'bot-operator-connector-state', Boolean(selectedConnector && isSafePaperConnector(selectedConnector, { includeArchived: showArchivedConnectors })), 'Safe paper connector selected', 'Needs safe connector');
+            updateOperatorStepState('bot-operator-step-plan', 'bot-operator-plan-state', Boolean(selectedReadyPlan), 'Ready paper plan found', 'Create ready paper plan');
+            updateOperatorStepState('bot-operator-step-schedule', 'bot-operator-schedule-state', Boolean(selectedActiveSchedule || activePaperScheduleCount), 'Active paper schedule found', selectedReadyPlan ? 'Activate paper schedule' : 'Waiting for ready plan');
+            updateOperatorStepState('bot-operator-step-verify', 'bot-operator-verify-state', verified, verified ? 'Verified 100%' : 'Not verified');
+
+            document.getElementById('bot-operator-strategy-note').textContent = recommendedStrategy
+                ? `Recommended: #${recommendedStrategy.id} ${recommendedStrategy.name}. This is selected automatically when safe defaults are used.`
+                : 'No strategy is available yet. Create or save a strategy before paper automation can finish.';
+            document.getElementById('bot-operator-session-note').textContent = selectedSession
+                ? `Selected paper session #${selectedSession.id}. Risk gate: ${riskGateLabel(selectedSession.result)}. No real money is used.`
+                : passedSessions.length
+                    ? 'Choose the recommended passed replay for this strategy.'
+                    : 'No passed paper session is available for the selected strategy. Click Create Safe Paper Replay.';
+            document.getElementById('bot-operator-risk-note').textContent = selectedRiskProfile
+                ? `Selected #${selectedRiskProfile.id} ${selectedRiskProfile.name}. Kill Switch is off and paper limits are active.`
+                : 'No active safe paper profile is selected. Click Create Safe Risk Profile.';
+            document.getElementById('bot-operator-connector-note').textContent = selectedConnector
+                ? `Selected #${selectedConnector.id} ${selectedConnector.label}. Mode is paper; live orders remain disabled.`
+                : 'No safe local paper connector is selected. Click Create Local Paper Connector.';
+            document.getElementById('bot-operator-plan-counts').textContent = `Ready Paper Plans: ${readyPaperPlanCount}${selectedReadyPlan ? ` · selected plan #${selectedReadyPlan.id}` : ''}`;
+            document.getElementById('bot-operator-schedule-counts').textContent = `Active Paper Schedules: ${activePaperScheduleCount}${selectedActiveSchedule ? ` · selected schedule #${selectedActiveSchedule.id}` : ''}`;
+
+            renderBotOperatorProgress({ verified });
+        }
+
+        function selectBotOperatorStrategy(strategyId) {
+            const select = document.getElementById('bot-operator-strategy');
+
+            if (select && strategyId) {
+                select.value = String(strategyId);
+            }
+
+            renderBotOperatorWizard();
+        }
+
+        async function loadBotOperatorOwnerSetupWizard() {
+            const response = await fetch('/api/v1/owner-setup-wizard');
+            const data = await response.json();
+
+            if (!response.ok) {
+                setOperatorStatus(data.error || 'Owner Setup Wizard refresh failed.');
+                return null;
+            }
+
+            latestOwnerSetupWizard = data.wizard;
+            renderBotOperatorWizard(latestOwnerSetupWizard);
+            return latestOwnerSetupWizard;
+        }
+
+        function describePaperGateFix(gate = {}) {
+            const fixes = {
+                paper_strategy_and_data_ready: 'Go to Step 1 to select a strategy. If market data is missing, open Market Data and import matching candles.',
+                paper_risk_profile_ready: 'Go to Step 3 and click Create Safe Risk Profile.',
+                paper_replay_or_session_ready: 'Go to Step 2 and click Create Safe Paper Replay.',
+                paper_bot_plan_ready: 'Go to Step 5 and click Create Safe Paper Plan.',
+                paper_verification_run_completed: 'Go to Step 6 and click Activate Paper Schedule, then Step 7 Verify Paper Trading 100%.'
+            };
+
+            return fixes[gate.id] || gate.exactlyEnter || gate.missing || 'Use the highlighted wizard step above.';
+        }
+
+        async function createOperatorSafeRiskProfile() {
+            setOperatorStatus('Creating safe paper risk profile...', 'This creates local paper limits only. No wallet signing or live trading is enabled.');
+            const response = await fetch('/api/v1/risk-profiles', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(safePaperRiskDefaults)
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                setOperatorStatus(data.error || 'Safe risk profile creation failed.', 'Next: use Step 3 and try Create Safe Risk Profile again.');
+                return null;
+            }
+
+            await loadRiskProfiles();
+            document.getElementById('bot-operator-risk-profile').value = String(data.profile.id);
+            await verifyRiskProfileGate({ quiet: true });
+            setOperatorStatus('Safe risk profile created.', `Risk Profile #${data.profile.id} is active, paper-only, and Kill Switch is off.`);
+            renderBotOperatorWizard();
+            return data.profile;
+        }
+
+        async function createOperatorSafeConnector() {
+            setOperatorStatus('Creating local paper connector...', 'This stores connector metadata only. No API key, secret, wallet signing, or live order route is enabled.');
+            const response = await fetch('/api/v1/exchange-connectors', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    exchangeName: 'local_paper',
+                    label: 'Local Paper Connector',
+                    mode: 'paper',
+                    status: 'configured',
+                    settings: {
+                        paperOnly: true,
+                        localOnly: true,
+                        liveExecution: false,
+                        createdBy: 'bot_operator_wizard'
+                    }
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                setOperatorStatus(data.error || 'Local paper connector creation failed.', 'Next: use Step 4 and try Create Local Paper Connector again.');
+                return null;
+            }
+
+            await loadConnectors();
+            document.getElementById('bot-operator-connector').value = String(data.connector.id);
+            setOperatorStatus('Local paper connector created.', `Connector #${data.connector.id} is safe paper metadata. Live orders remain disabled.`);
+            renderBotOperatorWizard();
+            return data.connector;
+        }
+
+        async function createOperatorPaperSession() {
+            const strategyId = getOperatorStrategyId();
+
+            if (!strategyId) {
+                setOperatorStatus('Step 1 is missing.', 'Next: choose a Strategy in Step 1, then click Create Safe Paper Replay.');
+                return null;
+            }
+
+            setOperatorStatus('Creating safe paper replay...', 'This runs local simulation only. It does not use real money, wallets, signing, or exchange orders.');
+            const response = await fetch(`/api/v1/strategies/${strategyId}/paper-sessions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    initialCapital: 10000,
+                    feePercent: 0.1,
+                    slippagePercent: 0.05,
+                    maxDrawdownPercent: 100,
+                    maxLossStreak: 999,
+                    minTradeCount: 0,
+                    name: 'Operator safe paper replay'
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                setOperatorStatus(
+                    data.error || 'Safe paper replay failed.',
+                    'Next: open Market Data, import or refresh candles matching the selected strategy symbol/timeframe, then return to Step 2 and click Create Safe Paper Replay.'
+                );
+                return null;
+            }
+
+            await loadPaperSessions();
+            document.getElementById('bot-operator-paper-session').value = String(data.session.id);
+            setOperatorStatus('Safe paper replay created.', `Paper Session #${data.session.id} passed locally. No live trading was used.`);
+            renderBotOperatorWizard();
+            return data.session;
+        }
+
+        async function createOperatorPaperPlan() {
+            const strategyId = getOperatorStrategyId();
+            const paperSessionId = getOperatorPaperSessionId();
+            const riskProfileId = getOperatorRiskProfileId();
+            const connectorId = getOperatorConnectorId();
+
+            if (!strategyId) {
+                setOperatorStatus('Step 1 is missing.', 'Next: choose a Strategy in Step 1.');
+                return null;
+            }
+
+            if (!paperSessionId) {
+                setOperatorStatus('Step 2 is missing.', 'Next: choose a passed Paper Session or click Create Safe Paper Replay.');
+                return null;
+            }
+
+            if (!riskProfileId) {
+                setOperatorStatus('Step 3 is missing.', 'Next: choose an active Risk Profile or click Create Safe Risk Profile.');
+                return null;
+            }
+
+            if (!connectorId) {
+                setOperatorStatus('Step 4 is missing.', 'Next: choose a safe paper Connector or click Create Local Paper Connector.');
+                return null;
+            }
+
+            const beforeCount = getReadyPaperPlans().length;
+            const strategy = getSelectedOperatorStrategy();
+            setOperatorStatus('Creating safe paper plan...', 'This links paper-only records. It cannot enable live trading or wallet signing.');
+            const response = await fetch('/api/v1/bot-automation-plans', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    strategyId,
+                    paperSessionId,
+                    riskProfileId,
+                    connectorId,
+                    name: `${strategy?.name || 'Operator'} safe paper plan`,
+                    mode: 'paper',
+                    notes: 'Created by Bot Operator Wizard. Paper only. Live trading, wallet signing, and exchange order placement remain disabled.'
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                setOperatorStatus(data.error || 'Safe paper plan creation failed.', 'Next: review Steps 1-4, then click Create Safe Paper Plan again.');
+                return null;
+            }
+
+            botOperatorCreatedPlanId = data.plan.id;
+            setBotPlanForm(data.plan);
+            await Promise.all([
+                loadBotPlans(),
+                loadBotRuns(),
+                loadBotSchedules(),
+                loadBotSafetyDossier(data.plan.id),
+                loadBotAutomationCapabilityPath()
+            ]);
+            const afterCount = getReadyPaperPlans().length;
+            const readinessStatus = getPlanReadinessStatus(data.plan);
+
+            if (readinessStatus !== 'ready_for_paper') {
+                const missing = (data.plan.readiness?.blockingFailures || data.plan.readiness?.failures || []).join(', ') || 'review required';
+                setOperatorStatus(
+                    'Paper plan saved but is not ready yet.',
+                    `Missing: ${missing}. Next: use the highlighted Step 1-4 fix button, then click Create Safe Paper Plan again.`
+                );
+                return data.plan;
+            }
+
+            setOperatorStatus('Ready paper plan created.', `Ready Paper Plans: ${beforeCount} to ${afterCount}. Plan #${data.plan.id} is paper-only.`);
+            renderBotOperatorWizard();
+            return data.plan;
+        }
+
+        async function createOperatorPaperSchedule({ active = false } = {}) {
+            const readyPlan = getMatchingReadyPaperPlan() || getReadyPaperPlans()[0];
+
+            if (!readyPlan) {
+                setOperatorStatus('Step 5 is missing.', 'Next: click Create Safe Paper Plan, then create the paper schedule.');
+                return null;
+            }
+
+            const beforeCount = getActivePaperSchedules().length;
+            setOperatorStatus(active ? 'Creating and activating local paper schedule...' : 'Creating local paper schedule...', 'This is local paper automation only. No live order endpoint is enabled.');
+            const response = await fetch(`/api/v1/bot-automation-plans/${readyPlan.id}/schedules`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    intervalMinutes: 15,
+                    status: active ? 'active' : 'paused',
+                    positionOpen: false
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                setOperatorStatus(data.error || 'Local paper schedule creation failed.', 'Next: confirm Step 5 shows a ready paper plan, then click Create Local Paper Schedule again.');
+                return null;
+            }
+
+            botOperatorCreatedScheduleId = data.schedule.id;
+            setBotScheduleForm(data.schedule);
+            await Promise.all([
+                loadBotSchedules(),
+                loadBotRuns(),
+                loadBotAutomationCapabilityPath()
+            ]);
+            const afterCount = getActivePaperSchedules().length;
+            setOperatorStatus(
+                active ? 'Paper schedule created and activated.' : 'Local paper schedule created.',
+                active
+                    ? `Active Paper Schedules: ${beforeCount} to ${afterCount}. Schedule #${data.schedule.id} is active and paper-only.`
+                    : `Schedule #${data.schedule.id} is paused. Next: click Activate Paper Schedule.`
+            );
+            renderBotOperatorWizard();
+            return data.schedule;
+        }
+
+        async function activateOperatorPaperSchedule() {
+            const readyPlan = getMatchingReadyPaperPlan() || getReadyPaperPlans()[0];
+            const existingSchedule = readyPlan
+                ? sortNewestFirst(availableBotSchedules.filter(schedule => (
+                    String(schedule.plan_id) === String(readyPlan.id)
+                    && schedule.status !== 'archived'
+                )))[0]
+                : null;
+
+            if (!readyPlan) {
+                setOperatorStatus('Step 5 is missing.', 'Next: click Create Safe Paper Plan before activating a paper schedule.');
+                return null;
+            }
+
+            if (!existingSchedule) {
+                return createOperatorPaperSchedule({ active: true });
+            }
+
+            const beforeCount = getActivePaperSchedules().length;
+            setOperatorStatus('Activating paper schedule...', 'This activates local paper automation only. It does not enable live trading or wallet signing.');
+            const response = await fetch(`/api/v1/bot-automation-schedules/${existingSchedule.id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: 'active' })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                setOperatorStatus(data.error || 'Paper schedule activation failed.', 'Next: click Create Local Paper Schedule, then Activate Paper Schedule again.');
+                return null;
+            }
+
+            botOperatorCreatedScheduleId = data.schedule.id;
+            await Promise.all([
+                loadBotSchedules(),
+                loadBotRuns(),
+                loadBotAutomationCapabilityPath()
+            ]);
+            const afterCount = getActivePaperSchedules().length;
+            setOperatorStatus('Paper schedule activated.', `Active Paper Schedules: ${beforeCount} to ${afterCount}. Schedule #${data.schedule.id} is paper-only.`);
+            renderBotOperatorWizard();
+            return data.schedule;
+        }
+
+        async function verifyOperatorPaperTrading() {
+            setOperatorStatus('Verifying paper trading completion...', 'Checking Owner Setup paper gates now.');
+            const wizard = await loadBotOperatorOwnerSetupWizard();
+
+            if (!wizard) {
+                return false;
+            }
+
+            const paperProgress = wizard.progress?.paperTrading?.current || 0;
+            const missingPaperGates = (wizard.gates?.paperTrading || []).filter(gate => !gate.passed);
+            const verification = document.getElementById('bot-operator-verification');
+
+            if (paperProgress >= 100) {
+                const message = 'Paper Trading is verified at 100%. Live trading and wallet signing are still disabled.';
+                setOperatorStatus(message);
+                if (verification) {
+                    verification.textContent = message;
+                }
+                renderBotOperatorWizard(wizard);
+                return true;
+            }
+
+            const nextGate = missingPaperGates[0];
+            const detail = nextGate
+                ? [
+                    `Paper progress: ${paperProgress}%`,
+                    `Still missing: ${nextGate.label}`,
+                    `Why needed: ${nextGate.whyNeeded}`,
+                    `Safe: ${nextGate.safe}`,
+                    `Exactly what to click next: ${describePaperGateFix(nextGate)}`,
+                    `Current evidence: ${nextGate.evidence}`
+                ].join('\n')
+                : `Paper progress: ${paperProgress}%. Refresh the wizard and run verification again.`;
+            setOperatorStatus('Paper Trading is not 100% yet.', detail);
+            if (verification) {
+                verification.textContent = detail;
+            }
+            renderBotOperatorWizard(wizard);
+            return false;
+        }
+
+        async function useOperatorSafeDefaultsAndFinish() {
+            setOperatorStatus('Using safe defaults to finish paper setup...', 'The wizard will select or create only local paper records. It will not enable live trading, wallet signing, or exchange orders.');
+            renderBotOperatorWizard();
+
+            if (!getOperatorStrategyId()) {
+                const strategy = getRecommendedStrategy();
+
+                if (!strategy) {
+                    setOperatorStatus('No strategy is available.', 'Next: create or save a strategy first, then click Use Safe Defaults and Finish Paper Setup again.');
+                    return false;
+                }
+
+                document.getElementById('bot-operator-strategy').value = String(strategy.id);
+                selectedStrategyId = strategy.id;
+                selectedStrategy = strategy;
+            }
+
+            if (!getOperatorPaperSessionId()) {
+                const session = getRecommendedPaperSession(getOperatorStrategyId()) || await createOperatorPaperSession();
+
+                if (!session) {
+                    return false;
+                }
+
+                document.getElementById('bot-operator-paper-session').value = String(session.id);
+            }
+
+            if (!getOperatorRiskProfileId()) {
+                const riskProfile = getRecommendedRiskProfile() || await createOperatorSafeRiskProfile();
+
+                if (!riskProfile) {
+                    return false;
+                }
+
+                document.getElementById('bot-operator-risk-profile').value = String(riskProfile.id);
+            }
+
+            if (!getOperatorConnectorId()) {
+                const connector = getRecommendedConnector() || await createOperatorSafeConnector();
+
+                if (!connector) {
+                    return false;
+                }
+
+                document.getElementById('bot-operator-connector').value = String(connector.id);
+            }
+
+            renderBotOperatorWizard();
+
+            if (!getMatchingReadyPaperPlan()) {
+                const plan = await createOperatorPaperPlan();
+
+                if (!plan || !isReadyPaperPlan(plan)) {
+                    return false;
+                }
+            }
+
+            const readyPlan = getMatchingReadyPaperPlan() || getReadyPaperPlans()[0];
+
+            if (!getActivePaperSchedules(readyPlan?.id)[0]) {
+                await activateOperatorPaperSchedule();
+            }
+
+            return verifyOperatorPaperTrading();
         }
 
         function renderPaperSessions(sessions = []) {
@@ -4062,6 +4993,7 @@
             const visiblePlans = filterBotPlans(plans);
             latestVisibleBotPlans = visiblePlans;
             updateBotPlanFilterCount(visiblePlans.length, plans.length);
+            renderBotOperatorWizard();
             schedulePlan.innerHTML = [
                 '<option value="">No paper plan</option>',
                 ...plans
@@ -4232,6 +5164,7 @@
 
         function renderBotAutomationCapabilityPath(capabilityPath = {}) {
             const output = document.getElementById('bot-automation-capability-path');
+            latestBotAutomationCapabilityPath = capabilityPath;
             const paperAutomation = capabilityPath.paperAutomation || {};
             const futureLiveAutomation = capabilityPath.futureLiveAutomation || {};
             const counts = paperAutomation.counts || {};
@@ -4279,6 +5212,7 @@
                     <span>${escapeHtml(paperAutomation.ownerAction || 'Create a ready paper plan and schedule before automation.')}</span>
                 </div>
             `;
+            renderBotOperatorWizard();
         }
 
         async function loadBotAutomationCapabilityPath() {
@@ -4349,13 +5283,7 @@
         }
 
         async function loadBotPlans() {
-            const params = new URLSearchParams();
-
-            if (selectedStrategyId) {
-                params.set('strategyId', selectedStrategyId);
-            }
-
-            const response = await fetch(`/api/v1/bot-automation-plans?${params.toString()}`);
+            const response = await fetch('/api/v1/bot-automation-plans');
             const data = await response.json();
 
             if (!response.ok) {
@@ -4841,6 +5769,7 @@
             const visibleRuns = filterBotRuns(runs);
             latestVisibleBotRuns = visibleRuns;
             updateBotRunFilterCount(visibleRuns.length, runs.length);
+            renderBotOperatorWizard();
 
             if (!runs.length) {
                 output.textContent = selectedStrategyId
@@ -4934,13 +5863,7 @@
         }
 
         async function loadBotRuns() {
-            const params = new URLSearchParams();
-
-            if (selectedStrategyId) {
-                params.set('strategyId', selectedStrategyId);
-            }
-
-            const response = await fetch(`/api/v1/bot-automation-runs?${params.toString()}`);
+            const response = await fetch('/api/v1/bot-automation-runs');
             const data = await response.json();
 
             if (!response.ok) {
@@ -5082,6 +6005,7 @@
             const visibleSchedules = filterBotSchedules(schedules);
             latestVisibleBotSchedules = visibleSchedules;
             updateBotScheduleFilterCount(visibleSchedules.length, schedules.length);
+            renderBotOperatorWizard();
 
             if (!schedules.length) {
                 output.textContent = selectedStrategyId
@@ -5210,18 +6134,7 @@
         }
 
         async function loadBotSchedules() {
-            const params = new URLSearchParams();
-            const status = document.getElementById('bot-schedule-filter-status').value;
-
-            if (selectedStrategyId) {
-                params.set('strategyId', selectedStrategyId);
-            }
-
-            if (status) {
-                params.set('status', status);
-            }
-
-            const response = await fetch(`/api/v1/bot-automation-schedules?${params.toString()}`);
+            const response = await fetch('/api/v1/bot-automation-schedules');
             const data = await response.json();
 
             if (!response.ok) {
@@ -6786,6 +7699,42 @@
             ], 'etherealai-filtered-rebalance-batches', 'No filtered rebalance batches are available to download.');
         });
 
+        document.getElementById('bot-operator-strategy').addEventListener('change', () => {
+            selectedStrategyId = getOperatorStrategyId();
+            selectedStrategy = availableStrategies.find(strategy => String(strategy.id) === String(selectedStrategyId)) || null;
+            document.getElementById('bot-operator-paper-session').value = '';
+            renderBotPlanSelectors();
+            renderBotOperatorWizard();
+        });
+        document.getElementById('bot-operator-paper-session').addEventListener('change', renderBotOperatorWizard);
+        document.getElementById('bot-operator-risk-profile').addEventListener('change', renderBotOperatorWizard);
+        document.getElementById('bot-operator-connector').addEventListener('change', renderBotOperatorWizard);
+        document.getElementById('bot-operator-show-archived-connectors').addEventListener('change', renderBotOperatorWizard);
+        document.getElementById('bot-operator-create-paper-session').addEventListener('click', createOperatorPaperSession);
+        document.getElementById('bot-operator-create-risk-profile').addEventListener('click', createOperatorSafeRiskProfile);
+        document.getElementById('bot-operator-create-connector').addEventListener('click', createOperatorSafeConnector);
+        document.getElementById('bot-operator-create-plan').addEventListener('click', createOperatorPaperPlan);
+        document.getElementById('bot-operator-create-schedule').addEventListener('click', () => createOperatorPaperSchedule({ active: false }));
+        document.getElementById('bot-operator-activate-schedule').addEventListener('click', activateOperatorPaperSchedule);
+        document.getElementById('bot-operator-verify').addEventListener('click', verifyOperatorPaperTrading);
+        document.getElementById('bot-operator-safe-finish').addEventListener('click', useOperatorSafeDefaultsAndFinish);
+        document.getElementById('bot-operator-refresh').addEventListener('click', async () => {
+            setOperatorStatus('Refreshing paper setup records...', 'Reloading strategies, sessions, risk profiles, connectors, plans, schedules, and Owner Setup progress.');
+            await Promise.all([
+                loadStrategies(),
+                loadPaperSessions(),
+                loadRiskProfiles(),
+                loadConnectors(),
+                loadBotPlans(),
+                loadBotRuns(),
+                loadBotSchedules(),
+                loadBotAutomationCapabilityPath(),
+                loadBotOperatorOwnerSetupWizard()
+            ]);
+            await loadBotOperatorOwnerSetupWizard();
+            setOperatorStatus('Wizard refreshed.', 'Use the next blocked step shown in the checklist.');
+        });
+
         document.getElementById('bot-plan-form').addEventListener('submit', async event => {
             event.preventDefault();
 
@@ -6802,8 +7751,16 @@
                 ? Number(formData.get('connectorId'))
                 : null;
 
+            if (!selectedStrategyId) {
+                const operatorStrategyId = getOperatorStrategyId();
+
+                if (operatorStrategyId) {
+                    selectedStrategyId = operatorStrategyId;
+                }
+            }
+
             if (!botPlanId && !selectedStrategyId) {
-                output.textContent = 'Select a strategy before saving a bot automation plan.';
+                output.textContent = 'Step 1 is missing. In the Bot Operator Wizard, choose a Strategy, then click Create Safe Paper Plan.';
                 return;
             }
 
@@ -6952,7 +7909,7 @@
             const scheduleId = formData.get('id');
 
             if (!scheduleId && !planId) {
-                output.textContent = 'Select a paper bot plan before saving a schedule.';
+                output.textContent = 'Step 5 is missing. In the Bot Operator Wizard, click Create Safe Paper Plan, then click Create Local Paper Schedule.';
                 return;
             }
 
@@ -6996,7 +7953,7 @@
 
         document.getElementById('bot-schedule-filter-form').addEventListener('submit', async event => {
             event.preventDefault();
-            await loadBotSchedules();
+            renderBotSchedules(availableBotSchedules);
         });
         document.getElementById('bot-schedule-filter-download').addEventListener('click', () => {
             downloadJsonSnapshot(latestVisibleBotSchedules, 'etherealai-filtered-paper-schedules', 'No filtered paper schedules are available to download.');

@@ -151,6 +151,8 @@ patrick@etherealAI
 
 - Paper bot schedules can run local paper decision cycles automatically.
 - Strategy Lab, Owner Proof Packet, and System Memory show an Automated Paper Path panel backed by `/api/v1/bot-automation-capability-path`, with Future Live Automation blocked until a later reviewed implementation phase.
+- Strategy Lab Bots now opens as a non-technical Operator Wizard with seven visible steps: select strategy, select passed paper session, select active paper risk profile, select safe paper connector, create a ready paper plan, create/activate a local paper schedule, and verify paper trading at `100%`.
+- The `Use Safe Defaults and Finish Paper Setup` button creates or selects only paper/local records. It does not enable live trading, wallet signing, exchange orders, token deployment, or social posting.
 - Owner Proof Packet includes a Paper Automation Runbook for monitor-only owner testing: review ready paper plans, activate or review a paper schedule, inspect the latest paper run, export local evidence, and record local MVP acceptance while live actions stay blocked.
 - The workflow can create local plan, schedule, paper-run, readiness, go-live-review, and dossier evidence records.
 - Strategy Lab exports are local evidence snapshots only: filtered plan/run/schedule JSON or CSV, safety dossier JSON, and dossier history CSV.

@@ -28,7 +28,7 @@ The current project is intentionally designed for owner-controlled local operati
 - `/mvp-test-pass` - owner test pass and evidence checklist
 - `/server-route-inventory` - route map and safety boundaries
 - `/creator` - local AI builder workflow
-- `/strategy-lab` - strategy research, paper automation, safety controls, and non-coder Risk Profile Configuration for completing the paper risk gate
+- `/strategy-lab` - strategy research, paper automation, safety controls, non-coder Risk Profile Configuration, and a Bot Operator Wizard that can finish paper setup without live trading or wallet signing
 - `/solidity-lab` - token, NFT, website, whitepaper, chain, and ecosystem planning
 - `/social-ops` - local-only social/community draft workflows
 

@@ -6098,6 +6098,65 @@ function checkStrategyLabRiskProfileSetupUi() {
   pass('Strategy Lab risk profile setup UI');
 }
 
+function checkStrategyLabBotOperatorWizardUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+
+  if (
+    !html.includes('Bot Operator Wizard')
+    || !html.includes('id="bot-operator-wizard"')
+    || !html.includes('Use Safe Defaults and Finish Paper Setup')
+    || !html.includes('Step 1: Select Strategy')
+    || !html.includes('id="bot-operator-strategy"')
+    || !html.includes('Step 2: Select Paper Session')
+    || !html.includes('id="bot-operator-paper-session"')
+    || !html.includes('Create Safe Paper Replay')
+    || !html.includes('Step 3: Select Risk Profile')
+    || !html.includes('id="bot-operator-risk-profile"')
+    || !html.includes('Create Safe Risk Profile')
+    || !html.includes('Step 4: Select Execution Connector')
+    || !html.includes('id="bot-operator-connector"')
+    || !html.includes('Show archived connectors')
+    || !html.includes('Create Local Paper Connector')
+    || !html.includes('Step 5: Create Ready Paper Plan')
+    || !html.includes('Create Safe Paper Plan')
+    || !html.includes('Ready Paper Plans:')
+    || !html.includes('Step 6: Create/Activate Paper Schedule')
+    || !html.includes('Create Local Paper Schedule')
+    || !html.includes('Activate Paper Schedule')
+    || !html.includes('Active Paper Schedules:')
+    || !html.includes('Step 7: Final Verification')
+    || !html.includes('Verify Paper Trading 100%')
+    || !html.includes('Strategy selected')
+    || !html.includes('Paper session selected')
+    || !html.includes('Risk profile active')
+    || !html.includes('Connector safe')
+    || !html.includes('Ready paper plan created')
+    || !html.includes('Paper schedule active')
+    || !html.includes('Paper trading verified 100%')
+    || !html.includes('function renderBotOperatorWizard(wizard = latestOwnerSetupWizard)')
+    || !html.includes('function createOperatorPaperPlan()')
+    || !html.includes('function createOperatorPaperSchedule({ active = false } = {})')
+    || !html.includes('function activateOperatorPaperSchedule()')
+    || !html.includes('function verifyOperatorPaperTrading()')
+    || !html.includes('function useOperatorSafeDefaultsAndFinish()')
+    || !html.includes('/api/v1/owner-setup-wizard')
+    || !html.includes("mode: 'paper'")
+    || !html.includes('Live trading, wallet signing, and exchange order placement remain disabled.')
+    || !html.includes('advanced-bot-records')
+    || !styles.includes('.operator-wizard')
+    || !styles.includes('.operator-progress-checklist')
+    || !styles.includes('.operator-step-ready')
+    || !styles.includes('.operator-step-blocked')
+    || !styles.includes('.operator-check-pass')
+    || !styles.includes('.operator-check-blocked')
+  ) {
+    fail('Strategy Lab Bot Operator Wizard is missing required non-technical paper setup controls or safe-default wiring');
+  }
+
+  pass('Strategy Lab Bot Operator Wizard UI');
+}
+
 function checkMvpTestPassOwnerWorkflowUi() {
   const html = fs.readFileSync(path.join(projectRoot, 'app/client/mvp-test-pass.html'), 'utf8');
 
@@ -9877,6 +9936,7 @@ async function main() {
   checkInlineScripts('app/client/server-route-inventory.html');
   checkStrategyLabSafetyDossierExportUi();
   checkStrategyLabRiskProfileSetupUi();
+  checkStrategyLabBotOperatorWizardUi();
   checkMvpTestPassOwnerWorkflowUi();
   checkDashboardMvpReadinessUi();
   checkOperatorControlCenterUi();

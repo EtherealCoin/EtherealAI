@@ -881,6 +881,140 @@ footer {
     min-height: auto;
 }
 
+.operator-wizard {
+    background: #f8fafc;
+    border: 1px solid #dbeafe;
+    border-left: 5px solid #2563eb;
+    border-radius: 8px;
+    display: grid;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 16px;
+}
+
+.operator-wizard-header {
+    align-items: start;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.operator-wizard-header > div:first-child {
+    display: grid;
+    gap: 4px;
+}
+
+.operator-wizard-header span,
+.operator-step p,
+.operator-step-note,
+.operator-count-change {
+    color: #4b5563;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.operator-progress-checklist {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.operator-progress-checklist article {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #d1d5db;
+    border-radius: 8px;
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+}
+
+.operator-check-pass {
+    border-left-color: #16a34a !important;
+}
+
+.operator-check-blocked {
+    border-left-color: #dc2626 !important;
+}
+
+.operator-step {
+    border-left: 4px solid #d1d5db !important;
+}
+
+.operator-step-ready {
+    border-left-color: #16a34a !important;
+}
+
+.operator-step-blocked {
+    border-left-color: #dc2626 !important;
+}
+
+.operator-step-heading {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.operator-state-ready,
+.operator-state-blocked {
+    border-radius: 999px;
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 5px 9px;
+    text-transform: uppercase;
+}
+
+.operator-state-ready {
+    background: #15803d;
+}
+
+.operator-state-blocked {
+    background: #b91c1c;
+}
+
+.operator-step label:not(.checkbox-row) {
+    font-weight: 700;
+}
+
+.operator-step select {
+    border: 1px solid #9ca3af;
+    border-radius: 6px;
+    font: inherit;
+    min-height: 46px;
+    padding: 10px;
+    width: 100%;
+}
+
+.operator-step-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.operator-step-actions button,
+.operator-wizard-header button {
+    background: #111827;
+    border: 0;
+    border-radius: 6px;
+    color: #ffffff;
+    cursor: pointer;
+    font: inherit;
+    padding: 10px 14px;
+}
+
+.operator-step-actions button:disabled,
+.operator-wizard-header button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.advanced-bot-records {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 12px;
+}
+
 .operator-shell {
     max-width: 980px;
 }
@@ -1270,6 +1404,7 @@ footer {
     .checklist-item,
     .compact-form,
     .artifact-controls,
+    .operator-wizard-header,
     .owner-file-picker,
     .owner-detected-wallet,
     .owner-gate-card > div:first-child {
