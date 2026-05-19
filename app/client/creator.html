@@ -8,12 +8,12 @@
 </head>
 <body>
     <nav>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/operator-control">Operator Control</a>
-        <a href="/security-lockdown">Security Lockdown</a>
+        <a href="/dashboard">Mission Control</a>
+        <a href="/operator-control">Wallet & Funding</a>
+        <a href="/security-lockdown">Security</a>
         <a href="/owner-proof-packet">Proof Packet</a>
         <a href="/solidity-lab">Solidity Lab</a>
-        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/strategy-lab">Strategy / Paper / Bots</a>
         <a href="/social-ops">Social Ops</a>
         <a href="/logout">Logout</a>
     </nav>
@@ -23,7 +23,7 @@
         <p>Describe what you want built. The system will create a local plan first, then wait before making files or running commands.</p>
         <div class="auth-proof-banner" role="status">
             <strong>MVP 99% · Local E2E 95%</strong>
-            <span>Live execution disabled · <a href="/owner-proof-packet">Proof packet</a> · <a href="/mvp-test-pass">Owner evidence</a> · <a href="/dashboard">Dashboard</a></span>
+            <span>Live execution disabled · <a href="/owner-proof-packet">Proof packet</a> · <a href="/mvp-test-pass">Owner evidence</a> · <a href="/dashboard">Mission Control</a></span>
         </div>
 
         <section class="model-panel">
@@ -1667,5 +1667,6 @@
             document.getElementById('git-status-output').textContent = error.message;
         });
     </script>
+    <script src="/js/operator-next-action.js"></script>
 </body>
 </html>

@@ -20,17 +20,19 @@ The current project is intentionally designed for owner-controlled local operati
 
 ## Key Pages
 
-- `/dashboard` - system status, model roles, MLX lifecycle, multi-agent coordination, system memory
-- `/owner-setup` - non-coder setup wizard for paper 95 to 100 and full E2E readiness 72 to 100 with live trading disabled, including visual `.env` file selection, safe credential presence checks, detected public wallet address display, and step-by-step blocked-gate guidance
-- `/operator-control` - wallet metadata, owner key-control guidance, permissions, and revoke workflows
-- `/security-lockdown` - read-only Mac/network security audit and owner hardening checklist
+- `/dashboard` - Mission Control for system health, readiness progress, live-lock status, wallets, security, active bots, blocked gates, next action, model roles, MLX lifecycle, multi-agent coordination, and system memory
+- `/owner-setup` - Setup Wizard for paper 95 to 100 and full E2E readiness 72 to 100 with live trading disabled, including visual `.env` file selection, safe credential presence checks, detected public wallet address display, and step-by-step blocked-gate guidance
+- `/operator-control` - Wallet & Funding Center for wallet metadata, owner key-control guidance, permissions, project assignment, and revoke workflows
+- `/security-lockdown` - Security Lockdown Center for read-only Mac/network security audit, local attack-surface review, and owner hardening checklist
 - `/owner-proof-packet` - local proof packet, owner acceptance, live-blocker evidence
 - `/mvp-test-pass` - owner test pass and evidence checklist
-- `/server-route-inventory` - route map and safety boundaries
+- `/server-route-inventory` - Advanced / Developer Tools for route map, safety boundaries, raw evidence, and developer checks
 - `/creator` - local AI builder workflow
-- `/strategy-lab` - strategy research, paper automation, safety controls, non-coder Risk Profile Configuration, and a Bot Operator Wizard that can finish paper setup without live trading or wallet signing
+- `/strategy-lab` - Strategy, Paper Trading, and Bot Control for strategy research, paper automation, safety controls, non-coder Risk Profile Configuration, and a Bot Operator Wizard that can finish paper setup without live trading or wallet signing
 - `/solidity-lab` - token, NFT, website, whitepaper, chain, and ecosystem planning
 - `/social-ops` - local-only social/community draft workflows
+
+Every protected operator page now loads the global `What do I do next?` assistant. It checks the local owner setup, readiness, bot automation, wallet, security, and health APIs, then recommends the safest next action in plain English without enabling live trading or wallet signing.
 
 ## Run Locally
 

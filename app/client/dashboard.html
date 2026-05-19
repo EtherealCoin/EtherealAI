@@ -3,27 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EtherealAI Dashboard</title>
+    <title>EtherealAI Mission Control</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <nav>
         <a href="/">Home</a>
-        <a href="/owner-setup">Owner Setup</a>
-        <a href="/operator-control">Operator Control</a>
-        <a href="/security-lockdown">Security Lockdown</a>
+        <a href="/owner-setup">Setup Wizard</a>
+        <a href="/operator-control">Wallet & Funding</a>
+        <a href="/security-lockdown">Security</a>
         <a href="/owner-proof-packet">Proof Packet</a>
         <a href="/mvp-test-pass">MVP Test Pass</a>
         <a href="/server-route-inventory">Route Inventory</a>
         <a href="/creator">Creator Agent</a>
-        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/strategy-lab">Strategy / Paper / Bots</a>
         <a href="/solidity-lab">Solidity Lab</a>
         <a href="/social-ops">Social Ops</a>
         <a href="/logout">Logout</a>
     </nav>
     <div class="container">
-        <h1>EtherealAI</h1>
-        <p>Your local-first AI developer for builder workflows, crypto research, Solidity, and automation.</p>
+        <section class="mission-hero">
+            <h1>Mission Control</h1>
+            <p>This is the CEO/operator home base. It answers what is healthy, what is blocked, what is safe, and what to do next without terminal commands.</p>
+            <div class="button-row">
+                <button id="mission-next-action" type="button">What do I do next?</button>
+                <a class="cta-button" href="/owner-setup">Open Setup Wizard</a>
+                <a class="cta-button" href="/strategy-lab#bot-automation">Open Paper Trading Center</a>
+                <a class="cta-button" href="/security-lockdown">Open Security</a>
+            </div>
+        </section>
 
         <section class="status-grid" aria-label="System status">
             <article class="status-card" id="server-status">
@@ -42,6 +50,45 @@
                 <h2>Local Models</h2>
                 <p>Checking...</p>
             </article>
+        </section>
+
+        <section class="ceo-workflow-map" aria-label="Main operator areas">
+            <h2>Main Operating Areas</h2>
+            <p class="workflow-helper-text">Use these instead of hunting through raw tables. Advanced records remain available lower on the page.</p>
+            <div class="ceo-workflow-grid">
+                <a class="ceo-workflow-card" href="/dashboard">
+                    <strong>Home / Mission Control</strong>
+                    <span>Health, readiness, live lock, wallets, security, active bots, blocked gates, and next action.</span>
+                </a>
+                <a class="ceo-workflow-card" href="/owner-setup">
+                    <strong>Setup Wizard</strong>
+                    <span>Finish setup gates one by one with visible fixes and no hidden requirements.</span>
+                </a>
+                <a class="ceo-workflow-card" href="/strategy-lab#strategy-entry">
+                    <strong>Strategy Builder</strong>
+                    <span>Create strategy logic in plain English, run local tests, and understand settings.</span>
+                </a>
+                <a class="ceo-workflow-card" href="/strategy-lab#bot-automation">
+                    <strong>Paper Trading Center</strong>
+                    <span>Create paper plans, schedules, verification runs, and paper completion evidence.</span>
+                </a>
+                <a class="ceo-workflow-card" href="/strategy-lab#bot-automation">
+                    <strong>Bot Control Center</strong>
+                    <span>Monitor, activate, pause, and review bots. Paper-only by default.</span>
+                </a>
+                <a class="ceo-workflow-card" href="/operator-control">
+                    <strong>Wallet & Funding Center</strong>
+                    <span>Add public wallet metadata, label purposes, and keep keys outside EtherealAI.</span>
+                </a>
+                <a class="ceo-workflow-card" href="/security-lockdown">
+                    <strong>Security Lockdown Center</strong>
+                    <span>Review local Mac security, secrets status, attack surfaces, backups, and emergency controls.</span>
+                </a>
+                <a class="ceo-workflow-card" href="#advanced-operator-tools">
+                    <strong>Advanced / Developer Tools</strong>
+                    <span>Raw JSON, logs, model tests, connector metadata, GitHub, MLX, and other technical controls.</span>
+                </a>
+            </div>
         </section>
 
         <section class="model-panel">
@@ -65,6 +112,10 @@
             <div id="live-handoff-stages" class="task-list">Loading handoff stages...</div>
             <div id="live-handoff-key-gates" class="task-list">Loading owner key gates...</div>
         </section>
+
+        <details id="advanced-operator-tools" class="compact-details advanced-operator-tools">
+            <summary>Advanced / Developer Tools</summary>
+            <p class="inline-status">Use this area only when you need raw records, model tests, GitHub publishing status, local model lifecycle controls, or detailed system memory exports.</p>
 
         <section class="model-panel">
             <h2>Model Roles</h2>
@@ -316,6 +367,7 @@
             <div id="mlx-lifecycle-summary" class="task-list">Loading MLX lifecycle...</div>
             <pre id="mlx-lifecycle-output" class="model-output">Waiting for MLX lifecycle status...</pre>
         </section>
+        </details>
 
         <section class="next-actions">
             <h2>Next Build Modules</h2>
@@ -1558,6 +1610,9 @@
         document.getElementById('refresh-mlx-lifecycle').addEventListener('click', loadMlxLifecycleStatus);
         document.getElementById('refresh-multi-agent').addEventListener('click', loadMultiAgentRegistry);
         document.getElementById('refresh-multi-agent-runs').addEventListener('click', loadMultiAgentRuns);
+        document.getElementById('mission-next-action').addEventListener('click', () => {
+            window.EtherealOperatorAssistant?.show();
+        });
         document.getElementById('start-mlx-lifecycle').addEventListener('click', () => runMlxLifecycleAction('start'));
         document.getElementById('stop-mlx-lifecycle').addEventListener('click', () => runMlxLifecycleAction('stop'));
         document.getElementById('record-dev-note').addEventListener('click', async () => {
@@ -1606,5 +1661,6 @@
         loadMultiAgentRegistry();
         loadMultiAgentRuns();
     </script>
+    <script src="/js/operator-next-action.js"></script>
 </body>
 </html>

@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Operator Control Center</title>
+    <title>Wallet & Funding Center</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <nav>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/security-lockdown">Security Lockdown</a>
+        <a href="/dashboard">Mission Control</a>
+        <a href="/security-lockdown">Security</a>
         <a href="/owner-proof-packet">Proof Packet</a>
         <a href="/mvp-test-pass">MVP Test Pass</a>
-        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/strategy-lab">Strategy / Paper / Bots</a>
         <a href="/solidity-lab">Solidity Lab</a>
         <a href="/social-ops">Social Ops</a>
         <a href="/logout">Logout</a>
     </nav>
 
     <main class="container operator-shell">
-        <h1>Operator Control Center</h1>
-        <p>Use this control center to attach wallet metadata, take owner control of keys outside EtherealAI, scope permissions, review safety blockers, and revoke access without writing code.</p>
+        <h1>Wallet & Funding Center</h1>
+        <p>Use this center to add public wallet addresses, label wallets by purpose, prepare future hardware-wallet approval, and keep seed phrases and private keys completely outside EtherealAI.</p>
 
         <div class="auth-proof-banner" role="status">
             <strong>Wallet Safety Boundary</strong>
@@ -29,9 +29,10 @@
 
         <section class="model-panel">
             <h2>Owner Control Summary</h2>
+            <p class="inline-status">What is this? Your wallet control overview. Why it matters: the AI can plan around wallet labels without controlling funds. What to do next: attach public metadata or review readiness.</p>
             <div class="button-row">
                 <button id="refresh-operator-center" type="button">Refresh Control Center</button>
-                <a class="cta-button" href="/security-lockdown">Mac Security Lockdown</a>
+                <a class="cta-button" href="/security-lockdown">Open Security</a>
                 <a class="cta-button" href="/owner-proof-packet">Review Proof Packet</a>
             </div>
             <div id="operator-summary" class="artifact-grid">Loading operator control summary...</div>
@@ -40,6 +41,7 @@
 
         <section class="model-panel">
             <h2>Wallet Onboarding Wizard</h2>
+            <p class="inline-status">Use this guided flow to take owner control of keys outside EtherealAI, then attach only public metadata that the local system can safely reference.</p>
             <div id="wallet-quick-start" class="operator-step-list">Loading simplest safe path...</div>
             <div id="wallet-guide-steps" class="operator-step-list">Loading wallet onboarding guide...</div>
         </section>
@@ -569,5 +571,6 @@
             document.getElementById('operator-summary').textContent = error.message;
         });
     </script>
+    <script src="/js/operator-next-action.js"></script>
 </body>
 </html>

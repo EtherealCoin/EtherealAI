@@ -25,59 +25,72 @@
     </script>
 
     <main class="home-shell">
-        <section class="home-hero">
+        <section class="home-hero mission-hero">
             <div class="container">
-                <h1>EtherealAI Local Builder</h1>
-                <p>Owner-test-ready local AI builder, strategy research lab, and monitor-only automation control center.</p>
+                <h1>Home / Mission Control</h1>
+                <p>Operate EtherealAI as founder software: see system health, paper trading progress, full E2E readiness, live lock status, wallets, security, active bots, blocked gates, and the next safest action.</p>
                 <div class="button-row home-actions">
-                    <a href="/dashboard" class="cta-button">Open Dashboard</a>
-                    <a href="/owner-setup" class="cta-button secondary-action">Open Owner Setup</a>
-                    <a href="/owner-proof-packet" class="cta-button secondary-action">Open Proof Packet</a>
-                    <a href="/mvp-test-pass" class="cta-button secondary-action">Open MVP Test Pass</a>
+                    <a href="/dashboard" class="cta-button">Open Mission Control</a>
+                    <button id="home-next-action" type="button" class="cta-button secondary-action">What do I do next?</button>
+                    <a href="/owner-setup" class="cta-button secondary-action">Open Setup Wizard</a>
+                    <a href="/strategy-lab#bot-automation" class="cta-button secondary-action">Open Paper Trading Center</a>
                 </div>
-                <div class="artifact-grid home-proof-grid" aria-label="Local proof status">
+                <div id="home-mission-status" class="artifact-grid home-proof-grid" aria-label="Local proof status">
                     <div class="artifact-stat">
-                        <strong>MVP Ready</strong>
-                        <span>99%</span>
-                        <span>0 MVP blockers</span>
+                        <strong>System Health</strong>
+                        <span>Loading</span>
+                        <span>checking local server</span>
                     </div>
                     <div class="artifact-stat">
-                        <strong>Local Paper Automation</strong>
-                        <span>95%</span>
-                        <span>monitor-only workflow</span>
+                        <strong>Paper Trading</strong>
+                        <span>Loading</span>
+                        <span>checking setup wizard</span>
                     </div>
                     <div class="artifact-stat">
-                        <strong>Full Live End-to-End</strong>
-                        <span>72%</span>
-                        <span>4 live gates blocked</span>
+                        <strong>Full E2E Readiness</strong>
+                        <span>Loading</span>
+                        <span>live remains locked</span>
                     </div>
                     <div class="artifact-stat">
                         <strong>Live Execution</strong>
-                        <span>Disabled</span>
-                        <span>no live order endpoint</span>
+                        <span>Loading</span>
+                        <span>checking safety boundary</span>
                     </div>
                 </div>
+                <div id="home-next-action-summary" class="inline-status">Loading next recommended action...</div>
             </div>
         </section>
 
         <section class="home-workflows">
             <div class="container">
-                <h2>Owner Workflows</h2>
+                <h2>Main Operating Areas</h2>
                 <div class="home-workflow-grid">
                     <a class="home-workflow-card" href="/dashboard">
-                        <strong>Dashboard</strong>
+                        <strong>Home / Mission Control</strong>
                         <span>Review local health, readiness percentages, full-live blockers, and System Memory export.</span>
                     </a>
                     <a class="home-workflow-card" href="/owner-setup">
-                        <strong>Owner Setup Wizard</strong>
+                        <strong>Setup Wizard</strong>
                         <span>Finish paper and full E2E setup gates with plain-English checks, public wallet metadata, and live execution disabled.</span>
                     </a>
+                    <a class="home-workflow-card" href="/strategy-lab#strategy-entry">
+                        <strong>Strategy Builder</strong>
+                        <span>Create strategies in plain English, use safe defaults, and run local research before paper trading.</span>
+                    </a>
+                    <a class="home-workflow-card" href="/strategy-lab#bot-automation">
+                        <strong>Paper Trading Center</strong>
+                        <span>Create paper plans, schedules, verification runs, and see exactly what is needed for 100%.</span>
+                    </a>
+                    <a class="home-workflow-card" href="/strategy-lab#bot-automation">
+                        <strong>Bot Control Center</strong>
+                        <span>Start, pause, schedule, and monitor paper bots while live mode stays locked.</span>
+                    </a>
                     <a class="home-workflow-card" href="/operator-control">
-                        <strong>Operator Control Center</strong>
+                        <strong>Wallet & Funding Center</strong>
                         <span>Attach wallet metadata, scope permissions, review owner key handoff steps, and revoke wallet access without coding.</span>
                     </a>
                     <a class="home-workflow-card" href="/security-lockdown">
-                        <strong>Mac Security Lockdown</strong>
+                        <strong>Security Lockdown Center</strong>
                         <span>Audit local Mac hardening, review listening services, and follow the hostile-network owner checklist.</span>
                     </a>
                     <a class="home-workflow-card" href="/mvp-test-pass">
@@ -89,7 +102,7 @@
                         <span>Download one local JSON packet with readiness, proof surfaces, route safety, and blocked live gates.</span>
                     </a>
                     <a class="home-workflow-card" href="/strategy-lab">
-                        <strong>Strategy Lab</strong>
+                        <strong>Strategy / Paper / Bots</strong>
                         <span>Run research, backtests, paper automation, dossier exports, and monitor-only bot workflows.</span>
                     </a>
                     <a class="home-workflow-card" href="/creator">
@@ -97,7 +110,7 @@
                         <span>Create local tasks, file proposals, checkpoints, and safe verification command runs.</span>
                     </a>
                     <a class="home-workflow-card" href="/server-route-inventory">
-                        <strong>Route Inventory</strong>
+                        <strong>Advanced / Developer Tools</strong>
                         <span>Inspect server routes, safety module boundaries, and monitor-only route profiles.</span>
                     </a>
                     <a class="home-workflow-card" href="/social-ops">
@@ -119,6 +132,51 @@
                 document.getElementById('footer-container').innerHTML = data;
             });
     </script>
+    <script src="/js/operator-next-action.js"></script>
+    <script>
+        function renderHomeMission(summary = {}) {
+            const owner = summary.owner?.wizard;
+            const health = summary.health;
+            const bot = summary.bot?.capabilityPath;
+            const security = summary.security?.audit;
+            const next = summary.nextAction;
+            const cards = [
+                ['System Health', health?.server?.ok && health?.database?.ok ? 'Healthy' : 'Review', health?.server?.ok ? `Port ${health.server.port}` : 'open Mission Control'],
+                ['Paper Trading', `${owner?.progress?.paperTrading?.current ?? '?'}%`, `${bot?.paperAutomation?.counts?.readyPaperPlans ?? 0} ready plan(s)`],
+                ['Full E2E Readiness', `${owner?.progress?.fullEndToEnd?.current ?? '?'}%`, 'live approval still separate'],
+                ['Live Execution', owner?.safetyBoundary?.liveTradingEnabled ? 'Enabled' : 'Locked', 'wallet signing disabled'],
+                ['Wallet Status', `${owner?.walletMetadata?.savedPublicWallets?.length ?? 0} wallet(s)`, 'public metadata only'],
+                ['Security Status', security?.summary?.status || 'review', `${security?.summary?.failCount ?? 0} fix-now item(s)`],
+                ['Active Bots', `${bot?.paperAutomation?.counts?.activeSchedules ?? 0}`, 'paper schedules only'],
+                ['Blocked Gates', `${(owner?.gates?.paperTrading || []).filter(gate => !gate.passed).length + (owner?.gates?.fullEndToEnd || []).filter(gate => !gate.passed).length}`, 'click next action']
+            ];
 
+            document.getElementById('home-mission-status').innerHTML = cards.map(([label, value, note]) => `
+                <div class="artifact-stat">
+                    <strong>${label}</strong>
+                    <span>${value}</span>
+                    <span>${note}</span>
+                </div>
+            `).join('');
+            document.getElementById('home-next-action-summary').textContent = next
+                ? `Next safest action: ${next.title}. ${next.detail}`
+                : 'Next safest action is still loading.';
+        }
+
+        document.getElementById('home-next-action').addEventListener('click', () => {
+            window.EtherealOperatorAssistant?.show();
+        });
+
+        window.addEventListener('load', async () => {
+            if (!window.EtherealOperatorAssistant) {
+                return;
+            }
+            try {
+                renderHomeMission(await window.EtherealOperatorAssistant.collectState());
+            } catch (error) {
+                document.getElementById('home-next-action-summary').textContent = error.message;
+            }
+        });
+    </script>
 </body>
 </html>

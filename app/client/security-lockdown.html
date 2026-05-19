@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mac Security Lockdown</title>
+    <title>Security Lockdown Center</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <nav>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/operator-control">Operator Control</a>
-        <a href="/security-lockdown">Security Lockdown</a>
+        <a href="/dashboard">Mission Control</a>
+        <a href="/operator-control">Wallet & Funding</a>
+        <a href="/security-lockdown">Security</a>
         <a href="/owner-proof-packet">Proof Packet</a>
-        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/strategy-lab">Strategy / Paper / Bots</a>
         <a href="/logout">Logout</a>
     </nav>
 
     <main class="container operator-shell security-shell">
-        <h1>Mac Security Lockdown</h1>
-        <p>Use this page as the owner control room for the physical Mac. It audits local security state, shows what still needs manual owner action, and keeps EtherealAI bound to local-only operation.</p>
+        <h1>Security Lockdown Center</h1>
+        <p>Use this as the owner control room for the physical Mac and local attack surface. It shows security status, secrets boundaries, live execution state, blocked attack surfaces, recovery steps, and emergency containment.</p>
 
         <div class="auth-proof-banner" role="status">
             <strong>Hostile Network Mode</strong>
@@ -413,5 +413,6 @@
             document.getElementById('mac-security-summary').textContent = error.message;
         });
     </script>
+    <script src="/js/operator-next-action.js"></script>
 </body>
 </html>

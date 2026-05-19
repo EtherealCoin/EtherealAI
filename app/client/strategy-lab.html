@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strategy Lab</title>
+    <title>Strategy, Paper Trading, and Bot Control</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <nav>
         <a href="/mvp-test-pass">MVP Test Pass</a>
         <a href="/owner-proof-packet">Proof Packet</a>
-        <a href="/operator-control">Operator Control</a>
-        <a href="/security-lockdown">Security Lockdown</a>
-        <a href="/dashboard">Dashboard</a>
+        <a href="/operator-control">Wallet & Funding</a>
+        <a href="/security-lockdown">Security</a>
+        <a href="/dashboard">Mission Control</a>
         <a href="/creator">Creator Agent</a>
         <a href="/solidity-lab">Solidity Lab</a>
         <a href="/social-ops">Social Ops</a>
@@ -20,46 +20,79 @@
     </nav>
 
     <main class="container">
-        <h1>Strategy Lab</h1>
-        <p>Save crypto strategy specs locally, run research checks, and keep live execution out of the loop until the system is ready.</p>
+        <h1>Strategy, Paper Trading, and Bot Control</h1>
+        <p>This page turns trading ideas into local simulations and paper bots. Paper trading never needs wallet signing, and live mode remains locked behind a future separate approval process.</p>
         <div class="auth-proof-banner" role="status">
             <strong>MVP 99% · Local E2E 95%</strong>
-            <span>Live execution disabled · <a href="/owner-proof-packet">Proof packet</a> · <a href="/mvp-test-pass">Owner evidence</a> · <a href="/dashboard">Dashboard</a></span>
+            <span>Live execution disabled · <a href="/owner-proof-packet">Proof packet</a> · <a href="/mvp-test-pass">Owner evidence</a> · <a href="/dashboard">Mission Control</a></span>
         </div>
 
+        <section class="ceo-workflow-map" aria-label="Strategy operator workflow">
+            <h2>Operator Workflow</h2>
+            <p class="workflow-helper-text">Start at Strategy Builder, prove the idea with paper trading, then monitor paper bots. Technical records are kept lower on the page for review.</p>
+            <div class="ceo-workflow-grid">
+                <a class="ceo-workflow-card" href="#strategy-entry">
+                    <strong>Strategy Builder</strong>
+                    <span>Describe the idea in plain English, choose market/timeframe, and save it locally.</span>
+                </a>
+                <a class="ceo-workflow-card" href="#research-suite">
+                    <strong>Visual Backtest Results</strong>
+                    <span>Run a local candle backtest and read the outcome before automating anything.</span>
+                </a>
+                <a class="ceo-workflow-card" href="#risk-profile-configuration">
+                    <strong>Paper Risk Profile</strong>
+                    <span>Set safe local paper limits and keep the Kill Switch off only for paper setup completion.</span>
+                </a>
+                <a class="ceo-workflow-card" href="#bot-automation">
+                    <strong>Paper Trading Center</strong>
+                    <span>Create a ready paper plan, activate a paper schedule, and verify paper trading at 100%.</span>
+                </a>
+                <a class="ceo-workflow-card" href="#bot-automation">
+                    <strong>Bot Control Center</strong>
+                    <span>Monitor active paper schedules and review results. Live bot mode stays locked.</span>
+                </a>
+                <a class="ceo-workflow-card" href="#advanced-strategy-tools">
+                    <strong>Advanced / Developer Tools</strong>
+                    <span>Raw imports, sweeps, walk-forward tests, connectors, logs, exports, and technical filters.</span>
+                </a>
+            </div>
+        </section>
+
         <section class="model-panel quick-nav-panel" aria-label="Strategy Lab quick navigation">
-            <h2>Quick Navigation</h2>
+            <h2>Page Shortcuts</h2>
             <div class="quick-nav">
-                <a href="#strategy-entry">Strategy</a>
-                <a href="#research-suite">Research</a>
-                <a href="#exchange-connectors">Connectors</a>
-                <a href="#risk-management">Backtests</a>
+                <a href="#strategy-entry">Strategy Builder</a>
+                <a href="#research-suite">Backtest</a>
                 <a href="#risk-profile-configuration">Risk</a>
-                <a href="#automation-safety">Safety</a>
-                <a href="#bot-automation">Bots</a>
-                <a href="#market-data">Market Data</a>
-                <a href="#market-imports">Imports</a>
+                <a href="#bot-automation">Paper/Bots</a>
                 <a href="#rebalance-batch">Rebalance</a>
+                <a href="#advanced-strategy-tools">Advanced</a>
             </div>
         </section>
 
         <section class="model-panel" id="strategy-entry">
-            <h2>New Strategy</h2>
+            <h2>Strategy Builder</h2>
+            <p class="inline-status">What is this? A plain-English trading idea saved locally. Why it matters: paper trading needs a strategy before it can simulate. What to do next: fill the fields or use the safe paper example, then click Save Strategy.</p>
             <form id="strategy-form" class="model-test-form">
                 <label for="strategy-name">Strategy Name</label>
                 <input type="text" id="strategy-name" name="name" required>
+                <p class="workflow-helper-text">Use a plain label you will recognize later, such as Polygon momentum pullback.</p>
 
                 <label for="market-symbol">Market / Symbol</label>
                 <input type="text" id="market-symbol" name="marketSymbol" placeholder="BTC/USDT" required>
+                <p class="workflow-helper-text">Use the pair you want to study. Paper trading uses local market data, not money.</p>
 
                 <label for="timeframe">Timeframe</label>
                 <input type="text" id="timeframe" name="timeframe" placeholder="15m, 1h, 4h" required>
+                <p class="workflow-helper-text">Shorter timeframes create more signals; longer timeframes are slower and usually easier to review.</p>
 
                 <label for="entry-rules">Entry Rules</label>
-                <textarea id="entry-rules" name="entryRules" rows="5" required></textarea>
+                <textarea id="entry-rules" name="entryRules" rows="5" placeholder="Example: Enter when price closes above the 20-period moving average after two red candles." required></textarea>
+                <p class="workflow-helper-text">Say when EtherealAI should consider entering a paper trade.</p>
 
                 <label for="exit-rules">Exit Rules</label>
-                <textarea id="exit-rules" name="exitRules" rows="5" required></textarea>
+                <textarea id="exit-rules" name="exitRules" rows="5" placeholder="Example: Exit when price closes below the 20-period moving average or reaches the paper take-profit." required></textarea>
+                <p class="workflow-helper-text">Say when EtherealAI should consider leaving a paper trade.</p>
 
                 <label for="stop-loss">Stop Loss %</label>
                 <input type="number" id="stop-loss" name="stopLoss" step="0.01">
@@ -70,7 +103,10 @@
                 <label for="risk-notes">Risk Notes</label>
                 <textarea id="risk-notes" name="riskNotes" rows="3"></textarea>
 
-                <button type="submit">Save Strategy</button>
+                <div class="button-row">
+                    <button type="button" id="strategy-safe-example">Use Safe Paper Example</button>
+                    <button type="submit">Save Strategy</button>
+                </div>
             </form>
         </section>
 
@@ -78,6 +114,18 @@
             <h2>Saved Strategies</h2>
             <div id="strategy-list" class="task-list">Loading strategies...</div>
         </section>
+
+        <details id="advanced-strategy-tools" class="compact-details advanced-operator-tools">
+            <summary>Advanced / Developer Tools</summary>
+            <p class="inline-status">This area keeps the raw research tables, imports, connector metadata, logs, archives, filters, and technical evidence. Normal operation should start with Strategy Builder, Paper Trading Center, Bot Control Center, Wallet & Funding, and Security.</p>
+            <div class="quick-nav">
+                <a href="#risk-management">Backtest Explorer</a>
+                <a href="#automation-safety">Optimization/Safety</a>
+                <a href="#market-data">Market Data Providers</a>
+                <a href="#market-imports">Imports</a>
+                <a href="#exchange-connectors">Saved Strategy Records</a>
+            </div>
+        </details>
 
         <section class="model-panel" id="research-suite">
             <h2>Backtest Research</h2>
@@ -7129,6 +7177,18 @@
             await loadStrategy(data.strategy.id);
         });
 
+        document.getElementById('strategy-safe-example').addEventListener('click', () => {
+            document.getElementById('strategy-name').value = 'Safe paper momentum pullback';
+            document.getElementById('market-symbol').value = 'MATIC/USDT';
+            document.getElementById('timeframe').value = '1h';
+            document.getElementById('entry-rules').value = 'Enter a paper trade only when price closes above the 20-period moving average after a pullback and volume is not unusually low.';
+            document.getElementById('exit-rules').value = 'Exit the paper trade when price closes below the 20-period moving average, reaches the paper take-profit, or violates the paper risk profile.';
+            document.getElementById('stop-loss').value = '2';
+            document.getElementById('take-profit').value = '4';
+            document.getElementById('risk-notes').value = 'Paper-only example. No wallet signing, no live exchange order, and no live trading.';
+            document.getElementById('backtest-results').textContent = 'Safe paper example filled. Review the wording, then click Save Strategy.';
+        });
+
         document.getElementById('run-backtest').addEventListener('click', async () => {
             if (!selectedStrategyId) {
                 return;
@@ -8154,5 +8214,6 @@
 
         bootStrategyLab();
     </script>
+    <script src="/js/operator-next-action.js"></script>
 </body>
 </html>

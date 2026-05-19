@@ -3,25 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Owner Setup Wizard</title>
+    <title>Setup Wizard</title>
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
     <nav>
-        <a href="/dashboard">Dashboard</a>
-        <a href="/owner-setup">Owner Setup</a>
-        <a href="/operator-control">Operator Control</a>
-        <a href="/security-lockdown">Security Lockdown</a>
+        <a href="/dashboard">Mission Control</a>
+        <a href="/owner-setup">Setup Wizard</a>
+        <a href="/operator-control">Wallet & Funding</a>
+        <a href="/security-lockdown">Security</a>
         <a href="/owner-proof-packet">Proof Packet</a>
-        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/strategy-lab">Strategy / Paper / Bots</a>
         <a href="/solidity-lab">Solidity Lab</a>
         <a href="/social-ops">Social Ops</a>
         <a href="/logout">Logout</a>
     </nav>
 
     <main class="container">
-        <h1>Owner Setup Wizard</h1>
-        <p>Finish the blocked setup gates without developer workflows. Live trading and wallet signing stay disabled.</p>
+        <h1>Setup Wizard</h1>
+        <p>Finish blocked setup gates one at a time without developer workflows. Every missing requirement shows what it is, why it matters, whether it is safe, and what to click next. Live trading and wallet signing stay disabled.</p>
         <div class="auth-proof-banner" role="status">
             <strong>MVP 100% · Paper 95→100 · Full E2E 72→100</strong>
             <span>Live execution disabled · no seed phrases · no private keys · credentials read from <code>~/EtherealAI_Secrets/.env</code></span>
@@ -618,5 +618,6 @@
 
         loadWizard();
     </script>
+    <script src="/js/operator-next-action.js"></script>
 </body>
 </html>
