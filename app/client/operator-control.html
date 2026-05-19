@@ -9,6 +9,7 @@
 <body>
     <nav>
         <a href="/dashboard">Dashboard</a>
+        <a href="/security-lockdown">Security Lockdown</a>
         <a href="/owner-proof-packet">Proof Packet</a>
         <a href="/mvp-test-pass">MVP Test Pass</a>
         <a href="/strategy-lab">Strategy Lab</a>
@@ -30,6 +31,7 @@
             <h2>Owner Control Summary</h2>
             <div class="button-row">
                 <button id="refresh-operator-center" type="button">Refresh Control Center</button>
+                <a class="cta-button" href="/security-lockdown">Mac Security Lockdown</a>
                 <a class="cta-button" href="/owner-proof-packet">Review Proof Packet</a>
             </div>
             <div id="operator-summary" class="artifact-grid">Loading operator control summary...</div>
@@ -38,7 +40,37 @@
 
         <section class="model-panel">
             <h2>Wallet Onboarding Wizard</h2>
+            <div id="wallet-quick-start" class="operator-step-list">Loading simplest safe path...</div>
             <div id="wallet-guide-steps" class="operator-step-list">Loading wallet onboarding guide...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Owner Key Takeover Mode</h2>
+            <p class="inline-status">Pick a role first. EtherealAI fills the safest metadata defaults, keeps risky permissions blocked, and never asks for secret material.</p>
+            <div class="key-template-grid">
+                <button type="button" data-wallet-template="trading_research">Trading Research</button>
+                <button type="button" data-wallet-template="token_deployment">Token Deployment</button>
+                <button type="button" data-wallet-template="treasury">Treasury</button>
+                <button type="button" data-wallet-template="recovery">Recovery / Backup</button>
+            </div>
+            <div class="operator-step-list key-takeover-checklist">
+                <article>
+                    <strong>1. You control recovery outside EtherealAI</strong>
+                    <span>Seed phrase, private key, hardware wallet PIN, and wallet password stay offline and outside this server.</span>
+                </article>
+                <article>
+                    <strong>2. EtherealAI gets public metadata only</strong>
+                    <span>Label, chain, network, public address, project assignment, and permission scope are enough for planning.</span>
+                </article>
+                <article>
+                    <strong>3. Risky permissions remain blocked</strong>
+                    <span>Trading, transfers, bridging, contract deployment, minting, and treasury spend stay blocked unless future owner-approved live gates exist.</span>
+                </article>
+                <article>
+                    <strong>4. Readiness review is the handoff receipt</strong>
+                    <span>After attaching metadata, press Review Readiness. That logs the owner-control checkpoint without giving EtherealAI the keys.</span>
+                </article>
+            </div>
         </section>
 
         <section class="model-panel">
@@ -191,6 +223,92 @@
             ['paper_only', 'Paper Only'],
             ['read_only', 'Read Only']
         ];
+        const walletTemplates = {
+            trading_research: {
+                label: 'Trading research wallet',
+                walletKind: 'hardware',
+                chainFamily: 'evm',
+                network: 'base',
+                connectionMethod: 'hardware',
+                assignments: 'trading-lab, paper-automation',
+                status: 'onboarding',
+                notes: 'Owner controls keys outside EtherealAI. Used for research and future reviewed trading workflows only.',
+                permissions: {
+                    view_public_address: 'read_only',
+                    request_signature: 'blocked',
+                    deploy_contract: 'blocked',
+                    mint_token: 'blocked',
+                    transfer_assets: 'blocked',
+                    trade_execution: 'paper_only',
+                    bridge_assets: 'blocked',
+                    treasury_spend: 'blocked',
+                    admin_recovery: 'blocked'
+                }
+            },
+            token_deployment: {
+                label: 'Token deployment wallet',
+                walletKind: 'hardware',
+                chainFamily: 'evm',
+                network: 'base',
+                connectionMethod: 'hardware',
+                assignments: 'solidity-lab, token-deployment',
+                status: 'review_required',
+                notes: 'Owner controls keys outside EtherealAI. Deployment remains local scaffold only until future reviewed live gates exist.',
+                permissions: {
+                    view_public_address: 'read_only',
+                    request_signature: 'blocked',
+                    deploy_contract: 'blocked',
+                    mint_token: 'blocked',
+                    transfer_assets: 'blocked',
+                    trade_execution: 'blocked',
+                    bridge_assets: 'blocked',
+                    treasury_spend: 'blocked',
+                    admin_recovery: 'blocked'
+                }
+            },
+            treasury: {
+                label: 'Treasury wallet',
+                walletKind: 'multisig',
+                chainFamily: 'evm',
+                network: 'base',
+                connectionMethod: 'multisig',
+                assignments: 'treasury, owner-control',
+                status: 'review_required',
+                notes: 'Owner-controlled treasury. Prefer multisig or hardware wallet. EtherealAI stores metadata only.',
+                permissions: {
+                    view_public_address: 'read_only',
+                    request_signature: 'blocked',
+                    deploy_contract: 'blocked',
+                    mint_token: 'blocked',
+                    transfer_assets: 'blocked',
+                    trade_execution: 'blocked',
+                    bridge_assets: 'blocked',
+                    treasury_spend: 'blocked',
+                    admin_recovery: 'blocked'
+                }
+            },
+            recovery: {
+                label: 'Recovery wallet reference',
+                walletKind: 'watch_only',
+                chainFamily: 'evm',
+                network: 'base',
+                connectionMethod: 'watch_only',
+                assignments: 'recovery, backup',
+                status: 'disabled',
+                notes: 'Recovery reference only. Do not connect recovery material to this app.',
+                permissions: {
+                    view_public_address: 'read_only',
+                    request_signature: 'blocked',
+                    deploy_contract: 'blocked',
+                    mint_token: 'blocked',
+                    transfer_assets: 'blocked',
+                    trade_execution: 'blocked',
+                    bridge_assets: 'blocked',
+                    treasury_spend: 'blocked',
+                    admin_recovery: 'blocked'
+                }
+            }
+        };
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -236,6 +354,34 @@
                 .map(select => [select.dataset.permissionKey, select.value]));
         }
 
+        function applyWalletTemplate(templateId) {
+            const template = walletTemplates[templateId];
+
+            if (!template) {
+                return;
+            }
+
+            document.getElementById('wallet-label').value = template.label;
+            document.getElementById('wallet-kind').value = template.walletKind;
+            document.getElementById('wallet-chain-family').value = template.chainFamily;
+            document.getElementById('wallet-network').value = template.network;
+            document.getElementById('wallet-connection-method').value = template.connectionMethod;
+            document.getElementById('wallet-assignments').value = template.assignments;
+            document.getElementById('wallet-status').value = template.status;
+            document.getElementById('wallet-notes').value = template.notes;
+
+            Object.entries(template.permissions).forEach(([key, value]) => {
+                const select = document.querySelector(`[data-permission-key="${key}"]`);
+
+                if (select) {
+                    select.value = value;
+                }
+            });
+
+            document.getElementById('wallet-form-status').textContent = `${template.label} template applied. Add only the public address, then attach metadata.`;
+            document.getElementById('wallet-public-address').focus();
+        }
+
         function renderSummary(summary = {}) {
             const counts = summary.counts || {};
             document.getElementById('operator-summary').innerHTML = [
@@ -263,6 +409,15 @@
         }
 
         function renderGuide(guide = {}) {
+            const quickStart = guide.quickStart || {};
+            document.getElementById('wallet-quick-start').innerHTML = quickStart.steps ? `
+                <article>
+                    <strong>${escapeHtml(quickStart.title)}</strong>
+                    <ol>${quickStart.steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol>
+                    <em>${escapeHtml(quickStart.result || '')}</em>
+                </article>
+            ` : '<p>No quick-start path loaded.</p>';
+
             document.getElementById('wallet-guide-steps').innerHTML = (guide.steps || []).map((step, index) => `
                 <article>
                     <strong>${index + 1}. ${escapeHtml(step.label)}</strong>
@@ -394,6 +549,7 @@
         document.addEventListener('click', event => {
             const readinessWalletId = event.target.dataset.readinessWallet;
             const revokeWalletId = event.target.dataset.revokeWallet;
+            const walletTemplateId = event.target.dataset.walletTemplate;
 
             if (readinessWalletId) {
                 reviewWalletReadiness(readinessWalletId).catch(error => alert(error.message));
@@ -401,6 +557,10 @@
 
             if (revokeWalletId) {
                 revokeWallet(revokeWalletId).catch(error => alert(error.message));
+            }
+
+            if (walletTemplateId) {
+                applyWalletTemplate(walletTemplateId);
             }
         });
 

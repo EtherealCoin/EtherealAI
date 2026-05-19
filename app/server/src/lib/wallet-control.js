@@ -299,6 +299,52 @@ function buildWalletOnboardingGuide() {
       liveExecutionEnabled: false,
       silentOutboundConnections: false
     },
+    quickStart: {
+      title: 'Simplest safe key-control path',
+      steps: [
+        'Open Mac Security Lockdown first and review any Fix Now items.',
+        'Pick a wallet role template: Trading Research, Token Deployment, Treasury, or Recovery.',
+        'Create or choose the wallet outside EtherealAI.',
+        'Paste only the public address into EtherealAI.',
+        'Leave risky permissions blocked.',
+        'Attach metadata and run readiness review.'
+      ],
+      result: 'The owner keeps the keys. EtherealAI receives a local planning record and an audit trail, not control of funds.'
+    },
+    walletRoleTemplates: [
+      {
+        id: 'trading_research',
+        label: 'Trading Research',
+        defaultChainFamily: 'evm',
+        defaultNetwork: 'base',
+        defaultWalletKind: 'hardware',
+        permissionModel: 'read public address, paper-only trading research, no transfer authority'
+      },
+      {
+        id: 'token_deployment',
+        label: 'Token Deployment',
+        defaultChainFamily: 'evm',
+        defaultNetwork: 'base',
+        defaultWalletKind: 'hardware',
+        permissionModel: 'deployment planning only until a future reviewed live signing gate exists'
+      },
+      {
+        id: 'treasury',
+        label: 'Treasury',
+        defaultChainFamily: 'evm',
+        defaultNetwork: 'base',
+        defaultWalletKind: 'multisig',
+        permissionModel: 'watch and planning only; treasury spend blocked'
+      },
+      {
+        id: 'recovery',
+        label: 'Recovery / Backup',
+        defaultChainFamily: 'evm',
+        defaultNetwork: 'base',
+        defaultWalletKind: 'watch_only',
+        permissionModel: 'disabled reference only; recovery material stays offline'
+      }
+    ],
     steps: [
       {
         id: 'choose_wallet',

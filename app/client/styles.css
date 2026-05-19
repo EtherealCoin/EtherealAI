@@ -831,6 +831,85 @@ footer {
     gap: 6px;
 }
 
+.key-template-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    margin: 14px 0;
+}
+
+.key-template-grid button {
+    background: #111827;
+    border: 0;
+    border-radius: 8px;
+    color: #ffffff;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    min-height: 46px;
+    padding: 10px 12px;
+}
+
+.key-template-grid button:hover {
+    background: #1d4ed8;
+}
+
+.key-takeover-checklist article {
+    border-left: 4px solid #2563eb;
+}
+
+.security-shell {
+    max-width: 1080px;
+}
+
+.security-check-card {
+    border-left: 4px solid #6b7280;
+}
+
+.security-check-card h3 {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.security-check-card h3 span {
+    background: #f3f4f6;
+    border-radius: 999px;
+    color: #374151;
+    font-size: 0.78rem;
+    padding: 4px 8px;
+}
+
+.security-status-pass {
+    border-left-color: #15803d;
+}
+
+.security-status-pass h3 span {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.security-status-review,
+.security-status-unknown {
+    border-left-color: #ca8a04;
+}
+
+.security-status-review h3 span,
+.security-status-unknown h3 span {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.security-status-fail {
+    border-left-color: #dc2626;
+}
+
+.security-status-fail h3 span {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
 .timeline-list {
     display: grid;
     gap: 10px;

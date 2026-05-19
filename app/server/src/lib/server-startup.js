@@ -1,6 +1,7 @@
 function startEtherealServer({
   app,
   port,
+  host = '127.0.0.1',
   recordDevServerStart,
   updateDevServerHeartbeat,
   scheduleMarketImportWorker,
@@ -11,8 +12,8 @@ function startEtherealServer({
   setIntervalFn = setInterval,
   logger = console
 }) {
-  return app.listen(port, () => {
-    logger.log(`Server running on port ${port}`);
+  return app.listen(port, host, () => {
+    logger.log(`Server running on ${host}:${port}`);
 
     recordDevServerStart().catch(error => {
       logger.error(`Unable to record dev server start: ${error.message}`);

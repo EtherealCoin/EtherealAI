@@ -40,6 +40,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/routes/file-proposals.js',
     'app/server/src/routes/health.js',
     'app/server/src/routes/local-models.js',
+    'app/server/src/routes/mac-security.js',
     'app/server/src/routes/market-data.js',
     'app/server/src/routes/multi-agent.js',
     'app/server/src/routes/order-intents.js',
@@ -76,6 +77,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/local-model-routing.js',
     'app/server/src/lib/local-model-runtime.js',
     'app/server/src/lib/live-execution-handoff.js',
+    'app/server/src/lib/mac-security.js',
     'app/server/src/lib/mlx-lifecycle.js',
     'app/server/src/lib/multi-agent-coordination.js',
     'app/server/src/lib/owner-acceptance.js',
@@ -174,9 +176,11 @@ function checkOwnerEvidenceModule() {
     || ownerEvidence.fullLiveBlockers?.length !== 4
     || !ownerEvidence.proofSurfaces.some(surface => surface.id === 'owner_proof_packet' && surface.location === '/owner-proof-packet')
     || !ownerEvidence.proofSurfaces.some(surface => surface.id === 'operator_control_wallets' && surface.location === '/operator-control' && surface.signingEnabled === false)
+    || !ownerEvidence.proofSurfaces.some(surface => surface.id === 'mac_security_lockdown' && surface.location === '/security-lockdown' && surface.readOnlyAudit === true)
     || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'social-ops' && boundary.externalPostingEnabled === false)
     || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'solidity-lab' && boundary.deploymentEnabled === false)
     || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'wallet-control' && boundary.signingEnabled === false)
+    || !ownerEvidence.externalSurfaceBoundaries.some(boundary => boundary.moduleId === 'mac-security' && boundary.readOnlyAudit === true)
   ) {
     fail('owner evidence module did not expose the expected local-only proof contract');
   }
@@ -382,6 +386,7 @@ function checkOwnerProofPacketModule() {
     || buildPaperAutomationRunbook(packet.botAutomationCapabilityPath).ownerMode !== 'activate_ready_paper_schedule'
     || packet.proofSurfaces.length < 8
     || !packet.proofSurfaces.some(surface => surface.id === 'operator_control_wallets' && surface.location === '/operator-control')
+    || !packet.proofSurfaces.some(surface => surface.id === 'mac_security_lockdown' && surface.location === '/security-lockdown')
     || packet.exportSurfaces.length !== 3
     || packet.fullLiveBlockers.length !== 1
     || packet.fullLiveBlockers[0].id !== 'live_order_endpoint_enabled'
@@ -983,10 +988,10 @@ async function checkServerStartupModule() {
   const calls = [];
   const server = startEtherealServer({
     app: {
-      listen(port, callback) {
-        calls.push({ type: 'listen', port });
+      listen(port, host, callback) {
+        calls.push({ type: 'listen', port, host });
         callback();
-        return { listening: true, port };
+        return { listening: true, port, host };
       }
     },
     port: 3123,
@@ -1036,9 +1041,10 @@ async function checkServerStartupModule() {
 
   if (
     server.listening !== true
-    || !logs.includes('Server running on port 3123')
+    || !logs.includes('Server running on 127.0.0.1:3123')
     || calls[0].type !== 'listen'
     || calls[0].port !== 3123
+    || calls[0].host !== '127.0.0.1'
     || !calls.some(call => call.type === 'record-start')
     || calls.filter(call => call.type === 'market-import').length !== 1
     || calls.filter(call => call.type === 'market-refresh').length !== 2
@@ -1226,6 +1232,7 @@ function checkRouteRegistrationModule() {
     'registerDevServerRoutes',
     'registerSystemMemoryRoutes',
     'registerWalletControlRoutes',
+    'registerMacSecurityRoutes',
     'registerAutomationSafetyRoutes',
     'registerArtifactRoutes',
     'registerLocalModelRoutes',
@@ -1252,6 +1259,7 @@ function checkRouteRegistrationModule() {
     || !routeRegistrationSource.includes("require('../routes/bot-automation')")
     || !routeRegistrationSource.includes("require('../routes/multi-agent')")
     || !routeRegistrationSource.includes("require('../routes/wallet-control')")
+    || !routeRegistrationSource.includes("require('../routes/mac-security')")
     || !routeRegistrationSource.includes("require('../routes/strategy-research')")
     || !routeRegistrationSource.includes("require('../routes/pages')")
     || !expectedRouteRegistrars.every(name => routeRegistrationSource.includes(`${name}(app`))
@@ -1262,6 +1270,8 @@ function checkRouteRegistrationModule() {
     || !serverSource.includes('const ROUTE_PARSERS = {')
     || !serverSource.includes("require('./lib/live-execution-handoff')")
     || !serverSource.includes("require('./lib/wallet-control')")
+    || !serverSource.includes("require('./lib/mac-security')")
+    || !serverSource.includes("const SERVER_HOST = String(process.env.ETHEREALAI_HOST || '127.0.0.1')")
     || !serverSource.includes('buildCompanySetupPlan')
     || !serverSource.includes('normalizeCompanyDnsTargetInput')
     || !serverSource.includes('parseCompanyDnsTarget')
@@ -2267,6 +2277,90 @@ function checkWalletControlModule() {
   }
 
   pass('wallet control module');
+}
+
+async function checkMacSecurityModule() {
+  const {
+    buildMacSecurityAudit,
+    buildMacSecurityGuide,
+    getServerBindCheck,
+    parseListeningPorts,
+    summarizeChecks
+  } = require(path.join(projectRoot, 'app/server/src/lib/mac-security'));
+  const responses = new Map([
+    ['/usr/bin/fdesetup status', 'FileVault is On.'],
+    ['/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate', 'Firewall is blocking all non-essential incoming connections. (State = 2)'],
+    ['/usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode', 'Firewall stealth mode is on'],
+    ['/usr/libexec/ApplicationFirewall/socketfilterfw --getblockall', 'Firewall is blocking all non-essential incoming connections.'],
+    ['/usr/libexec/ApplicationFirewall/socketfilterfw --getallowsigned', 'Automatically allow built-in signed software ENABLED.'],
+    ['/usr/sbin/spctl --status', 'assessments enabled'],
+    ['/usr/bin/csrutil status', 'System Integrity Protection status: enabled.'],
+    ['/usr/sbin/softwareupdate --schedule', 'Automatic checking for updates is turned on'],
+    ['/usr/sbin/systemsetup -getremotelogin', 'Remote Login: Off'],
+    ['/usr/sbin/systemsetup -getremoteappleevents', 'Remote Apple Events: Off'],
+    ['/usr/bin/defaults read com.apple.NetworkBrowser DisableAirDrop', '1'],
+    ['/usr/bin/defaults read com.apple.screensaver askForPassword', '1'],
+    ['/usr/bin/defaults read com.apple.screensaver askForPasswordDelay', '0'],
+    ['/usr/sbin/lsof -nP -iTCP -sTCP:LISTEN', [
+      'COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME',
+      'node 100 ethereal 20u IPv4 0x1 0t0 TCP 127.0.0.1:3000 (LISTEN)',
+      'ControlCe 200 ethereal 21u IPv4 0x2 0t0 TCP *:7000 (LISTEN)'
+    ].join('\n')]
+  ]);
+  const execFileCapture = async (command, args) => {
+    const key = `${command} ${args.join(' ')}`;
+
+    if (!responses.has(key)) {
+      return { exitCode: 1, stdout: '', stderr: `missing fixture for ${key}` };
+    }
+
+    return { exitCode: 0, stdout: responses.get(key), stderr: '' };
+  };
+  const audit = await buildMacSecurityAudit({
+    execFileCapture,
+    platform: 'darwin',
+    serverHost: '127.0.0.1',
+    port: 3000
+  });
+  const guide = buildMacSecurityGuide();
+  const bindPass = getServerBindCheck({ serverHost: '127.0.0.1', port: 3000 });
+  const bindFail = getServerBindCheck({ serverHost: '0.0.0.0', port: 3000 });
+  const parsedPorts = parseListeningPorts(responses.get('/usr/sbin/lsof -nP -iTCP -sTCP:LISTEN'));
+  const summary = summarizeChecks([
+    { status: 'pass' },
+    { status: 'fail' },
+    { status: 'review' },
+    { status: 'unknown' }
+  ]);
+
+  if (
+    audit.supported !== true
+    || audit.summary?.totalChecks < 14
+    || audit.summary?.failCount !== 0
+    || audit.summary?.reviewCount < 1
+    || audit.safetyBoundary?.readOnlyAudit !== true
+    || audit.safetyBoundary?.privilegedMutation !== false
+    || !audit.checks.some(check => check.id === 'filevault' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'firewall_global' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'firewall_allow_signed_builtin' && check.status === 'review')
+    || !audit.checks.some(check => check.id === 'etherealai_bind_host' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'listening_ports' && check.status === 'review')
+    || !audit.listeningPorts.some(port => port.command === 'node' && port.exposure === 'loopback_only')
+    || !audit.listeningPorts.some(port => port.command === 'ControlCe' && port.exposure === 'all_interfaces')
+    || bindPass.status !== 'pass'
+    || bindFail.status !== 'fail'
+    || parsedPorts.length !== 2
+    || summary.failCount !== 1
+    || guide.operatingMode !== 'assume_home_network_hostile'
+    || !guide.rules.some(rule => rule.includes('VPNs can improve transport privacy'))
+    || !guide.ownerSettingsChecklist.some(item => item.area.includes('General > Sharing'))
+    || !guide.adminOnlyActions.some(item => item.includes('Remote Login'))
+    || guide.etherealAiSecurityBoundary?.bindsToLoopbackByDefault !== true
+  ) {
+    fail('mac security module did not expose read-only host hardening audit behavior');
+  }
+
+  pass('mac security module');
 }
 
 function checkSystemConfigRuntimeModule() {
@@ -5915,10 +6009,17 @@ function checkOperatorControlCenterUi() {
 
   if (
     !pages.includes("app.get('/operator-control', requirePageAuth")
+    || !pages.includes("app.get('/security-lockdown', requirePageAuth")
     || !dashboard.includes('/operator-control')
+    || !dashboard.includes('/security-lockdown')
     || !home.includes('Operator Control Center')
+    || !home.includes('Mac Security Lockdown')
     || !html.includes('Operator Control Center')
     || !html.includes('Wallet Onboarding Wizard')
+    || !html.includes('wallet-quick-start')
+    || !html.includes('Owner Key Takeover Mode')
+    || !html.includes('walletTemplates')
+    || !html.includes('data-wallet-template="trading_research"')
     || !html.includes('Step-by-Step Operating Procedures')
     || !html.includes('Attach Wallet Metadata')
     || !html.includes('Connected Wallets')
@@ -5945,6 +6046,7 @@ function checkOperatorControlCenterUi() {
     || !html.includes('Recovery procedure')
     || !html.includes('Rollback protection')
     || !html.includes('operator-procedures')
+    || !html.includes('/security-lockdown')
     || !html.includes('Do not paste seed phrases')
     || !html.includes('function renderPermissionControls()')
     || !html.includes('function loadOperatorCenter()')
@@ -5952,12 +6054,48 @@ function checkOperatorControlCenterUi() {
     || !styles.includes('.operator-shell')
     || !styles.includes('.operator-step-list')
     || !styles.includes('.permission-grid')
+    || !styles.includes('.key-template-grid')
     || !styles.includes('.wallet-card')
   ) {
     fail('operator control center UI is missing wallet onboarding, safety, or route wiring');
   }
 
   pass('operator control center owner wallet UI');
+}
+
+function checkMacSecurityLockdownUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/security-lockdown.html'), 'utf8');
+  const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
+  const route = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/mac-security.js'), 'utf8');
+  const routeRegistration = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/route-registration.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+
+  if (
+    !pages.includes("app.get('/security-lockdown', requirePageAuth")
+    || !route.includes('/api/v1/mac-security/audit')
+    || !route.includes('/api/v1/mac-security/guide')
+    || !routeRegistration.includes("require('../routes/mac-security')")
+    || !html.includes('Mac Security Lockdown')
+    || !html.includes('Hostile Network Mode')
+    || !html.includes('Security Snapshot')
+    || !html.includes('Priority Owner Actions')
+    || !html.includes('Audit Checks')
+    || !html.includes('Listening Network Services')
+    || !html.includes('Manual Mac Lockdown Checklist')
+    || !html.includes('Emergency Containment')
+    || !html.includes('Network And Router Plan')
+    || !html.includes('VPN reality check')
+    || !html.includes('/api/v1/mac-security/audit')
+    || !html.includes('function renderPriorityActions')
+    || !html.includes('function renderListeningPorts')
+    || !styles.includes('.security-shell')
+    || !styles.includes('.security-status-pass')
+    || !styles.includes('.security-status-fail')
+  ) {
+    fail('mac security lockdown UI is missing host hardening audit coverage');
+  }
+
+  pass('mac security lockdown UI');
 }
 
 function checkOwnerProofPacketUi() {
@@ -6097,6 +6235,7 @@ function checkHomeLocalProofUi() {
     || !html.includes('safety module boundaries')
     || !header.includes('MVP 99% · Local E2E 95% · Live disabled')
     || !header.includes('/owner-proof-packet')
+    || !header.includes('/security-lockdown')
     || !header.includes('/mvp-test-pass')
     || !header.includes('/server-route-inventory')
     || !footer.includes('Local Proof')
@@ -6296,9 +6435,14 @@ function checkMvpOwnerTestPassDoc() {
     || !doc.includes('`Record Local MVP Acceptance` remains disabled until the local test pass, proof-packet review, and live-disabled acknowledgement boxes are checked.')
     || !doc.includes('`Download Proof Packet JSON` is enabled after `/api/v1/owner-proof-packet` loads.')
     || !doc.includes('Packet Checksum shows a SHA-256 prefix and the downloaded JSON includes the full checksum.')
-    || !doc.includes('Proof Surfaces include owner proof packet, dashboard readiness, MVP Test Pass, Operator Control, route inventory, Strategy Lab, Social Ops, and Solidity Lab.')
+    || !doc.includes('Proof Surfaces include owner proof packet, dashboard readiness, MVP Test Pass, Operator Control, Mac Security Lockdown, route inventory, Strategy Lab, Social Ops, and Solidity Lab.')
     || !doc.includes('Open `/operator-control`')
-    || !doc.includes('Wallet Onboarding Wizard explains the owner key handoff in plain English.')
+    || !doc.includes('Wallet Onboarding Wizard explains the owner key handoff in plain English and shows the simplest safe key-control path.')
+    || !doc.includes('Owner Key Takeover Mode shows Trading Research, Token Deployment, Treasury, and Recovery templates')
+    || !doc.includes('Open `/security-lockdown`')
+    || !doc.includes('Security Snapshot loads from `/api/v1/mac-security/audit`')
+    || !doc.includes('## Mac Security Lockdown Workflow')
+    || !doc.includes('Safe user-level hardening applied in this session')
     || !doc.includes('## Owner Wallet Control Workflow')
     || !doc.includes('Revocation is the emergency shutdown path for a wallet record')
     || !doc.includes('Bot Automation Path shows Automated Paper Path, Ready Paper Plans, Active Paper Schedules, Future Live Automation blocked, Live Blocked Gates, and no live order endpoint.')
@@ -6373,9 +6517,12 @@ function checkProjectHandoffDoc() {
     || !doc.includes('owner proof surfaces')
     || !doc.includes('`ownerAcceptance`')
     || !doc.includes('`botAutomationCapabilityPath`')
-    || !doc.includes('owner proof packet, dashboard readiness, MVP test pass, Operator Control, route inventory, Strategy Lab, Social Ops, and Solidity Lab')
+    || !doc.includes('owner proof packet, dashboard readiness, MVP test pass, Operator Control, Mac Security Lockdown, route inventory, Strategy Lab, Social Ops, and Solidity Lab')
     || !doc.includes('/operator-control` is the non-coder Operator Control Center')
+    || !doc.includes('/security-lockdown` is the non-coder Mac Security Lockdown Center')
     || !doc.includes('/api/v1/operator-control-center')
+    || !doc.includes('/api/v1/mac-security/audit')
+    || !doc.includes('read_only_local_mac_audit_no_privileged_mutation')
     || !doc.includes('owner_wallets')
     || !doc.includes('wallet_permission_events')
     || !doc.includes('metadata_only_no_wallet_secrets')
@@ -6388,7 +6535,7 @@ function checkProjectHandoffDoc() {
     || !doc.includes('Dashboard System Memory export now includes owner-evidence references, owner acceptance pending status')
     || !doc.includes('Owner Proof Coverage counts, owner acceptance pending status, and local acceptance record count from System Memory')
     || !doc.includes('Route Inventory now cross-checks Owner Proof Coverage, owner acceptance pending status, and local acceptance record count from System Memory')
-    || !doc.includes('external-surface boundaries for Social Ops, Solidity Lab, and wallet control')
+    || !doc.includes('external-surface boundaries for Social Ops, Solidity Lab, wallet control, and Mac security')
     || !doc.includes('Social Ops remains local draft-only')
     || !doc.includes('Solidity Lab remains local scaffold/review only')
     || !doc.includes('Solidity Lab now includes a local Token Ecosystem Studio')
@@ -8638,6 +8785,7 @@ async function runServerApiChecks() {
     || !inventory.modules.some(module => module.moduleId === 'wallet-control' && module.files?.includes('app/server/src/routes/wallet-control.js') && module.safetyProfile?.boundary === 'metadata_only_no_wallet_secrets')
     || !inventory.modules.some(module => module.moduleId === 'file-proposals' && module.files?.includes('app/server/src/routes/file-proposals.js'))
     || !inventory.modules.some(module => module.moduleId === 'local-models' && module.files?.includes('app/server/src/routes/local-models.js'))
+    || !inventory.modules.some(module => module.moduleId === 'mac-security' && module.files?.includes('app/server/src/routes/mac-security.js') && module.safetyProfile?.boundary === 'read_only_local_mac_audit_no_privileged_mutation')
     || !inventory.modules.some(module => module.moduleId === 'multi-agent' && module.files?.includes('app/server/src/routes/multi-agent.js') && module.safetyProfile?.boundary === 'local_coordination_no_external_actions')
     || !inventory.modules.some(module => module.moduleId === 'market-data')
     || !inventory.modules.some(module => module.moduleId === 'strategy-research' && module.files?.includes('app/server/src/routes/strategy-research.js'))
@@ -8646,6 +8794,7 @@ async function runServerApiChecks() {
     || !inventory.modules.some(module => module.moduleId === 'automation-safety' && module.safetyProfile?.boundary === 'blocks_live_launch')
     || !inventory.modules.some(module => module.moduleId === 'exchange-metadata' && module.safetyProfile?.boundary === 'metadata_only_no_credentials')
     || !inventory.modules.some(module => module.moduleId === 'wallet-control' && module.safetyProfile?.signingEnabled === false && module.safetyProfile?.secretsStored === false)
+    || !inventory.modules.some(module => module.moduleId === 'mac-security' && module.safetyProfile?.secretsStored === false && module.safetyProfile?.ownerReviewRequired === true)
     || !inventory.modules.some(module => module.moduleId === 'order-intents' && module.safetyProfile?.boundary === 'risk_review_no_execution')
     || !inventory.modules.some(module => module.moduleId === 'social-ops' && module.safetyProfile?.boundary === 'local_drafts_no_external_posting' && module.safetyProfile?.externalPostingEnabled === false)
     || !inventory.modules.some(module => module.moduleId === 'solidity-lab' && module.safetyProfile?.boundary === 'local_scaffold_no_deployment' && module.safetyProfile?.deploymentEnabled === false)
@@ -8733,6 +8882,8 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/api/v1/exchange-connectors/:id/adapter-contract-events' && route.file === 'app/server/src/routes/exchange-metadata.js')
     || !inventory.routes.some(route => route.path === '/api/v1/exchange-adapter-contract-events/:id' && route.file === 'app/server/src/routes/exchange-metadata.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/operator-control-center' && route.file === 'app/server/src/routes/wallet-control.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/mac-security/audit' && route.file === 'app/server/src/routes/mac-security.js')
+    || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/mac-security/guide' && route.file === 'app/server/src/routes/mac-security.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/wallets' && route.file === 'app/server/src/routes/wallet-control.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/wallets' && route.file === 'app/server/src/routes/wallet-control.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/wallets/:id' && route.file === 'app/server/src/routes/wallet-control.js')
@@ -8853,6 +9004,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/api/v1/auth/login' && route.file === 'app/server/src/routes/auth.js')
     || !inventory.routes.some(route => route.path === '/dashboard' && route.file === 'app/server/src/routes/pages.js')
     || !inventory.routes.some(route => route.path === '/operator-control' && route.file === 'app/server/src/routes/pages.js')
+    || !inventory.routes.some(route => route.path === '/security-lockdown' && route.file === 'app/server/src/routes/pages.js')
     || !inventory.routes.some(route => route.path === '/owner-proof-packet' && route.file === 'app/server/src/routes/pages.js')
   ) {
     fail('server route inventory did not expose expected modularization inventory data');
@@ -8995,6 +9147,24 @@ async function runServerApiChecks() {
   await runWalletControlFixtureChecks(baseUrl, cookie);
   await runBotAutomationFixtureChecks(baseUrl, cookie);
 
+  const macSecurityAudit = await fetchJson(`${baseUrl}/api/v1/mac-security/audit`, { headers: authHeaders });
+
+  if (
+    macSecurityAudit.body.localOnly !== true
+    || macSecurityAudit.body.readOnlyAudit !== true
+    || macSecurityAudit.body.privilegedMutation !== false
+    || macSecurityAudit.body.secretsInspected !== false
+    || macSecurityAudit.body.audit?.safetyBoundary?.readOnlyAudit !== true
+    || !Array.isArray(macSecurityAudit.body.audit?.checks)
+    || !macSecurityAudit.body.audit.checks.some(check => check.id === 'filevault')
+    || !macSecurityAudit.body.audit.checks.some(check => check.id === 'etherealai_bind_host' && check.status === 'pass')
+    || !macSecurityAudit.body.guide?.rules?.some(rule => rule.includes('VPNs can improve transport privacy'))
+    || !macSecurityAudit.body.guide?.ownerSettingsChecklist?.some(item => item.area.includes('General > Sharing'))
+    || macSecurityAudit.body.guide?.etherealAiSecurityBoundary?.bindsToLoopbackByDefault !== true
+  ) {
+    fail('mac security audit API did not expose read-only local host hardening state');
+  }
+
   const systemMemory = await fetchJson(`${baseUrl}/api/v1/system-memory`, { headers: authHeaders });
 
   if (!Object.prototype.hasOwnProperty.call(systemMemory.body.snapshot?.counts || {}, 'exchange_connector_readiness_events')) {
@@ -9082,6 +9252,11 @@ async function runServerApiChecks() {
       && surface.signingEnabled === false
     ))
     || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
+      surface.id === 'mac_security_lockdown'
+      && surface.location === '/security-lockdown'
+      && surface.readOnlyAudit === true
+    ))
+    || !systemMemory.body.snapshot?.ownerEvidence?.proofSurfaces?.some(surface => (
       surface.id === 'social_ops_drafts'
       && surface.location === '/social-ops'
       && surface.externalPostingEnabled === false
@@ -9124,6 +9299,11 @@ async function runServerApiChecks() {
       boundary.moduleId === 'wallet-control'
       && boundary.boundary === 'metadata_only_no_wallet_secrets'
       && boundary.signingEnabled === false
+    ))
+    || !systemMemory.body.snapshot?.ownerEvidence?.externalSurfaceBoundaries?.some(boundary => (
+      boundary.moduleId === 'mac-security'
+      && boundary.boundary === 'read_only_local_mac_audit_no_privileged_mutation'
+      && boundary.readOnlyAudit === true
     ))
   ) {
     fail('system memory did not include owner evidence manifest and live-blocker references');
@@ -9182,6 +9362,7 @@ async function main() {
   checkSocialOpsModule();
   checkRiskSafetyModule();
   checkOrderIntentSimulatorModule();
+  await checkMacSecurityModule();
   await checkRiskProfileActionsModule();
   checkSolidityLabModule();
   checkBotAutomationModule();
@@ -9192,6 +9373,7 @@ async function main() {
   checkInlineScripts('app/client/creator.html');
   checkInlineScripts('app/client/dashboard.html');
   checkInlineScripts('app/client/operator-control.html');
+  checkInlineScripts('app/client/security-lockdown.html');
   checkInlineScripts('app/client/owner-proof-packet.html');
   checkInlineScripts('app/client/mvp-test-pass.html');
   checkInlineScripts('app/client/server-route-inventory.html');
@@ -9199,6 +9381,7 @@ async function main() {
   checkMvpTestPassOwnerWorkflowUi();
   checkDashboardMvpReadinessUi();
   checkOperatorControlCenterUi();
+  checkMacSecurityLockdownUi();
   checkOwnerProofPacketUi();
   checkHomeLocalProofUi();
   checkAuthenticatedProofBanners();

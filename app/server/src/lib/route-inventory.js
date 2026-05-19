@@ -34,6 +34,14 @@ function categorizeRoutePath(routePath) {
     };
   }
 
+  if (routePath.startsWith('/api/v1/mac-security')) {
+    return {
+      category: 'Mac Host Security',
+      moduleId: 'mac-security',
+      suggestedFile: 'app/server/src/routes/mac-security.js'
+    };
+  }
+
   if (
     routePath.startsWith('/api/v1/model-roles')
     || routePath.startsWith('/api/v1/policy')
@@ -273,6 +281,16 @@ function getModuleSafetyProfile(moduleId) {
       boundary: 'metadata_only_no_wallet_secrets',
       liveExecutionEnabled: false,
       signingEnabled: false,
+      secretsStored: false,
+      ownerReviewRequired: true
+    };
+  }
+
+  if (moduleId === 'mac-security') {
+    return {
+      level: 'host_security',
+      boundary: 'read_only_local_mac_audit_no_privileged_mutation',
+      liveExecutionEnabled: false,
       secretsStored: false,
       ownerReviewRequired: true
     };

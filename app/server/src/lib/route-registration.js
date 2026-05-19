@@ -10,6 +10,7 @@ const { registerExchangeMetadataRoutes } = require('../routes/exchange-metadata'
 const { registerFileProposalRoutes } = require('../routes/file-proposals');
 const { registerHealthRoutes } = require('../routes/health');
 const { registerLocalModelRoutes } = require('../routes/local-models');
+const { registerMacSecurityRoutes } = require('../routes/mac-security');
 const { registerMarketDataRoutes } = require('../routes/market-data');
 const { registerMultiAgentRoutes } = require('../routes/multi-agent');
 const { registerOrderIntentRoutes } = require('../routes/order-intents');
@@ -196,6 +197,8 @@ function registerEtherealRoutes(app, options) {
     buildWalletOnboardingGuide,
     buildOperatorControlSummary,
     walletPermissionKeys,
+    buildMacSecurityAudit,
+    buildMacSecurityGuide,
     commandTemplates,
     getGitStatusSnapshot,
     getGitPublishStatus,
@@ -348,6 +351,12 @@ function registerEtherealRoutes(app, options) {
     buildLiveExecutionHandoff,
     selects,
     parsers
+  });
+
+  registerMacSecurityRoutes(app, {
+    requireAuth,
+    buildMacSecurityAudit,
+    buildMacSecurityGuide
   });
 
   registerArtifactRoutes(app, {

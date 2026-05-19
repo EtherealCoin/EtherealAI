@@ -41,6 +41,16 @@ function buildOwnerEvidenceSnapshot() {
         liveExecutionEnabled: false
       },
       {
+        id: 'mac_security_lockdown',
+        label: 'Mac Security Lockdown',
+        location: '/security-lockdown',
+        evidence: 'Read-only local Mac hardening audit, listening-service review, hostile-network checklist, and owner-only manual remediation steps',
+        localOnly: true,
+        readOnlyAudit: true,
+        privilegedMutation: false,
+        liveExecutionEnabled: false
+      },
+      {
         id: 'route_inventory_boundaries',
         label: 'Route Inventory safety boundaries',
         location: '/server-route-inventory',
@@ -122,6 +132,13 @@ function buildOwnerEvidenceSnapshot() {
         boundary: 'metadata_only_no_wallet_secrets',
         signingEnabled: false,
         liveExecutionEnabled: false,
+        ownerReviewRequired: true
+      },
+      {
+        moduleId: 'mac-security',
+        boundary: 'read_only_local_mac_audit_no_privileged_mutation',
+        localOnly: true,
+        readOnlyAudit: true,
         ownerReviewRequired: true
       }
     ]

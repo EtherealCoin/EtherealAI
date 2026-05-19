@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mac Security Lockdown</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/operator-control">Operator Control</a>
+        <a href="/security-lockdown">Security Lockdown</a>
+        <a href="/owner-proof-packet">Proof Packet</a>
+        <a href="/strategy-lab">Strategy Lab</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main class="container operator-shell security-shell">
+        <h1>Mac Security Lockdown</h1>
+        <p>Use this page as the owner control room for the physical Mac. It audits local security state, shows what still needs manual owner action, and keeps EtherealAI bound to local-only operation.</p>
+
+        <div class="auth-proof-banner" role="status">
+            <strong>Hostile Network Mode</strong>
+            <span>Read-only audit · no secret inspection · no router mutation · no VPN mutation · no privileged browser commands</span>
+        </div>
+
+        <section class="model-panel">
+            <h2>Security Snapshot</h2>
+            <div class="button-row">
+                <button id="refresh-security-audit" type="button">Refresh Mac Audit</button>
+                <a class="cta-button" href="/operator-control">Open Key Control</a>
+            </div>
+            <div id="mac-security-summary" class="artifact-grid">Loading Mac security audit...</div>
+            <div id="mac-security-boundary" class="task-list">Loading boundaries...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Priority Owner Actions</h2>
+            <div id="priority-actions" class="operator-step-list">Loading priority actions...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Audit Checks</h2>
+            <div id="security-checks" class="task-list">Loading local checks...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Listening Network Services</h2>
+            <div id="listening-ports" class="task-list">Loading listening ports...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Manual Mac Lockdown Checklist</h2>
+            <div id="owner-settings-checklist" class="operator-step-list">Loading manual settings...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Emergency Containment</h2>
+            <div id="emergency-containment" class="operator-step-list">Loading containment plan...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Network And Router Plan</h2>
+            <div class="operator-step-list">
+                <article>
+                    <strong>Do this first</strong>
+                    <span>Use one clean primary router with current firmware, a strong admin password, WPA3 or WPA2, WPS off, UPnP off, remote admin off, and no unneeded port forwards.</span>
+                </article>
+                <article>
+                    <strong>Separate device classes</strong>
+                    <span>Put cameras, TVs, tablets, Apple TV, smart devices, and guests on isolated networks that cannot reach this Mac or wallet machines.</span>
+                </article>
+                <article>
+                    <strong>VPN reality check</strong>
+                    <span>A VPN can hide traffic from an ISP or local router, but it does not repair infected devices, stolen sessions, malicious browser extensions, or bad router firmware.</span>
+                </article>
+                <article>
+                    <strong>Avoid router chains</strong>
+                    <span>Thirty routers creates failure points and confusion. Clean firmware, segmentation, disabled remote admin, and monitored egress are stronger.</span>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const body = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(body.error || `Request failed: ${response.status}`);
+            }
+
+            return body;
+        }
+
+        function statusLabel(status) {
+            if (status === 'pass') {
+                return 'Pass';
+            }
+            if (status === 'fail') {
+                return 'Fix Now';
+            }
+            if (status === 'unknown') {
+                return 'Manual Check';
+            }
+            return 'Review';
+        }
+
+        function renderSummary(audit = {}) {
+            const summary = audit.summary || {};
+            document.getElementById('mac-security-summary').innerHTML = [
+                ['Status', summary.status || 'loading'],
+                ['Passed', summary.passCount ?? 0],
+                ['Fix Now', summary.failCount ?? 0],
+                ['Review', summary.reviewCount ?? 0],
+                ['Manual Checks', summary.unknownCount ?? 0],
+                ['Total Checks', summary.totalChecks ?? 0]
+            ].map(([label, value]) => `
+                <article class="artifact-stat">
+                    <strong>${escapeHtml(label)}</strong>
+                    <span>${escapeHtml(value)}</span>
+                </article>
+            `).join('');
+
+            const boundary = audit.safetyBoundary || {};
+            document.getElementById('mac-security-boundary').innerHTML = Object.entries(boundary).map(([key, value]) => `
+                <article class="task-card">
+                    <div>
+                        <h3>${escapeHtml(key.replaceAll(/([A-Z])/g, ' $1'))}</h3>
+                        <p>${value === true ? 'Enabled' : escapeHtml(value)}</p>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        function renderPriorityActions(checks = []) {
+            const priority = checks
+                .filter(check => ['fail', 'review', 'unknown'].includes(check.status))
+                .slice(0, 8);
+
+            document.getElementById('priority-actions').innerHTML = priority.map((check, index) => `
+                <article>
+                    <strong>${index + 1}. ${escapeHtml(check.label)} · ${escapeHtml(statusLabel(check.status))}</strong>
+                    <span>${escapeHtml(check.message)}</span>
+                    <em>${escapeHtml(check.ownerAction)}</em>
+                </article>
+            `).join('') || `
+                <article>
+                    <strong>Visible checks passed</strong>
+                    <span>The local audit did not find an immediate blocker. Continue with the manual router, Apple ID, browser, and sharing review.</span>
+                    <em>Do not reduce security settings after a pass.</em>
+                </article>
+            `;
+        }
+
+        function renderChecks(checks = []) {
+            document.getElementById('security-checks').innerHTML = checks.map(check => `
+                <article class="task-card security-check-card security-status-${escapeHtml(check.status)}">
+                    <div>
+                        <h3>${escapeHtml(check.label)} <span>${escapeHtml(statusLabel(check.status))}</span></h3>
+                        <p>${escapeHtml(check.category)} · ${escapeHtml(check.message)}</p>
+                        <p>${escapeHtml(check.ownerAction)}</p>
+                    </div>
+                </article>
+            `).join('') || '<p>No audit checks returned.</p>';
+        }
+
+        function renderListeningPorts(ports = []) {
+            document.getElementById('listening-ports').innerHTML = ports.map(port => `
+                <article class="task-card security-check-card">
+                    <div>
+                        <h3>${escapeHtml(port.command)} · ${escapeHtml(port.exposure)}</h3>
+                        <p>${escapeHtml(port.name)}</p>
+                        <p>${escapeHtml(port.ownerAction)}</p>
+                    </div>
+                </article>
+            `).join('') || '<p>No listening TCP services were visible to this audit.</p>';
+        }
+
+        function renderGuide(guide = {}) {
+            document.getElementById('owner-settings-checklist').innerHTML = (guide.ownerSettingsChecklist || []).map((item, index) => `
+                <article>
+                    <strong>${index + 1}. ${escapeHtml(item.area)}</strong>
+                    <span>${escapeHtml(item.target)}</span>
+                </article>
+            `).join('');
+
+            document.getElementById('emergency-containment').innerHTML = (guide.emergencyContainment || []).map((item, index) => `
+                <article>
+                    <strong>${index + 1}. Containment Step</strong>
+                    <span>${escapeHtml(item)}</span>
+                </article>
+            `).join('');
+        }
+
+        async function loadMacSecurityAudit() {
+            const data = await fetchJson('/api/v1/mac-security/audit');
+            const audit = data.audit || {};
+            renderSummary(audit);
+            renderPriorityActions(audit.checks || []);
+            renderChecks(audit.checks || []);
+            renderListeningPorts(audit.listeningPorts || []);
+            renderGuide(data.guide || {});
+        }
+
+        document.getElementById('refresh-security-audit').addEventListener('click', () => {
+            loadMacSecurityAudit().catch(error => {
+                document.getElementById('mac-security-summary').textContent = error.message;
+            });
+        });
+
+        loadMacSecurityAudit().catch(error => {
+            document.getElementById('mac-security-summary').textContent = error.message;
+        });
+    </script>
+</body>
+</html>

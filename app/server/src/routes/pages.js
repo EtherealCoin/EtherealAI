@@ -29,6 +29,10 @@ function registerPageRoutes(app, { clientDir }) {
     res.sendFile(path.join(clientDir, 'operator-control.html'));
   });
 
+  app.get('/security-lockdown', requirePageAuth, (req, res) => {
+    res.sendFile(path.join(clientDir, 'security-lockdown.html'));
+  });
+
   app.get('/owner-proof-packet', requirePageAuth, (req, res) => {
     res.sendFile(path.join(clientDir, 'owner-proof-packet.html'));
   });

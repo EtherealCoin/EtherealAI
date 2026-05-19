@@ -17,6 +17,10 @@ const {
   createProcessRuntime
 } = require('./lib/process-runtime');
 const {
+  buildMacSecurityAudit,
+  buildMacSecurityGuide
+} = require('./lib/mac-security');
+const {
   createServerPaths
 } = require('./lib/server-paths');
 const {
@@ -469,6 +473,7 @@ const {
 });
 
 const PORT = Number(process.env.PORT || 3000);
+const SERVER_HOST = String(process.env.ETHEREALAI_HOST || '127.0.0.1').trim() || '127.0.0.1';
 const DEV_SERVER_STARTED_AT = new Date().toISOString();
 const {
   getDevServerStatus,
@@ -794,6 +799,12 @@ registerEtherealRoutes(app, {
   buildWalletOnboardingGuide,
   buildOperatorControlSummary,
   walletPermissionKeys: WALLET_PERMISSION_KEYS,
+  buildMacSecurityAudit: () => buildMacSecurityAudit({
+    execFileCapture,
+    serverHost: SERVER_HOST,
+    port: PORT
+  }),
+  buildMacSecurityGuide,
   commandTemplates,
   getGitStatusSnapshot,
   getGitPublishStatus,
@@ -812,6 +823,7 @@ registerEtherealRoutes(app, {
 startEtherealServer({
   app,
   port: PORT,
+  host: SERVER_HOST,
   recordDevServerStart,
   updateDevServerHeartbeat,
   scheduleMarketImportWorker,
