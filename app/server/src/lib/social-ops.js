@@ -38,6 +38,16 @@ function reviewSocialContent(content) {
       id: 'secret_claim',
       label: 'Secret or insider claim',
       pattern: /\b(secret|insider|leaked|guaranteed alpha)\b/
+    },
+    {
+      id: 'listing_evasion',
+      label: 'Listing evasion, bribery, or bypass risk',
+      pattern: /\b(bribe|bribery|pay.{0,24}(employee|staff|insider)|rogue employee|bypass|circumvent|get around|guaranteed listing|expedite.{0,24}listing)\b/
+    },
+    {
+      id: 'manipulated_activity',
+      label: 'Fake activity or market manipulation risk',
+      pattern: /\b(fake volume|wash trad|fake followers|fake comments|fake community|bot followers|spam.{0,24}(coinmarketcap|coingecko|listing|request)|raid.{0,24}(coinmarketcap|coingecko))\b/
     }
   ];
   const flags = checks

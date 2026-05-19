@@ -4556,6 +4556,7 @@ function checkSocialOpsModule() {
   });
   const cleanReview = reviewSocialContent('Local research build update with no performance claim.');
   const flaggedReview = reviewSocialContent('Guaranteed 100x profits, buy now. Not financial advice.');
+  const listingShortcutReview = reviewSocialContent('We can bribe CMC staff, fake volume, and spam CoinGecko for a guaranteed listing.');
 
   if (parsed.metadata?.review?.status !== 'clean' || parsed.platform !== 'x') {
     fail('social ops module did not parse social post metadata');
@@ -4569,6 +4570,9 @@ function checkSocialOpsModule() {
     flaggedReview.status !== 'review'
     || !flaggedReview.flags.some(flag => flag.id === 'investment_advice')
     || !flaggedReview.flags.some(flag => flag.id === 'performance_claim')
+    || listingShortcutReview.status !== 'review'
+    || !listingShortcutReview.flags.some(flag => flag.id === 'listing_evasion')
+    || !listingShortcutReview.flags.some(flag => flag.id === 'manipulated_activity')
   ) {
     fail('social ops module did not flag risky social content');
   }
@@ -5031,6 +5035,9 @@ function checkSolidityLabModule() {
     buildTokenEcosystemCatalog,
     buildTokenEcosystemBlueprint,
     buildMultiChainTokenBuildPlan,
+    buildPolygonOperatingProfile,
+    buildCompliantListingApplicationPlan,
+    buildCommunityOperationsPlan,
     buildTokenEcosystemProjectBlueprint,
     buildTokenEcosystemWorkspaceFiles,
     normalizeTokenEcosystemProjectInput,
@@ -5070,6 +5077,23 @@ function checkSolidityLabModule() {
   const polygonBuildPlan = buildMultiChainTokenBuildPlan({
     ...spec,
     network: 'polygon'
+  });
+  const polygonOperatingProfile = buildPolygonOperatingProfile({
+    ...spec,
+    network: 'polygon'
+  });
+  const polygonBlueprint = buildTokenEcosystemBlueprint({
+    ...spec,
+    network: 'polygon',
+    features: 'Polygon CoinMarketCap CoinGecko Discord Telegram YouTube Medium website whitepaper top 200 rebalance arbitrage'
+  });
+  const listingApplicationPlan = buildCompliantListingApplicationPlan({
+    ...spec,
+    network: 'polygon'
+  });
+  const communityOperations = buildCommunityOperationsPlan({
+    ...spec,
+    name: 'Polygon Fixture'
   });
   const cardanoBuildPlan = buildMultiChainTokenBuildPlan({
     ...spec,
@@ -5169,6 +5193,10 @@ function checkSolidityLabModule() {
     || !catalog.socialChannels?.some(channel => channel.id === 'medium')
     || !catalog.listingSources?.some(sourceItem => sourceItem.platform === 'CoinMarketCap')
     || !catalog.listingSources?.some(sourceItem => sourceItem.platform === 'CoinGecko')
+    || catalog.polygonOperatingProfile?.chain?.chainId !== 137
+    || !catalog.polygonOperatingProfile?.trading?.dexRouteFocus?.includes('QuickSwap')
+    || !catalog.listingApplicationPlan?.platformPackets?.some(packet => packet.platform === 'CoinMarketCap')
+    || !catalog.communityOperations?.operatingRoles?.some(role => role.id === 'moderator')
     || blueprint.status !== 'local_blueprint_only'
     || blueprint.safetyBoundary?.deploymentEnabled !== false
     || blueprint.safetyBoundary?.externalPostingEnabled !== false
@@ -5179,6 +5207,15 @@ function checkSolidityLabModule() {
     || polygonBuildPlan.selectedChain?.id !== 'polygon'
     || polygonBuildPlan.standardPlan?.implementationLane !== 'evm_solidity'
     || !/OpenZeppelin/.test(polygonBuildPlan.standardPlan?.starterScaffold || '')
+    || polygonOperatingProfile.status !== 'primary_polygon_ready'
+    || polygonOperatingProfile.chain?.chainId !== 137
+    || !polygonOperatingProfile.walletOps?.permissionScopes?.includes('owner_review_required_for_signing')
+    || polygonBlueprint.polygonOperatingProfile?.status !== 'primary_polygon_ready'
+    || polygonBlueprint.listingApplicationPlan?.status !== 'owner_review_required'
+    || !polygonBlueprint.communityOperations?.operatingRoles?.some(role => role.id === 'announcements_manager')
+    || !listingApplicationPlan.prohibitedShortcuts?.some(item => /bribery/i.test(item))
+    || !listingApplicationPlan.platformPackets?.some(packet => packet.platform === 'CoinGecko')
+    || !communityOperations.moderationRules?.some(rule => /impersonation/i.test(rule))
     || cardanoBuildPlan.selectedChain?.id !== 'cardano'
     || cardanoBuildPlan.standardPlan?.implementationLane !== 'cardano_native_asset'
     || algorandProjectInput.targetChain !== 'algorand'
@@ -5202,6 +5239,9 @@ function checkSolidityLabModule() {
     || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'website/SITE_MAP.md')
     || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'website/CLOUDFLARE_DEPLOYMENT_PLAN.md')
     || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'whitepaper/WHITEPAPER_DRAFT.md')
+    || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'polygon/POLYGON_OPERATING_PROFILE.md')
+    || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'listing/CMC_CG_APPLICATION_PLAN.md')
+    || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'community/COMMUNITY_OPERATIONS_RUNBOOK.md')
     || !tokenProjectWorkspaceFiles.some(file => file.relativePath === 'automation/CROSS_CHAIN_ARBITRAGE_DESIGN.md')
     || !tokenProjectWorkspaceFiles.every(file => file.content.includes('No wallet private keys') || file.relativePath !== 'README.md')
     || parsedTokenProject.localOnly !== true
@@ -6450,6 +6490,10 @@ function checkLocalOnlySurfaceCues() {
     || !social.includes('no social network API calls')
     || !social.includes('Owner Review')
     || !social.includes('save drafts before any future posting phase')
+    || !social.includes('Token Community Manager')
+    || !social.includes('Create Listing / Community Drafts')
+    || !social.includes('/api/v1/social-posts/token-projects/')
+    || !social.includes('no fake volume, spam, bribes, or bypass')
     || !social.includes('<option value="medium">Medium</option>')
     || !social.includes('<option value="farcaster">Farcaster</option>')
     || !social.includes('<option value="docs">Docs Portal</option>')
@@ -6488,6 +6532,9 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('Top-200 rebalance bot')
     || !solidity.includes('Apply Token Options To Spec')
     || !solidity.includes('Select Low-Fee Launch Defaults')
+    || !solidity.includes('Select Polygon Launch Defaults')
+    || !solidity.includes('Polygon-first token launch')
+    || !solidity.includes('Polygon Operating Profile')
     || !solidity.includes('Target Blockchain')
     || !solidity.includes('Solana SPL Token')
     || !solidity.includes('Cardano Native Asset')

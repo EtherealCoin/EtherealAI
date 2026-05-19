@@ -3,7 +3,7 @@ const LISTING_SOURCES = [
     platform: 'CoinMarketCap',
     title: 'Listings Criteria',
     url: 'https://support.coinmarketcap.com/hc/en-us/articles/360043659351-Listings-Criteria',
-    summary: 'Tracked-listing review emphasizes a functional website, block explorer, active public trading with material volume on a tracked exchange, a project representative, credible evidence, truthful submissions, and no spam or bribery.'
+    summary: 'Tracked-listing review emphasizes a functional website, block explorer, active public trading with material volume on a tracked exchange, a project representative, credible evidence, truthful submissions, the official online request form, and no spam or bribery.'
   },
   {
     platform: 'CoinMarketCap',
@@ -21,7 +21,7 @@ const LISTING_SOURCES = [
     platform: 'CoinGecko',
     title: 'Methodology',
     url: 'https://www.coingecko.com/en/methodology',
-    summary: 'CoinGecko lists criteria such as a working project-owned website, block explorer, at least one active integrated exchange, clear circulating-supply communication, and warns that listings are not guaranteed.'
+    summary: 'CoinGecko lists criteria such as a working project-owned website, block explorer, at least one active integrated exchange, clear circulating-supply communication, no listing-fee guarantees, and warns that listings are not guaranteed.'
   }
 ];
 
@@ -175,12 +175,19 @@ const CHAIN_CATALOG = [
     id: 'polygon',
     name: 'Polygon',
     family: 'evm-sidechain-l2',
+    chainId: 137,
+    nativeAsset: 'POL',
     gasProfile: 'low',
     launchFit: 'recommended_low_fee_evm',
     fit: 'Low fees, broad wallet support, and many retail/community token projects.',
     tokenStandards: ['ERC20', 'ERC721', 'ERC1155'],
     tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry'],
-    crossChainNotes: 'Good for NFT-heavy experiments and low-cost community utilities.'
+    explorers: [{ label: 'PolygonScan', url: 'https://polygonscan.com' }],
+    walletSupport: ['MetaMask', 'Rabby', 'WalletConnect-compatible wallets', 'hardware wallet via owner connector'],
+    rpcProfile: 'owner-managed Polygon RPC/provider reference only; EtherealAI stores no RPC secrets in token projects',
+    dexRouteFocus: ['QuickSwap', 'Uniswap on Polygon', 'Sushi-compatible Polygon routes', 'aggregator quote adapters after owner approval'],
+    listingEvidenceFocus: ['verified Polygon contract', 'PolygonScan token page', 'official website', 'DEX pair URLs', 'liquidity/lock evidence', 'clear circulating supply docs'],
+    crossChainNotes: 'Good for NFT-heavy experiments, low-cost community utilities, top-200 rebalance research, and Polygon-first listing evidence.'
   },
   {
     id: 'bnb-chain',
@@ -678,6 +685,8 @@ function normalizeChainId(value = '') {
     ['avalanche-c-chain', 'avalanche'],
     ['matic', 'polygon'],
     ['polygon-pos', 'polygon'],
+    ['polygon-mainnet', 'polygon'],
+    ['polygon-network', 'polygon'],
     ['eth', 'ethereum'],
     ['sol', 'solana'],
     ['fantom', 'fantom-sonic'],
@@ -940,6 +949,62 @@ function buildMultiChainTokenBuildPlan(spec = {}) {
   };
 }
 
+function buildPolygonOperatingProfile(spec = {}) {
+  const selectedChain = getChainOption(spec.network);
+  const polygon = getChainOption('polygon');
+  const isPrimaryChain = selectedChain.id === 'polygon';
+
+  return {
+    status: isPrimaryChain ? 'primary_polygon_ready' : 'available_polygon_lane',
+    isPrimaryChain,
+    chain: {
+      id: polygon.id,
+      name: polygon.name,
+      family: polygon.family,
+      chainId: polygon.chainId,
+      nativeAsset: polygon.nativeAsset,
+      gasProfile: polygon.gasProfile,
+      explorers: polygon.explorers,
+      walletSupport: polygon.walletSupport
+    },
+    tokenBuild: {
+      standards: polygon.tokenStandards,
+      tooling: polygon.tooling,
+      defaultContractType: 'erc20',
+      localScaffold: 'Solidity + OpenZeppelin + Hardhat local workspace with Polygon chain config added in a future reviewed deploy phase',
+      deploymentBoundary: 'local scaffold and review only; no Polygon mainnet/testnet broadcast from this MVP'
+    },
+    trading: {
+      supportedPlanningModes: ['paper top-200 rebalance research', 'Polygon DEX quote research', 'cross-chain route scoring', 'arbitrage after-fee modeling'],
+      dexRouteFocus: polygon.dexRouteFocus,
+      requiredBeforeLiveTrading: [
+        'owner wallet connector reference with signing outside EtherealAI',
+        'Polygon RPC/provider secret stored only in owner-approved secret manager',
+        'DEX adapter contract tests',
+        'slippage, gas, pool-depth, tax-token, and bridge-risk model',
+        'owner go-live acceptance for each strategy'
+      ],
+      blockedNow: ['no wallet signing', 'no live swap', 'no liquidity transaction', 'no bridge transaction']
+    },
+    listingEvidence: polygon.listingEvidenceFocus.map(item => ({
+      item,
+      status: 'blocked_until_owner_deploys_or_provides_evidence'
+    })),
+    walletOps: {
+      networkLabel: 'polygon',
+      permissionScopes: ['view_public_address', 'read_token_balances', 'prepare_unsigned_transaction', 'owner_review_required_for_signing'],
+      isolationRule: 'Use a separate labeled wallet for Polygon deployment/trading/treasury roles; never reuse a seed phrase inside EtherealAI.'
+    },
+    safetyBoundary: {
+      localOnly: true,
+      signingEnabled: false,
+      liveTradingEnabled: false,
+      deploymentEnabled: false,
+      rpcSecretsAccepted: false
+    }
+  };
+}
+
 function buildTokenFeatureMatrix(spec = {}) {
   const flags = detectFeatureFlags(spec);
   const rows = [
@@ -1134,9 +1199,14 @@ function buildLogoBrief(spec = {}) {
 }
 
 function buildListingReadiness(spec = {}) {
+  const applicationPlan = buildCompliantListingApplicationPlan(spec);
+  const polygonProfile = buildPolygonOperatingProfile(spec);
+
   return {
     status: 'evidence_required',
     sources: LISTING_SOURCES,
+    applicationPlan,
+    polygonEvidence: polygonProfile.chain,
     checklist: [
       {
         id: 'functional_website',
@@ -1180,7 +1250,103 @@ function buildListingReadiness(spec = {}) {
         status: 'required',
         evidence: 'Listing strategy must be organic and evidence-based.'
       }
-    ]
+    ],
+    platformPackets: applicationPlan.platformPackets,
+    prohibitedShortcuts: applicationPlan.prohibitedShortcuts
+  };
+}
+
+function buildCompliantListingApplicationPlan(spec = {}) {
+  const tokenName = spec.name || 'Token Project';
+  const chain = getChainOption(spec.network);
+  const officialFormOnly = 'owner submits through the official platform request form only';
+
+  return {
+    status: 'owner_review_required',
+    tokenName,
+    targetChain: {
+      id: chain.id,
+      name: chain.name,
+      family: chain.family
+    },
+    officialSources: LISTING_SOURCES,
+    phases: [
+      {
+        id: 'evidence_foundation',
+        label: 'Evidence Foundation',
+        output: 'Website, whitepaper, roadmap, tokenomics, official links, security notes, and contract/explorer evidence are complete and internally consistent.'
+      },
+      {
+        id: 'market_liquidity_proof',
+        label: 'Market And Liquidity Proof',
+        output: 'Token is traded on at least one legitimate, relevant exchange/DEX with verifiable pair URLs, real liquidity, and no manufactured activity.'
+      },
+      {
+        id: 'community_operations',
+        label: 'Community Operations',
+        output: 'Discord/Telegram/X/Medium/YouTube/docs channels show real updates, moderation, support, and transparent progress without spam campaigns.'
+      },
+      {
+        id: 'application_packet',
+        label: 'Application Packet',
+        output: 'EtherealAI prepares a local owner-reviewed CMC/CoinGecko packet with links, screenshots, supply docs, contact details, and risk notes.'
+      },
+      {
+        id: 'owner_submission',
+        label: 'Owner Submission',
+        output: 'Owner submits once through official forms, tracks status locally, and does not duplicate, spam, bribe, or use middlemen promising results.'
+      }
+    ],
+    platformPackets: [
+      {
+        platform: 'CoinMarketCap',
+        requestPath: 'CoinMarketCap Request Form: 1 - [New Listing] Add cryptoasset',
+        ownerSubmissionPath: officialFormOnly,
+        evidence: [
+          'functional project-owned website',
+          'verified block explorer/token page',
+          'active market/pair URLs',
+          'supply, allocation, lock, vesting, and treasury documentation',
+          'official representative contact',
+          'official social/community URLs',
+          'proof that activity is organic and not spammed or bribed'
+        ]
+      },
+      {
+        platform: 'CoinGecko',
+        requestPath: 'CoinGecko account and request form for active or preview token listing',
+        ownerSubmissionPath: officialFormOnly,
+        evidence: [
+          'working project-owned website',
+          'working block explorer',
+          'exchange/DEX where CoinGecko can track the token',
+          'clear circulating-supply communication',
+          'logo/image assets',
+          'official socials and support links',
+          'no repeated status-pressure or community spam'
+        ]
+      }
+    ],
+    communityGrowthPath: [
+      'publish progress updates tied to real shipped milestones',
+      'run support and moderation with written rules',
+      'convert roadmap completions into Medium/docs/YouTube/X drafts',
+      'collect owner-reviewed evidence of community growth, not fake engagement',
+      'prepare listing packet only after links and market evidence are verifiable'
+    ],
+    prohibitedShortcuts: [
+      'attempted bribery or payment to platform staff',
+      'fake volume, wash trading, fake followers, fake comments, or fake community metrics',
+      'duplicate request spam or instructing the community to spam listing teams',
+      'impersonating platform staff or using middlemen claiming guaranteed listings',
+      'submitting inaccurate supply, liquidity, exchange, or team information'
+    ],
+    safetyBoundary: {
+      externalSubmissionEnabled: false,
+      publicPostingEnabled: false,
+      paymentForListingEnabled: false,
+      ownerReviewRequired: true
+    }
   };
 }
 
@@ -1271,11 +1437,13 @@ function buildCrossChainArbitrageArchitecture() {
 
 function buildSocialCampaignPlan(spec = {}) {
   const tokenName = spec.name || 'Token Project';
+  const communityOperations = buildCommunityOperationsPlan(spec);
 
   return {
     status: 'draft_only',
     tokenName,
     channels: SOCIAL_CHANNELS,
+    communityOperations,
     launchCadence: [
       {
         phase: 'Pre-launch',
@@ -1293,6 +1461,74 @@ function buildSocialCampaignPlan(spec = {}) {
         phase: 'Ecosystem expansion',
         outputs: ['NFT utility release notes', 'dapp walkthrough', 'governance summary', 'partner/update article']
       }
+    ],
+    listingGrowthRules: [
+      'Every campaign draft must tie to a real shipped milestone, public artifact, or owner-approved roadmap item.',
+      'Community questions are answered with support language, risk disclosures, and links to official docs.',
+      'No fake engagement, no paid listing promises, no spam raids, and no pressure campaigns against CMC/CoinGecko.'
+    ]
+  };
+}
+
+function buildCommunityOperationsPlan(spec = {}) {
+  const tokenName = spec.name || 'Token Project';
+
+  return {
+    status: 'draft_only_no_external_account_control',
+    tokenName,
+    operatingRoles: [
+      {
+        id: 'moderator',
+        label: 'Community Moderator',
+        scope: 'Draft room rules, triage FAQs, flag scams/impersonators, and prepare owner-reviewed responses.',
+        automationBoundary: 'no external moderation action without future owner-approved connector'
+      },
+      {
+        id: 'announcements_manager',
+        label: 'Announcements Manager',
+        scope: 'Turn real project milestones into X, Discord, Telegram, Medium, YouTube, and docs drafts.',
+        automationBoundary: 'draft queue only; public posting disabled'
+      },
+      {
+        id: 'listing_evidence_manager',
+        label: 'Listing Evidence Manager',
+        scope: 'Maintain CMC/CoinGecko evidence packet, official links, supply docs, exchange/pair URLs, and community metrics.',
+        automationBoundary: 'local packet only; external submission disabled'
+      },
+      {
+        id: 'support_manager',
+        label: 'Support Manager',
+        scope: 'Prepare plain-English answers for token utility, wallet setup, safety, roadmap, and dapp usage.',
+        automationBoundary: 'local response drafts only'
+      }
+    ],
+    stagePlaybooks: [
+      {
+        stage: 'Pre-Launch',
+        actions: ['publish founder thesis drafts', 'prepare Discord/Telegram rules', 'publish website/whitepaper preview drafts', 'collect early FAQ']
+      },
+      {
+        stage: 'Launch Evidence',
+        actions: ['announce verified contract link after owner deployment', 'document liquidity and lock evidence', 'publish tokenomics explainer', 'update support FAQ']
+      },
+      {
+        stage: 'Listing Readiness',
+        actions: ['audit official links', 'prepare CMC packet', 'prepare CoinGecko packet', 'publish community progress report', 'avoid duplicate/spam status requests']
+      },
+      {
+        stage: 'Post-Listing Growth',
+        actions: ['publish milestone recaps', 'moderate support channels', 'update roadmap', 'capture community questions for product backlog']
+      }
+    ],
+    moderationRules: [
+      'Remove or flag impersonation, fake airdrops, malicious links, seed-phrase requests, and guaranteed-return claims.',
+      'Do not allow posts that ask members to spam listing teams or harass exchanges.',
+      'Route legal, tax, investment, or wallet-loss questions to owner-approved disclaimers and support docs.'
+    ],
+    announcementControls: [
+      'Use only owner-approved facts, links, contract addresses, and roadmap status.',
+      'Mark speculative roadmap items as planned, not shipped.',
+      'Keep investment-advice, guaranteed-profit, and artificial-urgency language out of public drafts.'
     ]
   };
 }
@@ -1306,6 +1542,9 @@ function buildTokenEcosystemCatalog() {
     whitepaperTemplates: WHITEPAPER_TEMPLATES,
     websiteTemplates: WEBSITE_TEMPLATES,
     listingSources: LISTING_SOURCES,
+    polygonOperatingProfile: buildPolygonOperatingProfile({ network: 'polygon' }),
+    listingApplicationPlan: buildCompliantListingApplicationPlan({ network: 'polygon' }),
+    communityOperations: buildCommunityOperationsPlan({ name: 'Token Project' }),
     nodeResearch: buildNodeResearchPlan(),
     crossChainArbitrage: buildCrossChainArbitrageArchitecture()
   };
@@ -1331,6 +1570,9 @@ function buildTokenEcosystemBlueprint(spec = {}) {
     logo: buildLogoBrief(spec),
     socialCampaign: buildSocialCampaignPlan(spec),
     listingReadiness: buildListingReadiness(spec),
+    listingApplicationPlan: buildCompliantListingApplicationPlan(spec),
+    polygonOperatingProfile: buildPolygonOperatingProfile(spec),
+    communityOperations: buildCommunityOperationsPlan(spec),
     chainBuilder: buildChainBuilderPlan(spec),
     chainCatalog: CHAIN_CATALOG,
     nodeResearch: buildNodeResearchPlan(),
@@ -1540,6 +1782,9 @@ function buildTokenWebsiteDeployPackageFiles(project = {}, cloudflarePlan = {}) 
   const social = blueprint.socialCampaign || {};
   const listing = blueprint.listingReadiness || {};
   const multiChain = blueprint.multiChainTokenBuild || {};
+  const applicationPlan = blueprint.listingApplicationPlan || listing.applicationPlan || {};
+  const polygonProfile = blueprint.polygonOperatingProfile || {};
+  const communityOps = blueprint.communityOperations || social.communityOperations || {};
   const primaryDomain = cloudflarePlan.primaryDomain || 'etherealdigit.ai';
   const primaryFqdn = cloudflarePlan.primaryFqdn || primaryDomain;
   const customDomains = cloudflarePlan.cloudflarePages?.customDomains || [primaryFqdn];
@@ -1563,6 +1808,15 @@ function buildTokenWebsiteDeployPackageFiles(project = {}, cloudflarePlan = {}) 
   ];
   const communityItems = (social.channels || []).map(channel => `${channel.label}: ${channel.purpose}`);
   const listingItems = (listing.checklist || []).map(item => `${item.label}: ${item.evidence}`);
+  const applicationItems = (applicationPlan.phases || []).map(phase => `${phase.label}: ${phase.output}`);
+  const polygonItems = [
+    `Chain ID: ${polygonProfile.chain?.chainId || 137}`,
+    `Native asset: ${polygonProfile.chain?.nativeAsset || 'POL'}`,
+    `Wallet support: ${(polygonProfile.chain?.walletSupport || []).join(', ')}`,
+    `DEX focus: ${(polygonProfile.trading?.dexRouteFocus || []).join(', ')}`,
+    `Deployment boundary: ${polygonProfile.tokenBuild?.deploymentBoundary || 'local only'}`
+  ];
+  const communityOpsItems = (communityOps.operatingRoles || []).map(role => `${role.label}: ${role.scope}`);
   const css = `:root {
   color-scheme: light;
   --ink: #172033;
@@ -1734,8 +1988,10 @@ h1 {
         nav,
         sections: [
           { title: 'Token Plan', body: 'Local launch site generated from the Solidity Lab token ecosystem blueprint.', items: featureItems },
+          { title: 'Polygon Operating Profile', body: 'Polygon-first chain planning for low-fee token, dapp, trading, and listing evidence workflows.', items: polygonItems },
           { title: 'Roadmap', body: 'Milestones generated from the token website and whitepaper plan.', items: roadmapItems },
-          { title: 'Listing Evidence', body: 'Evidence checklist for future owner-reviewed CoinMarketCap/CoinGecko readiness.', items: listingItems }
+          { title: 'Listing Evidence', body: 'Evidence checklist for future owner-reviewed CoinMarketCap/CoinGecko readiness.', items: listingItems },
+          { title: 'CMC/CoinGecko Application Path', body: 'Official-form-only application plan. No spam, fake activity, paid guarantees, or bypass behavior.', items: applicationItems }
         ]
       })
     },
@@ -1778,6 +2034,7 @@ h1 {
         currentPath: '/community/',
         sections: [
           { title: 'Social Channels', items: communityItems },
+          { title: 'Community Operations', items: communityOpsItems },
           { title: 'Launch Cadence', items: (social.launchCadence || []).flatMap(phase => (phase.outputs || []).map(output => `${phase.phase}: ${output}`)) },
           { title: 'Posting Boundary', items: ['Draft locally.', 'Review manually.', 'Connect official accounts only after owner approval.'] }
         ]
@@ -1857,6 +2114,9 @@ function buildTokenEcosystemWorkspaceFiles(project = {}) {
   const social = blueprint.socialCampaign || {};
   const logo = blueprint.logo || {};
   const multiChain = blueprint.multiChainTokenBuild || {};
+  const polygonProfile = blueprint.polygonOperatingProfile || {};
+  const applicationPlan = blueprint.listingApplicationPlan || listing.applicationPlan || {};
+  const communityOps = blueprint.communityOperations || social.communityOperations || {};
   const tokenName = project.name || blueprint.contract?.name || 'Token Ecosystem Project';
 
   return [
@@ -1961,6 +2221,37 @@ ${(social.channels || []).map(channel => `- ${channel.label}: ${channel.purpose}
 ## Launch Cadence
 
 ${(social.launchCadence || []).map(phase => `## ${phase.phase}\n\n${markdownList(phase.outputs || [])}`).join('\n\n')}
+
+## Community Operations
+
+${(communityOps.operatingRoles || []).map(role => `- ${role.label}: ${role.scope} Boundary: ${role.automationBoundary}`).join('\n')}
+
+## Listing Growth Rules
+
+${markdownList(social.listingGrowthRules || [])}
+`
+    },
+    {
+      relativePath: 'community/COMMUNITY_OPERATIONS_RUNBOOK.md',
+      content: `# Community Operations Runbook
+
+Status: ${communityOps.status || 'draft_only_no_external_account_control'}
+
+## Operating Roles
+
+${(communityOps.operatingRoles || []).map(role => `- ${role.label}: ${role.scope} Boundary: ${role.automationBoundary}`).join('\n')}
+
+## Stage Playbooks
+
+${(communityOps.stagePlaybooks || []).map(stage => `## ${stage.stage}\n\n${markdownList(stage.actions || [])}`).join('\n\n')}
+
+## Moderation Rules
+
+${markdownList(communityOps.moderationRules || [])}
+
+## Announcement Controls
+
+${markdownList(communityOps.announcementControls || [])}
 `
     },
     {
@@ -1976,6 +2267,72 @@ ${(listing.checklist || []).map(item => `- [ ] ${item.label} (${item.status}): $
 ## Sources
 
 ${(listing.sources || []).map(source => `- ${source.platform}: ${source.title} - ${source.url}`).join('\n')}
+`
+    },
+    {
+      relativePath: 'listing/CMC_CG_APPLICATION_PLAN.md',
+      content: `# CoinMarketCap / CoinGecko Application Plan
+
+Status: ${applicationPlan.status || 'owner_review_required'}
+
+## Official Sources
+
+${(applicationPlan.officialSources || LISTING_SOURCES).map(source => `- ${source.platform}: ${source.title} - ${source.url}`).join('\n')}
+
+## Phases
+
+${(applicationPlan.phases || []).map(phase => `- ${phase.label}: ${phase.output}`).join('\n')}
+
+## Platform Packets
+
+${(applicationPlan.platformPackets || []).map(packet => `## ${packet.platform}\n\nRequest path: ${packet.requestPath}\n\nOwner submission: ${packet.ownerSubmissionPath}\n\n${markdownList(packet.evidence || [])}`).join('\n\n')}
+
+## Prohibited Shortcuts
+
+${markdownList(applicationPlan.prohibitedShortcuts || [])}
+`
+    },
+    {
+      relativePath: 'polygon/POLYGON_OPERATING_PROFILE.md',
+      content: `# Polygon Operating Profile
+
+Status: ${polygonProfile.status || 'available_polygon_lane'}
+
+## Chain
+
+- Name: ${polygonProfile.chain?.name || 'Polygon'}
+- Chain ID: ${polygonProfile.chain?.chainId || 137}
+- Native asset: ${polygonProfile.chain?.nativeAsset || 'POL'}
+- Family: ${polygonProfile.chain?.family || 'evm-sidechain-l2'}
+- Gas profile: ${polygonProfile.chain?.gasProfile || 'low'}
+
+## Token Build
+
+- Standards: ${(polygonProfile.tokenBuild?.standards || ['ERC20', 'ERC721', 'ERC1155']).join(', ')}
+- Tooling: ${(polygonProfile.tokenBuild?.tooling || ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry']).join(', ')}
+- Local scaffold: ${polygonProfile.tokenBuild?.localScaffold || 'Solidity + OpenZeppelin + Hardhat local workspace'}
+- Deployment boundary: ${polygonProfile.tokenBuild?.deploymentBoundary || 'local scaffold and review only'}
+
+## Trading And Arbitrage Planning
+
+${markdownList(polygonProfile.trading?.supportedPlanningModes || [])}
+
+## DEX Route Focus
+
+${markdownList(polygonProfile.trading?.dexRouteFocus || [])}
+
+## Required Before Live Trading
+
+${markdownList(polygonProfile.trading?.requiredBeforeLiveTrading || [])}
+
+## Listing Evidence
+
+${(polygonProfile.listingEvidence || []).map(item => `- [ ] ${item.item}: ${item.status}`).join('\n')}
+
+## Wallet Ops
+
+- Network label: ${polygonProfile.walletOps?.networkLabel || 'polygon'}
+- Isolation rule: ${polygonProfile.walletOps?.isolationRule || 'Use separate labeled wallets and keep seeds outside EtherealAI.'}
 `
     },
     {
@@ -2059,11 +2416,14 @@ module.exports = {
   buildWhitepaperDraft,
   buildWebsiteBlueprint,
   buildLogoBrief,
+  buildPolygonOperatingProfile,
   buildListingReadiness,
+  buildCompliantListingApplicationPlan,
   buildChainBuilderPlan,
   buildNodeResearchPlan,
   buildCrossChainArbitrageArchitecture,
   buildSocialCampaignPlan,
+  buildCommunityOperationsPlan,
   buildTokenEcosystemCatalog,
   buildTokenEcosystemBlueprint,
   normalizeTokenEcosystemProjectInput,

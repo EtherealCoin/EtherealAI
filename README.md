@@ -72,7 +72,7 @@ The following are blocked by design:
 - Domain or external account purchases
 - Solidity/token deployment
 - Blockchain deployment
-- CoinMarketCap/CoinGecko submission automation
+- CoinMarketCap/CoinGecko external submission automation; local evidence packets, official-form checklists, and owner-reviewed application drafts are supported
 - Hermes Agent bypass of EtherealAI gates
 
 ## Multi-Agent Coordination

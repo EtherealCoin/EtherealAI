@@ -7,6 +7,7 @@ function registerSocialOpsRoutes(app, {
   parseSocialPost,
   parseRebalanceSimulationBatch,
   parseTokenEcosystemProject,
+  buildTokenEcosystemProjectBlueprint,
   reviewSocialContent,
   generateWithLocalModel
 }) {
@@ -116,6 +117,118 @@ function registerSocialOpsRoutes(app, {
     }
 
     return `${baseLine}${noteLine}`;
+  }
+
+  function buildTokenListingCampaignContent(platform, {
+    tokenProject,
+    blueprint,
+    accountLabel,
+    campaignNote
+  }) {
+    const projectName = tokenProject?.name || blueprint?.contract?.name || 'Token Project';
+    const chain = tokenProject?.target_chain || blueprint?.multiChainTokenBuild?.selectedChain?.id || 'polygon';
+    const selectedChain = blueprint?.multiChainTokenBuild?.selectedChain?.name || chain;
+    const applicationPlan = blueprint?.listingApplicationPlan || blueprint?.listingReadiness?.applicationPlan || {};
+    const communityOps = blueprint?.communityOperations || blueprint?.socialCampaign?.communityOperations || {};
+    const phaseSummary = (applicationPlan.phases || [])
+      .map(phase => phase.label)
+      .slice(0, 5)
+      .join(' -> ') || 'Evidence Foundation -> Community Operations -> Application Packet -> Owner Submission';
+    const roleSummary = (communityOps.operatingRoles || [])
+      .map(role => role.label)
+      .slice(0, 4)
+      .join(', ') || 'Moderator, Announcements Manager, Listing Evidence Manager';
+    const noteLine = campaignNote ? `\n\nOwner note: ${campaignNote}` : '';
+    const safetyLine = 'Draft only. No public posting, listing submission, wallet signing, fake volume, spam, or paid listing shortcut is enabled.';
+
+    if (platform === 'discord') {
+      return [
+        `# ${projectName} Community Operations`,
+        '',
+        `Target chain: ${selectedChain}.`,
+        `Operating roles: ${roleSummary}.`,
+        `Listing readiness path: ${phaseSummary}.`,
+        '',
+        'Moderator focus: keep official links pinned, remove impersonators/scam links, route support questions to docs, and escalate owner-only decisions.',
+        'Announcement focus: publish only real shipped milestones, verified links, roadmap updates, and evidence the owner has reviewed.',
+        safetyLine,
+        noteLine
+      ].join('\n').trim();
+    }
+
+    if (platform === 'telegram') {
+      return [
+        `${projectName} community update: EtherealAI prepared the local listing-readiness and community-ops workflow for ${selectedChain}.`,
+        `Current path: ${phaseSummary}.`,
+        'Pinned rules: use official links only, no seed phrases, no fake listing spam, no investment advice, and no guaranteed-return claims.',
+        safetyLine,
+        noteLine
+      ].join('\n').trim();
+    }
+
+    if (platform === 'youtube') {
+      return [
+        `Video outline: ${projectName} listing-readiness and community operations`,
+        '',
+        `1. What ${projectName} is building on ${selectedChain}.`,
+        '2. Website, whitepaper, roadmap, tokenomics, and contract evidence checklist.',
+        '3. Polygon-specific evidence: verified contract, PolygonScan, DEX pairs, liquidity/lock docs, and supply docs.',
+        `4. Community operations roles: ${roleSummary}.`,
+        '5. CMC/CoinGecko path: official forms only, owner review, no duplicate requests, no bribes, no fake activity.',
+        '6. Next owner gates before public action.',
+        noteLine
+      ].join('\n').trim();
+    }
+
+    if (platform === 'medium') {
+      return [
+        `# ${projectName} Progress Update: Listing Readiness And Community Operations`,
+        '',
+        `${projectName} now has a local, owner-reviewed path for building the public evidence required before any future CoinMarketCap or CoinGecko submission. The target chain context is ${selectedChain}.`,
+        '',
+        `The current readiness workflow is: ${phaseSummary}. EtherealAI is preparing the website, whitepaper, roadmap, tokenomics documentation, official links, community operating model, and listing evidence packet locally.`,
+        '',
+        `Community operations are split into clear roles: ${roleSummary}. These roles keep announcements factual, support consistent, moderation visible, and listing evidence organized.`,
+        '',
+        safetyLine,
+        noteLine
+      ].join('\n').trim();
+    }
+
+    if (platform === 'docs') {
+      return [
+        `# ${projectName} Listing And Community Ops Runbook`,
+        '',
+        `Target chain: ${selectedChain}`,
+        '',
+        '## Readiness Path',
+        phaseSummary.split(' -> ').map(phase => `- ${phase}`).join('\n'),
+        '',
+        '## Roles',
+        roleSummary.split(', ').map(role => `- ${role}`).join('\n'),
+        '',
+        '## Boundary',
+        safetyLine,
+        noteLine
+      ].join('\n').trim();
+    }
+
+    if (platform === 'reddit' || platform === 'farcaster') {
+      return [
+        `${projectName} build update`,
+        '',
+        `EtherealAI prepared a local community-ops and listing-readiness plan for ${selectedChain}. The focus is verifiable product progress: website, whitepaper, roadmap, contract/explorer evidence, official links, and community support.`,
+        safetyLine,
+        noteLine
+      ].join('\n').trim();
+    }
+
+    return [
+      `${projectName} update: local listing-readiness and community-ops workflow is ready for ${selectedChain}.`,
+      `Path: ${phaseSummary}.`,
+      safetyLine,
+      noteLine
+    ].join('\n').trim();
   }
 
   app.get('/api/v1/social-posts', requireAuth, async (req, res) => {
@@ -356,6 +469,86 @@ function registerSocialOpsRoutes(app, {
         posts,
         localOnly: true,
         externalPostingEnabled: false,
+        liveExecutionEnabled: false
+      });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/social-posts/token-projects/:id/listing-campaign-drafts', requireAuth, async (req, res) => {
+    try {
+      const sensitiveFields = findSensitiveFields(req.body || {});
+
+      if (sensitiveFields.length) {
+        return res.status(400).json({
+          error: 'Listing/community campaign drafts cannot store account tokens, passwords, wallet secrets, or listing credentials.',
+          sensitiveFields
+        });
+      }
+
+      const tokenProject = parseTokenEcosystemProject(await dbGet(
+        'SELECT * FROM token_ecosystem_projects WHERE id = ?',
+        [req.params.id]
+      ));
+
+      if (!tokenProject) {
+        return res.status(404).json({ error: 'Token ecosystem project not found' });
+      }
+
+      const blueprint = typeof buildTokenEcosystemProjectBlueprint === 'function'
+        ? buildTokenEcosystemProjectBlueprint(tokenProject)
+        : tokenProject.blueprint || {};
+      const platforms = normalizePlatforms(req.body?.platforms || ['x', 'discord', 'telegram', 'youtube', 'medium', 'docs']);
+      const accountLabel = String(req.body?.accountLabel || '').trim().slice(0, 120);
+      const campaignNote = String(req.body?.campaignNote || '').trim().slice(0, 1000);
+      const posts = [];
+
+      for (const platform of platforms) {
+        const content = buildTokenListingCampaignContent(platform, {
+          tokenProject,
+          blueprint,
+          accountLabel,
+          campaignNote
+        }).slice(0, 10000);
+        const review = reviewSocialContent(content);
+        const result = await dbRun(
+          `INSERT INTO social_posts
+           (platform, account_label, content, status, scheduled_for, metadata_json)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            platform,
+            accountLabel,
+            content,
+            'draft',
+            null,
+            JSON.stringify({
+              source: 'token_listing_community_ops_v1',
+              tokenEcosystemProjectId: tokenProject.id,
+              targetChain: tokenProject.target_chain,
+              listingApplicationPlan: blueprint.listingApplicationPlan || blueprint.listingReadiness?.applicationPlan || null,
+              communityOperations: blueprint.communityOperations || blueprint.socialCampaign?.communityOperations || null,
+              polygonOperatingProfile: blueprint.polygonOperatingProfile || null,
+              localOnly: true,
+              externalPostingEnabled: false,
+              listingSubmissionEnabled: false,
+              liveExecutionEnabled: false,
+              review
+            })
+          ]
+        );
+        posts.push(parseSocialPost(await dbGet('SELECT * FROM social_posts WHERE id = ?', [result.lastID])));
+      }
+
+      res.status(201).json({
+        tokenProject,
+        posts,
+        listingApplicationPlan: blueprint.listingApplicationPlan || blueprint.listingReadiness?.applicationPlan || null,
+        communityOperations: blueprint.communityOperations || blueprint.socialCampaign?.communityOperations || null,
+        polygonOperatingProfile: blueprint.polygonOperatingProfile || null,
+        localOnly: true,
+        externalPostingEnabled: false,
+        listingSubmissionEnabled: false,
         liveExecutionEnabled: false
       });
     } catch (error) {

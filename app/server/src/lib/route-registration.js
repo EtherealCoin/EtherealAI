@@ -606,6 +606,7 @@ function registerEtherealRoutes(app, options) {
     parseSocialPost: parsers.parseSocialPost,
     parseRebalanceSimulationBatch: parsers.parseRebalanceSimulationBatch,
     parseTokenEcosystemProject: parsers.parseTokenEcosystemProject,
+    buildTokenEcosystemProjectBlueprint,
     reviewSocialContent,
     generateWithLocalModel
   });

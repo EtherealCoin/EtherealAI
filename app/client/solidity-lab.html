@@ -169,6 +169,7 @@
                     <div class="button-row">
                         <button id="apply-token-options" type="button">Apply Token Options To Spec</button>
                         <button id="select-low-fee-token-options" type="button">Select Low-Fee Launch Defaults</button>
+                        <button id="select-polygon-token-options" type="button">Select Polygon Launch Defaults</button>
                         <button id="save-token-ecosystem-project" type="button">Save Ecosystem Project</button>
                         <button id="update-token-ecosystem-project" type="button">Update Selected Project</button>
                         <button id="clear-token-ecosystem-selection" type="button">Clear Selection</button>
@@ -480,6 +481,30 @@
             document.getElementById('token-ecosystem-notes').value = 'Low-fee Base/Polygon/BNB/Avalanche/Solana launch path with website, whitepaper, social growth, listing evidence, NFT utility upgrades, and paper-only arbitrage strategy planning.';
         }
 
+        function selectPolygonTokenDefaults() {
+            const defaultValues = new Set([
+                'passive income reward model',
+                'staking vault',
+                'NFT utility upgrades for profitability and access tiers',
+                'vesting, lockups, and team allocation controls',
+                'anti-whale and anti-bot controls',
+                'cross-chain bridge and liquidity route plan',
+                'top 200 market cap rebalancing bot use case',
+                'arbitrage-aware strategy design',
+                'dapp dashboard and holder utility modules',
+                'CoinMarketCap and CoinGecko listing evidence packet',
+                'Discord, Telegram, YouTube, Medium, X launch bundle',
+                'website, roadmap, logo, and whitepaper generation'
+            ]);
+            document.getElementById('contract-network').value = 'polygon';
+            document.getElementById('contract-type').value = 'erc20';
+            document.querySelectorAll('#token-feature-options input').forEach(input => {
+                input.checked = defaultValues.has(input.value);
+            });
+            document.getElementById('nft-utility-notes').value = 'Polygon NFT utility tiers can unlock capped dapp modules, fee discounts, community roles, governance boosts, and owner-approved upgrade paths.';
+            document.getElementById('token-ecosystem-notes').value = 'Polygon-first token launch: ERC20 scaffold, PolygonScan evidence, QuickSwap/Uniswap/Sushi route research, website, whitepaper, community ops, CMC/CoinGecko packet, paper-only top-200 rebalance/arbitrage planning, and no live deployment until owner approval.';
+        }
+
         function setTokenProjectSelection(projectId = null) {
             selectedTokenEcosystemProjectId = projectId ? Number(projectId) : null;
             const status = document.getElementById('token-ecosystem-project-status');
@@ -751,6 +776,9 @@
             const logo = blueprint.logo || {};
             const nodeResearch = blueprint.nodeResearch || {};
             const multiChain = blueprint.multiChainTokenBuild || {};
+            const polygonProfile = blueprint.polygonOperatingProfile || {};
+            const applicationPlan = blueprint.listingApplicationPlan || listingReadiness.applicationPlan || {};
+            const communityOps = blueprint.communityOperations || socialCampaign.communityOperations || {};
             const selectedChain = multiChain.selectedChain || {};
             const standardPlan = multiChain.standardPlan || {};
 
@@ -769,6 +797,11 @@
                     title: 'Low-Fee Launch Candidates',
                     description: (multiChain.recommendedLowFeeChains || []).map(chain => chain.name).join(' · '),
                     status: 'low-fee'
+                },
+                {
+                    title: 'Polygon Operating Profile',
+                    description: `Chain ID ${polygonProfile.chain?.chainId || 137} · ${(polygonProfile.trading?.dexRouteFocus || []).join(' · ')} · ${polygonProfile.tokenBuild?.deploymentBoundary || 'local only'}`,
+                    status: polygonProfile.status || 'polygon'
                 },
                 ...(multiChain.requiredBeforeLiveDeployment || []).map(item => ({
                     title: item,
@@ -818,16 +851,36 @@
                 }
             ]);
 
-            document.getElementById('listing-blueprint').innerHTML = renderTaskCards(listingReadiness.checklist || []);
+            document.getElementById('listing-blueprint').innerHTML = renderTaskCards([
+                ...(listingReadiness.checklist || []),
+                ...(applicationPlan.phases || []).map(phase => ({
+                    title: phase.label,
+                    description: phase.output,
+                    status: 'application'
+                })),
+                ...(applicationPlan.prohibitedShortcuts || []).map(item => ({
+                    title: item,
+                    description: 'Blocked listing shortcut. Use official evidence path only.',
+                    status: 'blocked'
+                })),
+                ...(communityOps.operatingRoles || []).map(role => ({
+                    title: role.label,
+                    description: role.scope,
+                    status: 'community'
+                }))
+            ]);
             document.getElementById('ecosystem-output').textContent = JSON.stringify({
                 contract: blueprint.contract,
                 safetyBoundary: blueprint.safetyBoundary,
                 multiChainTokenBuild: multiChain,
+                polygonOperatingProfile: polygonProfile,
                 tokenFeatureMatrix: blueprint.tokenFeatureMatrix,
                 nftUtilityDesigner: blueprint.nftUtilityDesigner,
                 logoCreationBrief: logo,
                 socialCampaign,
+                communityOperations: communityOps,
                 listingReadiness,
+                listingApplicationPlan: applicationPlan,
                 chainBuilder,
                 nodeResearch,
                 crossChainArbitrage: blueprint.crossChainArbitrage
@@ -927,6 +980,7 @@
         document.getElementById('load-ecosystem-catalog').addEventListener('click', loadEcosystemCatalog);
         document.getElementById('apply-token-options').addEventListener('click', applyTokenOptionsToSpec);
         document.getElementById('select-low-fee-token-options').addEventListener('click', selectLowFeeTokenDefaults);
+        document.getElementById('select-polygon-token-options').addEventListener('click', selectPolygonTokenDefaults);
         document.getElementById('save-token-ecosystem-project').addEventListener('click', saveTokenEcosystemProject);
         document.getElementById('update-token-ecosystem-project').addEventListener('click', updateTokenEcosystemProject);
         document.getElementById('clear-token-ecosystem-selection').addEventListener('click', () => setTokenProjectSelection(null));

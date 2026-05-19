@@ -89,6 +89,51 @@
         </section>
 
         <section class="model-panel">
+            <h2>Token Community Manager</h2>
+            <div class="artifact-grid">
+                <div class="artifact-stat">
+                    <strong>CMC / CoinGecko</strong>
+                    <span>Evidence Path</span>
+                    <span>official forms only</span>
+                </div>
+                <div class="artifact-stat">
+                    <strong>Community Ops</strong>
+                    <span>Draft Manager</span>
+                    <span>moderation, announcements, support, docs</span>
+                </div>
+                <div class="artifact-stat">
+                    <strong>Unsafe Shortcuts</strong>
+                    <span>Blocked</span>
+                    <span>no fake volume, spam, bribes, or bypass</span>
+                </div>
+            </div>
+            <form id="listing-campaign-form" class="model-test-form">
+                <label for="listing-token-project-id">Token Ecosystem Project ID</label>
+                <input id="listing-token-project-id" name="tokenProjectId" type="number" min="1" required placeholder="Project ID from Solidity Lab">
+
+                <label for="listing-account">Account Label</label>
+                <input id="listing-account" name="accountLabel" type="text" value="EtherealAI official">
+
+                <label for="listing-platforms">Platforms</label>
+                <div id="listing-platforms" class="checkbox-grid">
+                    <label><input type="checkbox" value="x" checked> X</label>
+                    <label><input type="checkbox" value="discord" checked> Discord</label>
+                    <label><input type="checkbox" value="telegram" checked> Telegram</label>
+                    <label><input type="checkbox" value="youtube" checked> YouTube</label>
+                    <label><input type="checkbox" value="medium" checked> Medium</label>
+                    <label><input type="checkbox" value="docs" checked> Docs Portal</label>
+                    <label><input type="checkbox" value="reddit"> Reddit</label>
+                    <label><input type="checkbox" value="farcaster"> Farcaster</label>
+                </div>
+
+                <label for="listing-note">Owner Note</label>
+                <textarea id="listing-note" name="campaignNote" rows="3" placeholder="Optional milestone, use-case note, roadmap item, or launch context."></textarea>
+
+                <button type="submit">Create Listing / Community Drafts</button>
+            </form>
+        </section>
+
+        <section class="model-panel">
             <h2>Draft Post</h2>
             <form id="social-post-form" class="model-test-form">
                 <label for="post-platform">Platform</label>
@@ -169,6 +214,11 @@
                     </tbody>
                 </table>
             `;
+        }
+
+        function getListingCampaignPlatforms() {
+            return Array.from(document.querySelectorAll('#listing-platforms input:checked'))
+                .map(input => input.value);
         }
 
         async function loadSocialPosts() {
@@ -259,6 +309,44 @@
                 '',
                 data.post.content
             ].join('\n');
+            await loadSocialPosts();
+        });
+
+        document.getElementById('listing-campaign-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const tokenProjectId = document.getElementById('listing-token-project-id').value.trim();
+            const output = document.getElementById('social-output');
+            output.textContent = 'Creating local listing and community-management drafts...';
+
+            const response = await fetch(`/api/v1/social-posts/token-projects/${tokenProjectId}/listing-campaign-drafts`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    accountLabel: document.getElementById('listing-account').value.trim(),
+                    campaignNote: document.getElementById('listing-note').value.trim(),
+                    platforms: getListingCampaignPlatforms()
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Listing/community draft generation failed.';
+                return;
+            }
+
+            output.textContent = JSON.stringify({
+                draftsCreated: data.posts?.length || 0,
+                tokenProject: data.tokenProject,
+                listingApplicationPlan: data.listingApplicationPlan,
+                communityOperations: data.communityOperations,
+                polygonOperatingProfile: data.polygonOperatingProfile,
+                localOnly: data.localOnly,
+                externalPostingEnabled: data.externalPostingEnabled,
+                listingSubmissionEnabled: data.listingSubmissionEnabled
+            }, null, 2);
             await loadSocialPosts();
         });
 

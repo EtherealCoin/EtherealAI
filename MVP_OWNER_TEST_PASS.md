@@ -99,14 +99,18 @@ patrick@etherealAI
    - Open starter source, review output, and scaffold a local workspace if needed.
    - Pass condition: Deployment Boundary shows local-only deployment, wallet secrets blocked, and no mainnet or testnet broadcast.
    - Pass condition: Target Blockchain accepts low-fee and non-Ethereum options including Solana, Polygon, BNB Chain, Avalanche, Base, and custom-chain.
+   - Pass condition: `Select Polygon Launch Defaults` fills a Polygon ERC20 launch profile with PolygonScan, DEX route research, listing evidence, social/community ops, and no-live-execution boundaries.
    - Pass condition: Token Ecosystem Studio loads the local ecosystem catalog.
    - Pass condition: Saved specs expose an `Ecosystem` action that opens multi-chain token builder, website creation, whitepaper, chain-builder/node research, listing readiness, logo brief, social/community plan, and cross-chain arbitrage design output.
+   - Pass condition: Polygon ecosystem output includes chain ID `137`, Polygon wallet/RPC no-secret boundary, Polygon DEX route planning, and local-only listing evidence requirements.
    - Pass condition: Ecosystem output keeps deployment, wallet secrets, external posting, and live trading disabled.
 
 10. Test Social Ops locally.
    - Generate or save a draft.
+   - Create Token Community Manager drafts for a saved token ecosystem project if a project exists.
    - Review the Draft Queue.
    - Pass condition: Local-Only Safety shows public posting disabled, no social network API calls, and owner review required.
+   - Pass condition: Token Community Manager creates local CMC/CoinGecko/community drafts without external posting or listing submission, and flags fake-volume, spam, bribery, or bypass language for review.
 
 11. Test exchange safety metadata.
    - Save secret references using reference names only.
