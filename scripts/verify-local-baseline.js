@@ -2254,7 +2254,11 @@ function checkWalletControlModule() {
     || readiness.summary?.liveExecutionEnabled !== false
     || !readiness.privilegedPermissions.includes('request_signature')
     || guide.safetyBoundary?.secretsAccepted !== false
-    || guide.trainingContent?.length < 2
+    || guide.trainingContent?.length < 8
+    || !guide.trainingContent?.some(item => item.id === 'system_start_stop_video')
+    || !guide.trainingContent?.some(item => item.id === 'security_procedures_video')
+    || !guide.operatingProcedures?.some(item => item.id === 'emergency_shutdown')
+    || !guide.operatingProcedures?.some(item => item.id === 'backup_recovery')
     || summary.counts?.wallets !== 1
     || summary.signingEnabled !== false
     || !summary.boundaries?.includes('No seed phrase storage.')
@@ -5915,6 +5919,7 @@ function checkOperatorControlCenterUi() {
     || !home.includes('Operator Control Center')
     || !html.includes('Operator Control Center')
     || !html.includes('Wallet Onboarding Wizard')
+    || !html.includes('Step-by-Step Operating Procedures')
     || !html.includes('Attach Wallet Metadata')
     || !html.includes('Connected Wallets')
     || !html.includes('Recovery And Emergency Controls')
@@ -5939,6 +5944,7 @@ function checkOperatorControlCenterUi() {
     || !html.includes('Emergency shutdown')
     || !html.includes('Recovery procedure')
     || !html.includes('Rollback protection')
+    || !html.includes('operator-procedures')
     || !html.includes('Do not paste seed phrases')
     || !html.includes('function renderPermissionControls()')
     || !html.includes('function loadOperatorCenter()')

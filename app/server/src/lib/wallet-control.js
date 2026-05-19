@@ -350,6 +350,83 @@ function buildWalletOnboardingGuide() {
         ]
       },
       {
+        id: 'key_ownership_transfer_video',
+        title: 'Key Ownership Transfer Walkthrough',
+        format: 'youtube_style_script',
+        outline: [
+          'Explain that key ownership happens outside EtherealAI.',
+          'Show how to create or recover a wallet with a hardware wallet or multisig.',
+          'Show how to record only the public address and connector reference.',
+          'Confirm live signing remains disabled after metadata is attached.'
+        ]
+      },
+      {
+        id: 'local_ai_operation_video',
+        title: 'Local AI Operation Walkthrough',
+        format: 'youtube_style_script',
+        outline: [
+          'Open Dashboard and review model roles, local model status, and MLX lifecycle.',
+          'Use model benchmark controls without enabling external providers.',
+          'Confirm System Memory export shows local-only state.',
+          'Stop if local model status or memory isolation looks unsafe.'
+        ]
+      },
+      {
+        id: 'system_start_stop_video',
+        title: 'System Startup And Shutdown',
+        format: 'youtube_style_script',
+        outline: [
+          'Start EtherealAI locally from the project directory.',
+          'Open Dashboard and confirm server, database, models, and memory sync.',
+          'Use MLX lifecycle controls only when needed.',
+          'Stop the app server before OS updates, travel, or unattended maintenance.'
+        ]
+      },
+      {
+        id: 'trading_controls_video',
+        title: 'Trading Controls Walkthrough',
+        format: 'youtube_style_script',
+        outline: [
+          'Open Strategy Lab and verify live execution is disabled.',
+          'Use market data, backtests, paper runs, and safety dossiers only.',
+          'Review risk profile and kill-switch state before paper schedules.',
+          'Do not attach live exchange keys until a future reviewed live phase exists.'
+        ]
+      },
+      {
+        id: 'automation_controls_video',
+        title: 'Automation Controls Walkthrough',
+        format: 'youtube_style_script',
+        outline: [
+          'Open Strategy Lab bot automation controls.',
+          'Review ready paper plans and schedule status.',
+          'Run or pause paper schedules with local evidence exports.',
+          'Confirm no live order endpoint exists before leaving automation running.'
+        ]
+      },
+      {
+        id: 'security_procedures_video',
+        title: 'Security Procedures Walkthrough',
+        format: 'youtube_style_script',
+        outline: [
+          'Review local-only boundaries before adding any connector metadata.',
+          'Rotate any password or token that was pasted into any chat or browser.',
+          'Use Keychain or a hardware wallet for real secrets outside EtherealAI.',
+          'Use Operator Control revoke for wallet concerns and keep external posting disabled.'
+        ]
+      },
+      {
+        id: 'backup_recovery_video',
+        title: 'Backups And Recovery Walkthrough',
+        format: 'youtube_style_script',
+        outline: [
+          'Confirm GitHub push status for source code.',
+          'Export System Memory and owner proof packet after major changes.',
+          'Keep wallet recovery materials offline outside EtherealAI.',
+          'After restore, verify memory sync, database health, and live-disabled gates.'
+        ]
+      },
+      {
         id: 'emergency_revoke_video',
         title: 'Emergency Wallet Revocation',
         format: 'youtube_style_script',
@@ -359,6 +436,76 @@ function buildWalletOnboardingGuide() {
           'Press revoke.',
           'Confirm status changed to revoked and live signing remains disabled.'
         ]
+      }
+    ],
+    operatingProcedures: [
+      {
+        id: 'start_system',
+        title: 'Start EtherealAI',
+        steps: [
+          'Open Terminal in /Users/ethereal/test-ai-project.',
+          'Run npm start.',
+          'Open http://127.0.0.1:3000.',
+          'Log in, open Dashboard, and confirm server, database, local models, and memory sync are healthy.'
+        ],
+        stopCondition: 'Stop and investigate if server health, database health, or memory sync fails.'
+      },
+      {
+        id: 'stop_system',
+        title: 'Stop EtherealAI',
+        steps: [
+          'Finish any active local verification run.',
+          'Pause paper schedules if the computer will be offline.',
+          'Stop the app server process.',
+          'Confirm no unexpected process remains on port 3000.'
+        ],
+        stopCondition: 'Do not force-close during database writes unless emergency shutdown is required.'
+      },
+      {
+        id: 'attach_wallet',
+        title: 'Attach Wallet Metadata',
+        steps: [
+          'Create or select the wallet outside EtherealAI.',
+          'Enter label, chain family, network, public address, and project assignment.',
+          'Leave risky permissions blocked or owner-approved each time.',
+          'Run readiness review and confirm no secrets were stored.'
+        ],
+        stopCondition: 'Stop immediately if any field contains seed words, private keys, passphrases, API tokens, or passwords.'
+      },
+      {
+        id: 'paper_trading_review',
+        title: 'Review Paper Trading Controls',
+        steps: [
+          'Open Strategy Lab.',
+          'Review active strategy, risk profile, market data, and paper automation status.',
+          'Export safety dossier evidence when needed.',
+          'Keep live execution disabled.'
+        ],
+        stopCondition: 'Stop if any screen suggests live order placement, credential loading, or exchange network mutation is enabled.'
+      },
+      {
+        id: 'emergency_shutdown',
+        title: 'Emergency Shutdown',
+        steps: [
+          'Revoke any suspect wallet metadata record in Operator Control.',
+          'Pause paper schedules from Strategy Lab if the system is unattended.',
+          'Stop the app server.',
+          'Rotate external passwords/tokens outside EtherealAI if any secret may have been exposed.',
+          'Record notes in System Memory after the system is safe.'
+        ],
+        stopCondition: 'Do not continue automation after suspected compromise until owner review is complete.'
+      },
+      {
+        id: 'backup_recovery',
+        title: 'Backup And Recovery',
+        steps: [
+          'Push source changes to GitHub.',
+          'Export Owner Proof Packet JSON.',
+          'Export System Memory JSON.',
+          'Keep wallet recovery material offline and separate from the repo.',
+          'After restore, run npm test and authenticated verification before operating.'
+        ],
+        stopCondition: 'Do not operate from a restored copy until verification passes and live-disabled gates are confirmed.'
       }
     ]
   };

@@ -42,6 +42,11 @@
         </section>
 
         <section class="model-panel">
+            <h2>Step-by-Step Operating Procedures</h2>
+            <div id="operator-procedures" class="operator-step-list">Loading operating procedures...</div>
+        </section>
+
+        <section class="model-panel">
             <h2>Attach Wallet Metadata</h2>
             <p class="inline-status">Enter only public metadata. Do not paste seed phrases, recovery phrases, private keys, API tokens, passphrases, or wallet passwords.</p>
             <form id="wallet-form" class="model-test-form">
@@ -265,6 +270,14 @@
                     <em>${escapeHtml(step.ownerDecision)}</em>
                 </article>
             `).join('') || '<p>No onboarding steps loaded.</p>';
+
+            document.getElementById('operator-procedures').innerHTML = (guide.operatingProcedures || []).map(procedure => `
+                <article>
+                    <strong>${escapeHtml(procedure.title)}</strong>
+                    <ol>${(procedure.steps || []).map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol>
+                    <em>${escapeHtml(procedure.stopCondition || '')}</em>
+                </article>
+            `).join('') || '<p>No operating procedures loaded.</p>';
 
             document.getElementById('wallet-training-content').innerHTML = (guide.trainingContent || []).map(item => `
                 <article class="task-card">
