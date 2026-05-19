@@ -2296,6 +2296,10 @@ async function checkMacSecurityModule() {
     ['/usr/sbin/spctl --status', 'assessments enabled'],
     ['/usr/bin/csrutil status', 'System Integrity Protection status: enabled.'],
     ['/usr/sbin/softwareupdate --schedule', 'Automatic checking for updates is turned on'],
+    ['/usr/bin/dscl . -read /Groups/admin GroupMembership', 'GroupMembership: root ethereal _mbsetupuser'],
+    ['/usr/bin/profiles status -type enrollment', 'Enrolled via DEP: No\nMDM enrollment: No'],
+    ['/usr/bin/crontab -l', 'crontab: no crontab for ethereal'],
+    ['/usr/bin/systemextensionsctl list', '0 extension(s)'],
     ['/usr/sbin/systemsetup -getremotelogin', 'Remote Login: Off'],
     ['/usr/sbin/systemsetup -getremoteappleevents', 'Remote Apple Events: Off'],
     ['/usr/bin/defaults read com.apple.NetworkBrowser DisableAirDrop', '1'],
@@ -2305,7 +2309,10 @@ async function checkMacSecurityModule() {
       'COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME',
       'node 100 ethereal 20u IPv4 0x1 0t0 TCP 127.0.0.1:3000 (LISTEN)',
       'ControlCe 200 ethereal 21u IPv4 0x2 0t0 TCP *:7000 (LISTEN)'
-    ].join('\n')]
+    ].join('\n')],
+    ['/bin/ls -1 /Users/ethereal/Library/LaunchAgents', 'com.google.GoogleUpdater.wake.plist\ncom.valvesoftware.steamclean.plist'],
+    ['/bin/ls -1 /Library/LaunchAgents', ''],
+    ['/bin/ls -1 /Library/LaunchDaemons', '']
   ]);
   const execFileCapture = async (command, args) => {
     const key = `${command} ${args.join(' ')}`;
@@ -2320,7 +2327,8 @@ async function checkMacSecurityModule() {
     execFileCapture,
     platform: 'darwin',
     serverHost: '127.0.0.1',
-    port: 3000
+    port: 3000,
+    ownerHome: '/Users/ethereal'
   });
   const guide = buildMacSecurityGuide();
   const bindPass = getServerBindCheck({ serverHost: '127.0.0.1', port: 3000 });
@@ -2335,26 +2343,35 @@ async function checkMacSecurityModule() {
 
   if (
     audit.supported !== true
-    || audit.summary?.totalChecks < 14
+    || audit.summary?.totalChecks < 19
     || audit.summary?.failCount !== 0
-    || audit.summary?.reviewCount < 1
+    || audit.summary?.reviewCount < 3
     || audit.safetyBoundary?.readOnlyAudit !== true
     || audit.safetyBoundary?.privilegedMutation !== false
     || !audit.checks.some(check => check.id === 'filevault' && check.status === 'pass')
     || !audit.checks.some(check => check.id === 'firewall_global' && check.status === 'pass')
     || !audit.checks.some(check => check.id === 'firewall_allow_signed_builtin' && check.status === 'review')
+    || !audit.checks.some(check => check.id === 'admin_group_membership' && check.status === 'review')
+    || !audit.checks.some(check => check.id === 'mdm_enrollment' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'user_crontab' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'system_extensions' && check.status === 'pass')
+    || !audit.checks.some(check => check.id === 'startup_persistence_items' && check.status === 'review')
     || !audit.checks.some(check => check.id === 'etherealai_bind_host' && check.status === 'pass')
     || !audit.checks.some(check => check.id === 'listening_ports' && check.status === 'review')
     || !audit.listeningPorts.some(port => port.command === 'node' && port.exposure === 'loopback_only')
     || !audit.listeningPorts.some(port => port.command === 'ControlCe' && port.exposure === 'all_interfaces')
+    || !audit.startupItems.some(folder => folder.id === 'user_launch_agents' && folder.items.includes('com.google.GoogleUpdater.wake.plist'))
     || bindPass.status !== 'pass'
     || bindFail.status !== 'fail'
     || parsedPorts.length !== 2
     || summary.failCount !== 1
     || guide.operatingMode !== 'assume_home_network_hostile'
     || !guide.rules.some(rule => rule.includes('VPNs can improve transport privacy'))
+    || !guide.compromisedHostProtocol.some(item => item.includes('admin rights, MDM, system extensions, kernel-level tampering'))
+    || !guide.cleanRoomRecoveryPlan.some(item => item.includes('DFU restore/revive'))
     || !guide.ownerSettingsChecklist.some(item => item.area.includes('General > Sharing'))
     || !guide.adminOnlyActions.some(item => item.includes('Remote Login'))
+    || !guide.adminOnlyActions.some(item => item.includes('LaunchAgents'))
     || guide.etherealAiSecurityBoundary?.bindsToLoopbackByDefault !== true
   ) {
     fail('mac security module did not expose read-only host hardening audit behavior');
@@ -6079,7 +6096,10 @@ function checkMacSecurityLockdownUi() {
     || !html.includes('Hostile Network Mode')
     || !html.includes('Security Snapshot')
     || !html.includes('Priority Owner Actions')
+    || !html.includes('Suspected Admin Or Kernel Compromise')
+    || !html.includes('Clean-Room Recovery Plan')
     || !html.includes('Audit Checks')
+    || !html.includes('Startup Persistence Review')
     || !html.includes('Listening Network Services')
     || !html.includes('Manual Mac Lockdown Checklist')
     || !html.includes('Emergency Containment')
@@ -6087,6 +6107,7 @@ function checkMacSecurityLockdownUi() {
     || !html.includes('VPN reality check')
     || !html.includes('/api/v1/mac-security/audit')
     || !html.includes('function renderPriorityActions')
+    || !html.includes('function renderStartupItems')
     || !html.includes('function renderListeningPorts')
     || !styles.includes('.security-shell')
     || !styles.includes('.security-status-pass')
@@ -9157,8 +9178,14 @@ async function runServerApiChecks() {
     || macSecurityAudit.body.audit?.safetyBoundary?.readOnlyAudit !== true
     || !Array.isArray(macSecurityAudit.body.audit?.checks)
     || !macSecurityAudit.body.audit.checks.some(check => check.id === 'filevault')
+    || !macSecurityAudit.body.audit.checks.some(check => check.id === 'admin_group_membership')
+    || !macSecurityAudit.body.audit.checks.some(check => check.id === 'mdm_enrollment')
+    || !macSecurityAudit.body.audit.checks.some(check => check.id === 'startup_persistence_items')
     || !macSecurityAudit.body.audit.checks.some(check => check.id === 'etherealai_bind_host' && check.status === 'pass')
+    || !Array.isArray(macSecurityAudit.body.audit?.startupItems)
     || !macSecurityAudit.body.guide?.rules?.some(rule => rule.includes('VPNs can improve transport privacy'))
+    || !macSecurityAudit.body.guide?.compromisedHostProtocol?.some(item => item.includes('admin rights, MDM'))
+    || !macSecurityAudit.body.guide?.cleanRoomRecoveryPlan?.some(item => item.includes('DFU restore/revive'))
     || !macSecurityAudit.body.guide?.ownerSettingsChecklist?.some(item => item.area.includes('General > Sharing'))
     || macSecurityAudit.body.guide?.etherealAiSecurityBoundary?.bindsToLoopbackByDefault !== true
   ) {

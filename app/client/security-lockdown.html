@@ -41,8 +41,23 @@
         </section>
 
         <section class="model-panel">
+            <h2>Suspected Admin Or Kernel Compromise</h2>
+            <div id="compromised-host-protocol" class="operator-step-list">Loading compromised-host protocol...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Clean-Room Recovery Plan</h2>
+            <div id="clean-room-recovery-plan" class="operator-step-list">Loading clean-room recovery plan...</div>
+        </section>
+
+        <section class="model-panel">
             <h2>Audit Checks</h2>
             <div id="security-checks" class="task-list">Loading local checks...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Startup Persistence Review</h2>
+            <div id="startup-items" class="task-list">Loading startup persistence items...</div>
         </section>
 
         <section class="model-panel">
@@ -188,6 +203,21 @@
             `).join('') || '<p>No listening TCP services were visible to this audit.</p>';
         }
 
+        function renderStartupItems(folders = []) {
+            document.getElementById('startup-items').innerHTML = folders.map(folder => `
+                <article class="task-card security-check-card">
+                    <div>
+                        <h3>${escapeHtml(folder.label)} <span>${escapeHtml((folder.items || []).length)} item(s)</span></h3>
+                        <p>${escapeHtml(folder.path)}</p>
+                        ${(folder.items || []).length
+                            ? `<ul>${folder.items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+                            : '<p>No items visible in this folder.</p>'}
+                        ${folder.error ? `<p>${escapeHtml(folder.error)}</p>` : ''}
+                    </div>
+                </article>
+            `).join('') || '<p>No startup persistence folders were returned by the audit.</p>';
+        }
+
         function renderGuide(guide = {}) {
             document.getElementById('owner-settings-checklist').innerHTML = (guide.ownerSettingsChecklist || []).map((item, index) => `
                 <article>
@@ -202,6 +232,20 @@
                     <span>${escapeHtml(item)}</span>
                 </article>
             `).join('');
+
+            document.getElementById('compromised-host-protocol').innerHTML = (guide.compromisedHostProtocol || []).map((item, index) => `
+                <article>
+                    <strong>${index + 1}. Compromised-Host Rule</strong>
+                    <span>${escapeHtml(item)}</span>
+                </article>
+            `).join('');
+
+            document.getElementById('clean-room-recovery-plan').innerHTML = (guide.cleanRoomRecoveryPlan || []).map((item, index) => `
+                <article>
+                    <strong>${index + 1}. Recovery Step</strong>
+                    <span>${escapeHtml(item)}</span>
+                </article>
+            `).join('');
         }
 
         async function loadMacSecurityAudit() {
@@ -210,6 +254,7 @@
             renderSummary(audit);
             renderPriorityActions(audit.checks || []);
             renderChecks(audit.checks || []);
+            renderStartupItems(audit.startupItems || []);
             renderListeningPorts(audit.listeningPorts || []);
             renderGuide(data.guide || {});
         }

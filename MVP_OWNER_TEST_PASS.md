@@ -54,7 +54,9 @@ patrick@etherealAI
    - Pass condition: the page shows Hostile Network Mode, Priority Owner Actions, Audit Checks, Listening Network Services, Manual Mac Lockdown Checklist, Emergency Containment, and Network And Router Plan.
    - Pass condition: the audit reports read-only local checks only; it does not inspect secrets, mutate routers, mutate VPNs, run live trading, or run privileged browser commands.
    - Pass condition: EtherealAI bind host reports loopback/local-only operation on `127.0.0.1`.
-   - Pass condition: the page gives plain-English owner actions for FileVault, firewall, stealth mode, Gatekeeper, SIP, automatic updates, remote access, AirDrop, password-after-sleep, and listening services.
+   - Pass condition: the page gives plain-English owner actions for FileVault, firewall, stealth mode, Gatekeeper, SIP, automatic updates, local admin accounts, MDM enrollment, user crontab, system extensions, remote access, AirDrop, password-after-sleep, startup persistence, and listening services.
+   - Pass condition: Suspected Admin Or Kernel Compromise explains that this Mac must not be trusted for secrets until clean-room recovery is complete.
+   - Pass condition: Clean-Room Recovery Plan explains selective backup, full erase/reinstall or DFU restore/revive for Apple silicon when firmware/system integrity is in doubt, and credential rotation from a clean device/network.
 
 4. Open `/mvp-test-pass`.
    - Pass condition: MVP status is `ready_for_owner_testing`, MVP completion is `99%` before owner acceptance or `100%` after local owner acceptance, local end-to-end completion is `95%`, MVP blockers are `0`, and live execution is disabled.
@@ -155,7 +157,9 @@ patrick@etherealAI
 ## Mac Security Lockdown Workflow
 
 - `/security-lockdown` is the current non-coder Mac host security surface.
-- `/api/v1/mac-security/audit` performs a read-only local audit of FileVault, macOS Firewall, stealth mode, block-all incoming mode, Gatekeeper, System Integrity Protection, update checks, remote access checks, AirDrop preference, password-after-sleep preference, listening TCP services, and EtherealAI loopback binding.
+- `/api/v1/mac-security/audit` performs a read-only local audit of FileVault, macOS Firewall, stealth mode, block-all incoming mode, Gatekeeper, System Integrity Protection, update checks, local admin accounts, MDM enrollment, user crontab, system extensions, remote access checks, AirDrop preference, password-after-sleep preference, startup persistence folders, listening TCP services, and EtherealAI loopback binding.
+- Suspected admin/kernel compromise mode explicitly treats the current Mac as untrusted for wallet signing, banking, or credential rotation until clean-room recovery.
+- Clean-room recovery guidance tells the owner to preserve evidence, selectively back up owner-created data only, avoid migrating apps/profiles/extensions/startup items, and consider full erase/reinstall or Apple silicon DFU restore/revive from a clean second Mac when firmware/system integrity is in doubt.
 - The audit does not inspect secrets, mutate routers, mutate VPNs, change DNS, deploy websites, post externally, place trades, or enable wallet signing.
 - Safe user-level hardening applied in this session: password required immediately after sleep/screensaver, AirDrop disable preference, visible filename extensions, and Finder extension-change warnings.
 - Manual owner actions remain necessary for admin-only Mac settings such as Sharing services, remote login, remote Apple events, firewall app exceptions, Full Disk Access, Accessibility, Screen Recording, Input Monitoring, Login Items, and router/IoT segmentation.

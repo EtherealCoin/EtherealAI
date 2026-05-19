@@ -99,6 +99,58 @@ const MAC_SECURITY_COMMANDS = [
       : review('Automatic update checks were not confirmed on.')
   },
   {
+    id: 'admin_group_membership',
+    category: 'Admin Control',
+    label: 'Local admin accounts',
+    command: '/usr/bin/dscl',
+    args: ['.', '-read', '/Groups/admin', 'GroupMembership'],
+    severity: 'review',
+    ownerAction: 'Confirm every local admin account is expected. Remove unknown admins only after backup and owner review.',
+    parse: output => {
+      const members = parseAdminMembers(output);
+
+      return members.length
+        ? review(`Admin members visible to this audit: ${members.join(', ')}.`)
+        : unknown('Admin group membership could not be parsed.');
+    }
+  },
+  {
+    id: 'mdm_enrollment',
+    category: 'Admin Control',
+    label: 'MDM / device management enrollment',
+    command: '/usr/bin/profiles',
+    args: ['status', '-type', 'enrollment'],
+    severity: 'block',
+    ownerAction: 'If MDM enrollment is unexpected, treat the Mac as managed by someone else and plan clean-room recovery before using it for secrets.',
+    parse: output => /Enrolled via DEP:\s*No/i.test(output) && /MDM enrollment:\s*No/i.test(output)
+      ? pass('No DEP or MDM enrollment was reported.')
+      : fail('MDM or DEP enrollment was reported or could not be ruled out.')
+  },
+  {
+    id: 'user_crontab',
+    category: 'Persistence',
+    label: 'User crontab',
+    command: '/usr/bin/crontab',
+    args: ['-l'],
+    severity: 'review',
+    ownerAction: 'If a crontab exists, review every command before deleting anything. Unknown scheduled commands are persistence risk.',
+    parse: output => /no crontab/i.test(output)
+      ? pass('No user crontab was reported.')
+      : review('A user crontab exists or could not be ruled out.')
+  },
+  {
+    id: 'system_extensions',
+    category: 'Kernel And System Extensions',
+    label: 'System extensions',
+    command: '/usr/bin/systemextensionsctl',
+    args: ['list'],
+    severity: 'review',
+    ownerAction: 'Review any system extension. Unknown network, security, input, or disk extensions are high-risk on a suspected compromised host.',
+    parse: output => /^0 extension\(s\)/i.test(cleanOutput(output)) || /no system extensions/i.test(output)
+      ? pass('No system extensions were reported.')
+      : review('System extensions exist or could not be ruled out.')
+  },
+  {
     id: 'remote_login',
     category: 'Remote Access',
     label: 'Remote Login / SSH',
@@ -209,6 +261,16 @@ function parseOnOffOutput(output, offMessage, onMessage) {
   return unknown('This setting could not be confirmed from the local audit.');
 }
 
+function parseAdminMembers(output = '') {
+  const match = String(output || '').match(/GroupMembership:\s*(.+)$/im);
+
+  if (!match) {
+    return [];
+  }
+
+  return match[1].split(/\s+/).map(item => item.trim()).filter(Boolean);
+}
+
 function normalizeCommandResult(result = {}) {
   const stdout = String(result.stdout || '').trim();
   const stderr = String(result.stderr || '').trim();
@@ -316,6 +378,80 @@ async function getListeningPortAudit(execFileCapture) {
   };
 }
 
+async function listDirectoryItems(execFileCapture, directoryPath) {
+  const result = normalizeCommandResult(await execFileCapture('/bin/ls', ['-1', directoryPath], {
+    timeout: COMMAND_TIMEOUT_MS,
+    maxBuffer: 1024 * 1024
+  }));
+
+  if (/No such file or directory/i.test(result.output)) {
+    return [];
+  }
+
+  return result.output
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .slice(0, 200);
+}
+
+async function getStartupItemAudit(execFileCapture, ownerHome = process.env.HOME || '/Users/ethereal') {
+  const locations = [
+    {
+      id: 'user_launch_agents',
+      label: 'User LaunchAgents',
+      path: `${ownerHome}/Library/LaunchAgents`
+    },
+    {
+      id: 'system_launch_agents',
+      label: 'System LaunchAgents',
+      path: '/Library/LaunchAgents'
+    },
+    {
+      id: 'system_launch_daemons',
+      label: 'System LaunchDaemons',
+      path: '/Library/LaunchDaemons'
+    }
+  ];
+  const folders = [];
+
+  for (const location of locations) {
+    try {
+      folders.push({
+        ...location,
+        items: await listDirectoryItems(execFileCapture, location.path)
+      });
+    } catch (error) {
+      folders.push({
+        ...location,
+        items: [],
+        error: cleanOutput(error.message)
+      });
+    }
+  }
+
+  const totalItems = folders.reduce((total, folder) => total + folder.items.length, 0);
+  const hasErrors = folders.some(folder => folder.error);
+
+  return {
+    id: 'startup_persistence_items',
+    category: 'Persistence',
+    label: 'LaunchAgents and LaunchDaemons',
+    severity: 'review',
+    status: hasErrors ? 'unknown' : totalItems ? 'review' : 'pass',
+    passed: !hasErrors && totalItems === 0,
+    message: hasErrors
+      ? 'One or more startup-item folders could not be read.'
+      : totalItems
+        ? `${totalItems} startup persistence item(s) need owner review.`
+        : 'No user/system LaunchAgents or LaunchDaemons were visible in the audited folders.',
+    ownerAction: 'Review each startup item before deleting anything. Unknown LaunchAgents or LaunchDaemons are common persistence points.',
+    folders,
+    localOnly: true,
+    privilegedMutation: false
+  };
+}
+
 function getServerBindCheck({ serverHost = '127.0.0.1', port = 3000 } = {}) {
   const normalized = String(serverHost || '').trim().toLowerCase();
   const loopback = ['127.0.0.1', 'localhost', '::1'].includes(normalized);
@@ -359,7 +495,8 @@ async function buildMacSecurityAudit({
   execFileCapture,
   platform = process.platform,
   serverHost = '127.0.0.1',
-  port = 3000
+  port = 3000,
+  ownerHome = process.env.HOME || '/Users/ethereal'
 } = {}) {
   if (platform !== 'darwin') {
     const checks = [unknown('Mac security audit is only available on macOS.')];
@@ -402,8 +539,21 @@ async function buildMacSecurityAudit({
     localOnly: true,
     privilegedMutation: false
   }));
+  const startupItems = await getStartupItemAudit(execFileCapture, ownerHome).catch(error => ({
+    id: 'startup_persistence_items',
+    category: 'Persistence',
+    label: 'LaunchAgents and LaunchDaemons',
+    severity: 'review',
+    status: 'unknown',
+    passed: false,
+    message: cleanOutput(error.message || 'Unable to inspect startup persistence folders.'),
+    ownerAction: 'Manually inspect Login Items, Background Items, LaunchAgents, and LaunchDaemons.',
+    folders: [],
+    localOnly: true,
+    privilegedMutation: false
+  }));
   const serverBind = getServerBindCheck({ serverHost, port });
-  const checks = [...commandChecks, listeningPorts, serverBind];
+  const checks = [...commandChecks, listeningPorts, startupItems, serverBind];
 
   return {
     supported: true,
@@ -411,6 +561,7 @@ async function buildMacSecurityAudit({
     summary: summarizeChecks(checks),
     checks,
     listeningPorts: listeningPorts.ports || [],
+    startupItems: startupItems.folders || [],
     safetyBoundary: {
       localOnly: true,
       readOnlyAudit: true,
@@ -434,6 +585,20 @@ function buildMacSecurityGuide() {
       'Thirty chained routers increases complexity. Prefer one clean primary router, segmented VLANs or guest networks, disabled remote admin, and clean firmware.',
       'Treat every public post, DNS change, deployment, wallet signature, and exchange order as owner-approved only.'
     ],
+    compromisedHostProtocol: [
+      'If admin rights, MDM, system extensions, kernel-level tampering, or unexplained file deletion are suspected, do not treat this Mac as clean.',
+      'Do not unlock hardware wallets, enter seed phrases, sign treasury transactions, or rotate high-value credentials from the suspect machine.',
+      'Use this machine for read-only inspection, local code work, and evidence export only until clean-room recovery is complete.',
+      'Preserve evidence before destructive cleanup: screenshots, exported proof packets, system audit output, router screenshots, and a list of suspicious processes or startup items.',
+      'Plan recovery from a clean device and clean network, not from the same possibly compromised environment.'
+    ],
+    cleanRoomRecoveryPlan: [
+      'Acquire or prepare a clean trusted device and a clean network path before rotating Apple ID, email, bank, exchange, GitHub, Cloudflare, or domain credentials.',
+      'Back up only owner-created documents, project source, exported proof packets, and verified wallet-independent artifacts. Do not migrate apps, browser profiles, extensions, Login Items, LaunchAgents, LaunchDaemons, or old system settings.',
+      'For Apple silicon, prefer a full erase/reinstall or DFU restore/revive from a clean second Mac when firmware or system-volume integrity is in doubt.',
+      'After reinstall, create a new admin password, enable FileVault, enable firewall, keep Sharing services off, apply updates, then install only required software from trusted sources.',
+      'Reconnect wallets only after the clean device, clean network, and account rotations are complete.'
+    ],
     emergencyContainment: [
       'Keep hardware wallets and recovery material offline. Do not connect them to a suspect machine for routine browsing.',
       'Disconnect unnecessary Bluetooth, AirDrop, file sharing, screen sharing, remote login, and AirPlay Receiver.',
@@ -444,6 +609,10 @@ function buildMacSecurityGuide() {
     ],
     ownerSettingsChecklist: [
       {
+        area: 'Suspected admin/kernel compromise',
+        target: 'Treat the current Mac as untrusted for secrets until clean-room recovery. Do not use it for wallet signing, bank login, or credential rotation.'
+      },
+      {
         area: 'System Settings > General > Sharing',
         target: 'Turn off Remote Login, Screen Sharing, Remote Management, File Sharing, Remote Apple Events, Internet Sharing, Bluetooth Sharing, and AirPlay Receiver unless actively needed.'
       },
@@ -453,7 +622,7 @@ function buildMacSecurityGuide() {
       },
       {
         area: 'System Settings > Privacy & Security',
-        target: 'Keep FileVault on, Gatekeeper on, Lockdown Mode considered if you need maximum Apple ecosystem hardening, and review Full Disk Access / Screen Recording permissions.'
+        target: 'Keep FileVault on, Gatekeeper on, Lockdown Mode considered if you need maximum Apple ecosystem hardening, and review Full Disk Access, Accessibility, Input Monitoring, Screen Recording, and system extensions.'
       },
       {
         area: 'System Settings > Apple ID',
@@ -475,6 +644,9 @@ function buildMacSecurityGuide() {
       'Finder file-extension change warning was set on for this user.'
     ],
     adminOnlyActions: [
+      'Confirm all admin users are expected, including hidden or setup-created accounts.',
+      'Confirm MDM/device-management enrollment is absent unless intentionally owned by you.',
+      'Review LaunchAgents, LaunchDaemons, user crontab, Login Items, Background Items, and system extensions.',
       'Disable Remote Login and Remote Apple Events if the audit cannot confirm them without admin access.',
       'Review and remove unnecessary Login Items and Background Items.',
       'Review Full Disk Access, Accessibility, Screen Recording, and Input Monitoring permissions.',
