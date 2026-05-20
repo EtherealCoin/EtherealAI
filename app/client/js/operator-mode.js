@@ -1,5 +1,6 @@
 (function () {
     const MODE_KEY = 'etherealai.operatorMode';
+    const BRAND_LOGO_SRC = '/public/brand/etherealai-logo.png';
 
     const pageConfigs = {
         '/': {
@@ -542,10 +543,13 @@
         workspace.innerHTML = `
             <div class="operator-page-label">Simple Operator Mode</div>
             <div class="operator-workspace-header">
-                <div>
-                    <p class="operator-area">${escapeHtml(config.area)}</p>
-                    <h1>${escapeHtml(config.title)}</h1>
-                    <p>${escapeHtml(config.summary)}</p>
+                <div class="operator-brand-heading">
+                    <img src="${BRAND_LOGO_SRC}" alt="EtherealAI logo" class="operator-brand-logo">
+                    <div>
+                        <p class="operator-area">${escapeHtml(config.area)}</p>
+                        <h1>${escapeHtml(config.title)}</h1>
+                        <p>${escapeHtml(config.summary)}</p>
+                    </div>
                 </div>
                 <div class="operator-workspace-actions">
                     ${actionMarkup(config.primaryAction)}
@@ -584,9 +588,12 @@
         bar.id = 'operator-mode-bar';
         bar.className = 'operator-mode-bar';
         bar.innerHTML = `
-            <div>
-                <strong id="operator-mode-label">Simple Operator Mode</strong>
-                <span>Daily CEO controls are simplified. Advanced diagnostics stay hidden until you choose them.</span>
+            <div class="operator-mode-brand">
+                <img src="${BRAND_LOGO_SRC}" alt="EtherealAI logo" class="operator-mode-logo">
+                <div>
+                    <strong id="operator-mode-label">Simple Operator Mode</strong>
+                    <span>Daily CEO controls are simplified. Advanced diagnostics stay hidden until you choose them.</span>
+                </div>
             </div>
             <div class="operator-mode-actions">
                 ${trainingDropdownMarkup('operator-mode-training-menu')}

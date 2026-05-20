@@ -39,6 +39,7 @@ patrick@etherealAI
 1. Open `/dashboard`.
    - Pass condition: Server, database, dev-server status, local model status, and memory snapshot load.
    - Pass condition: the automatic EtherealAI Day/Night theme follows system/browser preference, keeps text/forms/cards readable, uses green for safe/ready, red only for blocked/danger, amber for next actions/attention, and blue/purple for neutral brand accents.
+   - Pass condition: the EtherealAI logo appears as a restrained brand mark in the operator shell and does not clutter workflow cards or tables.
    - Pass condition: Model Roles shows coder `qwen3.6:35b-a3b` and provider `ollama`.
    - Pass condition: Local Model Benchmark is available for role default, Ollama, and MLX provider comparisons, including `Max Tokens` and `Disable Thinking` controls. MLX is expected online only when `mlx_lm.server` is running on port `8080`.
    - Pass condition: MLX Lifecycle shows status/start/stop controls, memory isolation, and `Unload Ollama Before Start`.

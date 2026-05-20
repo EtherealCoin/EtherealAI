@@ -167,6 +167,62 @@ body {
     height: 50px;
 }
 
+.ethereal-brand-lockup {
+    align-items: center;
+    display: flex;
+    gap: 10px;
+}
+
+.ethereal-brand-lockup img,
+.operator-brand-logo,
+.operator-mode-logo,
+.login-brand-mark img {
+    background: color-mix(in srgb, var(--surface) 72%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 28%, var(--border));
+    border-radius: 999px;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.16);
+    object-fit: cover;
+}
+
+.ethereal-brand-lockup img {
+    height: 42px;
+    width: 42px;
+}
+
+.operator-brand-logo {
+    height: 58px;
+    width: 58px;
+}
+
+.operator-mode-logo {
+    flex: 0 0 auto;
+    height: 38px;
+    width: 38px;
+}
+
+.operator-brand-heading,
+.operator-mode-brand {
+    align-items: center;
+    display: flex;
+    gap: 14px;
+}
+
+.operator-brand-heading {
+    align-items: flex-start;
+}
+
+.login-brand-mark {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    margin: 0 auto 14px;
+}
+
+.login-brand-mark img {
+    height: 68px;
+    width: 68px;
+}
+
 nav {
     display: flex;
     gap: 20px;

@@ -6947,6 +6947,9 @@ function checkSimpleOperatorModeUsabilityRefactor() {
   const operatorMode = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-mode.js'), 'utf8');
   const operatorNext = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-next-action.js'), 'utf8');
   const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+  const header = fs.readFileSync(path.join(projectRoot, 'components/header.html'), 'utf8');
+  const login = fs.readFileSync(path.join(projectRoot, 'app/client/login.html'), 'utf8');
+  const logoPath = path.join(projectRoot, 'app/client/public/brand/etherealai-logo.png');
   const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
   const manual = fs.readFileSync(path.join(projectRoot, 'app/client/operator-manual.html'), 'utf8');
   const mainPages = [
@@ -6971,6 +6974,9 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !operatorMode.includes('data-operator-training-toggle')
     || !operatorMode.includes('data-operator-training-choice="text"')
     || !operatorMode.includes('data-operator-training-choice="video"')
+    || !operatorMode.includes("BRAND_LOGO_SRC = '/public/brand/etherealai-logo.png'")
+    || !operatorMode.includes('operator-brand-logo')
+    || !operatorMode.includes('operator-mode-logo')
     || !operatorMode.includes('No terminal commands are required for normal Simple Mode operation.')
     || !operatorMode.includes('operator-guided-focus')
     || !operatorMode.includes('The recommended next button is highlighted on the page.')
@@ -7006,6 +7012,14 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !styles.includes('--status-info')
     || !styles.includes('.operator-next-action-panel .button-row .cta-button')
     || !styles.includes('background: var(--status-warning-bg)')
+    || !styles.includes('.ethereal-brand-lockup')
+    || !styles.includes('.operator-brand-logo')
+    || !styles.includes('.operator-mode-logo')
+    || !styles.includes('.login-brand-mark')
+    || !header.includes('/public/brand/etherealai-logo.png')
+    || !header.includes('EtherealAI logo')
+    || !login.includes('login-brand-mark')
+    || !fs.existsSync(logoPath)
     || !styles.includes('.operator-answer-panel')
     || !styles.includes('.operator-guided-workflow')
     || !styles.includes('.operator-training-menu')
