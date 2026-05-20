@@ -205,6 +205,66 @@
                 ['Add wallet metadata', 'Add public addresses only.', { label: 'Open Wallet Center', href: '/operator-control' }]
             ]
         },
+        '/operator-training': {
+            area: 'Operator Training Library',
+            title: 'Learn EtherealAI In Order',
+            summary: 'Use the built-in text and video-style training modules to operate each major tab without outside help.',
+            primaryAction: { label: 'Start Training Library', selector: '#operator-training-library-root' },
+            keepHeadings: ['Operator Training Library'],
+            readyLabel: 'Training Ready',
+            nextText: 'Start with the first lesson, then use the text or video guide for the page you are operating.',
+            cards: [
+                ['Text Guides', 'Plain-English operating instructions for every major page.'],
+                ['Video-Style Walkthroughs', 'Placeholder players, chapters, transcripts, and exact click instructions.'],
+                ['Pause And Verify', 'Each lesson tells you what to check before moving forward.'],
+                ['Safety Boundaries', 'Live trading and wallet signing stay locked unless separately approved later.']
+            ],
+            workflow: [
+                ['Start the library', 'Open the ordered training modules.', { label: 'Start Training Library', selector: '#operator-training-library-root' }],
+                ['Learn Mission Control', 'Read how to interpret status and next actions.', { label: 'Open Mission Control Lesson', href: '/operator-training#training-read-mission-control' }],
+                ['Practice paper operation', 'Use the strategy and paper bot lesson before creating automation.', { label: 'Open Paper Training', href: '/operator-training#training-build-and-paper-test-strategy' }]
+            ]
+        },
+        '/owner-proof-packet': {
+            area: 'Proof Packet',
+            title: 'Download Local Proof Before Acceptance',
+            summary: 'Review readiness, local proof surfaces, checksum, and blocked live gates before recording owner acceptance.',
+            primaryAction: { label: 'Download Proof Packet JSON', selector: '#download-owner-proof-packet' },
+            keepHeadings: ['Owner Proof Packet', 'Owner Acceptance'],
+            readyLabel: 'Proof Ready',
+            nextText: 'Download the proof packet, review the checksum and live lock, then record local acceptance only after manual review.',
+            cards: [
+                ['Readiness', 'Shows whether local MVP proof is ready.'],
+                ['Checksum', 'Confirms the local packet has a stable evidence marker.'],
+                ['Owner Acceptance', 'Records review only after you check each safety item.'],
+                ['Live Lock', 'Live trading and wallet signing remain disabled.']
+            ],
+            workflow: [
+                ['Load proof packet', 'Refresh local readiness and proof data.', { label: 'Refresh Proof Packet', selector: '#refresh-owner-proof-packet' }],
+                ['Download evidence', 'Save the local JSON proof packet.', { label: 'Download Proof Packet JSON', selector: '#download-owner-proof-packet' }],
+                ['Record acceptance', 'Complete manual review checkboxes only when ready.', { label: 'Open Acceptance Review', selector: '#owner-acceptance-form' }]
+            ]
+        },
+        '/mvp-test-pass': {
+            area: 'MVP Test Pass',
+            title: 'Confirm The Local MVP Test Pass',
+            summary: 'Review owner-facing proof, evidence manifest, paper automation smoke checks, and live-disabled safety.',
+            primaryAction: { label: 'Download Evidence Manifest JSON', selector: '#owner-evidence-download' },
+            keepHeadings: ['Owner Evidence Manifest', 'Completion Ledger'],
+            readyLabel: 'MVP Evidence Ready',
+            nextText: 'Review evidence, download the manifest if needed, then use Proof Packet for final local acceptance.',
+            cards: [
+                ['Bot Automation Smoke', 'Confirms paper automation is local and monitor-only.'],
+                ['Evidence Manifest', 'Downloads local proof rows and checksums.'],
+                ['Completion Ledger', 'Separates Local E2E complete from Live E2E locked.'],
+                ['Owner Acceptance', 'Final review happens from Proof Packet, not by enabling live mode.']
+            ],
+            workflow: [
+                ['Review smoke checks', 'Confirm paper automation is not live trading.', { label: 'Open Smoke Checks', selector: '#bot-workflow-smoke-cards' }],
+                ['Download evidence', 'Save the local evidence manifest.', { label: 'Download Evidence Manifest JSON', selector: '#owner-evidence-download' }],
+                ['Open proof packet', 'Record acceptance only after owner review.', { label: 'Open Proof Packet', href: '/owner-proof-packet' }]
+            ]
+        },
         '/server-route-inventory': {
             area: 'Advanced Developer Mode',
             title: 'Advanced Developer Tools',
@@ -344,6 +404,18 @@
         return `<button type="button" data-operator-click="${escapeHtml(action.selector || '')}">${escapeHtml(action.label || 'Open')}</button>`;
     }
 
+    function trainingDropdownMarkup(extraClass = '') {
+        return `
+            <div class="operator-training-menu ${escapeHtml(extraClass)}">
+                <button type="button" class="operator-secondary-action" data-operator-training-toggle aria-expanded="false">Show me how</button>
+                <div class="operator-training-menu-list" hidden>
+                    <button type="button" data-operator-training-choice="text">Show me in text</button>
+                    <button type="button" data-operator-training-choice="video">Show me in video</button>
+                </div>
+            </div>
+        `;
+    }
+
     function renderWorkflow(steps = []) {
         if (!steps.length) {
             return '';
@@ -478,7 +550,7 @@
                 </div>
                 <div class="operator-workspace-actions">
                     ${actionMarkup(config.primaryAction)}
-                    <button type="button" class="operator-secondary-action" data-operator-tutorial>Show me how</button>
+                    ${trainingDropdownMarkup('operator-workspace-training-menu')}
                     <button type="button" class="operator-secondary-action" data-operator-mode="advanced">Advanced Developer Mode</button>
                 </div>
             </div>
@@ -492,6 +564,7 @@
             </div>
             <div class="operator-manual-link-row">
                 <a href="/operator-manual">Start Here / Operator Manual</a>
+                <a href="/operator-training">Operator Training Library</a>
                 <span>No terminal commands are required for normal Simple Mode operation.</span>
             </div>
         `;
@@ -517,7 +590,7 @@
                 <span>Daily CEO controls are simplified. Advanced diagnostics stay hidden until you choose them.</span>
             </div>
             <div class="operator-mode-actions">
-                <button type="button" data-operator-tutorial>Show me how</button>
+                ${trainingDropdownMarkup('operator-mode-training-menu')}
                 <button type="button" data-operator-mode="simple">Simple Mode</button>
                 <button type="button" data-operator-mode="advanced">Advanced Mode</button>
             </div>
@@ -637,6 +710,34 @@
                 return;
             }
 
+            const trainingToggle = event.target.closest('[data-operator-training-toggle]');
+            if (trainingToggle) {
+                const menu = trainingToggle.closest('.operator-training-menu');
+                const list = menu?.querySelector('.operator-training-menu-list');
+                const shouldOpen = Boolean(list?.hidden);
+                document.querySelectorAll('.operator-training-menu-list').forEach(item => {
+                    item.hidden = true;
+                    item.closest('.operator-training-menu')?.querySelector('[data-operator-training-toggle]')?.setAttribute('aria-expanded', 'false');
+                });
+                if (list) {
+                    list.hidden = !shouldOpen;
+                    trainingToggle.setAttribute('aria-expanded', String(shouldOpen));
+                }
+                return;
+            }
+
+            const trainingChoice = event.target.closest('[data-operator-training-choice]');
+            if (trainingChoice) {
+                trainingChoice.closest('.operator-training-menu-list')?.setAttribute('hidden', '');
+                trainingChoice.closest('.operator-training-menu')?.querySelector('[data-operator-training-toggle]')?.setAttribute('aria-expanded', 'false');
+                if (window.EtherealTraining?.open) {
+                    window.EtherealTraining.open(trainingChoice.dataset.operatorTrainingChoice, pagePath());
+                } else {
+                    showTutorial();
+                }
+                return;
+            }
+
             if (event.target.closest('[data-operator-tutorial]')) {
                 showTutorial();
                 return;
@@ -650,6 +751,14 @@
             const clickButton = event.target.closest('[data-operator-click]');
             if (clickButton) {
                 runAction(clickButton.dataset.operatorClick);
+                return;
+            }
+
+            if (!event.target.closest('.operator-training-menu')) {
+                document.querySelectorAll('.operator-training-menu-list').forEach(item => {
+                    item.hidden = true;
+                    item.closest('.operator-training-menu')?.querySelector('[data-operator-training-toggle]')?.setAttribute('aria-expanded', 'false');
+                });
             }
         });
     }

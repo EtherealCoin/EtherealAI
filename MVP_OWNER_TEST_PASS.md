@@ -1,6 +1,6 @@
 # EtherealAI MVP Owner Test Pass
 
-Last updated: 2026-05-18
+Last updated: 2026-05-20
 
 ## Current Scope
 
@@ -29,6 +29,12 @@ patrick@etherealAI
 ```
 
 ## Primary Local Test Sequence
+
+1. Open `/operator-training`.
+   - Pass condition: Operator Training Library loads in Simple Operator Mode.
+   - Pass condition: the library contains ordered beginner lessons for Start EtherealAI, Read Mission Control, Complete Setup Wizard, Add Wallet Metadata Safely, Review Security, Use Proof Packet, Confirm MVP Test Pass, Review Route Inventory, Use Creator Agent, Build and Paper Test Strategy, Use Solidity Lab, and Use Social Ops.
+   - Pass condition: each lesson has `Show me in text`, `Show me in video`, `Start walkthrough`, `Replay this step`, a placeholder video player, transcript, exact click instructions, and pause-and-verify moments.
+   - Pass condition: each lesson explains that live trading and wallet signing stay locked unless a separate future owner approval process exists.
 
 1. Open `/dashboard`.
    - Pass condition: Server, database, dev-server status, local model status, and memory snapshot load.

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EtherealAI Operator Training Library</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/dashboard">Mission Control</a>
+        <a href="/owner-setup">Setup Wizard</a>
+        <a href="/operator-control">Wallet & Funding</a>
+        <a href="/security-lockdown">Security</a>
+        <a href="/owner-proof-packet">Proof Packet</a>
+        <a href="/mvp-test-pass">MVP Test Pass</a>
+        <a href="/server-route-inventory">Route Inventory</a>
+        <a href="/creator">Creator Agent</a>
+        <a href="/strategy-lab">Strategy / Paper / Bots</a>
+        <a href="/solidity-lab">Solidity Lab</a>
+        <a href="/social-ops">Social Ops</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main class="container">
+        <section class="auth-proof-banner">
+            <strong>Operator Training Library</strong>
+            <span>Text guides · video-style walkthroughs · transcripts · exact click instructions · live trading disabled</span>
+            <a href="/operator-manual">Operator Manual</a>
+        </section>
+
+        <div id="operator-training-library-root">Loading Operator Training Library...</div>
+    </main>
+
+    <script src="/js/operator-next-action.js"></script>
+    <script src="/js/operator-training.js"></script>
+    <script src="/js/operator-mode.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            window.EtherealTraining?.renderLibrary('operator-training-library-root');
+        });
+    </script>
+</body>
+</html>

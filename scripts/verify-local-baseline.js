@@ -109,6 +109,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/market-refresh-schedules.js',
     'app/server/src/lib/dev-server.js',
     'app/client/js/operator-next-action.js',
+    'app/client/js/operator-training.js',
     'app/client/js/operator-mode.js',
     'app/server/src/lib/artifact-rows.js',
     'app/server/src/lib/creator-records.js',
@@ -6783,7 +6784,8 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     'app/client/solidity-lab.html',
     'app/client/social-ops.html',
     'app/client/creator.html',
-    'app/client/operator-manual.html'
+    'app/client/operator-manual.html',
+    'app/client/operator-training.html'
   ];
 
   if (
@@ -6791,10 +6793,15 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !operatorMode.includes('Guided Workflow')
     || !operatorMode.includes('data-operator-recommended-action')
     || !operatorMode.includes('Start Here / Operator Manual')
+    || !operatorMode.includes('Operator Training Library')
+    || !operatorMode.includes('data-operator-training-toggle')
+    || !operatorMode.includes('data-operator-training-choice="text"')
+    || !operatorMode.includes('data-operator-training-choice="video"')
     || !operatorMode.includes('No terminal commands are required for normal Simple Mode operation.')
     || !operatorMode.includes('operator-guided-focus')
     || !operatorMode.includes('The recommended next button is highlighted on the page.')
     || !operatorMode.includes("'/operator-manual'")
+    || !operatorMode.includes("'/operator-training'")
     || !operatorMode.includes('Create strategy')
     || !operatorMode.includes('Run backtest')
     || !operatorMode.includes('Create paper plan')
@@ -6814,9 +6821,11 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !operatorNext.includes('Local E2E Complete')
     || !styles.includes('.operator-answer-panel')
     || !styles.includes('.operator-guided-workflow')
+    || !styles.includes('.operator-training-menu')
     || !styles.includes('.operator-simple-mode .operator-simple-keep .model-output:not(.owner-action-output)')
     || !styles.includes('.operator-simple-mode .operator-guided-focus')
     || !pages.includes("app.get('/operator-manual', requirePageAuth")
+    || !pages.includes("app.get('/operator-training', requirePageAuth")
     || !manual.includes('Start Here Walkthrough')
     || !manual.includes('Paper trading does not require exchange APIs, live trading, wallet signing, seed phrases, private keys, or terminal commands.')
     || !manual.includes('Optional is not failed')
@@ -6830,6 +6839,7 @@ function checkSimpleOperatorModeUsabilityRefactor() {
 
     if (
       !html.includes('/js/operator-next-action.js')
+      || !html.includes('/js/operator-training.js')
       || !html.includes('/js/operator-mode.js')
     ) {
       fail(`${relativePath} is missing the global beginner operator shell scripts`);
@@ -6837,6 +6847,95 @@ function checkSimpleOperatorModeUsabilityRefactor() {
   }
 
   pass('simple operator mode beginner usability refactor');
+}
+
+function checkOperatorTrainingSystem() {
+  const training = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-training.js'), 'utf8');
+  const operatorMode = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-mode.js'), 'utf8');
+  const trainingPage = fs.readFileSync(path.join(projectRoot, 'app/client/operator-training.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+  const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
+  const requiredModules = [
+    'Start EtherealAI',
+    'Read Mission Control',
+    'Complete Setup Wizard',
+    'Add Wallet Metadata Safely',
+    'Review Security',
+    'Use Proof Packet',
+    'Confirm MVP Test Pass',
+    'Review Route Inventory',
+    'Use Creator Agent',
+    'Build and Paper Test Strategy',
+    'Use Solidity Lab',
+    'Use Social Ops'
+  ];
+  const requiredPages = [
+    'app/client/index.html',
+    'app/client/dashboard.html',
+    'app/client/owner-setup.html',
+    'app/client/operator-control.html',
+    'app/client/security-lockdown.html',
+    'app/client/owner-proof-packet.html',
+    'app/client/mvp-test-pass.html',
+    'app/client/server-route-inventory.html',
+    'app/client/creator.html',
+    'app/client/strategy-lab.html',
+    'app/client/solidity-lab.html',
+    'app/client/social-ops.html',
+    'app/client/operator-manual.html',
+    'app/client/operator-training.html'
+  ];
+
+  for (const title of requiredModules) {
+    if (!training.includes(title)) {
+      fail(`operator training catalog is missing ${title}`);
+    }
+  }
+
+  if (
+    !training.includes('Show me in text')
+    || !training.includes('Show me in video')
+    || !training.includes('Start walkthrough')
+    || !training.includes('Replay this step')
+    || !training.includes('Pause here and verify')
+    || !training.includes('Placeholder Video Player')
+    || !training.includes('Transcript')
+    || !training.includes('Video asset plan')
+    || !training.includes('scripts/render-training-video.swift')
+    || !training.includes('Live trading stays locked')
+    || !training.includes('Wallet signing stays locked')
+    || !training.includes('Do not enter seed phrases')
+    || !training.includes('Optional API keys')
+    || !training.includes('renderLibrary')
+    || !training.includes('window.EtherealTraining')
+    || !operatorMode.includes('data-operator-training-toggle')
+    || !operatorMode.includes('data-operator-training-choice="text"')
+    || !operatorMode.includes('data-operator-training-choice="video"')
+    || !operatorMode.includes('window.EtherealTraining.open')
+    || !operatorMode.includes('Operator Training Library')
+    || !trainingPage.includes('operator-training-library-root')
+    || !trainingPage.includes('Operator Training Library')
+    || !trainingPage.includes('/js/operator-training.js')
+    || !trainingPage.includes('window.EtherealTraining?.renderLibrary')
+    || !pages.includes("app.get('/operator-training', requirePageAuth")
+    || !styles.includes('.operator-training-overlay')
+    || !styles.includes('.operator-training-menu-list')
+    || !styles.includes('.training-video-player')
+    || !styles.includes('.training-transcript')
+    || !styles.includes('.training-library-grid')
+  ) {
+    fail('operator text/video training system is missing catalog, dropdown, library, video placeholder, transcript, or route wiring');
+  }
+
+  for (const relativePath of requiredPages) {
+    const html = fs.readFileSync(path.join(projectRoot, relativePath), 'utf8');
+
+    if (!html.includes('/js/operator-training.js') || !html.includes('/js/operator-mode.js')) {
+      fail(`${relativePath} is missing operator training scripts`);
+    }
+  }
+
+  pass('operator text/video training library');
 }
 
 function checkAuthenticatedProofBanners() {
@@ -8663,6 +8762,10 @@ async function runServerApiChecks() {
     {
       path: '/server-route-inventory',
       requiredText: ['MVP 100% · Local E2E 100%', 'Live execution disabled', 'Proof packet', 'Owner evidence']
+    },
+    {
+      path: '/operator-training',
+      requiredText: ['Operator Training Library', 'Text guides', 'video-style walkthroughs', 'exact click instructions']
     }
   ];
 
@@ -9686,6 +9789,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/security-lockdown' && route.file === 'app/server/src/routes/pages.js')
     || !inventory.routes.some(route => route.path === '/owner-setup' && route.file === 'app/server/src/routes/pages.js')
     || !inventory.routes.some(route => route.path === '/operator-manual' && route.file === 'app/server/src/routes/pages.js')
+    || !inventory.routes.some(route => route.path === '/operator-training' && route.file === 'app/server/src/routes/pages.js')
     || !inventory.routes.some(route => route.path === '/owner-proof-packet' && route.file === 'app/server/src/routes/pages.js')
   ) {
     fail('server route inventory did not expose expected modularization inventory data');
@@ -10089,6 +10193,7 @@ async function main() {
   checkInlineScripts('app/client/mvp-test-pass.html');
   checkInlineScripts('app/client/server-route-inventory.html');
   checkInlineScripts('app/client/operator-manual.html');
+  checkInlineScripts('app/client/operator-training.html');
   checkStrategyLabSafetyDossierExportUi();
   checkStrategyLabRiskProfileSetupUi();
   checkStrategyLabBotOperatorWizardUi();
@@ -10100,6 +10205,7 @@ async function main() {
   checkOwnerProofPacketUi();
   checkHomeLocalProofUi();
   checkSimpleOperatorModeUsabilityRefactor();
+  checkOperatorTrainingSystem();
   checkAuthenticatedProofBanners();
   checkRouteInventoryOwnerProofUi();
   checkLocalOnlySurfaceCues();

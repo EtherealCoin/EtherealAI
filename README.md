@@ -22,6 +22,7 @@ The current project is intentionally designed for owner-controlled local operati
 
 - `/dashboard` - Mission Control for system health, readiness progress, live-lock status, wallets, security, active bots, blocked gates, next action, model roles, MLX lifecycle, multi-agent coordination, and system memory
 - `/operator-manual` - Start Here / Operator Manual for beginner operation, safety rules, wallet handling, paper trading, and page-by-page usage without terminal commands
+- `/operator-training` - Operator Training Library with ordered text guides, video-style walkthrough placeholders, chapters, transcripts, exact click instructions, and pause-and-verify moments for every major operator tab
 - `/owner-setup` - Beginner Owner Setup for reaching `Local E2E Complete` without live trading, wallet signing, or external provider keys; optional `.env`, exchange, GitHub, Cloudflare, social, and chain-provider integrations stay in Future Integrations / Advanced Mode
 - `/operator-control` - Wallet & Funding Center for wallet metadata, owner key-control guidance, permissions, project assignment, and revoke workflows
 - `/security-lockdown` - Security Lockdown Center for read-only Mac/network security audit, local attack-surface review, and owner hardening checklist
@@ -37,7 +38,7 @@ Every protected operator page now loads the global `What do I do next?` assistan
 
 ## Operator Experience
 
-EtherealAI now defaults to **Simple Operator Mode**. This mode shows large readable task cards, one primary action, plain-English status, and a `Show me how` walkthrough on each main page. Raw IDs, logs, JSON, archived records, debug tables, route diagnostics, and technical filters remain available through **Advanced Developer Mode**, but they are hidden during normal CEO/operator use.
+EtherealAI now defaults to **Simple Operator Mode**. This mode shows large readable task cards, one primary action, plain-English status, and a `Show me how` dropdown on each main page with `Show me in text` and `Show me in video`. Raw IDs, logs, JSON, archived records, debug tables, route diagnostics, and technical filters remain available through **Advanced Developer Mode**, but they are hidden during normal CEO/operator use.
 
 Simple Operator Mode now renders the same beginner structure across Mission Control, Setup Wizard, Strategy / Paper / Bots, Wallet & Funding, Security, Solidity Lab, Social Ops, Creator Agent, and the Operator Manual:
 
@@ -50,6 +51,8 @@ Simple Operator Mode now renders the same beginner structure across Mission Cont
 Legacy forms, raw tables, archived records, filters, JSON output, route diagnostics, and internal evidence stay hidden until Advanced Developer Mode is intentionally opened. When a Simple Mode workflow step needs an existing form, EtherealAI reveals only that specific panel as a guided focus instead of exposing the whole developer dashboard.
 
 The Setup Wizard now reports `Local E2E Complete` when the local server is healthy, a paper schedule or completed paper run exists, an active paper risk profile exists, public wallet metadata exists, live trading is disabled, and wallet signing is disabled. Live E2E is shown separately as locked for future owner-approved security work. Polygon, Base, Ethereum, BNB, Avalanche, Solana, and future chains are selectable per project, token, strategy, or wallet; no blockchain is the system default. Chain-provider, exchange, GitHub, Cloudflare, and social API credentials are optional future integrations in Simple Mode. Public wallet addresses are added directly through the UI with `Add Public Wallet`; the `.env` file is only for optional API keys and later integrations.
+
+The Operator Training Library covers Home, Setup Wizard, Wallet & Funding, Security, Proof Packet, MVP Test Pass, Route Inventory, Creator Agent, Strategy / Paper / Bots, Solidity Lab, and Social Ops. Each module explains page purpose, buttons, fields, what not to enter, operating order, safe defaults, plain-English errors, success state, and the live-trading/wallet-signing safety boundary. Video mode currently provides in-app placeholder players, asset plans for later rendered videos, chapter narration, exact click instructions, replay controls, and transcripts.
 
 ## Run Locally
 

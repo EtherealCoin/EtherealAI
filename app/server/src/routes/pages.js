@@ -29,6 +29,10 @@ function registerPageRoutes(app, { clientDir }) {
     res.sendFile(path.join(clientDir, 'operator-manual.html'));
   });
 
+  app.get('/operator-training', requirePageAuth, (req, res) => {
+    res.sendFile(path.join(clientDir, 'operator-training.html'));
+  });
+
   app.get('/operator-control', requirePageAuth, (req, res) => {
     res.sendFile(path.join(clientDir, 'operator-control.html'));
   });
