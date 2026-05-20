@@ -39,6 +39,7 @@ patrick@etherealAI
 1. Open `/dashboard`.
    - Pass condition: Server, database, dev-server status, local model status, and memory snapshot load.
    - Pass condition: the automatic EtherealAI Day/Night theme follows system/browser preference, keeps text/forms/cards readable, uses green for safe/ready, red only for blocked/danger, amber for next actions/attention, and blue/purple for neutral brand accents.
+   - Pass condition: in night mode, after saving/running a strategy, Safe Paper Simulation completed cards, P/L, trades, spread/costs, strategy health, latest decision, warnings, inputs, and textareas remain readable with light text on dark or tinted surfaces.
    - Pass condition: the EtherealAI logo appears as a restrained brand mark in the operator shell and does not clutter workflow cards or tables.
    - Pass condition: Model Roles shows coder `qwen3.6:35b-a3b` and provider `ollama`.
    - Pass condition: Local Model Benchmark is available for role default, Ollama, and MLX provider comparisons, including `Max Tokens` and `Disable Thinking` controls. MLX is expected online only when `mlx_lm.server` is running on port `8080`.

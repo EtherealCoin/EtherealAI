@@ -580,10 +580,580 @@ p {
 
 footer {
     width: 100%;
-    background-color: #ffffff;
+    background-color: var(--surface);
     box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
+    color: var(--text-primary);
     padding: 20px 0;
     text-align: center;
+}
+
+/* Safe Paper night contrast repair.
+   This high-specificity layer uses semantic colors so legacy page rules with
+   hard-coded light backgrounds cannot override the brand theme. */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="day"]) {
+        --background: #09030f;
+        --surface: #15091f;
+        --surface-strong: #1d0f2d;
+        --surface-muted: #211331;
+        --surface-tint: #251538;
+        --text-primary: #fff9ff;
+        --text-secondary: #e8dff1;
+        --text-muted: #c6b8d4;
+        --border: #4b3564;
+        --border-strong: #7651a3;
+        --status-success-bg: rgba(22, 163, 74, 0.26);
+        --status-success-text: #dcfce7;
+        --status-warning-bg: rgba(245, 158, 11, 0.24);
+        --status-warning-text: #fef3c7;
+        --status-danger-bg: rgba(220, 38, 38, 0.24);
+        --status-danger-text: #fee2e2;
+        --status-info-bg: rgba(37, 99, 235, 0.24);
+        --status-info-text: #dbeafe;
+        --input-background: #100719;
+        --input-text: #fff9ff;
+        --code-background: #06020a;
+        --code-text: #fff9ff;
+    }
+}
+
+:root[data-theme="night"] {
+    --background: #09030f;
+    --surface: #15091f;
+    --surface-strong: #1d0f2d;
+    --surface-muted: #211331;
+    --surface-tint: #251538;
+    --text-primary: #fff9ff;
+    --text-secondary: #e8dff1;
+    --text-muted: #c6b8d4;
+    --border: #4b3564;
+    --border-strong: #7651a3;
+    --status-success-bg: rgba(22, 163, 74, 0.26);
+    --status-success-text: #dcfce7;
+    --status-warning-bg: rgba(245, 158, 11, 0.24);
+    --status-warning-text: #fef3c7;
+    --status-danger-bg: rgba(220, 38, 38, 0.24);
+    --status-danger-text: #fee2e2;
+    --status-info-bg: rgba(37, 99, 235, 0.24);
+    --status-info-text: #dbeafe;
+    --input-background: #100719;
+    --input-text: #fff9ff;
+    --code-background: #06020a;
+    --code-text: #fff9ff;
+}
+
+body,
+body.operator-simple-mode,
+.simple-operator-workspace,
+.mission-hero,
+.operator-dashboard,
+.operator-guided-workflow,
+.operator-workflow-step,
+.operator-manual-link-row,
+.model-panel,
+.task-card,
+.status-card,
+.role-card,
+.next-actions,
+.operator-answer-panel article,
+.operator-status-tile,
+.operator-task-card,
+.operator-step-list article,
+.wallet-card,
+.owner-progress-card,
+.owner-gate-card,
+.owner-file-status,
+.owner-detected-wallet,
+.owner-file-summary,
+.risk-profile-current-status,
+.owner-proof-surfaces,
+.owner-proof-surface-list article,
+.operator-wizard,
+.arbitrage-builder,
+.inline-tool-panel,
+.timeline-item,
+.workspace-row,
+.checklist-item,
+.command-template-row,
+.artifact-stat,
+.operator-training-card,
+.training-library-hero,
+.training-library-card,
+.training-pair-list article,
+.training-video-current,
+.training-asset-plan,
+.training-transcript,
+.safe-paper-result-card,
+.safe-paper-table-card,
+.safe-paper-warning-card,
+.operator-next-action-panel,
+.feature-card,
+.pricing-card,
+.testimonial-card,
+.operator-tutorial-card {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+.responsive-header,
+footer,
+.operator-simple-mode nav,
+.auth-proof-banner,
+.inline-status,
+.operator-next-action-grid article,
+.quick-nav a,
+.home-workflow-card,
+.ceo-workflow-card,
+.artifact-stat,
+.operator-progress-checklist article {
+    background: var(--surface-muted) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+label,
+dt,
+strong,
+.safe-paper-hero strong,
+.safe-paper-result-card strong,
+.safe-paper-warning-card strong,
+.safe-paper-table-card h3,
+.operator-progress-checklist strong,
+.operator-status-tile strong,
+.operator-task-card strong,
+.operator-answer-panel strong,
+.operator-workflow-step strong,
+.status-card strong,
+.task-card strong,
+.model-panel strong,
+.training-library-card strong,
+.operator-tutorial-card h2 {
+    color: var(--text-primary) !important;
+}
+
+p,
+li,
+dd,
+small,
+em,
+cite,
+.workflow-helper-text,
+.inline-status,
+.mission-hero p,
+.ceo-workflow-card span,
+.operator-workspace-header p,
+.operator-answer-panel span,
+.operator-workflow-step span,
+.operator-guided-workflow p,
+.operator-status-tile span,
+.operator-status-tile small,
+.operator-task-card span,
+.operator-step-list span,
+.operator-step-list em,
+.wallet-card span,
+.timeline-item span,
+.timeline-item p,
+.timeline-item code,
+.command-template-row code,
+.command-template-row span,
+.command-template-row em,
+.workspace-row code,
+.risk-check-list span,
+.risk-profile-explainer,
+.operator-wizard-header span,
+.operator-step p,
+.operator-step-note,
+.operator-count-change,
+.artifact-stat span,
+.artifact-pager span,
+.owner-proof-surfaces > span,
+.owner-proof-surface-list span,
+.owner-proof-surface-list p,
+.operator-training-card-header p,
+.training-library-hero p,
+.training-library-card p,
+.training-text-module p,
+.training-text-module li,
+.training-pair-list span,
+.training-video-current p,
+.training-chapter-grid span,
+.training-asset-plan span,
+.safe-paper-hero small,
+.safe-paper-result-card small,
+.safe-paper-table-card li,
+.operator-progress-checklist span,
+.operator-progress-checklist small,
+.safe-paper-warning-card li,
+.safe-paper-warning-card p,
+.operator-tutorial-card p,
+.operator-tutorial-script {
+    color: var(--text-secondary) !important;
+}
+
+a,
+.footer-content a,
+.auth-proof-banner a,
+.timeline-item a,
+.operator-page-label,
+.operator-area,
+.operator-training-card-header span,
+.training-library-hero span,
+.training-library-card > div:first-child span,
+.safe-paper-hero span,
+.safe-paper-result-card span,
+.safe-paper-table-card h3 {
+    color: var(--brand-blue) !important;
+}
+
+input,
+select,
+textarea,
+option,
+.model-test-form select,
+.model-test-form input,
+.model-test-form textarea,
+.compact-form input,
+.compact-form select,
+.compact-form textarea,
+.artifact-controls select,
+.artifact-controls input,
+.operator-step select,
+.owner-file-picker input[type="file"],
+.checklist-item select,
+.arbitrage-builder input,
+.arbitrage-builder select,
+.arbitrage-builder textarea {
+    background: var(--input-background) !important;
+    border-color: var(--border) !important;
+    color: var(--input-text) !important;
+    caret-color: var(--input-text);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted) !important;
+    opacity: 1;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--brand-blue) !important;
+    box-shadow: 0 0 0 3px var(--focus-ring) !important;
+    outline: none;
+}
+
+button,
+.cta-button,
+.secondary-action,
+.operator-primary-action,
+.operator-secondary-action,
+nav a,
+.quick-nav a,
+.operator-simple-mode nav a,
+.artifact-pager button,
+.task-card button,
+.operator-mode-actions button,
+.training-mode-tabs button,
+.training-library-actions button,
+.training-library-actions a,
+.training-video-controls a,
+.training-chapter-grid button,
+.operator-training-menu-list button,
+.operator-next-action-header button,
+.operator-next-action-panel button {
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+.cta-button,
+.button-row button,
+.compact-form button,
+.artifact-controls button,
+.control-grid article > button,
+.model-panel > button,
+.model-test-form button,
+.command-template-row button,
+.key-template-grid button,
+.operator-step-actions button,
+.operator-wizard-header button,
+.operator-primary-action,
+.operator-workflow-step button,
+.operator-workflow-step a,
+.operator-manual-link-row a,
+.operator-training-card-header button,
+.training-mode-tabs .training-mode-active,
+.training-library-actions button:first-child {
+    background: var(--button-primary) !important;
+    border: 0 !important;
+    color: #ffffff !important;
+}
+
+.safe-paper-hero,
+.core-setup-banner,
+.owner-action-output,
+.operator-check-pass,
+.operator-step-ready,
+.risk-check-pass,
+.owner-gate-pass,
+.security-status-pass,
+.safe-paper-status-card,
+.status-success,
+.training-chapter-grid .training-chapter-active {
+    background: var(--status-success-bg) !important;
+    border-color: color-mix(in srgb, var(--status-success) 55%, var(--border)) !important;
+    color: var(--status-success-text) !important;
+}
+
+.safe-paper-hero *,
+.core-setup-banner *,
+.owner-action-output *,
+.operator-check-pass *,
+.operator-step-ready *,
+.risk-check-pass *,
+.owner-gate-pass *,
+.security-status-pass *,
+.safe-paper-status-card *,
+.status-success *,
+.training-chapter-grid .training-chapter-active * {
+    color: var(--status-success-text) !important;
+}
+
+.safe-paper-hero button,
+.owner-primary-actions button:first-child,
+.training-video-controls button,
+.training-library-hero a {
+    background: var(--button-success) !important;
+    color: #ffffff !important;
+}
+
+.core-setup-banner-review,
+.status-warning,
+.security-status-review,
+.security-status-unknown,
+.operator-next-action-panel .button-row .cta-button {
+    background: var(--status-warning-bg) !important;
+    border-color: color-mix(in srgb, var(--status-warning) 55%, var(--border)) !important;
+    color: var(--status-warning-text) !important;
+}
+
+.core-setup-banner-review *,
+.status-warning *,
+.security-status-review *,
+.security-status-unknown * {
+    color: var(--status-warning-text) !important;
+}
+
+.safe-paper-warning-card,
+.status-danger,
+.operator-check-blocked,
+.operator-step-blocked,
+.risk-check-blocked,
+.owner-gate-blocked,
+.security-status-fail {
+    background: var(--status-danger-bg) !important;
+    border-color: color-mix(in srgb, var(--status-danger) 55%, var(--border)) !important;
+    color: var(--status-danger-text) !important;
+}
+
+.safe-paper-warning-card *,
+.status-danger *,
+.operator-check-blocked *,
+.operator-step-blocked *,
+.risk-check-blocked *,
+.owner-gate-blocked *,
+.security-status-fail * {
+    color: var(--status-danger-text) !important;
+}
+
+.safe-paper-warning-card button {
+    background: var(--button-danger) !important;
+    color: #ffffff !important;
+}
+
+.model-output,
+.owner-gate-card pre,
+.training-video-player,
+.operator-tutorial-script,
+pre,
+code {
+    background: var(--code-background) !important;
+    border-color: var(--border-strong) !important;
+    color: var(--code-text) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="day"]) .safe-paper-result-card,
+    :root:not([data-theme="day"]) .safe-paper-table-card,
+    :root:not([data-theme="day"]) .model-panel,
+    :root:not([data-theme="day"]) .task-card,
+    :root:not([data-theme="day"]) .operator-dashboard,
+    :root:not([data-theme="day"]) .simple-operator-workspace {
+        background: var(--surface-strong) !important;
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38) !important;
+    }
+
+    :root:not([data-theme="day"]) .operator-progress-checklist article,
+    :root:not([data-theme="day"]) .operator-status-tile,
+    :root:not([data-theme="day"]) .safe-paper-table-card {
+        background: var(--surface-muted) !important;
+    }
+}
+
+:root[data-theme="night"] .safe-paper-result-card,
+:root[data-theme="night"] .safe-paper-table-card,
+:root[data-theme="night"] .model-panel,
+:root[data-theme="night"] .task-card,
+:root[data-theme="night"] .operator-dashboard,
+:root[data-theme="night"] .simple-operator-workspace {
+    background: var(--surface-strong) !important;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38) !important;
+}
+
+:root[data-theme="night"] .operator-progress-checklist article,
+:root[data-theme="night"] .operator-status-tile,
+:root[data-theme="night"] .safe-paper-table-card {
+    background: var(--surface-muted) !important;
+}
+
+.safe-paper-hero,
+.safe-paper-status-card,
+.operator-progress-checklist article.operator-check-pass,
+.operator-check-pass,
+.operator-step-ready,
+.risk-check-pass,
+.owner-gate-pass,
+.security-status-pass,
+.status-success {
+    background: var(--status-success-bg) !important;
+    border-color: color-mix(in srgb, var(--status-success) 58%, var(--border)) !important;
+    color: var(--status-success-text) !important;
+}
+
+.safe-paper-hero span,
+.safe-paper-hero strong,
+.safe-paper-hero small,
+.safe-paper-status-card span,
+.safe-paper-status-card strong,
+.safe-paper-status-card small,
+.safe-paper-status-card p,
+.operator-progress-checklist article.operator-check-pass span,
+.operator-progress-checklist article.operator-check-pass strong,
+.operator-progress-checklist article.operator-check-pass small,
+.operator-check-pass span,
+.operator-check-pass strong,
+.operator-check-pass small,
+.operator-step-ready *,
+.risk-check-pass *,
+.owner-gate-pass *,
+.security-status-pass *,
+.status-success * {
+    color: var(--status-success-text) !important;
+}
+
+.safe-paper-warning-card,
+.operator-progress-checklist article.operator-check-blocked,
+.operator-check-blocked,
+.operator-step-blocked,
+.risk-check-blocked,
+.owner-gate-blocked,
+.security-status-fail,
+.status-danger {
+    background: var(--status-danger-bg) !important;
+    border-color: color-mix(in srgb, var(--status-danger) 58%, var(--border)) !important;
+    color: var(--status-danger-text) !important;
+}
+
+.safe-paper-warning-card span,
+.safe-paper-warning-card strong,
+.safe-paper-warning-card small,
+.safe-paper-warning-card p,
+.safe-paper-warning-card li,
+.operator-progress-checklist article.operator-check-blocked span,
+.operator-progress-checklist article.operator-check-blocked strong,
+.operator-progress-checklist article.operator-check-blocked small,
+.operator-check-blocked span,
+.operator-check-blocked strong,
+.operator-check-blocked small,
+.operator-step-blocked *,
+.risk-check-blocked *,
+.owner-gate-blocked *,
+.security-status-fail *,
+.status-danger * {
+    color: var(--status-danger-text) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="day"]) .safe-paper-status-card,
+    :root:not([data-theme="day"]) .operator-progress-checklist article.operator-check-pass,
+    :root:not([data-theme="day"]) .operator-check-pass,
+    :root:not([data-theme="day"]) .status-success {
+        background: var(--status-success-bg) !important;
+        border-color: color-mix(in srgb, var(--status-success) 62%, var(--border)) !important;
+        color: var(--status-success-text) !important;
+    }
+
+    :root:not([data-theme="day"]) .safe-paper-status-card *,
+    :root:not([data-theme="day"]) .operator-progress-checklist article.operator-check-pass *,
+    :root:not([data-theme="day"]) .operator-check-pass *,
+    :root:not([data-theme="day"]) .status-success * {
+        color: var(--status-success-text) !important;
+    }
+
+    :root:not([data-theme="day"]) .safe-paper-warning-card,
+    :root:not([data-theme="day"]) .operator-progress-checklist article.operator-check-blocked,
+    :root:not([data-theme="day"]) .operator-check-blocked,
+    :root:not([data-theme="day"]) .status-danger {
+        background: var(--status-danger-bg) !important;
+        border-color: color-mix(in srgb, var(--status-danger) 62%, var(--border)) !important;
+        color: var(--status-danger-text) !important;
+    }
+
+    :root:not([data-theme="day"]) .safe-paper-warning-card *,
+    :root:not([data-theme="day"]) .operator-progress-checklist article.operator-check-blocked *,
+    :root:not([data-theme="day"]) .operator-check-blocked *,
+    :root:not([data-theme="day"]) .status-danger * {
+        color: var(--status-danger-text) !important;
+    }
+}
+
+:root[data-theme="night"] .safe-paper-status-card,
+:root[data-theme="night"] .operator-progress-checklist article.operator-check-pass,
+:root[data-theme="night"] .operator-check-pass,
+:root[data-theme="night"] .status-success {
+    background: var(--status-success-bg) !important;
+    border-color: color-mix(in srgb, var(--status-success) 62%, var(--border)) !important;
+    color: var(--status-success-text) !important;
+}
+
+:root[data-theme="night"] .safe-paper-status-card *,
+:root[data-theme="night"] .operator-progress-checklist article.operator-check-pass *,
+:root[data-theme="night"] .operator-check-pass *,
+:root[data-theme="night"] .status-success * {
+    color: var(--status-success-text) !important;
+}
+
+:root[data-theme="night"] .safe-paper-warning-card,
+:root[data-theme="night"] .operator-progress-checklist article.operator-check-blocked,
+:root[data-theme="night"] .operator-check-blocked,
+:root[data-theme="night"] .status-danger {
+    background: var(--status-danger-bg) !important;
+    border-color: color-mix(in srgb, var(--status-danger) 62%, var(--border)) !important;
+    color: var(--status-danger-text) !important;
+}
+
+:root[data-theme="night"] .safe-paper-warning-card *,
+:root[data-theme="night"] .operator-progress-checklist article.operator-check-blocked *,
+:root[data-theme="night"] .operator-check-blocked *,
+:root[data-theme="night"] .status-danger * {
+    color: var(--status-danger-text) !important;
 }
 
 /* Final EtherealAI theme cascade. This intentionally lands last because older
@@ -3680,8 +4250,140 @@ a:focus-visible {
 
 footer {
     width: 100%;
-    background-color: #ffffff;
+    background-color: var(--surface);
     box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
+    color: var(--text-primary);
     padding: 20px 0;
     text-align: center;
+}
+
+/* Final EOF contrast lock for legacy rules appended above. */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="day"]) body,
+    :root:not([data-theme="day"]) body.operator-simple-mode {
+        background: var(--background-gradient) !important;
+        color: var(--text-primary) !important;
+    }
+
+    :root:not([data-theme="day"]) .safe-paper-result-card,
+    :root:not([data-theme="day"]) .safe-paper-table-card,
+    :root:not([data-theme="day"]) .operator-progress-checklist article,
+    :root:not([data-theme="day"]) .model-panel,
+    :root:not([data-theme="day"]) .task-card,
+    :root:not([data-theme="day"]) .simple-operator-workspace,
+    :root:not([data-theme="day"]) input,
+    :root:not([data-theme="day"]) select,
+    :root:not([data-theme="day"]) textarea {
+        border-color: var(--border) !important;
+        color: var(--text-primary) !important;
+    }
+
+    :root:not([data-theme="day"]) .safe-paper-result-card,
+    :root:not([data-theme="day"]) .model-panel,
+    :root:not([data-theme="day"]) .task-card,
+    :root:not([data-theme="day"]) .simple-operator-workspace {
+        background: var(--surface-strong) !important;
+    }
+
+    :root:not([data-theme="day"]) .safe-paper-table-card,
+    :root:not([data-theme="day"]) .operator-progress-checklist article {
+        background: var(--surface-muted) !important;
+    }
+
+    :root:not([data-theme="day"]) .safe-paper-hero,
+    :root:not([data-theme="day"]) .safe-paper-status-card,
+    :root:not([data-theme="day"]) .operator-progress-checklist article.operator-check-pass,
+    :root:not([data-theme="day"]) .operator-check-pass {
+        background: var(--status-success-bg) !important;
+        border-color: color-mix(in srgb, var(--status-success) 62%, var(--border)) !important;
+        color: var(--status-success-text) !important;
+    }
+
+    :root:not([data-theme="day"]) .safe-paper-hero *,
+    :root:not([data-theme="day"]) .safe-paper-status-card *,
+    :root:not([data-theme="day"]) .operator-progress-checklist article.operator-check-pass *,
+    :root:not([data-theme="day"]) .operator-check-pass * {
+        color: var(--status-success-text) !important;
+    }
+
+    :root:not([data-theme="day"]) .safe-paper-warning-card,
+    :root:not([data-theme="day"]) .operator-progress-checklist article.operator-check-blocked,
+    :root:not([data-theme="day"]) .operator-check-blocked {
+        background: var(--status-danger-bg) !important;
+        border-color: color-mix(in srgb, var(--status-danger) 62%, var(--border)) !important;
+        color: var(--status-danger-text) !important;
+    }
+
+    :root:not([data-theme="day"]) .safe-paper-warning-card *,
+    :root:not([data-theme="day"]) .operator-progress-checklist article.operator-check-blocked *,
+    :root:not([data-theme="day"]) .operator-check-blocked * {
+        color: var(--status-danger-text) !important;
+    }
+
+    :root:not([data-theme="day"]) input,
+    :root:not([data-theme="day"]) select,
+    :root:not([data-theme="day"]) textarea {
+        background: var(--input-background) !important;
+        color: var(--input-text) !important;
+    }
+}
+
+:root[data-theme="night"] body,
+:root[data-theme="night"] body.operator-simple-mode {
+    background: var(--background-gradient) !important;
+    color: var(--text-primary) !important;
+}
+
+:root[data-theme="night"] .safe-paper-result-card,
+:root[data-theme="night"] .model-panel,
+:root[data-theme="night"] .task-card,
+:root[data-theme="night"] .simple-operator-workspace {
+    background: var(--surface-strong) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+:root[data-theme="night"] .safe-paper-table-card,
+:root[data-theme="night"] .operator-progress-checklist article {
+    background: var(--surface-muted) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+:root[data-theme="night"] .safe-paper-hero,
+:root[data-theme="night"] .safe-paper-status-card,
+:root[data-theme="night"] .operator-progress-checklist article.operator-check-pass,
+:root[data-theme="night"] .operator-check-pass {
+    background: var(--status-success-bg) !important;
+    border-color: color-mix(in srgb, var(--status-success) 62%, var(--border)) !important;
+    color: var(--status-success-text) !important;
+}
+
+:root[data-theme="night"] .safe-paper-hero *,
+:root[data-theme="night"] .safe-paper-status-card *,
+:root[data-theme="night"] .operator-progress-checklist article.operator-check-pass *,
+:root[data-theme="night"] .operator-check-pass * {
+    color: var(--status-success-text) !important;
+}
+
+:root[data-theme="night"] .safe-paper-warning-card,
+:root[data-theme="night"] .operator-progress-checklist article.operator-check-blocked,
+:root[data-theme="night"] .operator-check-blocked {
+    background: var(--status-danger-bg) !important;
+    border-color: color-mix(in srgb, var(--status-danger) 62%, var(--border)) !important;
+    color: var(--status-danger-text) !important;
+}
+
+:root[data-theme="night"] .safe-paper-warning-card *,
+:root[data-theme="night"] .operator-progress-checklist article.operator-check-blocked *,
+:root[data-theme="night"] .operator-check-blocked * {
+    color: var(--status-danger-text) !important;
+}
+
+:root[data-theme="night"] input,
+:root[data-theme="night"] select,
+:root[data-theme="night"] textarea {
+    background: var(--input-background) !important;
+    border-color: var(--border) !important;
+    color: var(--input-text) !important;
 }
