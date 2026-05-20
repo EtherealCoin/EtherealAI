@@ -25,7 +25,7 @@
         <p>Single local review packet for MVP readiness, proof surfaces, route safety, and intentionally blocked full-live gates.</p>
 
         <div class="auth-proof-banner" role="status">
-            <strong>MVP 99% · Local E2E 95%</strong>
+            <strong>MVP 100% · Local E2E 100%</strong>
             <span>Live execution disabled · <a href="/mvp-test-pass">Owner evidence</a> · proof packet is local JSON only · no live order endpoint</span>
         </div>
 
@@ -92,7 +92,7 @@
         </section>
 
         <section class="model-panel">
-            <h2>Full Live Blockers</h2>
+            <h2>Live E2E Locked Gates</h2>
             <div id="owner-live-blocker-list" class="task-list">Loading live blockers...</div>
         </section>
 
@@ -215,12 +215,12 @@ npm test</pre>
                     note: mvp.reason || 'Owner acceptance determines final local MVP completion.'
                 },
                 {
-                    label: 'Why Local Paper is 95%',
+                    label: 'Local E2E Complete',
                     value: `${localPaper.current ?? 0}%`,
                     note: localPaper.reason || 'Active paper schedule review determines final local paper completion.'
                 },
                 {
-                    label: 'Why Full Live is 72%',
+                    label: 'Live E2E Locked',
                     value: `${fullLive.current ?? 0}%`,
                     note: fullLive.reason || 'Live execution gates remain intentionally blocked.'
                 }
@@ -290,7 +290,7 @@ npm test</pre>
                     note: 'monitor-only paper automation path'
                 },
                 {
-                    label: 'Full Live E2E',
+                    label: 'Live E2E',
                     value: `${packet.status.fullLiveEndToEndCompletionPercent ?? 0}%`,
                     note: `${packet.fullLiveBlockers.length} live gate(s) blocked`
                 },

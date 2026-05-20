@@ -21,7 +21,7 @@
 
     <main class="container">
         <h1>Setup Wizard</h1>
-        <p>Your local paper-trading system is complete. The remaining items on this page are optional future integrations. Live trading and wallet signing stay disabled.</p>
+        <p>Your local paper-trading system is complete. Chain providers, exchange keys, socials, GitHub, and Cloudflare are optional future integrations. Live E2E and wallet signing stay locked.</p>
         <div class="auth-proof-banner" role="status">
             <strong>MVP 100% · Paper Trading Complete</strong>
             <span>Optional future connections available · live execution disabled · no seed phrases · no private keys</span>
@@ -31,7 +31,7 @@
             <h2>Progress</h2>
             <div id="core-setup-banner" class="core-setup-banner">
                 <strong>Core Setup Complete</strong>
-                <span>You can now safely use local paper trading. Live trading and wallet signing remain disabled.</span>
+                <span>Local E2E Complete — You can safely operate local paper trading. Live E2E remains locked for future approval.</span>
             </div>
             <div id="owner-setup-progress" class="owner-progress-grid">Loading setup progress...</div>
             <div class="button-row">
@@ -60,7 +60,7 @@
 
         <section class="model-panel">
             <h2>Optional Future Connections</h2>
-            <p class="inline-status">Your local paper-trading system is complete. These remaining items are optional future integrations. Live trading and wallet signing remain disabled.</p>
+            <p class="inline-status">Your local paper-trading system is complete. Chain providers, exchange APIs, social tools, GitHub, and Cloudflare are optional future integrations. Live E2E and wallet signing remain locked.</p>
             <div class="button-row owner-primary-actions">
                 <button id="owner-add-public-wallet" type="button">Add Public Wallet</button>
                 <button id="owner-skip-optional-integrations" type="button">Skip Optional Integrations For Now</button>
@@ -75,8 +75,8 @@
         </section>
 
         <section class="model-panel advanced-setup-panel">
-            <h2>Blocked Full E2E Gates</h2>
-            <div id="full-e2e-gates" class="owner-gate-list">Loading full E2E gates...</div>
+            <h2>Live E2E Locked Gates</h2>
+            <div id="full-e2e-gates" class="owner-gate-list">Loading live E2E gates...</div>
         </section>
 
         <section class="model-panel advanced-setup-panel">
@@ -90,7 +90,7 @@
             <p>Public addresses are allowed. Do not enter a seed phrase, recovery phrase, private key, wallet password, or passphrase.</p>
             <form id="wallet-form" class="model-test-form">
                 <label for="wallet-label">Wallet Label</label>
-                <input id="wallet-label" name="label" type="text" required placeholder="Example: Polygon trading research wallet">
+                <input id="wallet-label" name="label" type="text" required placeholder="Example: Trading research wallet 1">
 
                 <label for="wallet-kind">Wallet Type</label>
                 <select id="wallet-kind" name="walletKind">
@@ -104,7 +104,7 @@
 
                 <label for="wallet-chain-family">Chain Family</label>
                 <select id="wallet-chain-family" name="chainFamily">
-                    <option value="evm">EVM: Polygon, Base, BNB, Ethereum, Avalanche</option>
+                    <option value="evm">EVM: Base, Polygon, BNB, Ethereum, Avalanche</option>
                     <option value="solana">Solana</option>
                     <option value="bitcoin">Bitcoin</option>
                     <option value="cosmos">Cosmos</option>
@@ -112,7 +112,7 @@
                 </select>
 
                 <label for="wallet-network">Network</label>
-                <input id="wallet-network" name="network" type="text" value="polygon" required>
+                <input id="wallet-network" name="network" type="text" value="" placeholder="base, polygon, ethereum, bnb-chain, avalanche, solana" required>
 
                 <label for="wallet-public-address">Public Address Only</label>
                 <input id="wallet-public-address" name="publicAddress" type="text" required placeholder="0x... or public wallet address">
@@ -128,7 +128,16 @@
     <script>
         let currentWizard = null;
         let lastSelectedEnvStatus = null;
-        const publicWalletVariableNames = new Set(['OWNER_PUBLIC_WALLET_ADDRESS', 'POLYGON_PUBLIC_WALLET_ADDRESS']);
+        const publicWalletVariableNames = new Set([
+            'OWNER_PUBLIC_WALLET_ADDRESS',
+            'CHAIN_PUBLIC_WALLET_ADDRESS',
+            'POLYGON_PUBLIC_WALLET_ADDRESS',
+            'BASE_PUBLIC_WALLET_ADDRESS',
+            'ETHEREUM_PUBLIC_WALLET_ADDRESS',
+            'BNB_PUBLIC_WALLET_ADDRESS',
+            'AVALANCHE_PUBLIC_WALLET_ADDRESS',
+            'SOLANA_PUBLIC_WALLET_ADDRESS'
+        ]);
         const forbiddenWalletSecretKeyPattern = /(seed|mnemonic|recovery|wallet.*private|private.*wallet|deployer_private_key|owner_private_key|wallet_secret|wallet_password)/i;
         const forbiddenValuePatterns = [
             { id: 'pem_private_key', label: 'PEM private key block', pattern: /-----BEGIN [A-Z ]*PRIVATE KEY-----/i },
@@ -163,7 +172,7 @@
                 <article class="owner-progress-card owner-optional-card">
                     <h3>Optional Future Connections</h3>
                     <strong>Optional</strong>
-                    <p>These are not setup failures. They are future integrations for live trading, social automation, domain work, and external APIs.</p>
+                    <p>These are not setup failures. They are future integrations for chain providers, live trading, social automation, domain work, and external APIs.</p>
                     <p>Status: Optional · live trading and wallet signing remain disabled.</p>
                 </article>
             `;
@@ -457,6 +466,10 @@
                     <p>Status: ${currentWizard?.coreSetup?.paperTradingOperational ? 'Working' : 'Unsafe'}. Your local paper-trading system is complete when the core setup banner is green. You can build strategies, run paper tests, and monitor paper bots without adding API keys.</p>
                 </article>
                 <article class="operator-step owner-optional-connection-card">
+                    <strong>Blockchain Provider / Chain Provider: optional</strong>
+                    <p>Status: ${escapeHtml(status('blockchain_provider'))}. Only needed later after you choose a target chain for a project. No blockchain provider key is required for local paper trading.</p>
+                </article>
+                <article class="operator-step owner-optional-connection-card">
                     <strong>Market Data Providers: optional</strong>
                     <p>Status: ${escapeHtml(status('market_data_providers'))}. Only needed later if you want automated external market-data refreshes. Paper trading can continue with local/imported data.</p>
                 </article>
@@ -484,12 +497,24 @@
         }
 
         function useDetectedWallet(address, source = 'selected .env file') {
+            const sourceText = String(source || '').toUpperCase();
+            const inferredNetwork = sourceText.includes('SOLANA')
+                ? 'solana'
+                : sourceText.includes('BASE')
+                    ? 'base'
+                    : sourceText.includes('ETHEREUM')
+                        ? 'ethereum'
+                        : sourceText.includes('BNB')
+                            ? 'bnb-chain'
+                            : sourceText.includes('AVALANCHE')
+                                ? 'avalanche'
+                                : sourceText.includes('POLYGON')
+                                    ? 'polygon'
+                                    : '';
             document.getElementById('wallet-public-address').value = address || '';
-            document.getElementById('wallet-label').value = source.includes('POLYGON')
-                ? 'Polygon owner public wallet'
-                : 'Owner public wallet';
+            document.getElementById('wallet-label').value = 'Owner public wallet';
             document.getElementById('wallet-chain-family').value = String(address || '').startsWith('0x') ? 'evm' : 'solana';
-            document.getElementById('wallet-network').value = source.includes('POLYGON') || String(address || '').startsWith('0x') ? 'polygon' : 'solana';
+            document.getElementById('wallet-network').value = inferredNetwork || (!String(address || '').startsWith('0x') ? 'solana' : '');
             document.getElementById('wallet-assignments').value = 'trading-research,token-deployment,treasury';
             document.getElementById('owner-setup-output').textContent = `Public wallet address copied into the safe metadata form from ${source}. Review it, then click Save Public Wallet Metadata.`;
         }
@@ -506,6 +531,14 @@
             `;
             document.getElementById('owner-setup-progress').innerHTML = [
                 progressCard(wizard.progress?.paperTrading || {}),
+                progressCard(wizard.progress?.localEndToEnd || {}),
+                `
+                <article class="owner-progress-card owner-live-locked-card">
+                    <h3>${escapeHtml(wizard.progress?.liveEndToEnd?.label || 'Live E2E Readiness')}</h3>
+                    <strong>Locked</strong>
+                    <p>${escapeHtml(wizard.progress?.liveEndToEnd?.message || 'Live E2E Locked — Future approval required.')}</p>
+                </article>
+                `,
                 optionalFutureProgressCard(wizard)
             ].join('');
             renderPaperConfiguration(wizard.paperConfiguration || {});
@@ -646,7 +679,7 @@
 
             output.textContent = 'Public wallet saved as metadata only. No seed phrase, private key, wallet signing, or live trading was enabled.';
             event.target.reset();
-            document.getElementById('wallet-network').value = 'polygon';
+            document.getElementById('wallet-network').value = '';
             document.getElementById('wallet-assignments').value = 'trading-research,token-deployment';
             await loadWizard();
         });

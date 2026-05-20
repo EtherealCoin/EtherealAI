@@ -163,6 +163,7 @@ function buildLocalLaunchVerificationStatus({
       enabled: false,
       orderEndpointEnabled: false,
       goLiveAllowed: false,
+      walletSigningEnabled: false,
       note: 'Local verification confirms this build remains monitor-only. No credential loader, live adapter, or order endpoint is enabled.'
     },
     requiredBlockedGates: [
@@ -229,10 +230,20 @@ function buildCompletionLedger({
   const ownerAccepted = ownerAcceptance?.status === 'accepted';
   const activePaperSchedules = Number(counts.botAutomationActiveSchedules || 0);
   const hasActivePaperSchedule = activePaperSchedules > 0;
+  const hasPublicWalletMetadata = Number(counts.ownerPublicWallets || 0) > 0;
+  const liveExecutionLocked = launchReadiness.liveExecution?.enabled === false
+    && launchReadiness.liveExecution?.orderEndpointEnabled === false
+    && launchReadiness.liveExecution?.goLiveAllowed === false;
+  const walletSigningLocked = launchReadiness.liveExecution?.walletSigningEnabled !== true;
+  const localE2eComplete = readyForOwnerTesting
+    && hasActivePaperSchedule
+    && hasPublicWalletMetadata
+    && liveExecutionLocked
+    && walletSigningLocked;
   const mvpCompletionPercent = ownerAccepted ? 100 : (readyForOwnerTesting ? 99 : 98);
-  const localEndToEndCompletionPercent = ownerAccepted && hasActivePaperSchedule
+  const localEndToEndCompletionPercent = localE2eComplete
     ? 100
-    : hasActivePaperSchedule
+    : readyForOwnerTesting && hasActivePaperSchedule
       ? 97
       : readyForOwnerTesting
         ? 95
@@ -240,14 +251,12 @@ function buildCompletionLedger({
   const endToEndCompletionPercent = 72;
 
   return {
-    status: ownerAccepted && hasActivePaperSchedule
-      ? 'local_owner_accepted_and_paper_active'
-      : ownerAccepted
-        ? 'owner_accepted_pending_active_paper_schedule'
-        : readyForOwnerTesting
-          ? 'waiting_for_owner_acceptance'
-          : 'needs_local_review',
-    explanation: 'Completion percentages are gate-based. Remaining local progress requires owner acceptance and paper schedule review; full live progress is intentionally capped until a later reviewed live-execution phase.',
+    status: localE2eComplete
+      ? 'local_e2e_complete_live_locked'
+      : readyForOwnerTesting
+        ? 'local_e2e_ready_for_owner_review'
+        : 'needs_local_review',
+    explanation: 'Readiness is split into Local E2E and Live E2E. Local E2E can complete while live trading remains locked. Live E2E is intentionally locked until a future owner-approved security process exists.',
     percentages: {
       mvp: {
         current: mvpCompletionPercent,
@@ -262,21 +271,27 @@ function buildCompletionLedger({
       },
       localPaperEndToEnd: {
         current: localEndToEndCompletionPercent,
-        next: ownerAccepted && hasActivePaperSchedule ? null : (hasActivePaperSchedule ? 100 : 97),
-        label: 'Local paper automation end-to-end',
-        reason: hasActivePaperSchedule
-          ? 'At least one active paper schedule exists; owner acceptance determines the final local completion gate.'
-          : 'No active paper schedule is currently running, so the local paper automation path remains in ready/review state.',
-        nextAction: hasActivePaperSchedule
-          ? 'Review the active paper schedule, latest paper run, and owner proof packet.'
-          : 'Activate a ready paper schedule in Strategy Lab when owner testing is ready.'
+        next: localE2eComplete ? null : (hasActivePaperSchedule ? 100 : 97),
+        label: 'Local E2E Readiness',
+        status: localE2eComplete ? 'complete' : 'needs_review',
+        reason: localE2eComplete
+          ? 'MVP is ready, paper trading is complete, a local paper schedule is active, public wallet metadata exists, live trading is disabled, and wallet signing is disabled.'
+          : hasActivePaperSchedule
+            ? 'A local paper schedule exists. Add or review public wallet metadata, then confirm live trading and wallet signing remain disabled.'
+            : 'No active paper schedule is currently running, so the local paper automation path remains in ready/review state.',
+        nextAction: localE2eComplete
+          ? 'Build strategy, run paper test, review paper bot results, create token plan, draft website/social content, or review security tasks.'
+          : hasActivePaperSchedule
+            ? 'Review wallet metadata and live lock state.'
+            : 'Activate a ready paper schedule in Strategy Lab when owner testing is ready.'
       },
       fullLiveEndToEnd: {
         current: endToEndCompletionPercent,
         next: null,
-        label: 'Full live end-to-end',
+        label: 'Live E2E Readiness',
+        status: 'locked',
         reason: 'Live execution remains blocked by design: credentials, live adapters, live order endpoint, and executable go-live acceptance are not implemented.',
-        nextAction: 'Start a separate reviewed live-execution implementation phase before this can increase.'
+        nextAction: 'No action required in Simple Mode. Open Advanced / Future Integrations only when intentionally starting a future owner-approved live process.'
       }
     },
     gates: [
@@ -290,23 +305,24 @@ function buildCompletionLedger({
       },
       {
         id: 'active_paper_schedule_reviewed',
-        label: 'Active paper schedule reviewed',
+        label: 'Local E2E requirements satisfied',
         lane: 'local_paper_end_to_end',
-        status: hasActivePaperSchedule ? 'ready_for_review' : 'pending_owner',
-        moves: hasActivePaperSchedule ? 'Local paper E2E can move beyond ready state after owner review.' : 'Local paper E2E remains at 95% while no active paper schedule exists.',
-        nextAction: hasActivePaperSchedule ? 'Review active schedule evidence.' : 'Activate a ready paper schedule.'
+        status: localE2eComplete ? 'complete' : 'pending_owner',
+        moves: localE2eComplete ? 'Local E2E is complete while Live E2E remains locked.' : 'Local E2E remains in review until paper schedule, public wallet metadata, and live locks are all confirmed.',
+        nextAction: localE2eComplete ? 'No setup action needed. Continue operating local paper workflows.' : 'Activate a ready paper schedule and add public wallet metadata.'
       },
       ...endToEndBlockingItems.map(blockerId => ({
         id: blockerId,
         label: blockerId,
         lane: 'full_live_end_to_end',
-        status: 'blocked_by_design',
-        moves: 'Full live E2E remains capped at 72%.',
+        status: 'locked_by_design',
+        moves: 'Live E2E is locked by design, not failed.',
         nextAction: 'Keep blocked until a future reviewed live implementation phase.'
       }))
     ],
     counts: {
       activePaperSchedules,
+      publicWalletMetadata: Number(counts.ownerPublicWallets || 0),
       blockedLiveGates: endToEndBlockingItems.length,
       requiredBlockedLiveGates: launchReadiness.requiredBlockedGates?.length || endToEndBlockingItems.length
     }
@@ -618,7 +634,15 @@ function buildMvpReadinessChecklist({
     mvpStatus: readyForOwnerTesting ? 'ready_for_owner_testing' : 'needs_review',
     mvpScope: 'local_research_builder_and_monitor_only',
     mvpCompletionPercent: completionLedger.percentages.mvp.current,
+    localEndToEndStatus: completionLedger.percentages.localPaperEndToEnd.status || 'needs_review',
+    localEndToEndLabel: completionLedger.percentages.localPaperEndToEnd.label,
+    localEndToEndMessage: completionLedger.percentages.localPaperEndToEnd.current === 100
+      ? 'Local E2E Complete — You can safely operate local paper trading.'
+      : completionLedger.percentages.localPaperEndToEnd.reason,
     localEndToEndCompletionPercent: completionLedger.percentages.localPaperEndToEnd.current,
+    liveEndToEndStatus: 'locked',
+    liveEndToEndLabel: completionLedger.percentages.fullLiveEndToEnd.label,
+    liveEndToEndMessage: 'Live E2E Locked — Future approval required.',
     endToEndCompletionPercent: completionLedger.percentages.fullLiveEndToEnd.current,
     completionLedger,
     automationModes: {
@@ -651,6 +675,7 @@ function buildMvpReadinessChecklist({
       enabled: false,
       orderEndpointEnabled: false,
       goLiveAllowed: false,
+      walletSigningEnabled: false,
       note: 'MVP readiness excludes live trading. Live execution remains blocked until future reviewed implementation work.'
     },
     totals: {

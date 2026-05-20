@@ -119,11 +119,11 @@
 
         if (coreSetupComplete) {
             return {
-                title: 'Your Paper-Trading System Is Operational',
-                why: 'Core setup is complete. Optional provider/API integrations can wait.',
+                title: 'Local E2E Complete',
+                why: 'You can safely operate local paper trading. Live E2E is locked for future owner-approved security work.',
                 action: readyPaperPlans > 0 && activeSchedules > 0 ? 'Open Bot Control Center' : 'Open Paper Trading Center',
                 href: '/strategy-lab#bot-automation',
-                detail: 'Create a strategy, run a paper bot, review paper results, or explore advanced integrations later.'
+                detail: 'Build strategy, run paper test, review paper bot results, create token plan, draft website/social content, or review security tasks.'
             };
         }
 
@@ -208,7 +208,7 @@
                 <p><strong>Do this next:</strong> ${escapeHtml(next.detail)}</p>
                 <div class="operator-next-action-grid">
                     <article>
-                        <strong>Paper</strong>
+                        <strong>Local E2E</strong>
                         <span>${coreSetupComplete ? 'Working' : 'Unsafe'}</span>
                     </article>
                     <article>
@@ -216,7 +216,7 @@
                         <span>Optional</span>
                     </article>
                     <article>
-                        <strong>Live Trading</strong>
+                        <strong>Live E2E</strong>
                         <span>${owner?.safetyBoundary?.liveTradingEnabled || mvp?.liveExecution?.enabled ? 'Unsafe' : 'Locked'}</span>
                     </article>
                     <article>

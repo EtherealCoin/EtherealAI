@@ -129,7 +129,7 @@
             area: 'Solidity Lab',
             title: 'Create A Token Project Without Deploying',
             summary: 'Draft token specs, website, whitepaper, listing plan, and ecosystem blueprint locally. Deployment remains locked.',
-            primaryAction: { label: 'Select Polygon Defaults', selector: '#select-polygon-token-options' },
+            primaryAction: { label: 'Select Chain-Neutral Defaults', selector: '#select-chain-neutral-token-options' },
             keepHeadings: ['Deployment Boundary', 'Contract Spec'],
             readyLabel: 'Token Planning Ready',
             nextText: 'Choose chain and token features, then save a local spec. Deployment remains locked.',
@@ -140,7 +140,7 @@
                 ['4. Review before deployment', 'No blockchain broadcast happens in this mode.']
             ],
             workflow: [
-                ['Pick blockchain', 'Use Polygon defaults or choose another chain.', { label: 'Select Polygon Defaults', selector: '#select-polygon-token-options' }],
+                ['Pick blockchain', 'Choose Polygon, Base, Ethereum, BNB, Avalanche, Solana, or another supported chain per project.', { label: 'Select Chain-Neutral Defaults', selector: '#select-chain-neutral-token-options' }],
                 ['Define token', 'Open the token spec form.', { label: 'Create Token Spec', selector: '#contract-form' }],
                 ['Build ecosystem plan', 'Open website, whitepaper, listing, and social planning.', { label: 'Open Ecosystem Studio', selector: '#load-ecosystem-catalog' }]
             ]
@@ -372,7 +372,10 @@
         const owner = summary?.owner?.wizard;
         const security = summary?.security?.audit;
         const health = summary?.health;
-        const coreComplete = Boolean(owner?.coreSetup?.paperTradingOperational)
+        const localE2eComplete = Boolean(owner?.coreSetup?.localEndToEndOperational)
+            || owner?.progress?.localEndToEnd?.status === 'complete'
+            || Number(owner?.progress?.localEndToEnd?.current || 0) >= 100;
+        const coreComplete = localE2eComplete || Boolean(owner?.coreSetup?.paperTradingOperational)
             || owner?.status === 'local_paper_trading_ready'
             || Number(owner?.progress?.paperTrading?.current || 0) >= 100;
         const walletCount = owner?.walletMetadata?.savedPublicWallets?.length ?? 0;
@@ -391,7 +394,7 @@
                 </article>
                 <article>
                     <span>Is it ready?</span>
-                    <strong>${escapeHtml(coreComplete ? (config.readyLabel || 'Ready') : 'Not Ready')}</strong>
+                    <strong>${escapeHtml(localE2eComplete ? 'Local E2E Complete' : (coreComplete ? (config.readyLabel || 'Ready') : 'Not Ready'))}</strong>
                     <p>${serverHealthy ? 'Local server is responding.' : 'Local server status needs review.'}</p>
                 </article>
                 <article>
@@ -401,7 +404,7 @@
                 </article>
                 <article>
                     <span>Safety</span>
-                    <strong>${liveLocked ? 'Live Trading Locked' : 'Unsafe'}</strong>
+                    <strong>${liveLocked ? 'Live E2E Locked' : 'Unsafe'}</strong>
                     <p>Wallet metadata: ${walletCount > 0 ? 'Present' : 'Optional'} · Security: ${securityText}</p>
                 </article>
             </section>
@@ -415,6 +418,9 @@
         const health = summary?.health;
         const serverHealthy = health?.server?.ok && health?.database?.ok;
         const liveLocked = !owner?.safetyBoundary?.liveTradingEnabled && !owner?.safetyBoundary?.walletSigningEnabled;
+        const localE2eComplete = Boolean(owner?.coreSetup?.localEndToEndOperational)
+            || owner?.progress?.localEndToEnd?.status === 'complete'
+            || Number(owner?.progress?.localEndToEnd?.current || 0) >= 100;
         const paperWorking = Boolean(owner?.coreSetup?.paperTradingOperational)
             || owner?.status === 'local_paper_trading_ready'
             || Number(owner?.progress?.paperTrading?.current || 0) >= 100;
@@ -424,8 +430,9 @@
             : ((security?.summary?.reviewCount ?? 0) > 0 ? 'Optional' : 'Working');
         const statuses = [
             ['Health', serverHealthy ? 'Working' : 'Unsafe', serverHealthy ? 'Local server is responding.' : 'Open Mission Control and refresh status.'],
+            ['Local E2E', localE2eComplete ? 'Working' : (paperWorking ? 'Optional' : 'Unsafe'), localE2eComplete ? 'Local E2E complete for paper operation.' : 'Add public wallet metadata if needed.'],
             ['Paper Trading', paperWorking ? 'Working' : 'Unsafe', `${bot?.paperAutomation?.counts?.activeSchedules ?? 0} active paper schedule(s).`],
-            ['Live Trading', liveLocked ? 'Locked' : 'Unsafe', liveLocked ? 'No live order or wallet signing path is active.' : 'Live or signing appears enabled. Review immediately.'],
+            ['Live E2E', liveLocked ? 'Locked' : 'Unsafe', liveLocked ? 'Future approval required; this is not a failure.' : 'Live or signing appears enabled. Review immediately.'],
             ['Wallets', savedWalletCount > 0 ? 'Working' : 'Optional', `${savedWalletCount} public metadata record(s).`],
             ['Security', securityValue, `${security?.summary?.failCount ?? 0} fix-now item(s).`]
         ];

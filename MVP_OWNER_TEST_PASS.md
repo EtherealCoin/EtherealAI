@@ -35,12 +35,12 @@ patrick@etherealAI
    - Pass condition: Model Roles shows coder `qwen3.6:35b-a3b` and provider `ollama`.
    - Pass condition: Local Model Benchmark is available for role default, Ollama, and MLX provider comparisons, including `Max Tokens` and `Disable Thinking` controls. MLX is expected online only when `mlx_lm.server` is running on port `8080`.
    - Pass condition: MLX Lifecycle shows status/start/stop controls, memory isolation, and `Unload Ollama Before Start`.
-   - Pass condition: Completion Ledger explains why MVP is 99%, why Local Paper is 95%, and why Full Live is 72%.
+   - Pass condition: Completion Ledger explains why MVP is 99%, why Local E2E is complete when paper/wallet/live-lock requirements are satisfied, and why Live E2E is locked.
    - Pass condition: MVP Readiness shows Owner Acceptance as `Pending Review`.
    - Pass condition: System Memory export shows owner evidence included, owner acceptance pending, and live disabled.
 
 2. Open `/owner-setup`.
-   - Pass condition: Owner Setup Wizard loads without developer workflows and shows `Paper 95→100` and `Full E2E 72→100`.
+   - Pass condition: Owner Setup Wizard loads without developer workflows and shows `Paper 95→100`, `Local E2E Complete`, and `Live E2E Locked`.
    - Pass condition: `Select .env File Visually` lets the owner browse for a `.env` file, then `Verify Selected .env File` checks it locally in the browser without sending secret values to the server.
    - Pass condition: every blocked gate shows what is missing, why it is needed, whether it is safe, exactly what the owner must enter, current evidence, and a one-click `Verify` button.
    - Pass condition: Local Secrets File reads from `~/EtherealAI_Secrets/.env`, reports approved variable names as present/missing only, and never displays credential values.
@@ -48,7 +48,7 @@ patrick@etherealAI
    - Pass condition: `.env` setup rejects seed phrases, recovery phrases, private keys, wallet passwords, PEM private keys, and seed-like values.
    - Pass condition: Add Public Wallet Address accepts label, wallet type, chain family, network, assignments, and public address only, then saves metadata through `/api/v1/wallets` with signing and live execution disabled.
    - Pass condition: `Run Paper Verification` can run one paper-only cycle when a ready paper bot plan exists, and does not require live wallet signing.
-   - Pass condition: full E2E setup readiness can reach `100%` only as live-disabled setup readiness; it does not enable live trading, wallet signing, deployment, DNS mutation, external posting, or live orders.
+   - Pass condition: Local E2E can reach `100%` while Live E2E remains locked; this does not enable live trading, wallet signing, deployment, DNS mutation, external posting, or live orders.
 
 2. Open `/operator-control`.
    - Pass condition: Owner Control Summary loads and reports local-only, no secret storage, signing disabled, and live execution disabled.
@@ -70,7 +70,7 @@ patrick@etherealAI
    - Pass condition: Clean-Room Recovery Plan explains selective backup, full erase/reinstall or DFU restore/revive for Apple silicon when firmware/system integrity is in doubt, and credential rotation from a clean device/network.
 
 4. Open `/mvp-test-pass`.
-   - Pass condition: MVP status is `ready_for_owner_testing`, MVP completion is `99%` before owner acceptance or `100%` after local owner acceptance, local end-to-end completion is `95%`, MVP blockers are `0`, and live execution is disabled.
+   - Pass condition: MVP status is `ready_for_owner_testing`, MVP completion is `99%` before owner acceptance or `100%` after local owner acceptance, local E2E readiness is `100%` when paper automation and public wallet metadata are present, MVP blockers are `0`, and live execution is disabled.
    - Pass condition: Completion Ledger shows owner acceptance recorded moves MVP from `99%` to `100%`, active paper schedule review moves local paper automation beyond `95%`, and live execution remains capped at `72%` by blocked gates.
    - Pass condition: Bot Automation Smoke shows monitor-only workflow status, dossier evidence, route boundary `monitor_only_no_live_orders`, and live execution blocked.
    - Pass condition: Owner Evidence Manifest lists local proof points and `Download Evidence Manifest JSON` is available.
@@ -112,7 +112,7 @@ patrick@etherealAI
    - Open starter source, review output, and scaffold a local workspace if needed.
    - Pass condition: Deployment Boundary shows local-only deployment, wallet secrets blocked, and no mainnet or testnet broadcast.
    - Pass condition: Target Blockchain accepts low-fee and non-Ethereum options including Solana, Polygon, BNB Chain, Avalanche, Base, and custom-chain.
-   - Pass condition: `Select Polygon Launch Defaults` fills a Polygon ERC20 launch profile with PolygonScan, DEX route research, listing evidence, social/community ops, and no-live-execution boundaries.
+   - Pass condition: `Select Chain-Neutral Launch Defaults` fills a chain-neutral launch profile, and Polygon remains selectable as one target chain with PolygonScan, DEX route research, listing evidence, social/community ops, and no-live-execution boundaries.
    - Pass condition: Token Ecosystem Studio loads the local ecosystem catalog.
    - Pass condition: Saved specs expose an `Ecosystem` action that opens multi-chain token builder, website creation, whitepaper, chain-builder/node research, listing readiness, logo brief, social/community plan, and cross-chain arbitrage design output.
    - Pass condition: Polygon ecosystem output includes chain ID `137`, Polygon wallet/RPC no-secret boundary, Polygon DEX route planning, and local-only listing evidence requirements.
@@ -169,11 +169,11 @@ patrick@etherealAI
 - The server still checks `~/EtherealAI_Secrets/.env` because that fixed path is what EtherealAI can load automatically.
 - Paper progress starts from `95%` and reaches `100%` when strategy/data, risk profile, replay/run evidence, paper bot plan, and one paper verification cycle or active paper schedule are present.
 - The paper risk profile gate can be completed without terminal commands from Strategy Lab → Risk by using safe paper defaults, saving the profile, activating it, keeping Kill Switch off, and clicking Verify Paper Risk Gate.
-- Full E2E setup readiness starts from `72%` and reaches `100%` when the local `.env` file is safe, Polygon RPC/provider keys are present, at least one exchange key pair is present, public wallet metadata is attached, connector metadata exists, GitHub/Cloudflare/social credential presence is verified, and live execution remains locked.
+- Local E2E readiness reaches `100%` when MVP readiness is complete, paper trading is complete, a local bot schedule or paper run works, public wallet metadata is attached, live trading is disabled, and wallet signing is disabled.
 - The wizard reads credential presence from `~/EtherealAI_Secrets/.env` only. It returns variable names and present/missing status, never secret values.
 - Public wallet addresses are the only `.env` values the wizard may display, and only when they match safe public address formats.
 - The wizard never requests or accepts seed phrases, recovery phrases, private keys, wallet passwords, deployer private keys, owner private keys, or wallet secret values.
-- Full E2E setup readiness `100%` is not live trading. It means the owner setup gates are ready for a future separate high-security live approval process.
+- Live E2E readiness is locked until a future owner-approved process exists. The locked state is correct safety behavior, not a setup failure.
 
 ## Owner Wallet Control Workflow
 
@@ -196,9 +196,9 @@ patrick@etherealAI
 - Safe user-level hardening applied in this session: password required immediately after sleep/screensaver, AirDrop disable preference, Handoff advertising/receiving disabled, Wi-Fi DNS set to Cloudflare/Quad9, Wi-Fi proxies confirmed off, SSH file permissions tightened, `.DS_Store` writes disabled for network/USB volumes, Apple personalized advertising disabled, visible filename extensions, and Finder extension-change warnings. Owner-approved admin hardening also disabled firewall auto-allow for signed built-in/downloaded apps, disabled the Remote Login/SSH launch service, and disabled the Remote Apple Events launch service.
 - Manual owner actions remain necessary for admin-only Mac settings such as Sharing services, remote login, remote Apple events, firewall app exceptions, Full Disk Access, Accessibility, Screen Recording, Input Monitoring, Login Items, and router/IoT segmentation.
 
-## Full Live Blockers
+## Live E2E Locked Gates
 
-Full live end-to-end completion remains about `72%` because these 4 gates are intentionally blocked:
+Live E2E remains locked because these 4 gates are intentionally blocked:
 
 - Runtime credential loader is implemented: future work must add local-only loading with no secret logging, no DB secret storage, and verifier coverage.
 - Live exchange order adapters are implemented: future work must replace disabled scaffolds with reviewed exchange-specific adapters.
@@ -226,9 +226,9 @@ npm test
 ## Current Completion Estimate
 
 - MVP completion: about `99%`
-- Local paper-automation end-to-end completion: about `95%`
-- Full live end-to-end completion: about `72%`
+- Local E2E completion: `100%` when paper automation, public wallet metadata, and live locks are satisfied
+- Live E2E readiness: locked until future owner-approved security work
 
-The Completion Ledger explains these caps in the app. MVP moves from `99%` to `100%` only after the owner records local acceptance. Local paper automation moves beyond `95%` after active paper schedule review. Full live stays at `72%` until a separate reviewed live-execution phase implements credential loading, live adapters, a live order endpoint, production-grade safety review, and go-live acceptance.
+The Completion Ledger explains these states in the app. MVP moves from `99%` to `100%` only after the owner records local acceptance. Local E2E can show complete for safe paper operation when the local paper schedule, public wallet metadata, and live locks are satisfied. Live E2E stays locked until a separate reviewed live-execution phase implements credential loading, live adapters, a live order endpoint, production-grade safety review, and go-live acceptance.
 
-The Owner Setup Wizard has its own setup-readiness percentages: paper setup can move from `95%` to `100%`, and full E2E setup readiness can move from `72%` to `100%` while live trading remains disabled. That wizard-specific `100%` is readiness for a later high-security approval process, not permission to trade live.
+The Owner Setup Wizard separates Local E2E from Live E2E: paper setup can move from `95%` to `100%`, Local E2E can show complete for safe paper operation, and Live E2E remains locked until future high-security approval. This is not permission to trade live.

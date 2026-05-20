@@ -21,7 +21,7 @@
     <main class="container">
         <h1>Solidity Lab</h1>
         <div class="auth-proof-banner" role="status">
-            <strong>MVP 99% · Local E2E 95%</strong>
+            <strong>MVP 100% · Local E2E 100%</strong>
             <span>Live execution disabled · <a href="/owner-proof-packet">Proof packet</a> · <a href="/mvp-test-pass">Owner evidence</a> · <a href="/dashboard">Mission Control</a></span>
         </div>
 
@@ -168,8 +168,9 @@
 
                     <div class="button-row">
                         <button id="apply-token-options" type="button">Apply Token Options To Spec</button>
+                        <button id="select-chain-neutral-token-options" type="button">Select Chain-Neutral Launch Defaults</button>
                         <button id="select-low-fee-token-options" type="button">Select Low-Fee Launch Defaults</button>
-                        <button id="select-polygon-token-options" type="button">Select Polygon Launch Defaults</button>
+                        <button id="select-polygon-token-options" type="button">Select Polygon As Target Chain</button>
                         <button id="save-token-ecosystem-project" type="button">Save Ecosystem Project</button>
                         <button id="update-token-ecosystem-project" type="button">Update Selected Project</button>
                         <button id="clear-token-ecosystem-selection" type="button">Clear Selection</button>
@@ -478,7 +479,14 @@
             document.querySelectorAll('#token-feature-options input').forEach(input => {
                 input.checked = defaultValues.has(input.value);
             });
-            document.getElementById('token-ecosystem-notes').value = 'Low-fee Base/Polygon/BNB/Avalanche/Solana launch path with website, whitepaper, social growth, listing evidence, NFT utility upgrades, and paper-only arbitrage strategy planning.';
+            document.getElementById('token-ecosystem-notes').value = 'Chain-neutral launch path across Base, Polygon, BNB, Avalanche, Solana, Ethereum, and future chains with website, whitepaper, social growth, listing evidence, NFT utility upgrades, and paper-only arbitrage strategy planning.';
+        }
+
+        function selectChainNeutralTokenDefaults() {
+            selectLowFeeTokenDefaults();
+            document.getElementById('contract-network').value = 'base';
+            document.getElementById('nft-utility-notes').value = 'NFT utility tiers can unlock capped dapp modules, fee discounts, community roles, governance boosts, and owner-approved upgrade paths on the selected chain.';
+            document.getElementById('token-ecosystem-notes').value = 'Chain-neutral token launch: choose target chain per project, build local contract/spec, website, whitepaper, community ops, CMC/CoinGecko packet, paper-only top-200 rebalance/arbitrage planning, and no live deployment until owner approval.';
         }
 
         function selectPolygonTokenDefaults() {
@@ -502,7 +510,7 @@
                 input.checked = defaultValues.has(input.value);
             });
             document.getElementById('nft-utility-notes').value = 'Polygon NFT utility tiers can unlock capped dapp modules, fee discounts, community roles, governance boosts, and owner-approved upgrade paths.';
-            document.getElementById('token-ecosystem-notes').value = 'Polygon-first token launch: ERC20 scaffold, PolygonScan evidence, QuickSwap/Uniswap/Sushi route research, website, whitepaper, community ops, CMC/CoinGecko packet, paper-only top-200 rebalance/arbitrage planning, and no live deployment until owner approval.';
+            document.getElementById('token-ecosystem-notes').value = 'Polygon selected for this project only: ERC20 scaffold, PolygonScan evidence, QuickSwap/Uniswap/Sushi route research, website, whitepaper, community ops, CMC/CoinGecko packet, paper-only top-200 rebalance/arbitrage planning, and no live deployment until owner approval.';
         }
 
         function setTokenProjectSelection(projectId = null) {
@@ -980,6 +988,7 @@
         document.getElementById('load-ecosystem-catalog').addEventListener('click', loadEcosystemCatalog);
         document.getElementById('apply-token-options').addEventListener('click', applyTokenOptionsToSpec);
         document.getElementById('select-low-fee-token-options').addEventListener('click', selectLowFeeTokenDefaults);
+        document.getElementById('select-chain-neutral-token-options').addEventListener('click', selectChainNeutralTokenDefaults);
         document.getElementById('select-polygon-token-options').addEventListener('click', selectPolygonTokenDefaults);
         document.getElementById('save-token-ecosystem-project').addEventListener('click', saveTokenEcosystemProject);
         document.getElementById('update-token-ecosystem-project').addEventListener('click', updateTokenEcosystemProject);

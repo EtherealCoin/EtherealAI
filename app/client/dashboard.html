@@ -104,7 +104,7 @@
         </section>
 
         <section class="model-panel">
-            <h2>Full E2E Handoff</h2>
+            <h2>Live E2E Handoff</h2>
             <div class="button-row">
                 <button id="refresh-live-handoff" type="button">Refresh Handoff</button>
             </div>
@@ -604,14 +604,14 @@
                             : 'resolve local blockers'
                 },
                 {
-                    label: 'Local End-to-End',
-                    value: `${readiness.localEndToEndCompletionPercent ?? readiness.mvpCompletionPercent ?? 0}%`,
-                    note: readiness.automationModes?.paper?.canRunAutomatically ? 'paper automation ready' : 'paper automation review'
+                    label: 'Local E2E Readiness',
+                    value: readiness.localEndToEndStatus === 'complete' ? 'Complete' : `${readiness.localEndToEndCompletionPercent ?? readiness.mvpCompletionPercent ?? 0}%`,
+                    note: readiness.localEndToEndMessage || (readiness.automationModes?.paper?.canRunAutomatically ? 'paper automation ready' : 'paper automation review')
                 },
                 {
-                    label: 'Full Live End-to-End',
-                    value: `${readiness.endToEndCompletionPercent ?? 0}%`,
-                    note: `${readiness.totals?.endToEndBlockingItems ?? 0} live blocker(s)`
+                    label: 'Live E2E Readiness',
+                    value: readiness.liveEndToEndStatus === 'locked' ? 'Locked' : `${readiness.endToEndCompletionPercent ?? 0}%`,
+                    note: readiness.liveEndToEndMessage || `${readiness.totals?.endToEndBlockingItems ?? 0} live gate(s) locked`
                 },
                 {
                     label: 'Go-Live Command',
@@ -649,8 +649,8 @@
                 </div>
                 `).join('')}
                 <div class="artifact-stat dashboard-live-blockers">
-                    <strong>Full Live Blockers</strong>
-                    <span>${fullLiveBlockers.length} gate(s) still intentionally blocked</span>
+                    <strong>Live E2E Locked Gates</strong>
+                    <span>${fullLiveBlockers.length} gate(s) intentionally locked, not failed</span>
                     <ul>
                         ${liveBlockerRows || '<li><strong>No live blockers reported</strong><span>Review the readiness payload before changing live mode.</span></li>'}
                     </ul>
@@ -671,12 +671,12 @@
                     badge: `${mvp.current ?? 0}%`
                 },
                 {
-                    title: 'Why Local Paper is 95%',
+                    title: localPaper.current === 100 ? 'Local E2E Complete' : 'Why Local E2E Needs Review',
                     description: `${localPaper.reason || 'Active paper schedule review determines final local paper completion.'} Next: ${localPaper.nextAction || 'Review Strategy Lab paper schedules.'}`,
                     badge: `${localPaper.current ?? 0}%`
                 },
                 {
-                    title: 'Why Full Live is 72%',
+                    title: 'Live E2E Locked',
                     description: `${fullLive.reason || 'Live execution gates remain intentionally blocked.'} Next: ${fullLive.nextAction || 'Keep live gates blocked.'}`,
                     badge: `${fullLive.current ?? 0}%`
                 }
@@ -735,7 +735,7 @@
                     note: handoff.status || 'owner_key_gated'
                 },
                 {
-                    label: 'Full Live E2E',
+                    label: 'Live E2E',
                     value: `${handoff.actualFullLiveEndToEndPercent ?? 72}%`,
                     note: 'actual live execution remains disabled'
                 },
@@ -790,7 +790,7 @@
                 renderLiveExecutionHandoff(data.handoff || {});
             } catch (error) {
                 document.getElementById('live-handoff-summary').textContent = error.message;
-                document.getElementById('live-handoff-stages').textContent = 'Full E2E handoff unavailable.';
+                document.getElementById('live-handoff-stages').textContent = 'Live E2E handoff unavailable.';
                 document.getElementById('live-handoff-key-gates').textContent = 'Owner key gates unavailable.';
             }
         }

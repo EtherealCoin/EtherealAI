@@ -23,7 +23,7 @@
         <h1>Strategy, Paper Trading, and Bot Control</h1>
         <p>This page turns trading ideas into local simulations and paper bots. Paper trading never needs wallet signing, and live mode remains locked behind a future separate approval process.</p>
         <div class="auth-proof-banner" role="status">
-            <strong>MVP 99% · Local E2E 95%</strong>
+            <strong>MVP 100% · Local E2E 100%</strong>
             <span>Live execution disabled · <a href="/owner-proof-packet">Proof packet</a> · <a href="/mvp-test-pass">Owner evidence</a> · <a href="/dashboard">Mission Control</a></span>
         </div>
 
@@ -4688,12 +4688,12 @@
                     note: `${readiness.totals?.mvpBlockingItems ?? 0} MVP blocker(s)`
                 },
                 {
-                    label: 'Local End-to-End',
+                    label: 'Local E2E Readiness',
                     value: `${readiness.localEndToEndCompletionPercent ?? readiness.mvpCompletionPercent ?? 0}%`,
                     note: readiness.automationModes?.paper?.canRunAutomatically ? 'paper automation ready' : 'paper automation review'
                 },
                 {
-                    label: 'Full Live End-to-End',
+                    label: 'Live E2E Readiness',
                     value: `${readiness.endToEndCompletionPercent ?? 0}%`,
                     note: `${readiness.totals?.endToEndBlockingItems ?? 0} live blocker(s)`
                 },

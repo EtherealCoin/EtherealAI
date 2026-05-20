@@ -175,12 +175,12 @@
                             : 'resolve local blockers'
                 },
                 {
-                    label: 'Local End-to-End',
+                    label: 'Local E2E Readiness',
                     value: `${readiness.localEndToEndCompletionPercent ?? readiness.mvpCompletionPercent ?? 0}%`,
                     note: readiness.automationModes?.paper?.canRunAutomatically ? 'paper automation ready' : 'paper automation review'
                 },
                 {
-                    label: 'Full Live End-to-End',
+                    label: 'Live E2E Readiness',
                     value: `${readiness.endToEndCompletionPercent ?? 0}%`,
                     note: `${readiness.totals?.endToEndBlockingItems ?? 0} live blocker(s)`
                 },
@@ -248,12 +248,12 @@
                     note: mvp.reason || 'Owner acceptance determines final local MVP completion.'
                 },
                 {
-                    label: 'Why Local Paper is 95%',
+                    label: 'Local E2E Complete',
                     value: `${localPaper.current ?? 0}%`,
                     note: localPaper.reason || 'Active paper schedule review determines final local paper completion.'
                 },
                 {
-                    label: 'Why Full Live is 72%',
+                    label: 'Live E2E Locked',
                     value: `${fullLive.current ?? 0}%`,
                     note: fullLive.reason || 'Live execution gates remain intentionally blocked.'
                 }

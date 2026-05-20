@@ -30,7 +30,9 @@ async function getMvpReadinessCounts(dbGet) {
     botAutomationPlans,
     botAutomationRuns,
     botAutomationSchedules,
-    botAutomationActiveSchedules
+    botAutomationActiveSchedules,
+    ownerWallets,
+    ownerPublicWallets
   ] = await Promise.all([
     dbGet('SELECT COUNT(*) AS count FROM creator_tasks'),
     dbGet('SELECT COUNT(*) AS count FROM workspaces'),
@@ -47,7 +49,9 @@ async function getMvpReadinessCounts(dbGet) {
     dbGet('SELECT COUNT(*) AS count FROM bot_automation_plans'),
     dbGet('SELECT COUNT(*) AS count FROM bot_automation_runs'),
     dbGet('SELECT COUNT(*) AS count FROM bot_automation_schedules'),
-    dbGet("SELECT COUNT(*) AS count FROM bot_automation_schedules WHERE status = 'active'")
+    dbGet("SELECT COUNT(*) AS count FROM bot_automation_schedules WHERE status = 'active'"),
+    dbGet("SELECT COUNT(*) AS count FROM owner_wallets WHERE status NOT IN ('revoked', 'archived', 'disabled')"),
+    dbGet("SELECT COUNT(*) AS count FROM owner_wallets WHERE status NOT IN ('revoked', 'archived', 'disabled') AND public_address IS NOT NULL AND TRIM(public_address) <> ''")
   ]);
 
   return {
@@ -66,7 +70,9 @@ async function getMvpReadinessCounts(dbGet) {
     botAutomationPlans: Number(botAutomationPlans.count || 0),
     botAutomationRuns: Number(botAutomationRuns.count || 0),
     botAutomationSchedules: Number(botAutomationSchedules.count || 0),
-    botAutomationActiveSchedules: Number(botAutomationActiveSchedules.count || 0)
+    botAutomationActiveSchedules: Number(botAutomationActiveSchedules.count || 0),
+    ownerWallets: Number(ownerWallets.count || 0),
+    ownerPublicWallets: Number(ownerPublicWallets.count || 0)
   };
 }
 

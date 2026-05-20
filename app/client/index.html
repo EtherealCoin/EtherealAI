@@ -28,7 +28,7 @@
         <section class="home-hero mission-hero">
             <div class="container">
                 <h1>Home / Mission Control</h1>
-                <p>Operate EtherealAI as founder software: see system health, paper trading progress, full E2E readiness, live lock status, wallets, security, active bots, blocked gates, and the next safest action.</p>
+                <p>Operate EtherealAI as founder software: see system health, local E2E readiness, live E2E lock status, wallets, security, active bots, and the next safest action.</p>
                 <div class="button-row home-actions">
                     <a href="/dashboard" class="cta-button">Open Mission Control</a>
                     <button id="home-next-action" type="button" class="cta-button secondary-action">What do I do next?</button>
@@ -47,9 +47,9 @@
                         <span>checking setup wizard</span>
                     </div>
                     <div class="artifact-stat">
-                        <strong>Full E2E Readiness</strong>
+                        <strong>Local E2E Readiness</strong>
                         <span>Loading</span>
-                        <span>live remains locked</span>
+                        <span>checking local paper operation</span>
                     </div>
                     <div class="artifact-stat">
                         <strong>Live Execution</strong>
@@ -144,12 +144,13 @@
             const cards = [
                 ['System Health', health?.server?.ok && health?.database?.ok ? 'Healthy' : 'Review', health?.server?.ok ? `Port ${health.server.port}` : 'open Mission Control'],
                 ['Paper Trading', `${owner?.progress?.paperTrading?.current ?? '?'}%`, `${bot?.paperAutomation?.counts?.readyPaperPlans ?? 0} ready plan(s)`],
-                ['Full E2E Readiness', `${owner?.progress?.fullEndToEnd?.current ?? '?'}%`, 'live approval still separate'],
+                ['Local E2E Readiness', owner?.progress?.localEndToEnd?.current === 100 ? 'Complete' : `${owner?.progress?.localEndToEnd?.current ?? '?'}%`, owner?.progress?.localEndToEnd?.message || 'local paper trading only'],
+                ['Live E2E Readiness', 'Locked', 'future approval required'],
                 ['Live Execution', owner?.safetyBoundary?.liveTradingEnabled ? 'Enabled' : 'Locked', 'wallet signing disabled'],
                 ['Wallet Status', `${owner?.walletMetadata?.savedPublicWallets?.length ?? 0} wallet(s)`, 'public metadata only'],
                 ['Security Status', security?.summary?.status || 'review', `${security?.summary?.failCount ?? 0} fix-now item(s)`],
                 ['Active Bots', `${bot?.paperAutomation?.counts?.activeSchedules ?? 0}`, 'paper schedules only'],
-                ['Blocked Gates', `${(owner?.gates?.paperTrading || []).filter(gate => !gate.passed).length + (owner?.gates?.fullEndToEnd || []).filter(gate => !gate.passed).length}`, 'click next action']
+                ['Required Setup Gates', `${(owner?.gates?.paperTrading || []).filter(gate => gate.blocking !== false && !gate.passed).length + (owner?.gates?.localEndToEnd || []).filter(gate => gate.blocking !== false && !gate.passed).length}`, 'optional integrations excluded']
             ];
 
             document.getElementById('home-mission-status').innerHTML = cards.map(([label, value, note]) => `

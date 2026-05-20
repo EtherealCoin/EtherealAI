@@ -6,20 +6,36 @@ const OWNER_ENV_PATH = path.join(OWNER_SECRETS_DIR, '.env');
 
 const ENV_VARIABLES = [
   {
-    id: 'polygon_rpc',
-    name: 'POLYGON_RPC_URL',
+    id: 'chain_rpc',
+    name: 'CHAIN_RPC_URL',
     group: 'rpc',
-    label: 'Polygon RPC URL',
-    example: 'POLYGON_RPC_URL=https://your-polygon-rpc-provider',
-    why: 'Needed so future Polygon quote/deploy/trading adapters can talk to Polygon without hardcoding provider credentials.'
+    label: 'Blockchain provider RPC URL',
+    example: 'CHAIN_RPC_URL=https://your-selected-chain-rpc-provider',
+    why: 'Optional future chain-provider access after the owner chooses a target chain. This is not required for local paper trading.'
   },
   {
-    id: 'polygon_scan',
+    id: 'chain_explorer',
+    name: 'CHAIN_EXPLORER_API_KEY',
+    group: 'rpc',
+    label: 'Blockchain explorer API key',
+    example: 'CHAIN_EXPLORER_API_KEY=your_selected_chain_explorer_api_key',
+    why: 'Optional future explorer evidence for the selected chain. This is not required for local paper trading.'
+  },
+  {
+    id: 'polygon_rpc_legacy',
+    name: 'POLYGON_RPC_URL',
+    group: 'rpc',
+    label: 'Optional Polygon RPC URL',
+    example: 'POLYGON_RPC_URL=https://your-polygon-rpc-provider',
+    why: 'Optional Polygon-specific provider access only when Polygon is the selected project chain. This is not a default setup gate.'
+  },
+  {
+    id: 'polygon_scan_legacy',
     name: 'POLYGONSCAN_API_KEY',
     group: 'rpc',
-    label: 'PolygonScan API key',
+    label: 'Optional PolygonScan API key',
     example: 'POLYGONSCAN_API_KEY=your_polygonscan_api_key',
-    why: 'Needed to verify Polygon contracts and collect explorer evidence for token/listing workflows.'
+    why: 'Optional Polygon explorer evidence only when Polygon is the selected project chain. This is not a default setup gate.'
   },
   {
     id: 'owner_public_wallet',
@@ -30,12 +46,60 @@ const ENV_VARIABLES = [
     why: 'Optional public wallet address that can be displayed and used to prefill wallet metadata. It must never be a private key or seed phrase.'
   },
   {
+    id: 'chain_public_wallet',
+    name: 'CHAIN_PUBLIC_WALLET_ADDRESS',
+    group: 'wallet_public',
+    label: 'Selected-chain public wallet address',
+    example: 'CHAIN_PUBLIC_WALLET_ADDRESS=0xOrSelectedChainPublicAddress',
+    why: 'Optional public address for the selected chain. Public metadata only; never signing material.'
+  },
+  {
     id: 'polygon_public_wallet',
     name: 'POLYGON_PUBLIC_WALLET_ADDRESS',
     group: 'wallet_public',
-    label: 'Polygon public wallet address',
+    label: 'Optional Polygon public wallet address',
     example: 'POLYGON_PUBLIC_WALLET_ADDRESS=0xYourPolygonPublicAddress',
-    why: 'Optional public Polygon address for token deployment, treasury, or trading metadata. It is public metadata only.'
+    why: 'Optional Polygon-specific public metadata only when Polygon is the selected chain.'
+  },
+  {
+    id: 'base_public_wallet',
+    name: 'BASE_PUBLIC_WALLET_ADDRESS',
+    group: 'wallet_public',
+    label: 'Optional Base public wallet address',
+    example: 'BASE_PUBLIC_WALLET_ADDRESS=0xYourBasePublicAddress',
+    why: 'Optional Base public metadata only when Base is the selected chain.'
+  },
+  {
+    id: 'ethereum_public_wallet',
+    name: 'ETHEREUM_PUBLIC_WALLET_ADDRESS',
+    group: 'wallet_public',
+    label: 'Optional Ethereum public wallet address',
+    example: 'ETHEREUM_PUBLIC_WALLET_ADDRESS=0xYourEthereumPublicAddress',
+    why: 'Optional Ethereum public metadata only when Ethereum is the selected chain.'
+  },
+  {
+    id: 'bnb_public_wallet',
+    name: 'BNB_PUBLIC_WALLET_ADDRESS',
+    group: 'wallet_public',
+    label: 'Optional BNB Chain public wallet address',
+    example: 'BNB_PUBLIC_WALLET_ADDRESS=0xYourBnbPublicAddress',
+    why: 'Optional BNB Chain public metadata only when BNB Chain is the selected chain.'
+  },
+  {
+    id: 'avalanche_public_wallet',
+    name: 'AVALANCHE_PUBLIC_WALLET_ADDRESS',
+    group: 'wallet_public',
+    label: 'Optional Avalanche public wallet address',
+    example: 'AVALANCHE_PUBLIC_WALLET_ADDRESS=0xYourAvalanchePublicAddress',
+    why: 'Optional Avalanche public metadata only when Avalanche is the selected chain.'
+  },
+  {
+    id: 'solana_public_wallet',
+    name: 'SOLANA_PUBLIC_WALLET_ADDRESS',
+    group: 'wallet_public',
+    label: 'Optional Solana public wallet address',
+    example: 'SOLANA_PUBLIC_WALLET_ADDRESS=YourSolanaPublicAddress',
+    why: 'Optional Solana public metadata only when Solana is the selected chain.'
   },
   {
     id: 'coinbase_key',
@@ -153,7 +217,13 @@ const ENV_VARIABLES = [
 
 const PUBLIC_WALLET_ADDRESS_NAMES = new Set([
   'OWNER_PUBLIC_WALLET_ADDRESS',
-  'POLYGON_PUBLIC_WALLET_ADDRESS'
+  'CHAIN_PUBLIC_WALLET_ADDRESS',
+  'POLYGON_PUBLIC_WALLET_ADDRESS',
+  'BASE_PUBLIC_WALLET_ADDRESS',
+  'ETHEREUM_PUBLIC_WALLET_ADDRESS',
+  'BNB_PUBLIC_WALLET_ADDRESS',
+  'AVALANCHE_PUBLIC_WALLET_ADDRESS',
+  'SOLANA_PUBLIC_WALLET_ADDRESS'
 ]);
 
 const FORBIDDEN_WALLET_SECRET_KEY_PATTERN = /(seed|mnemonic|recovery|wallet.*private|private.*wallet|deployer_private_key|owner_private_key|wallet_secret|wallet_password)/i;
@@ -509,15 +579,18 @@ function buildOwnerSetupWizard({
       optional: true
     }),
     gate({
-      id: 'rpc_provider_ready',
-      lane: 'full_e2e',
-      label: 'Polygon RPC/provider keys ready',
-      passed: envStatus.safeToUse && groupComplete(envStatus, ['POLYGON_RPC_URL', 'POLYGONSCAN_API_KEY']),
-      missing: 'POLYGON_RPC_URL and POLYGONSCAN_API_KEY are missing or empty.',
-      whyNeeded: 'Polygon token creation, explorer evidence, and quote adapters need provider access after owner approval.',
-      safe: 'Safe. These are provider credentials only; no wallet signing is enabled.',
-      exactlyEnter: ['POLYGON_RPC_URL=...', 'POLYGONSCAN_API_KEY=...'].join('\n'),
-      evidence: `POLYGON_RPC_URL=${hasEnv(envStatus, 'POLYGON_RPC_URL') ? 'present' : 'missing'}, POLYGONSCAN_API_KEY=${hasEnv(envStatus, 'POLYGONSCAN_API_KEY') ? 'present' : 'missing'}`,
+      id: 'chain_provider_ready',
+      lane: 'optional_future_integration',
+      label: 'Blockchain Provider / Chain Provider ready',
+      passed: envStatus.safeToUse && (
+        groupComplete(envStatus, ['CHAIN_RPC_URL', 'CHAIN_EXPLORER_API_KEY'])
+        || groupComplete(envStatus, ['POLYGON_RPC_URL', 'POLYGONSCAN_API_KEY'])
+      ),
+      missing: 'Optional: add provider credentials only after choosing a target chain for a project.',
+      whyNeeded: 'Future token evidence, chain reads, quote adapters, or deployment review may need provider access for the selected chain.',
+      safe: 'Safe when used as provider credentials only. These do not enable wallet signing or live trading.',
+      exactlyEnter: ['CHAIN_RPC_URL=...', 'CHAIN_EXPLORER_API_KEY=...', '# or chain-specific names after choosing a chain'].join('\n'),
+      evidence: `Generic provider=${groupComplete(envStatus, ['CHAIN_RPC_URL', 'CHAIN_EXPLORER_API_KEY']) ? 'complete' : 'optional'}, Polygon provider=${groupComplete(envStatus, ['POLYGON_RPC_URL', 'POLYGONSCAN_API_KEY']) ? 'complete' : 'optional'}`,
       blocking: false,
       optional: true
     }),
@@ -597,18 +670,24 @@ function buildOwnerSetupWizard({
     }),
     gate({
       id: 'high_security_live_approval_locked',
-      lane: 'full_e2e',
+      lane: 'live_e2e',
       label: 'Live trading remains locked',
       passed: liveLocked,
       missing: 'Live approval lock must show disabled execution, disabled order endpoint, and no go-live allowance.',
-      whyNeeded: 'The setup wizard can reach 100% readiness without enabling live trading.',
-      safe: 'Safe. This is the separate high-security approval boundary.',
+      whyNeeded: 'This is the correct safety state. Live E2E remains locked until a separate owner-approved live process exists.',
+      safe: 'Safe. This is the separate high-security approval boundary, not a failure.',
       exactlyEnter: 'Nothing to enter. Verify that live execution stays disabled.',
       evidence: liveLocked ? 'live execution disabled, order endpoint disabled, go-live blocked' : 'live lock not confirmed'
     })
   ];
   const paperProgress = corePaperReady ? 100 : computeProgress(95, paperGates);
-  const fullE2eProgress = computeProgress(72, fullE2eGates);
+  const localE2eReady = corePaperReady
+    && publicWallets.length > 0
+    && liveLocked
+    && walletSigningEnabled === false;
+  const localE2eProgress = localE2eReady ? 100 : (corePaperReady ? 95 : paperProgress);
+  const liveE2eGates = fullE2eGates.filter(item => item.lane === 'live_e2e');
+  const optionalFutureGates = fullE2eGates.filter(item => item.optional);
   const blockedGates = [...paperGates, ...fullE2eGates].filter(item => item.blocking !== false && !item.passed);
 
   return {
@@ -617,15 +696,19 @@ function buildOwnerSetupWizard({
     audience: 'non_technical_owner',
     coreSetup: {
       status: corePaperReady ? 'complete' : 'needs_attention',
-      label: corePaperReady ? 'Core Setup Complete' : 'Core Setup Needs Attention',
-      readinessLabel: corePaperReady ? 'Local Paper Trading Ready' : 'Paper Setup Needs Attention',
-      message: corePaperReady
-        ? 'You can now safely use local paper trading. Live trading and wallet signing remain disabled.'
+      label: localE2eReady ? 'Local E2E Complete' : (corePaperReady ? 'Core Setup Complete' : 'Core Setup Needs Attention'),
+      readinessLabel: localE2eReady ? 'Local E2E Complete' : (corePaperReady ? 'Local Paper Trading Ready' : 'Paper Setup Needs Attention'),
+      message: localE2eReady
+        ? 'Local E2E Complete — You can safely operate local paper trading. Live E2E remains locked for future approval.'
+        : corePaperReady
+          ? 'You can now safely use local paper trading. Add public wallet metadata through the UI to complete Local E2E. Live trading and wallet signing remain disabled.'
         : 'Finish the required paper-trading items. Optional API/provider integrations can wait.',
       paperTradingOperational: corePaperReady,
+      localEndToEndOperational: localE2eReady,
       localServerHealthy,
       paperScheduleOrRunReady,
       activeRiskProfilePresent: paperState.activeRiskProfiles.length > 0,
+      publicWalletMetadataPresent: publicWallets.length > 0,
       liveTradingEnabled: false,
       walletSigningEnabled: false,
       optionalIntegrationsRequired: false
@@ -682,26 +765,73 @@ function buildOwnerSetupWizard({
         label: 'Paper trading setup',
         liveSigningRequired: false
       },
-      fullEndToEnd: {
-        current: fullE2eProgress,
-        from: 72,
+      localEndToEnd: {
+        current: localE2eProgress,
+        from: 95,
         target: 100,
-        label: 'Full E2E setup readiness',
+        label: 'Local E2E Readiness',
+        status: localE2eReady ? 'complete' : 'needs_public_wallet_metadata',
+        message: localE2eReady
+          ? 'Local E2E Complete — You can safely operate local paper trading.'
+          : 'Local E2E needs public wallet metadata added through the UI. No wallet signing is required.'
+      },
+      liveEndToEnd: {
+        current: null,
+        from: null,
+        target: null,
+        label: 'Live E2E Readiness',
+        status: 'locked',
+        message: 'Live E2E Locked — Future approval required.',
         liveTradingEnabled: false,
-        note: '100% here means setup-ready for a later high-security live approval process, not live trading enabled.'
+        walletSigningEnabled: false
+      },
+      fullEndToEnd: {
+        current: null,
+        from: null,
+        target: null,
+        label: 'Live E2E Readiness',
+        status: 'locked',
+        liveTradingEnabled: false,
+        note: 'Live E2E Locked — Future approval required. This is the correct safety state, not a failure.'
       }
     },
     gates: {
       paperTrading: paperGates,
+      localEndToEnd: [
+        gate({
+          id: 'public_wallet_metadata_ready',
+          lane: 'local_e2e',
+          label: 'Public wallet metadata present',
+          passed: publicWallets.length > 0,
+          missing: 'Add at least one public wallet address through the UI.',
+          whyNeeded: 'Local E2E needs wallet metadata labels so projects, strategies, and token plans can assign wallets without giving EtherealAI signing keys.',
+          safe: 'Safe. Public addresses are metadata only; signing remains disabled.',
+          exactlyEnter: 'Use Add Public Wallet. Enter chain family, network, label, and public address only.',
+          evidence: `${publicWallets.length} public wallet metadata record(s)`
+        }),
+        ...paperGates
+      ],
+      liveEndToEnd: liveE2eGates,
+      optionalFutureIntegrations: optionalFutureGates,
       fullEndToEnd: fullE2eGates
     },
     optionalFutureIntegrations: [
       {
+        id: 'blockchain_provider',
+        label: 'Blockchain Provider / Chain Provider',
+        ownerStatus: (
+          groupComplete(envStatus, ['CHAIN_RPC_URL', 'CHAIN_EXPLORER_API_KEY'])
+          || groupComplete(envStatus, ['POLYGON_RPC_URL', 'POLYGONSCAN_API_KEY'])
+        ) ? 'Working' : 'Optional',
+        requiredForPaperTrading: false,
+        plainEnglish: 'Optional later after you choose a target chain for a project. Local paper trading does not need chain-provider keys.'
+      },
+      {
         id: 'market_data_providers',
         label: 'Market data providers',
-        ownerStatus: groupComplete(envStatus, ['POLYGON_RPC_URL']) ? 'Working' : 'Optional',
+        ownerStatus: hasEnv(envStatus, 'CHAIN_RPC_URL') || hasEnv(envStatus, 'POLYGON_RPC_URL') ? 'Working' : 'Optional',
         requiredForPaperTrading: false,
-        plainEnglish: 'Optional later for automated external data refreshes. Local paper trading does not need this.'
+        plainEnglish: 'Optional later for automated external data refreshes. Local paper trading can use local/imported data.'
       },
       {
         id: 'exchange_apis',

@@ -1606,7 +1606,9 @@ function checkReadinessModule() {
     || readiness.completionLedger?.percentages?.fullLiveEndToEnd?.current !== 72
     || !readiness.completionLedger?.gates?.some(gate => gate.id === 'owner_acceptance_recorded' && gate.status === 'pending_owner')
     || !readiness.completionLedger?.gates?.some(gate => gate.id === 'active_paper_schedule_reviewed' && gate.status === 'pending_owner')
-    || !readiness.completionLedger?.gates?.some(gate => gate.id === 'live_order_endpoint_enabled' && gate.status === 'blocked_by_design')
+    || readiness.liveEndToEndStatus !== 'locked'
+    || readiness.liveEndToEndMessage !== 'Live E2E Locked — Future approval required.'
+    || !readiness.completionLedger?.gates?.some(gate => gate.id === 'live_order_endpoint_enabled' && gate.status === 'locked_by_design')
     || readiness.botAutomationOwnerWorkflow?.monitorOnly !== true
     || readiness.botAutomationOwnerWorkflow?.exports?.dossierHistoryCsv !== true
     || readiness.botAutomationOwnerWorkflow?.routeSafetyProfile?.boundary !== 'monitor_only_no_live_orders'
@@ -2300,9 +2302,13 @@ function checkOwnerSetupWizardModule() {
     buildOwnerEnvTemplate
   } = require(path.join(projectRoot, 'app/server/src/lib/owner-setup-wizard'));
   const safeEnv = [
+    'CHAIN_RPC_URL=https://chain.example',
+    'CHAIN_EXPLORER_API_KEY=chain-explorer-fixture',
     'POLYGON_RPC_URL=https://polygon.example',
     'POLYGONSCAN_API_KEY=polygonscan-fixture',
     'OWNER_PUBLIC_WALLET_ADDRESS=0x000000000000000000000000000000000000dEaD',
+    'BASE_PUBLIC_WALLET_ADDRESS=0x000000000000000000000000000000000000bA5E',
+    'SOLANA_PUBLIC_WALLET_ADDRESS=11111111111111111111111111111111',
     'COINBASE_API_KEY=coinbase-key-fixture',
     'COINBASE_API_SECRET=coinbase-secret-fixture',
     'GITHUB_TOKEN=github-fixture',
@@ -2396,21 +2402,27 @@ function checkOwnerSetupWizardModule() {
     || unsafeStatus.safeToUse !== false
     || !unsafeStatus.forbiddenWalletSecretNames.includes('OWNER_SEED_PHRASE')
     || wizard.progress?.paperTrading?.current !== 100
-    || wizard.progress?.fullEndToEnd?.current !== 100
+    || wizard.progress?.localEndToEnd?.current !== 100
+    || wizard.progress?.localEndToEnd?.status !== 'complete'
+    || wizard.progress?.liveEndToEnd?.status !== 'locked'
+    || wizard.progress?.fullEndToEnd?.status !== 'locked'
+    || wizard.progress?.liveEndToEnd?.message !== 'Live E2E Locked — Future approval required.'
     || wizard.status !== 'local_paper_trading_ready'
-    || wizard.coreSetup?.label !== 'Core Setup Complete'
-    || wizard.coreSetup?.readinessLabel !== 'Local Paper Trading Ready'
+    || wizard.coreSetup?.label !== 'Local E2E Complete'
+    || wizard.coreSetup?.readinessLabel !== 'Local E2E Complete'
+    || wizard.coreSetup?.localEndToEndOperational !== true
     || wizard.coreSetup?.optionalIntegrationsRequired !== false
     || noEnvPaperWizard.status !== 'local_paper_trading_ready'
     || noEnvPaperWizard.progress?.paperTrading?.current !== 100
     || noEnvPaperWizard.coreSetup?.paperTradingOperational !== true
     || noEnvPaperWizard.coreSetup?.optionalIntegrationsRequired !== false
     || noEnvPaperWizard.walletMetadata?.nextAction?.includes('OWNER_PUBLIC_WALLET_ADDRESS')
-    || !noEnvPaperWizard.gates?.fullEndToEnd?.some(gate => gate.id === 'rpc_provider_ready' && gate.blocking === false && gate.optional === true)
+    || !noEnvPaperWizard.gates?.fullEndToEnd?.some(gate => gate.id === 'chain_provider_ready' && gate.blocking === false && gate.optional === true)
     || !noEnvPaperWizard.gates?.fullEndToEnd?.some(gate => gate.id === 'exchange_credentials_ready' && gate.blocking === false && gate.optional === true)
+    || !wizard.optionalFutureIntegrations?.some(item => item.id === 'blockchain_provider' && item.label === 'Blockchain Provider / Chain Provider' && item.requiredForPaperTrading === false)
     || wizard.envDiscovery?.visualPickerSupported !== true
     || wizard.paperConfiguration?.status !== 'paper_ready'
-    || wizard.walletMetadata?.detectedEnvPublicWallets?.length !== 1
+    || wizard.walletMetadata?.detectedEnvPublicWallets?.length < 3
     || !Array.isArray(wizard.setupGuide)
     || wizard.safetyBoundary?.liveTradingEnabled !== false
     || wizard.safetyBoundary?.seedPhrasesAccepted !== false
@@ -2418,6 +2430,8 @@ function checkOwnerSetupWizardModule() {
     || !wizard.gates?.paperTrading?.some(gate => gate.id === 'paper_verification_run_completed' && gate.passed)
     || !wizard.optionalFutureIntegrations?.some(item => item.id === 'exchange_apis' && item.requiredForPaperTrading === false)
     || !template.includes('Do not add seed phrases')
+    || !template.includes('CHAIN_RPC_URL=')
+    || !template.includes('CHAIN_PUBLIC_WALLET_ADDRESS=')
     || !template.includes('POLYGON_RPC_URL=')
   ) {
     fail('owner setup wizard module did not preserve safe env, progress, and live-disabled behavior');
@@ -6225,8 +6239,8 @@ function checkMvpTestPassOwnerWorkflowUi() {
     || !html.includes('id="completion-ledger-gates"')
     || !html.includes('function renderCompletionLedger(ledger = {})')
     || !html.includes('Why MVP is 99%')
-    || !html.includes('Why Local Paper is 95%')
-    || !html.includes('Why Full Live is 72%')
+    || !html.includes('Local E2E Complete')
+    || !html.includes('Live E2E Locked')
     || !html.includes('id="owner-acceptance-record-status"')
     || !html.includes('id="owner-acceptance-record-cards"')
     || !html.includes('id="owner-acceptance-record-list"')
@@ -6291,8 +6305,8 @@ function checkDashboardMvpReadinessUi() {
     || !html.includes('id="dashboard-completion-ledger"')
     || !html.includes('function renderCompletionLedger(ledger = {})')
     || !html.includes('Why MVP is 99%')
-    || !html.includes('Why Local Paper is 95%')
-    || !html.includes('Why Full Live is 72%')
+    || !html.includes('Local E2E Complete')
+    || !html.includes('Live E2E Locked')
     || !html.includes('id="memory-export-status"')
     || !html.includes('Export System Memory JSON')
     || !html.includes('Memory snapshot loading...')
@@ -6327,10 +6341,10 @@ function checkDashboardMvpReadinessUi() {
     || !html.includes('checklistById')
     || !html.includes('endToEndBlockingItems')
     || !html.includes('dashboard-live-blockers')
-    || !html.includes('Full Live Blockers')
-    || !html.includes('gate(s) still intentionally blocked')
+    || !html.includes('Live E2E Locked Gates')
+    || !html.includes('gate(s) intentionally locked, not failed')
     || !html.includes('Review live execution gate before enabling.')
-    || !html.includes('Full E2E Handoff')
+    || !html.includes('Live E2E Handoff')
     || !html.includes('id="live-handoff-summary"')
     || !html.includes('id="live-handoff-key-gates"')
     || !html.includes('function renderLiveExecutionHandoff(handoff = {})')
@@ -6491,7 +6505,7 @@ function checkOwnerSetupWizardUi() {
     || !html.includes('Use Detected Public Wallet')
     || !html.includes('Paper Trading Configuration')
     || !html.includes('Optional Future Connections')
-    || !html.includes('Your local paper-trading system is complete. These remaining items are optional future integrations.')
+    || !html.includes('Chain providers, exchange APIs, social tools, GitHub, and Cloudflare are optional future integrations.')
     || !html.includes('Status: Optional')
     || !html.includes('Add Public Wallet')
     || !html.includes('Skip Optional Integrations For Now')
@@ -6501,7 +6515,7 @@ function checkOwnerSetupWizardUi() {
     || !html.includes('Social/API integrations: optional future automation')
     || !html.includes('Wallet address: add through UI')
     || !html.includes('Blocked Paper Trading Gates')
-    || !html.includes('Blocked Full E2E Gates')
+    || !html.includes('Live E2E Locked Gates')
     || !html.includes('Local Secrets File')
     || !html.includes('Public Address Only')
     || !html.includes('Save Public Wallet Metadata')
@@ -6635,8 +6649,8 @@ function checkOwnerProofPacketUi() {
     || !html.includes('id="owner-completion-ledger-gates"')
     || !html.includes('completionLedger')
     || !html.includes('Why MVP is 99%')
-    || !html.includes('Why Local Paper is 95%')
-    || !html.includes('Why Full Live is 72%')
+    || !html.includes('Local E2E Complete')
+    || !html.includes('Live E2E Locked')
     || !html.includes('Owner Acceptance')
     || !html.includes('Bot Automation Path')
     || !html.includes('id="owner-bot-automation-path"')
@@ -6713,7 +6727,7 @@ function checkHomeLocalProofUi() {
     || !html.includes('Open Paper Trading Center')
     || !html.includes('System Health')
     || !html.includes('Paper Trading')
-    || !html.includes('Full E2E Readiness')
+    || !html.includes('Local E2E Readiness')
     || !html.includes('Live Execution')
     || !html.includes('Loading next recommended action')
     || !html.includes('Main Operating Areas')
@@ -6731,13 +6745,13 @@ function checkHomeLocalProofUi() {
     || !html.includes('window.EtherealOperatorAssistant.collectState')
     || !html.includes('home-next-action')
     || !html.includes('home-mission-status')
-    || !header.includes('MVP 99% · Local E2E 95% · Live disabled')
+    || !header.includes('MVP 100% · Local E2E 100% · Live E2E locked')
     || !header.includes('/owner-proof-packet')
     || !header.includes('/security-lockdown')
     || !header.includes('/mvp-test-pass')
     || !header.includes('/server-route-inventory')
     || !footer.includes('Local Proof')
-    || !footer.includes('MVP 99%, local paper automation 95%, full live end-to-end 72%, and live execution disabled.')
+    || !footer.includes('MVP 100%, Local E2E complete for paper operation, Live E2E locked, and live execution disabled.')
     || !footer.includes('Owner proof packet')
     || !footer.includes('Owner evidence manifest')
     || !footer.includes('no live order endpoint enabled')
@@ -6786,14 +6800,18 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !operatorMode.includes('Create paper plan')
     || !operatorMode.includes('Start paper schedule')
     || !operatorMode.includes('Review results')
+    || !operatorMode.includes('Select Chain-Neutral Defaults')
+    || operatorMode.includes('Select Polygon Defaults')
     || !operatorMode.includes('Working')
     || !operatorMode.includes('Optional')
     || !operatorMode.includes('Locked')
     || !operatorMode.includes('Unsafe')
     || operatorNext.includes('fullProgress < 100')
     || operatorNext.includes('Add Wallet Public Metadata')
-    || !operatorNext.includes('Optional provider/API integrations can wait.')
-    || !operatorNext.includes('Your Paper-Trading System Is Operational')
+    || operatorNext.includes('Polygon')
+    || !operatorNext.includes('Build strategy, run paper test, review paper bot results, create token plan, draft website/social content, or review security tasks.')
+    || !operatorNext.includes('Live E2E is locked for future owner-approved security work.')
+    || !operatorNext.includes('Local E2E Complete')
     || !styles.includes('.operator-answer-panel')
     || !styles.includes('.operator-guided-workflow')
     || !styles.includes('.operator-simple-mode .operator-simple-keep .model-output:not(.owner-action-output)')
@@ -6836,7 +6854,7 @@ function checkAuthenticatedProofBanners() {
 
     if (
       !html.includes('class="auth-proof-banner"')
-      || !html.includes('MVP 99% · Local E2E 95%')
+      || !html.includes('MVP 100% · Local E2E 100%')
       || !html.includes('Live execution disabled')
       || !html.includes('/owner-proof-packet')
       || !html.includes('Proof packet')
@@ -6945,8 +6963,8 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('Top-200 rebalance bot')
     || !solidity.includes('Apply Token Options To Spec')
     || !solidity.includes('Select Low-Fee Launch Defaults')
-    || !solidity.includes('Select Polygon Launch Defaults')
-    || !solidity.includes('Polygon-first token launch')
+    || !solidity.includes('Select Chain-Neutral Launch Defaults')
+    || !solidity.includes('Polygon selected for this project only')
     || !solidity.includes('Polygon Operating Profile')
     || !solidity.includes('Target Blockchain')
     || !solidity.includes('Solana SPL Token')
@@ -6989,8 +7007,8 @@ function checkMvpOwnerTestPassDoc() {
   const doc = fs.readFileSync(path.join(projectRoot, 'MVP_OWNER_TEST_PASS.md'), 'utf8');
 
   if (
-    !doc.includes('local end-to-end completion is `95%`')
-    || !doc.includes('Completion Ledger explains why MVP is 99%, why Local Paper is 95%, and why Full Live is 72%.')
+    !doc.includes('local E2E readiness is `100%` when paper automation and public wallet metadata are present')
+    || !doc.includes('Completion Ledger explains why MVP is 99%, why Local E2E is complete when paper/wallet/live-lock requirements are satisfied, and why Live E2E is locked.')
     || !doc.includes('Completion Ledger shows owner acceptance recorded moves MVP from `99%` to `100%`')
     || !doc.includes('Completion Ledger is present in the proof packet and lists owner acceptance, active paper schedule review, and blocked live gates.')
     || !doc.includes('MVP Readiness shows Owner Acceptance as `Pending Review`.')
@@ -7011,7 +7029,8 @@ function checkMvpOwnerTestPassDoc() {
     || !doc.includes('Owner Setup Wizard is included as a local proof surface with no secret values returned and live execution disabled.')
     || !doc.includes('Open `/owner-setup`')
     || !doc.includes('Paper 95→100')
-    || !doc.includes('Full E2E 72→100')
+    || !doc.includes('Local E2E Complete')
+    || !doc.includes('Live E2E Locked')
     || !doc.includes('~/EtherealAI_Secrets/.env')
     || !doc.includes('Open `/operator-control`')
     || !doc.includes('Wallet Onboarding Wizard explains the owner key handoff in plain English and shows the simplest safe key-control path.')
@@ -7022,7 +7041,7 @@ function checkMvpOwnerTestPassDoc() {
     || !doc.includes('Safe user-level hardening applied in this session')
     || !doc.includes('## Owner Wallet Control Workflow')
     || !doc.includes('## Owner Setup Wizard Workflow')
-    || !doc.includes('Full E2E setup readiness `100%` is not live trading.')
+    || !doc.includes('Live E2E readiness is locked until a future owner-approved process exists.')
     || !doc.includes('Revocation is the emergency shutdown path for a wallet record')
     || !doc.includes('Bot Automation Path shows Automated Paper Path, Ready Paper Plans, Active Paper Schedules, Future Live Automation blocked, Live Blocked Gates, and no live order endpoint.')
     || !doc.includes('Paper Automation Runbook lists the monitor-only owner steps')
@@ -7043,11 +7062,11 @@ function checkMvpOwnerTestPassDoc() {
     || !doc.includes('Record local MVP acceptance only after the manual pass is complete.')
     || !doc.includes('Use `Record Local MVP Acceptance`.')
     || !doc.includes('the record is saved locally and live execution remains disabled')
-    || !doc.includes('Local paper-automation end-to-end completion: about `95%`')
-    || !doc.includes('Full live end-to-end completion: about `72%`')
-    || !doc.includes('The Completion Ledger explains these caps in the app.')
-    || !doc.includes('## Full Live Blockers')
-    || !doc.includes('Full live end-to-end completion remains about `72%` because these 4 gates are intentionally blocked')
+    || !doc.includes('Local E2E completion: `100%` when paper automation, public wallet metadata, and live locks are satisfied')
+    || !doc.includes('Live E2E readiness: locked until future owner-approved security work')
+    || !doc.includes('The Completion Ledger explains these states in the app.')
+    || !doc.includes('## Live E2E Locked Gates')
+    || !doc.includes('Live E2E remains locked because these 4 gates are intentionally blocked')
     || !doc.includes('Runtime credential loader is implemented')
     || !doc.includes('Live exchange order adapters are implemented')
     || !doc.includes('Live order endpoint is enabled')
@@ -7070,8 +7089,8 @@ function checkProjectHandoffDoc() {
       doc.includes('Owner-test local MVP: about 99% complete.')
       || doc.includes('Owner-test local MVP: 100% after the local owner acceptance record; 99% before owner acceptance in a fresh database.')
     )
-    || !doc.includes('Local paper-automation end-to-end path: about 95% complete.')
-    || !doc.includes('Full live end-to-end path: about 72% complete')
+    || !doc.includes('Local E2E path: complete for safe local paper operation')
+    || !doc.includes('Live E2E path: locked because credential loading')
     || !doc.includes('## Current Owner-Test Snapshot')
     || !doc.includes('Owner evidence included · owner acceptance pending · live disabled')
     || !doc.includes('the completion ledger explaining why MVP/local paper/full live percentages are gated')
@@ -8497,7 +8516,7 @@ async function runServerApiChecks() {
     || !ownerSetupHtml.includes('Setup Wizard')
     || !ownerSetupHtml.includes('Paper Trading Complete')
     || !ownerSetupHtml.includes('Core Setup Complete')
-    || !ownerSetupHtml.includes('You can now safely use local paper trading. Live trading and wallet signing remain disabled.')
+    || !ownerSetupHtml.includes('Local E2E Complete — You can safely operate local paper trading. Live E2E remains locked for future approval.')
     || !ownerSetupHtml.includes('Optional future connections available')
     || !ownerSetupHtml.includes('Select .env File Visually')
     || !ownerSetupHtml.includes('Verify Selected .env File')
@@ -8522,10 +8541,12 @@ async function runServerApiChecks() {
     || ownerSetup.body.wizard?.progress?.paperTrading?.target !== 100
     || ownerSetup.body.wizard?.progress?.paperTrading?.current < 95
     || ownerSetup.body.wizard?.progress?.paperTrading?.current > 100
-    || ownerSetup.body.wizard?.progress?.fullEndToEnd?.from !== 72
-    || ownerSetup.body.wizard?.progress?.fullEndToEnd?.target !== 100
-    || ownerSetup.body.wizard?.progress?.fullEndToEnd?.current < 72
-    || ownerSetup.body.wizard?.progress?.fullEndToEnd?.current > 100
+    || ownerSetup.body.wizard?.progress?.localEndToEnd?.from !== 95
+    || ownerSetup.body.wizard?.progress?.localEndToEnd?.target !== 100
+    || ownerSetup.body.wizard?.progress?.localEndToEnd?.current < 95
+    || ownerSetup.body.wizard?.progress?.localEndToEnd?.current > 100
+    || ownerSetup.body.wizard?.progress?.liveEndToEnd?.status !== 'locked'
+    || ownerSetup.body.wizard?.progress?.fullEndToEnd?.status !== 'locked'
     || ownerSetup.body.wizard?.safetyBoundary?.liveTradingEnabled !== false
     || ownerSetup.body.wizard?.safetyBoundary?.walletSigningEnabled !== false
     || ownerSetup.body.wizard?.safetyBoundary?.seedPhrasesAccepted !== false
@@ -8625,23 +8646,23 @@ async function runServerApiChecks() {
   const protectedProofPages = [
     {
       path: '/creator',
-      requiredText: ['MVP 99% · Local E2E 95%', 'Live execution disabled', 'Proof packet', 'Owner evidence']
+      requiredText: ['MVP 100% · Local E2E 100%', 'Live execution disabled', 'Proof packet', 'Owner evidence']
     },
     {
       path: '/strategy-lab',
-      requiredText: ['MVP 99% · Local E2E 95%', 'Live execution disabled', 'Proof packet', 'Owner evidence', 'Cross-Exchange Arbitrage Simulator']
+      requiredText: ['MVP 100% · Local E2E 100%', 'Live execution disabled', 'Proof packet', 'Owner evidence', 'Cross-Exchange Arbitrage Simulator']
     },
     {
       path: '/solidity-lab',
-      requiredText: ['MVP 99% · Local E2E 95%', 'Proof packet', 'Deployment Boundary', 'no mainnet or testnet broadcast', 'Token Ecosystem Studio', 'Token Ecosystem Projects', 'Save Ecosystem Project', 'Update Selected Project', 'Artifact Manifest', 'Multi-Chain Token Builder', 'Listing Readiness']
+      requiredText: ['MVP 100% · Local E2E 100%', 'Proof packet', 'Deployment Boundary', 'no mainnet or testnet broadcast', 'Token Ecosystem Studio', 'Token Ecosystem Projects', 'Save Ecosystem Project', 'Update Selected Project', 'Artifact Manifest', 'Multi-Chain Token Builder', 'Listing Readiness']
     },
     {
       path: '/social-ops',
-      requiredText: ['MVP 99% · Local E2E 95%', 'Proof packet', 'Local-Only Safety', 'no social network API calls']
+      requiredText: ['MVP 100% · Local E2E 100%', 'Proof packet', 'Local-Only Safety', 'no social network API calls']
     },
     {
       path: '/server-route-inventory',
-      requiredText: ['MVP 99% · Local E2E 95%', 'Live execution disabled', 'Proof packet', 'Owner evidence']
+      requiredText: ['MVP 100% · Local E2E 100%', 'Live execution disabled', 'Proof packet', 'Owner evidence']
     }
   ];
 
@@ -9384,7 +9405,9 @@ async function runServerApiChecks() {
     || readiness.completionLedger?.percentages?.fullLiveEndToEnd?.current !== 72
     || !readiness.completionLedger?.gates?.some(gate => gate.id === 'owner_acceptance_recorded')
     || !readiness.completionLedger?.gates?.some(gate => gate.id === 'active_paper_schedule_reviewed')
-    || !readiness.completionLedger?.gates?.some(gate => gate.id === 'live_order_endpoint_enabled' && gate.status === 'blocked_by_design')
+    || readiness.liveEndToEndStatus !== 'locked'
+    || readiness.liveEndToEndMessage !== 'Live E2E Locked — Future approval required.'
+    || !readiness.completionLedger?.gates?.some(gate => gate.id === 'live_order_endpoint_enabled' && gate.status === 'locked_by_design')
     || readiness.automationModes?.paper?.canRunAutomatically !== true
     || readiness.automationModes?.paper?.reviewExportsEnabled !== true
     || readiness.automationModes?.paper?.liveExecutionEnabled !== false

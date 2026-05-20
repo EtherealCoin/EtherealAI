@@ -126,7 +126,7 @@ function registerSocialOpsRoutes(app, {
     campaignNote
   }) {
     const projectName = tokenProject?.name || blueprint?.contract?.name || 'Token Project';
-    const chain = tokenProject?.target_chain || blueprint?.multiChainTokenBuild?.selectedChain?.id || 'polygon';
+  const chain = tokenProject?.target_chain || blueprint?.multiChainTokenBuild?.selectedChain?.id || 'selected-chain';
     const selectedChain = blueprint?.multiChainTokenBuild?.selectedChain?.name || chain;
     const applicationPlan = blueprint?.listingApplicationPlan || blueprint?.listingReadiness?.applicationPlan || {};
     const communityOps = blueprint?.communityOperations || blueprint?.socialCampaign?.communityOperations || {};
@@ -172,7 +172,7 @@ function registerSocialOpsRoutes(app, {
         '',
         `1. What ${projectName} is building on ${selectedChain}.`,
         '2. Website, whitepaper, roadmap, tokenomics, and contract evidence checklist.',
-        '3. Polygon-specific evidence: verified contract, PolygonScan, DEX pairs, liquidity/lock docs, and supply docs.',
+        '3. Chain-specific evidence: verified contract, explorer page, DEX pairs, liquidity/lock docs, and supply docs for the selected blockchain.',
         `4. Community operations roles: ${roleSummary}.`,
         '5. CMC/CoinGecko path: official forms only, owner review, no duplicate requests, no bribes, no fake activity.',
         '6. Next owner gates before public action.',

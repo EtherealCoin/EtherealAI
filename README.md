@@ -22,7 +22,7 @@ The current project is intentionally designed for owner-controlled local operati
 
 - `/dashboard` - Mission Control for system health, readiness progress, live-lock status, wallets, security, active bots, blocked gates, next action, model roles, MLX lifecycle, multi-agent coordination, and system memory
 - `/operator-manual` - Start Here / Operator Manual for beginner operation, safety rules, wallet handling, paper trading, and page-by-page usage without terminal commands
-- `/owner-setup` - Beginner Owner Setup for reaching `Local Paper Trading Ready` without live trading, wallet signing, or external provider keys; optional `.env`, exchange, GitHub, Cloudflare, social, and Polygon provider integrations stay in Future Integrations / Advanced Mode
+- `/owner-setup` - Beginner Owner Setup for reaching `Local E2E Complete` without live trading, wallet signing, or external provider keys; optional `.env`, exchange, GitHub, Cloudflare, social, and chain-provider integrations stay in Future Integrations / Advanced Mode
 - `/operator-control` - Wallet & Funding Center for wallet metadata, owner key-control guidance, permissions, project assignment, and revoke workflows
 - `/security-lockdown` - Security Lockdown Center for read-only Mac/network security audit, local attack-surface review, and owner hardening checklist
 - `/owner-proof-packet` - local proof packet, owner acceptance, live-blocker evidence
@@ -33,7 +33,7 @@ The current project is intentionally designed for owner-controlled local operati
 - `/solidity-lab` - token, NFT, website, whitepaper, chain, and ecosystem planning
 - `/social-ops` - local-only social/community draft workflows
 
-Every protected operator page now loads the global `What do I do next?` assistant. It checks the local owner setup, readiness, bot automation, wallet, security, and health APIs, then recommends the safest next action in plain English without enabling live trading or wallet signing. Optional provider/API credentials do not become required next actions once local paper trading is ready.
+Every protected operator page now loads the global `What do I do next?` assistant. It checks the local owner setup, readiness, bot automation, wallet, security, and health APIs, then recommends the safest next action in plain English without enabling live trading or wallet signing. Optional provider/API credentials do not become required next actions once Local E2E is complete.
 
 ## Operator Experience
 
@@ -49,7 +49,7 @@ Simple Operator Mode now renders the same beginner structure across Mission Cont
 
 Legacy forms, raw tables, archived records, filters, JSON output, route diagnostics, and internal evidence stay hidden until Advanced Developer Mode is intentionally opened. When a Simple Mode workflow step needs an existing form, EtherealAI reveals only that specific panel as a guided focus instead of exposing the whole developer dashboard.
 
-The Setup Wizard now reports `Core Setup Complete` / `Local Paper Trading Ready` when the local server is healthy, a paper schedule or completed paper run exists, an active paper risk profile exists, live trading is disabled, and wallet signing is disabled. Polygon, exchange, GitHub, Cloudflare, and social API credentials are optional future integrations in Simple Mode. Public wallet addresses are added directly through the UI with `Add Public Wallet`; the `.env` file is only for optional API keys and later integrations.
+The Setup Wizard now reports `Local E2E Complete` when the local server is healthy, a paper schedule or completed paper run exists, an active paper risk profile exists, public wallet metadata exists, live trading is disabled, and wallet signing is disabled. Live E2E is shown separately as locked for future owner-approved security work. Polygon, Base, Ethereum, BNB, Avalanche, Solana, and future chains are selectable per project, token, strategy, or wallet; no blockchain is the system default. Chain-provider, exchange, GitHub, Cloudflare, and social API credentials are optional future integrations in Simple Mode. Public wallet addresses are added directly through the UI with `Add Public Wallet`; the `.env` file is only for optional API keys and later integrations.
 
 ## Run Locally
 

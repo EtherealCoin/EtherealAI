@@ -184,10 +184,10 @@ const CHAIN_CATALOG = [
     tooling: ['Solidity', 'OpenZeppelin', 'Hardhat', 'Foundry'],
     explorers: [{ label: 'PolygonScan', url: 'https://polygonscan.com' }],
     walletSupport: ['MetaMask', 'Rabby', 'WalletConnect-compatible wallets', 'hardware wallet via owner connector'],
-    rpcProfile: 'owner-managed Polygon RPC/provider reference only; EtherealAI stores no RPC secrets in token projects',
+    rpcProfile: 'owner-managed selected-chain RPC/provider reference only; EtherealAI stores no RPC secrets in token projects',
     dexRouteFocus: ['QuickSwap', 'Uniswap on Polygon', 'Sushi-compatible Polygon routes', 'aggregator quote adapters after owner approval'],
     listingEvidenceFocus: ['verified Polygon contract', 'PolygonScan token page', 'official website', 'DEX pair URLs', 'liquidity/lock evidence', 'clear circulating supply docs'],
-    crossChainNotes: 'Good for NFT-heavy experiments, low-cost community utilities, top-200 rebalance research, and Polygon-first listing evidence.'
+    crossChainNotes: 'Good for NFT-heavy experiments, low-cost community utilities, top-200 rebalance research, and Polygon-specific listing evidence when Polygon is selected.'
   },
   {
     id: 'bnb-chain',
@@ -979,7 +979,7 @@ function buildPolygonOperatingProfile(spec = {}) {
       dexRouteFocus: polygon.dexRouteFocus,
       requiredBeforeLiveTrading: [
         'owner wallet connector reference with signing outside EtherealAI',
-        'Polygon RPC/provider secret stored only in owner-approved secret manager',
+        'Selected-chain RPC/provider secret stored only in owner-approved secret manager',
         'DEX adapter contract tests',
         'slippage, gas, pool-depth, tax-token, and bridge-risk model',
         'owner go-live acceptance for each strategy'
@@ -1988,7 +1988,7 @@ h1 {
         nav,
         sections: [
           { title: 'Token Plan', body: 'Local launch site generated from the Solidity Lab token ecosystem blueprint.', items: featureItems },
-          { title: 'Polygon Operating Profile', body: 'Polygon-first chain planning for low-fee token, dapp, trading, and listing evidence workflows.', items: polygonItems },
+          { title: 'Polygon Operating Profile', body: 'Polygon-specific chain planning for low-fee token, dapp, trading, and listing evidence workflows when Polygon is selected.', items: polygonItems },
           { title: 'Roadmap', body: 'Milestones generated from the token website and whitepaper plan.', items: roadmapItems },
           { title: 'Listing Evidence', body: 'Evidence checklist for future owner-reviewed CoinMarketCap/CoinGecko readiness.', items: listingItems },
           { title: 'CMC/CoinGecko Application Path', body: 'Official-form-only application plan. No spam, fake activity, paid guarantees, or bypass behavior.', items: applicationItems }
