@@ -108,6 +108,8 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/market-import-dependencies.js',
     'app/server/src/lib/market-refresh-schedules.js',
     'app/server/src/lib/dev-server.js',
+    'app/client/js/operator-next-action.js',
+    'app/client/js/operator-mode.js',
     'app/server/src/lib/artifact-rows.js',
     'app/server/src/lib/creator-records.js',
     'app/server/src/lib/workspace-files.js',

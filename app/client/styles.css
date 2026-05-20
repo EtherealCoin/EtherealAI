@@ -1504,6 +1504,280 @@ footer {
     white-space: pre-wrap;
 }
 
+.operator-mode-bar {
+    align-items: center;
+    background: #111827;
+    color: #ffffff;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    padding: 12px 22px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.operator-mode-bar strong,
+.operator-mode-bar span {
+    display: block;
+}
+
+.operator-mode-bar span {
+    color: #d1d5db;
+    font-size: 0.95rem;
+    margin-top: 3px;
+}
+
+.operator-mode-actions,
+.operator-workspace-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.operator-mode-actions button,
+.operator-secondary-action {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #111827;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    padding: 10px 14px;
+}
+
+.simple-operator-workspace {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-shadow: 0 16px 34px rgba(17, 24, 39, 0.08);
+    box-sizing: border-box;
+    display: grid;
+    gap: 22px;
+    margin: 22px auto;
+    padding: 28px;
+    text-align: left;
+    width: min(1120px, calc(100vw - 32px));
+}
+
+.operator-page-label,
+.operator-area {
+    color: #2563eb;
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+}
+
+.operator-workspace-header {
+    align-items: start;
+    display: grid;
+    gap: 20px;
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.operator-workspace-header h1 {
+    color: #111827;
+    font-size: clamp(2rem, 5vw, 3.6rem);
+    line-height: 1;
+    margin: 0 0 14px;
+}
+
+.operator-workspace-header p {
+    color: #374151;
+    font-size: 1.15rem;
+    line-height: 1.55;
+    margin: 0;
+    max-width: 760px;
+}
+
+.operator-workspace-actions {
+    justify-content: flex-end;
+    min-width: 260px;
+}
+
+.operator-primary-action {
+    align-items: center;
+    background: #16a34a;
+    border: 0;
+    border-radius: 8px;
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-size: 1.1rem;
+    font-weight: 800;
+    justify-content: center;
+    min-height: 54px;
+    padding: 14px 20px;
+    text-align: center;
+    text-decoration: none;
+    width: 100%;
+}
+
+.operator-primary-action:hover {
+    background: #15803d;
+}
+
+.operator-status-grid,
+.operator-task-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.operator-status-tile,
+.operator-task-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    display: grid;
+    gap: 8px;
+    padding: 18px;
+}
+
+.operator-status-tile span,
+.operator-status-tile small,
+.operator-task-card span {
+    color: #4b5563;
+    line-height: 1.45;
+}
+
+.operator-status-tile strong {
+    color: #111827;
+    font-size: 1.6rem;
+}
+
+.operator-task-card strong {
+    color: #111827;
+    font-size: 1.05rem;
+}
+
+.operator-simple-mode {
+    background: #f3f4f6;
+}
+
+.operator-simple-mode nav {
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    box-sizing: border-box;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 12px;
+    width: 100%;
+}
+
+.operator-simple-mode nav a {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    color: #111827;
+    font-size: 0.98rem;
+    font-weight: 700;
+    padding: 10px 12px;
+}
+
+.operator-simple-mode .container {
+    max-width: 1120px;
+    width: 100%;
+}
+
+.operator-simple-mode .operator-simple-collapsed,
+.operator-simple-mode .advanced-operator-tools {
+    display: none !important;
+}
+
+.operator-simple-mode .operator-simple-keep {
+    border: 1px solid #d1d5db;
+    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.06);
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 1120px;
+}
+
+.operator-simple-mode .operator-simple-keep h2 {
+    font-size: 1.8rem;
+}
+
+.operator-simple-mode .model-test-form,
+.operator-simple-mode .compact-form {
+    gap: 12px;
+}
+
+.operator-simple-mode input,
+.operator-simple-mode select,
+.operator-simple-mode textarea {
+    border-radius: 8px;
+    font-size: 1.05rem;
+    min-height: 44px;
+    padding: 12px;
+}
+
+.operator-simple-mode textarea {
+    min-height: 110px;
+}
+
+.operator-simple-mode button,
+.operator-simple-mode .cta-button {
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 800;
+    min-height: 44px;
+    padding: 11px 15px;
+}
+
+.operator-highlight-target {
+    outline: 4px solid #22c55e;
+    outline-offset: 5px;
+}
+
+.operator-tutorial-overlay {
+    align-items: center;
+    background: rgba(17, 24, 39, 0.72);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    padding: 24px;
+    position: fixed;
+    z-index: 10000;
+}
+
+.operator-tutorial-card {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+    display: grid;
+    gap: 16px;
+    max-width: 720px;
+    padding: 28px;
+    text-align: left;
+}
+
+.operator-tutorial-card h2 {
+    color: #111827;
+    font-size: 2rem;
+    margin: 0;
+}
+
+.operator-tutorial-card p,
+.operator-tutorial-script {
+    color: #374151;
+    font-size: 1.08rem;
+    line-height: 1.55;
+    margin: 0;
+}
+
+.operator-tutorial-script {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    display: grid;
+    gap: 6px;
+    padding: 14px;
+}
+
 .checklist-item select {
     border: 1px solid #d1d5db;
     border-radius: 6px;
@@ -1527,12 +1801,29 @@ footer {
     .checklist-item,
     .compact-form,
     .artifact-controls,
-    .operator-wizard-header,
-    .operator-next-action-grid,
-    .owner-file-picker,
-    .owner-detected-wallet,
-    .owner-gate-card > div:first-child {
+        .operator-wizard-header,
+        .operator-next-action-grid,
+        .operator-workspace-header,
+        .owner-file-picker,
+        .owner-detected-wallet,
+        .owner-gate-card > div:first-child {
         grid-template-columns: 1fr;
+    }
+
+    .operator-mode-bar {
+        align-items: stretch;
+        display: grid;
+    }
+
+    .operator-mode-actions,
+    .operator-workspace-actions {
+        justify-content: stretch;
+    }
+
+    .operator-mode-actions button,
+    .operator-secondary-action,
+    .operator-primary-action {
+        width: 100%;
     }
 
     .owner-gate-card > div:first-child {
