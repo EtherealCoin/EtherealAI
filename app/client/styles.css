@@ -1,3 +1,145 @@
+/* EtherealAI brand theme system.
+   Default follows the system/browser preference. Advanced settings can later set
+   data-theme="day" or data-theme="night" on <html> to override it. */
+:root,
+:root[data-theme="day"] {
+    color-scheme: light;
+    --background: #fbf7fb;
+    --background-gradient: radial-gradient(circle at top left, rgba(236, 72, 153, 0.12), transparent 30rem), radial-gradient(circle at top right, rgba(37, 99, 235, 0.10), transparent 28rem), #fbf7fb;
+    --surface: #fffafd;
+    --surface-strong: #ffffff;
+    --surface-muted: #f6edf7;
+    --surface-tint: #f8f1fb;
+    --text-primary: #160b22;
+    --text-secondary: #4f405f;
+    --text-muted: #6b5d78;
+    --text-inverse: #ffffff;
+    --border: #dfd2e8;
+    --border-strong: #bfa7d5;
+    --brand-pink: #ec4899;
+    --brand-purple: #3b0764;
+    --brand-purple-soft: #6d28d9;
+    --brand-blue: #2563eb;
+    --brand-blue-soft: #dbeafe;
+    --status-success: #16a34a;
+    --status-success-bg: #eafaf0;
+    --status-success-text: #14532d;
+    --status-warning: #d97706;
+    --status-warning-bg: #fff7ed;
+    --status-warning-text: #7c2d12;
+    --status-danger: #dc2626;
+    --status-danger-bg: #fef2f2;
+    --status-danger-text: #7f1d1d;
+    --status-info: #2563eb;
+    --status-info-bg: #eef4ff;
+    --status-info-text: #1e3a8a;
+    --button-primary: linear-gradient(135deg, #6d28d9, #2563eb);
+    --button-primary-hover: linear-gradient(135deg, #581c87, #1d4ed8);
+    --button-success: #16a34a;
+    --button-warning: #f59e0b;
+    --button-danger: #dc2626;
+    --focus-ring: rgba(236, 72, 153, 0.34);
+    --shadow-soft: 0 18px 44px rgba(59, 7, 100, 0.12);
+    --shadow-panel: 0 22px 60px rgba(22, 11, 34, 0.16);
+    --radius-card: 8px;
+    --input-background: #ffffff;
+    --input-text: #160b22;
+    --code-background: #160b22;
+    --code-text: #f8f1fb;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="day"]) {
+        color-scheme: dark;
+        --background: #09030f;
+        --background-gradient: radial-gradient(circle at top left, rgba(236, 72, 153, 0.16), transparent 28rem), radial-gradient(circle at top right, rgba(37, 99, 235, 0.16), transparent 30rem), #09030f;
+        --surface: #15091f;
+        --surface-strong: #1d0f2d;
+        --surface-muted: #211331;
+        --surface-tint: #251538;
+        --text-primary: #fbf7fb;
+        --text-secondary: #ded4e8;
+        --text-muted: #bcaecc;
+        --text-inverse: #ffffff;
+        --border: #3a2850;
+        --border-strong: #5d3e82;
+        --brand-pink: #f472b6;
+        --brand-purple: #c084fc;
+        --brand-purple-soft: #a855f7;
+        --brand-blue: #60a5fa;
+        --brand-blue-soft: #172554;
+        --status-success: #4ade80;
+        --status-success-bg: rgba(22, 163, 74, 0.16);
+        --status-success-text: #bbf7d0;
+        --status-warning: #fbbf24;
+        --status-warning-bg: rgba(245, 158, 11, 0.17);
+        --status-warning-text: #fde68a;
+        --status-danger: #f87171;
+        --status-danger-bg: rgba(220, 38, 38, 0.18);
+        --status-danger-text: #fecaca;
+        --status-info: #60a5fa;
+        --status-info-bg: rgba(37, 99, 235, 0.18);
+        --status-info-text: #bfdbfe;
+        --button-primary: linear-gradient(135deg, #a855f7, #2563eb);
+        --button-primary-hover: linear-gradient(135deg, #c084fc, #3b82f6);
+        --button-success: #22c55e;
+        --button-warning: #f59e0b;
+        --button-danger: #ef4444;
+        --focus-ring: rgba(244, 114, 182, 0.42);
+        --shadow-soft: 0 22px 64px rgba(0, 0, 0, 0.42);
+        --shadow-panel: 0 26px 80px rgba(0, 0, 0, 0.52);
+        --input-background: #100719;
+        --input-text: #fbf7fb;
+        --code-background: #050108;
+        --code-text: #fbf7fb;
+    }
+}
+
+:root[data-theme="night"] {
+    color-scheme: dark;
+    --background: #09030f;
+    --background-gradient: radial-gradient(circle at top left, rgba(236, 72, 153, 0.16), transparent 28rem), radial-gradient(circle at top right, rgba(37, 99, 235, 0.16), transparent 30rem), #09030f;
+    --surface: #15091f;
+    --surface-strong: #1d0f2d;
+    --surface-muted: #211331;
+    --surface-tint: #251538;
+    --text-primary: #fbf7fb;
+    --text-secondary: #ded4e8;
+    --text-muted: #bcaecc;
+    --text-inverse: #ffffff;
+    --border: #3a2850;
+    --border-strong: #5d3e82;
+    --brand-pink: #f472b6;
+    --brand-purple: #c084fc;
+    --brand-purple-soft: #a855f7;
+    --brand-blue: #60a5fa;
+    --brand-blue-soft: #172554;
+    --status-success: #4ade80;
+    --status-success-bg: rgba(22, 163, 74, 0.16);
+    --status-success-text: #bbf7d0;
+    --status-warning: #fbbf24;
+    --status-warning-bg: rgba(245, 158, 11, 0.17);
+    --status-warning-text: #fde68a;
+    --status-danger: #f87171;
+    --status-danger-bg: rgba(220, 38, 38, 0.18);
+    --status-danger-text: #fecaca;
+    --status-info: #60a5fa;
+    --status-info-bg: rgba(37, 99, 235, 0.18);
+    --status-info-text: #bfdbfe;
+    --button-primary: linear-gradient(135deg, #a855f7, #2563eb);
+    --button-primary-hover: linear-gradient(135deg, #c084fc, #3b82f6);
+    --button-success: #22c55e;
+    --button-warning: #f59e0b;
+    --button-danger: #ef4444;
+    --focus-ring: rgba(244, 114, 182, 0.42);
+    --shadow-soft: 0 22px 64px rgba(0, 0, 0, 0.42);
+    --shadow-panel: 0 26px 80px rgba(0, 0, 0, 0.52);
+    --input-background: #100719;
+    --input-text: #fbf7fb;
+    --code-background: #050108;
+    --code-text: #fbf7fb;
+}
+
 body {
     font-family: 'Arial', sans-serif;
     margin: 0;
@@ -386,6 +528,1015 @@ footer {
     box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.1);
     padding: 20px 0;
     text-align: center;
+}
+
+/* Final EtherealAI theme cascade. This intentionally lands last because older
+   page rules still contain legacy light colors. */
+body,
+body.operator-simple-mode {
+    background: var(--background-gradient) !important;
+    color: var(--text-primary);
+}
+
+.responsive-header,
+footer,
+.operator-simple-mode nav,
+.auth-proof-banner,
+.simple-operator-workspace,
+.mission-hero,
+.operator-dashboard,
+.ceo-workflow-map,
+.model-panel,
+.status-card,
+.role-card,
+.next-actions,
+.task-card,
+.operator-answer-panel article,
+.operator-guided-workflow,
+.operator-workflow-step,
+.operator-manual-link-row,
+.operator-status-tile,
+.operator-task-card,
+.operator-step-list article,
+.wallet-card,
+.owner-progress-card,
+.owner-gate-card,
+.owner-file-status,
+.owner-detected-wallet,
+.owner-file-summary,
+.risk-profile-current-status,
+.owner-proof-surfaces,
+.owner-proof-surface-list article,
+.operator-wizard,
+.arbitrage-builder,
+.inline-tool-panel,
+.timeline-item,
+.workspace-row,
+.checklist-item,
+.command-template-row,
+.artifact-stat,
+.operator-training-card,
+.training-library-hero,
+.training-library-card,
+.training-pair-list article,
+.training-video-current,
+.training-asset-plan,
+.training-transcript,
+.safe-paper-result-card,
+.safe-paper-table-card,
+.safe-paper-warning-card,
+.operator-next-action-panel,
+.feature-card,
+.pricing-card,
+.testimonial-card {
+    background: var(--surface) !important;
+    border-color: var(--border) !important;
+    box-shadow: var(--shadow-soft);
+    color: var(--text-primary);
+}
+
+.home-workflows,
+.features-section,
+.pricing-section,
+.testimonials-section {
+    background: var(--background-gradient) !important;
+}
+
+.operator-mode-bar {
+    background: linear-gradient(135deg, var(--brand-purple), #160b22 58%, var(--brand-blue)) !important;
+    border-bottom: 1px solid var(--border-strong);
+    color: #ffffff;
+}
+
+h1,
+h2,
+h3,
+h4,
+strong,
+label,
+dt,
+.operator-workspace-header h1,
+.operator-guided-workflow h2,
+.operator-tutorial-card h2,
+.training-text-module h2,
+.training-text-module h3,
+.training-video-current h3,
+.training-library-card h2,
+.operator-training-card-header h1,
+.training-library-hero h1,
+.safe-paper-result-card strong,
+.safe-paper-warning-card strong {
+    color: var(--text-primary);
+}
+
+p,
+li,
+dd,
+small,
+em,
+cite,
+.inline-status,
+.workflow-helper-text,
+.mission-hero p,
+.ceo-workflow-card span,
+.operator-workspace-header p,
+.operator-answer-panel span,
+.operator-workflow-step span,
+.operator-guided-workflow p,
+.operator-status-tile span,
+.operator-status-tile small,
+.operator-task-card span,
+.operator-step-list span,
+.operator-step-list em,
+.wallet-card span,
+.timeline-item span,
+.timeline-item p,
+.timeline-item code,
+.command-template-row code,
+.command-template-row span,
+.command-template-row em,
+.workspace-row code,
+.risk-check-list span,
+.risk-profile-explainer,
+.operator-wizard-header span,
+.operator-step p,
+.operator-step-note,
+.operator-count-change,
+.artifact-stat span,
+.artifact-pager span,
+.owner-proof-surfaces > span,
+.owner-proof-surface-list span,
+.owner-proof-surface-list p,
+.operator-training-card-header p,
+.training-library-hero p,
+.training-library-card p,
+.training-text-module p,
+.training-text-module li,
+.training-pair-list span,
+.training-video-current p,
+.training-chapter-grid span,
+.training-asset-plan span,
+.safe-paper-hero small,
+.safe-paper-result-card small,
+.safe-paper-table-card li {
+    color: var(--text-secondary);
+}
+
+a,
+.footer-content a,
+.auth-proof-banner a,
+.timeline-item a,
+.operator-page-label,
+.operator-area,
+.operator-training-card-header span,
+.training-library-hero span,
+.training-library-card > div:first-child span,
+.safe-paper-hero span,
+.safe-paper-result-card span,
+.safe-paper-table-card h3 {
+    color: var(--brand-blue);
+}
+
+nav a,
+.quick-nav a,
+.operator-simple-mode nav a,
+.artifact-pager button,
+.task-card button,
+.operator-mode-actions button,
+.operator-secondary-action,
+.training-mode-tabs button,
+.training-library-actions button,
+.training-library-actions a,
+.training-video-controls a,
+.training-chapter-grid button,
+.operator-training-menu-list button,
+.operator-next-action-header button,
+.operator-next-action-panel button {
+    background: var(--surface-muted) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+input,
+select,
+textarea,
+.model-test-form select,
+.model-test-form input,
+.model-test-form textarea,
+.compact-form input,
+.compact-form select,
+.artifact-controls select,
+.artifact-controls input,
+.operator-step select,
+.owner-file-picker input[type="file"],
+.checklist-item select {
+    background: var(--input-background) !important;
+    border-color: var(--border) !important;
+    color: var(--input-text) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.cta-button,
+.secondary-action,
+.button-row button,
+.compact-form button,
+.artifact-controls button,
+.control-grid article > button,
+.model-panel > button,
+.model-test-form button,
+.command-template-row button,
+.key-template-grid button,
+.operator-step-actions button,
+.operator-wizard-header button,
+.operator-primary-action,
+.operator-workflow-step button,
+.operator-workflow-step a,
+.operator-manual-link-row a,
+.operator-training-card-header button,
+.training-mode-tabs .training-mode-active,
+.training-library-actions button:first-child {
+    background: var(--button-primary) !important;
+    border: 0 !important;
+    color: #ffffff !important;
+}
+
+.safe-paper-hero,
+.core-setup-banner,
+.owner-action-output {
+    background: var(--status-success-bg) !important;
+    border-color: color-mix(in srgb, var(--status-success) 42%, var(--border)) !important;
+    color: var(--status-success-text) !important;
+}
+
+.safe-paper-hero button,
+.owner-primary-actions button:first-child,
+.training-video-controls button,
+.training-library-hero a {
+    background: var(--button-success) !important;
+    color: #ffffff !important;
+}
+
+.core-setup-banner-review {
+    background: var(--status-warning-bg) !important;
+    border-color: color-mix(in srgb, var(--status-warning) 45%, var(--border)) !important;
+    color: var(--status-warning-text) !important;
+}
+
+.safe-paper-warning-card {
+    background: var(--status-danger-bg) !important;
+    border-color: color-mix(in srgb, var(--status-danger) 42%, var(--border)) !important;
+    color: var(--status-danger-text) !important;
+}
+
+.model-output,
+.owner-gate-card pre,
+.training-video-player,
+.operator-tutorial-script {
+    background: var(--code-background) !important;
+    border: 1px solid var(--border-strong);
+    color: var(--code-text) !important;
+}
+
+.inline-status,
+.operator-status-tile,
+.operator-task-card,
+.operator-next-action-grid article,
+.quick-nav a,
+.home-workflow-card,
+.ceo-workflow-card,
+.artifact-stat {
+    background: var(--surface-muted) !important;
+}
+
+.auth-proof-banner,
+.owner-proof-surfaces,
+.ceo-workflow-card,
+.operator-answer-panel article,
+.owner-optional-card,
+.operator-step.owner-optional-connection-card,
+.timeline-item {
+    border-left-color: var(--status-info) !important;
+}
+
+.status-card {
+    border-left-color: var(--status-warning) !important;
+}
+
+.status-card.ok,
+.operator-check-pass,
+.operator-step-ready,
+.risk-check-pass,
+.owner-gate-pass,
+.security-status-pass,
+.safe-paper-status-card,
+.training-chapter-grid .training-chapter-active {
+    border-left-color: var(--status-success) !important;
+}
+
+.status-card.warning,
+.operator-check-blocked,
+.operator-step-blocked,
+.risk-check-blocked,
+.owner-gate-blocked,
+.security-status-fail {
+    border-left-color: var(--status-danger) !important;
+}
+
+.security-status-review,
+.security-status-unknown {
+    border-left-color: var(--status-warning) !important;
+}
+
+.status-success {
+    background: var(--status-success-bg) !important;
+    border-color: color-mix(in srgb, var(--status-success) 44%, var(--border)) !important;
+    color: var(--status-success-text) !important;
+}
+
+.status-warning {
+    background: var(--status-warning-bg) !important;
+    border-color: color-mix(in srgb, var(--status-warning) 44%, var(--border)) !important;
+    color: var(--status-warning-text) !important;
+}
+
+.status-danger {
+    background: var(--status-danger-bg) !important;
+    border-color: color-mix(in srgb, var(--status-danger) 46%, var(--border)) !important;
+    color: var(--status-danger-text) !important;
+}
+
+.status-info {
+    background: var(--status-info-bg) !important;
+    border-color: color-mix(in srgb, var(--status-info) 44%, var(--border)) !important;
+    color: var(--status-info-text) !important;
+}
+
+.status-success strong,
+.status-success span {
+    color: var(--status-success-text) !important;
+}
+
+.status-warning strong,
+.status-warning span {
+    color: var(--status-warning-text) !important;
+}
+
+.status-danger strong,
+.status-danger span {
+    color: var(--status-danger-text) !important;
+}
+
+.status-info strong,
+.status-info span {
+    color: var(--status-info-text) !important;
+}
+
+.operator-next-action-grid article.status-success {
+    background: var(--status-success-bg) !important;
+    border-color: color-mix(in srgb, var(--status-success) 44%, var(--border)) !important;
+    color: var(--status-success-text) !important;
+}
+
+.operator-next-action-grid article.status-warning {
+    background: var(--status-warning-bg) !important;
+    border-color: color-mix(in srgb, var(--status-warning) 44%, var(--border)) !important;
+    color: var(--status-warning-text) !important;
+}
+
+.operator-next-action-grid article.status-danger {
+    background: var(--status-danger-bg) !important;
+    border-color: color-mix(in srgb, var(--status-danger) 46%, var(--border)) !important;
+    color: var(--status-danger-text) !important;
+}
+
+.operator-next-action-grid article.status-info {
+    background: var(--status-info-bg) !important;
+    border-color: color-mix(in srgb, var(--status-info) 44%, var(--border)) !important;
+    color: var(--status-info-text) !important;
+}
+
+.operator-next-action-button {
+    background: var(--button-primary) !important;
+    border-color: color-mix(in srgb, var(--brand-blue) 55%, var(--border)) !important;
+    box-shadow: var(--shadow-panel);
+    color: #ffffff !important;
+}
+
+.operator-next-action-panel {
+    box-shadow: var(--shadow-panel);
+}
+
+.operator-next-action-panel .button-row .cta-button {
+    background: var(--status-warning-bg) !important;
+    border: 1px solid color-mix(in srgb, var(--status-warning) 56%, var(--border)) !important;
+    box-shadow: none;
+    color: var(--status-warning-text) !important;
+}
+
+.operator-next-action-panel .button-row button {
+    background: var(--surface-muted) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: none;
+    color: var(--text-primary) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+/* Polished EtherealAI day/night brand layer. Keep this near the end so older
+   page-specific hard-coded colors inherit the shared theme without losing layout. */
+body {
+    background: var(--background-gradient);
+    color: var(--text-primary);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.45;
+}
+
+.responsive-header,
+footer,
+.home-hero,
+.home-workflow-card,
+.auth-proof-banner,
+.status-card,
+.role-card,
+.model-panel,
+.next-actions,
+.task-card,
+.artifact-stat,
+.risk-profile-current-status,
+.owner-proof-surfaces,
+.owner-proof-surface-list article,
+.operator-step-list article,
+.wallet-card,
+.timeline-item,
+.workspace-row,
+.checklist-item,
+.command-template-row,
+#file-list button,
+.owner-progress-card,
+.owner-gate-card,
+.owner-file-status,
+.owner-detected-wallet,
+.owner-file-summary,
+.operator-training-menu-list,
+.operator-training-card,
+.training-pair-list article,
+.training-video-current,
+.training-asset-plan,
+.training-transcript,
+.training-library-hero,
+.training-library-card,
+.safe-paper-result-card,
+.safe-paper-table-card,
+.safe-paper-warning-card,
+.simple-operator-workspace,
+.operator-answer-panel article,
+.operator-guided-workflow,
+.operator-workflow-step,
+.operator-manual-link-row,
+.operator-status-tile,
+.operator-task-card,
+.mission-hero,
+.operator-dashboard,
+.ceo-workflow-map,
+.arbitrage-builder,
+.inline-tool-panel,
+.operator-wizard,
+.operator-next-action-panel {
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: var(--shadow-soft);
+    color: var(--text-primary);
+}
+
+.operator-simple-mode,
+.home-workflows,
+.features-section,
+.pricing-section,
+.testimonials-section {
+    background: var(--background-gradient);
+}
+
+.responsive-header,
+.operator-simple-mode nav {
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 10px 30px rgba(22, 11, 34, 0.08);
+}
+
+.operator-mode-bar {
+    background: linear-gradient(135deg, var(--brand-purple), #160b22 58%, var(--brand-blue));
+    border-bottom: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-soft);
+}
+
+h1,
+h2,
+h3,
+h4,
+strong,
+label,
+dt,
+.auth-proof-banner strong,
+.artifact-stat strong,
+.owner-proof-surfaces > strong,
+.operator-answer-panel strong,
+.operator-status-tile strong,
+.operator-task-card strong,
+.safe-paper-result-card strong,
+.safe-paper-warning-card strong,
+.training-pair-list strong,
+.training-asset-plan strong,
+.operator-training-card-header h1,
+.training-library-hero h1,
+.training-text-module h2,
+.training-video-current h3,
+.training-library-card h2,
+.training-text-module h3,
+.operator-workspace-header h1,
+.operator-guided-workflow h2,
+.operator-tutorial-card h2 {
+    color: var(--text-primary);
+}
+
+p,
+li,
+dd,
+small,
+em,
+cite,
+.auth-proof-banner span,
+.footer-content li,
+.footer-bottom p,
+.mission-hero p,
+.ceo-workflow-card span,
+.workflow-helper-text,
+.operator-step-list span,
+.operator-step-list em,
+.wallet-card span,
+.timeline-item span,
+.timeline-item p,
+.timeline-item code,
+.command-template-row code,
+.command-template-row span,
+.command-template-row em,
+.workspace-row code,
+.owner-file-picker label,
+.owner-gate-card dt,
+.operator-workspace-header p,
+.operator-answer-panel span,
+.operator-workflow-step span,
+.operator-guided-workflow p,
+.operator-manual-link-row span,
+.operator-status-tile span,
+.operator-status-tile small,
+.operator-task-card span,
+.operator-tutorial-card p,
+.operator-tutorial-script,
+.training-text-module p,
+.training-text-module li,
+.training-pair-list span,
+.training-video-current p,
+.training-chapter-grid span,
+.training-asset-plan span,
+.operator-training-card-header p,
+.training-library-hero p,
+.training-library-card p,
+.safe-paper-hero small,
+.safe-paper-result-card small,
+.safe-paper-table-card li,
+.risk-check-list span,
+.risk-profile-explainer,
+.operator-wizard-header span,
+.operator-step p,
+.operator-step-note,
+.operator-count-change,
+.artifact-stat span,
+.artifact-pager span,
+.owner-proof-surfaces > span,
+.owner-proof-surface-list span,
+.owner-proof-surface-list p {
+    color: var(--text-secondary);
+}
+
+a,
+.footer-content a,
+.auth-proof-banner a,
+.timeline-item a,
+.operator-page-label,
+.operator-area,
+.operator-training-card-header span,
+.training-library-hero span,
+.training-library-card > div:first-child span {
+    color: var(--brand-blue);
+}
+
+nav a,
+.quick-nav a,
+.operator-simple-mode nav a,
+.artifact-pager button,
+.task-card button,
+.operator-mode-actions button,
+.operator-secondary-action,
+.training-mode-tabs button,
+.training-library-actions button,
+.training-library-actions a,
+.training-video-controls a,
+.training-chapter-grid button,
+.operator-next-action-header button,
+.operator-next-action-panel button {
+    background: var(--surface-muted);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+nav a:hover,
+.quick-nav a:hover,
+.operator-simple-mode nav a:hover,
+.artifact-pager button:hover,
+.task-card button:hover,
+.operator-secondary-action:hover,
+.training-chapter-grid button:hover {
+    background: var(--status-info-bg);
+    border-color: var(--brand-blue);
+    color: var(--text-primary);
+}
+
+.cta-button,
+.secondary-action,
+.button-row button,
+.compact-form button,
+.artifact-controls button,
+.control-grid article > button,
+.model-panel > button,
+.model-test-form button,
+.command-template-row button,
+.key-template-grid button,
+.operator-step-actions button,
+.operator-wizard-header button,
+.operator-primary-action,
+.operator-workflow-step button,
+.operator-workflow-step a,
+.operator-manual-link-row a,
+.operator-training-card-header button,
+.training-mode-tabs .training-mode-active,
+.training-library-actions button:first-child {
+    background: var(--button-primary);
+    border: 0;
+    color: var(--text-inverse);
+    box-shadow: 0 10px 26px rgba(37, 99, 235, 0.18);
+}
+
+.cta-button:hover,
+.secondary-action:hover,
+.button-row button:hover,
+.compact-form button:hover,
+.artifact-controls button:hover,
+.control-grid article > button:hover,
+.model-panel > button:hover,
+.model-test-form button:hover,
+.command-template-row button:hover,
+.key-template-grid button:hover,
+.operator-step-actions button:hover,
+.operator-wizard-header button:hover,
+.operator-primary-action:hover,
+.operator-workflow-step button:hover,
+.operator-workflow-step a:hover,
+.operator-manual-link-row a:hover {
+    background: var(--button-primary-hover);
+    transform: translateY(-1px);
+}
+
+.safe-paper-hero,
+.core-setup-banner,
+.owner-action-output {
+    background: var(--status-success-bg);
+    border-color: color-mix(in srgb, var(--status-success) 42%, var(--border));
+    color: var(--status-success-text);
+}
+
+.safe-paper-hero button,
+.owner-primary-actions button:first-child,
+.training-video-controls button,
+.training-library-hero a {
+    background: var(--button-success);
+    color: #ffffff;
+}
+
+.safe-paper-hero button:hover,
+.owner-primary-actions button:first-child:hover,
+.training-video-controls button:hover,
+.training-library-hero a:hover {
+    background: color-mix(in srgb, var(--button-success) 82%, #000000);
+}
+
+.safe-paper-hero span,
+.safe-paper-result-card span,
+.safe-paper-table-card h3,
+.core-setup-banner strong,
+.core-setup-banner span,
+.owner-action-output {
+    color: var(--status-success-text);
+}
+
+.core-setup-banner-review {
+    background: var(--status-warning-bg);
+    border-color: color-mix(in srgb, var(--status-warning) 45%, var(--border));
+    color: var(--status-warning-text);
+}
+
+.core-setup-banner-review strong {
+    color: var(--status-warning-text);
+}
+
+.safe-paper-warning-card {
+    background: var(--status-danger-bg);
+    border-color: color-mix(in srgb, var(--status-danger) 42%, var(--border));
+    color: var(--status-danger-text);
+}
+
+.safe-paper-warning-card strong {
+    color: var(--status-danger-text);
+}
+
+input,
+select,
+textarea,
+.model-test-form select,
+.model-test-form input,
+.model-test-form textarea,
+.compact-form input,
+.compact-form select,
+.artifact-controls select,
+.artifact-controls input,
+.operator-step select,
+.owner-file-picker input[type="file"],
+.checklist-item select {
+    background: var(--input-background);
+    border: 1px solid var(--border);
+    color: var(--input-text);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-muted);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+.inline-status,
+.workspace-row,
+.checklist-item,
+.command-template-row,
+.artifact-stat,
+.operator-status-tile,
+.operator-task-card,
+.operator-training-menu-list button,
+.training-pair-list article,
+.training-video-current,
+.training-asset-plan,
+.training-transcript,
+.owner-file-summary,
+.operator-next-action-grid article,
+.quick-nav a,
+.home-workflow-card,
+.ceo-workflow-card {
+    background: var(--surface-muted);
+    border-color: var(--border);
+}
+
+.model-output,
+.owner-gate-card pre,
+.training-video-player,
+.operator-tutorial-script {
+    background: var(--code-background);
+    border: 1px solid var(--border-strong);
+    color: var(--code-text);
+}
+
+.training-transcript pre {
+    color: var(--text-primary);
+}
+
+.training-video-frame {
+    background: radial-gradient(circle at top left, color-mix(in srgb, var(--brand-pink) 40%, transparent), transparent 55%), linear-gradient(135deg, var(--brand-purple), var(--brand-blue));
+    border-color: color-mix(in srgb, var(--brand-blue) 42%, var(--border));
+}
+
+.comparison-table th {
+    background: var(--surface-muted);
+    color: var(--text-secondary);
+}
+
+.comparison-table th,
+.comparison-table td,
+.dashboard-live-blockers li,
+.advanced-bot-records,
+.operator-training-card-header,
+.training-library-card .training-video-module {
+    border-color: var(--border);
+}
+
+.feature-card,
+.pricing-card,
+.testimonial-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-soft);
+}
+
+.most-popular {
+    border-color: var(--brand-pink);
+}
+
+.most-popular::before {
+    background: var(--brand-pink);
+    color: #ffffff;
+}
+
+.hero-section {
+    background: radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--brand-pink) 36%, transparent), transparent 30%), linear-gradient(135deg, var(--brand-purple), var(--brand-blue));
+    color: #ffffff;
+}
+
+.auth-proof-banner,
+.owner-proof-surfaces,
+.ceo-workflow-card,
+.operator-answer-panel article,
+.owner-optional-card,
+.operator-step.owner-optional-connection-card,
+.timeline-item {
+    border-left-color: var(--status-info);
+}
+
+.status-card {
+    border-left-color: var(--status-warning);
+}
+
+.status-card.ok,
+.operator-check-pass,
+.operator-step-ready,
+.risk-check-pass,
+.owner-gate-pass,
+.security-status-pass,
+.safe-paper-status-card,
+.training-chapter-grid .training-chapter-active {
+    border-left-color: var(--status-success) !important;
+}
+
+.status-card.warning,
+.operator-check-blocked,
+.operator-step-blocked,
+.risk-check-blocked,
+.owner-gate-blocked,
+.security-status-fail {
+    border-left-color: var(--status-danger) !important;
+}
+
+.security-status-review,
+.security-status-unknown {
+    border-left-color: var(--status-warning);
+}
+
+.risk-status-ready,
+.operator-state-ready,
+.security-status-pass h3 span {
+    background: var(--status-success-bg);
+    color: var(--status-success-text) !important;
+}
+
+.risk-status-blocked,
+.operator-state-blocked,
+.security-status-fail h3 span {
+    background: var(--status-danger-bg);
+    color: var(--status-danger-text) !important;
+}
+
+.security-status-review h3 span,
+.security-status-unknown h3 span {
+    background: var(--status-warning-bg);
+    color: var(--status-warning-text);
+}
+
+.status-success {
+    background: var(--status-success-bg) !important;
+    border-color: color-mix(in srgb, var(--status-success) 44%, var(--border)) !important;
+    color: var(--status-success-text) !important;
+}
+
+.status-warning {
+    background: var(--status-warning-bg) !important;
+    border-color: color-mix(in srgb, var(--status-warning) 44%, var(--border)) !important;
+    color: var(--status-warning-text) !important;
+}
+
+.status-danger {
+    background: var(--status-danger-bg) !important;
+    border-color: color-mix(in srgb, var(--status-danger) 46%, var(--border)) !important;
+    color: var(--status-danger-text) !important;
+}
+
+.status-info {
+    background: var(--status-info-bg) !important;
+    border-color: color-mix(in srgb, var(--status-info) 44%, var(--border)) !important;
+    color: var(--status-info-text) !important;
+}
+
+.status-success strong,
+.status-success span {
+    color: var(--status-success-text) !important;
+}
+
+.status-warning strong,
+.status-warning span {
+    color: var(--status-warning-text) !important;
+}
+
+.status-danger strong,
+.status-danger span {
+    color: var(--status-danger-text) !important;
+}
+
+.status-info strong,
+.status-info span {
+    color: var(--status-info-text) !important;
+}
+
+.operator-next-action-button {
+    background: var(--button-primary);
+    border-color: color-mix(in srgb, var(--brand-blue) 55%, var(--border));
+    box-shadow: var(--shadow-panel);
+    color: var(--text-inverse);
+}
+
+.operator-next-action-panel {
+    box-shadow: var(--shadow-panel);
+}
+
+.operator-next-action-panel .button-row .cta-button {
+    background: var(--status-warning-bg);
+    border: 1px solid color-mix(in srgb, var(--status-warning) 56%, var(--border));
+    box-shadow: none;
+    color: var(--status-warning-text);
+}
+
+.operator-next-action-panel .button-row .cta-button:hover {
+    background: color-mix(in srgb, var(--status-warning-bg) 74%, var(--status-warning));
+    color: var(--status-warning-text);
+    transform: translateY(-1px);
+}
+
+.operator-next-action-panel .button-row button {
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    box-shadow: none;
+    color: var(--text-primary);
+}
+
+.simple-operator-workspace,
+.operator-simple-mode .operator-simple-keep {
+    box-shadow: var(--shadow-soft);
+}
+
+.operator-simple-mode .operator-guided-focus.model-panel {
+    border-color: var(--status-success);
+}
+
+.operator-highlight-target {
+    outline-color: var(--brand-pink);
+}
+
+.operator-training-overlay,
+.operator-tutorial-overlay {
+    background: rgba(9, 3, 15, 0.78);
+}
+
+.operator-training-card,
+.operator-tutorial-card {
+    box-shadow: var(--shadow-panel);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="day"]) .logo img {
+        filter: drop-shadow(0 0 12px rgba(96, 165, 250, 0.24));
+    }
 }
 
 .footer-content {

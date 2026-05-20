@@ -136,6 +136,33 @@
         };
     }
 
+    function statusTone(value) {
+        const normalized = String(value || '').toLowerCase();
+
+        if (['working', 'complete', 'ready', 'safe', 'go'].includes(normalized)) {
+            return 'status-success';
+        }
+
+        if (['unsafe', 'blocked', 'missing', 'dangerous', 'stop', 'fix now'].includes(normalized)) {
+            return 'status-danger';
+        }
+
+        if (['optional', 'locked', 'review needed', 'attention', 'recommended'].includes(normalized)) {
+            return 'status-warning';
+        }
+
+        return 'status-info';
+    }
+
+    function renderStatusTile(label, value) {
+        return `
+            <article class="${statusTone(value)}">
+                <strong>${escapeHtml(label)}</strong>
+                <span>${escapeHtml(value)}</span>
+            </article>
+        `;
+    }
+
     async function collectState() {
         const requests = await Promise.allSettled([
             fetchJson('/api/v1/owner-setup-wizard'),
@@ -207,26 +234,11 @@
                 <p><strong>Why it matters:</strong> ${escapeHtml(next.why)}</p>
                 <p><strong>Do this next:</strong> ${escapeHtml(next.detail)}</p>
                 <div class="operator-next-action-grid">
-                    <article>
-                        <strong>Local E2E</strong>
-                        <span>${coreSetupComplete ? 'Working' : 'Unsafe'}</span>
-                    </article>
-                    <article>
-                        <strong>Future Integrations</strong>
-                        <span>Optional</span>
-                    </article>
-                    <article>
-                        <strong>Live E2E</strong>
-                        <span>${owner?.safetyBoundary?.liveTradingEnabled || mvp?.liveExecution?.enabled ? 'Unsafe' : 'Locked'}</span>
-                    </article>
-                    <article>
-                        <strong>Active Bots</strong>
-                        <span>${activePaperSchedules > 0 ? 'Working' : 'Optional'}</span>
-                    </article>
-                    <article>
-                        <strong>Security</strong>
-                        <span>${escapeHtml(securityStatus)}</span>
-                    </article>
+                    ${renderStatusTile('Local E2E', coreSetupComplete ? 'Working' : 'Unsafe')}
+                    ${renderStatusTile('Future Integrations', 'Optional')}
+                    ${renderStatusTile('Live E2E', owner?.safetyBoundary?.liveTradingEnabled || mvp?.liveExecution?.enabled ? 'Unsafe' : 'Locked')}
+                    ${renderStatusTile('Active Bots', activePaperSchedules > 0 ? 'Working' : 'Optional')}
+                    ${renderStatusTile('Security', securityStatus)}
                 </div>
                 <div class="button-row">
                     <a class="cta-button" href="${escapeHtml(next.href)}">${escapeHtml(next.action)}</a>

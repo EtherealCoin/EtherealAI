@@ -40,6 +40,8 @@ Every protected operator page now loads the global `What do I do next?` assistan
 
 EtherealAI now defaults to **Simple Operator Mode**. This mode shows large readable task cards, one primary action, plain-English status, and a `Show me how` dropdown on each main page with `Show me in text` and `Show me in video`. Raw IDs, logs, JSON, archived records, debug tables, route diagnostics, and technical filters remain available through **Advanced Developer Mode**, but they are hidden during normal CEO/operator use.
 
+The app now uses a polished automatic Day/Night brand theme based on system/browser preference. The shared CSS variables use EtherealAI colors: pink, dark purple, black, white, and blue. Day mode uses a near-white surface with a subtle pink tint; night mode uses dark purple/near-black surfaces with soft off-white text. Status colors are semantic across the app: green for safe/ready/complete, red only for blocked/danger/fix-now, amber for next steps or attention, and blue/purple for neutral information and navigation.
+
 Simple Operator Mode now renders the same beginner structure across Mission Control, Setup Wizard, Strategy / Paper / Bots, Wallet & Funding, Security, Solidity Lab, Social Ops, Creator Agent, and the Operator Manual:
 
 - What is this?
