@@ -21,10 +21,10 @@
 
     <main class="container">
         <h1>Setup Wizard</h1>
-        <p>Finish blocked setup gates one at a time without developer workflows. Every missing requirement shows what it is, why it matters, whether it is safe, and what to click next. Live trading and wallet signing stay disabled.</p>
+        <p>Your local paper-trading system is complete. The remaining items on this page are optional future integrations. Live trading and wallet signing stay disabled.</p>
         <div class="auth-proof-banner" role="status">
-            <strong>MVP 100% · Paper 95→100 · Full E2E 72→100</strong>
-            <span>Live execution disabled · no seed phrases · no private keys · credentials read from <code>~/EtherealAI_Secrets/.env</code></span>
+            <strong>MVP 100% · Paper Trading Complete</strong>
+            <span>Optional future connections available · live execution disabled · no seed phrases · no private keys</span>
         </div>
 
         <section class="model-panel">
@@ -33,12 +33,12 @@
             <div class="button-row">
                 <button id="refresh-owner-setup" type="button">Refresh / Verify All</button>
                 <button id="run-paper-verification" type="button">Run Paper Verification</button>
-                <button id="create-env-template" type="button">Create .env Template</button>
+                <button id="create-env-template" class="advanced-only" type="button">Create .env Template</button>
             </div>
-            <pre id="owner-setup-output" class="model-output">No setup action selected.</pre>
+            <div id="owner-setup-output" class="inline-status owner-action-output">Your local paper-trading system is complete. Optional integrations can wait.</div>
         </section>
 
-        <section class="model-panel">
+        <section class="model-panel advanced-setup-panel">
             <h2>Select .env File Visually</h2>
             <p>Use this if you do not want terminal commands. The browser checks the selected file locally and does not send secret values anywhere. The server also checks <code>~/EtherealAI_Secrets/.env</code> separately because browsers hide the real file path.</p>
             <div class="owner-file-picker">
@@ -55,21 +55,27 @@
         </section>
 
         <section class="model-panel">
-            <h2>Step-by-Step Completion Guide</h2>
+            <h2>Optional Future Connections</h2>
+            <p class="inline-status">Your local paper-trading system is complete. These remaining items are optional future integrations. Live trading and wallet signing remain disabled.</p>
+            <div class="button-row owner-primary-actions">
+                <button id="owner-add-public-wallet" type="button">Add Public Wallet</button>
+                <button id="owner-skip-optional-integrations" type="button">Skip Optional Integrations For Now</button>
+                <button id="owner-show-advanced-variables" type="button">Show Advanced Variable Names</button>
+            </div>
             <div id="owner-setup-guide" class="operator-step-list">Loading setup guide...</div>
         </section>
 
-        <section class="model-panel">
+        <section class="model-panel advanced-setup-panel">
             <h2>Blocked Paper Trading Gates</h2>
             <div id="paper-gates" class="owner-gate-list">Loading paper gates...</div>
         </section>
 
-        <section class="model-panel">
+        <section class="model-panel advanced-setup-panel">
             <h2>Blocked Full E2E Gates</h2>
             <div id="full-e2e-gates" class="owner-gate-list">Loading full E2E gates...</div>
         </section>
 
-        <section class="model-panel">
+        <section class="model-panel advanced-setup-panel">
             <h2>Local Secrets File</h2>
             <p>Put API/RPC credentials in <code>~/EtherealAI_Secrets/.env</code>. The app checks names and presence only; it never displays values.</p>
             <div id="env-status" class="comparison-table">Loading local secrets status...</div>
@@ -144,6 +150,18 @@
                         <span style="width: ${Math.max(0, Math.min(100, percent))}%"></span>
                     </div>
                     <p>${escapeHtml(item.note || (item.liveSigningRequired === false ? 'No live wallet signing required.' : ''))}</p>
+                </article>
+            `;
+        }
+
+        function optionalFutureProgressCard(wizard = {}) {
+            const fullProgress = Number(wizard.progress?.fullEndToEnd?.current || 0);
+            return `
+                <article class="owner-progress-card owner-optional-card">
+                    <h3>Optional Future Connections</h3>
+                    <strong>Optional</strong>
+                    <p>These are not setup failures. They are future integrations for live trading, social automation, domain work, and external APIs.</p>
+                    <p>Advanced setup readiness: ${fullProgress}% · live trading and wallet signing remain disabled.</p>
                 </article>
             `;
         }
@@ -426,27 +444,37 @@
 
         function renderSetupGuide(steps = []) {
             const element = document.getElementById('owner-setup-guide');
-
-            if (!steps.length) {
-                element.innerHTML = `
-                    <article class="operator-step">
-                        <strong>Setup gates complete</strong>
-                        <p>Paper setup and full E2E setup readiness are complete. Live trading remains disabled until a separate high-security approval process is built and manually enabled.</p>
-                    </article>
-                `;
-                return;
-            }
-
-            element.innerHTML = steps.map(step => `
-                <article class="operator-step">
-                    <strong>Step ${Number(step.step || 0)}: ${escapeHtml(step.label)}</strong>
-                    <p><strong>What to do:</strong> ${escapeHtml(step.ownerAction)}</p>
-                    <p><strong>Why:</strong> ${escapeHtml(step.why)}</p>
-                    <p><strong>Safety:</strong> ${escapeHtml(step.safety)}</p>
-                    <p><strong>Verify:</strong> ${escapeHtml(step.verifyAction)}</p>
-                    <p><strong>Evidence now:</strong> ${escapeHtml(step.evidence || '-')}</p>
+            const savedWallets = currentWizard?.walletMetadata?.savedPublicWallets?.length || 0;
+            element.innerHTML = `
+                <article class="operator-step owner-optional-connection-card">
+                    <strong>Required Now</strong>
+                    <p>Your local paper-trading system is complete. You can build strategies, run paper tests, and monitor paper bots without adding API keys.</p>
                 </article>
-            `).join('');
+                <article class="operator-step owner-optional-connection-card">
+                    <strong>Market Data Providers: optional</strong>
+                    <p>Only needed later if you want automated external market-data refreshes. Paper trading can continue with local/imported data.</p>
+                </article>
+                <article class="operator-step owner-optional-connection-card">
+                    <strong>Exchange APIs: optional future live trading</strong>
+                    <p>Coinbase, Kraken, Binance, and similar exchange keys are not needed for paper trading. They belong in a later high-security live-trading phase.</p>
+                </article>
+                <article class="operator-step owner-optional-connection-card">
+                    <strong>Social/API integrations: optional future automation</strong>
+                    <p>GitHub, Cloudflare, X, Discord, Telegram, and Medium access can wait. Drafting and planning still work locally.</p>
+                </article>
+                <article class="operator-step owner-optional-connection-card">
+                    <strong>Wallet address: add through UI</strong>
+                    <p>Saved public wallet records: ${Number(savedWallets)}. Add public addresses directly with Add Public Wallet. Do not use a hidden file for wallet setup.</p>
+                </article>
+                <article class="operator-step owner-optional-connection-card">
+                    <strong>Live Trading Locked</strong>
+                    <p>Live orders, wallet signing, token deployment, public posting, and DNS mutation remain disabled until a separate owner-approved security process exists.</p>
+                </article>
+                <article class="operator-step owner-optional-connection-card advanced-only">
+                    <strong>Developer / Advanced</strong>
+                    <p>Advanced Mode shows variable names, credential presence checks, raw gates, and diagnostics for technical review.</p>
+                </article>
+            `;
         }
 
         function useDetectedWallet(address, source = 'selected .env file') {
@@ -464,7 +492,7 @@
             currentWizard = wizard;
             document.getElementById('owner-setup-progress').innerHTML = [
                 progressCard(wizard.progress?.paperTrading || {}),
-                progressCard(wizard.progress?.fullEndToEnd || {})
+                optionalFutureProgressCard(wizard)
             ].join('');
             renderPaperConfiguration(wizard.paperConfiguration || {});
             renderSetupGuide(wizard.setupGuide || []);
@@ -497,7 +525,9 @@
                 return;
             }
 
-            output.textContent = JSON.stringify(data.gate, null, 2);
+            output.textContent = data.gate?.passed
+                ? 'That setup item is complete.'
+                : 'That setup item is still waiting. Open Advanced Mode if you need technical details.';
             await loadWizard();
         }
 
@@ -542,11 +572,7 @@
                 return;
             }
 
-            output.textContent = JSON.stringify({
-                run: data.run,
-                liveTradingEnabled: data.liveTradingEnabled,
-                walletSigningEnabled: data.walletSigningEnabled
-            }, null, 2);
+            output.textContent = 'Paper verification completed. Live trading and wallet signing remain disabled.';
             renderWizard(data.wizard || {});
         });
 
@@ -604,16 +630,29 @@
                 return;
             }
 
-            output.textContent = JSON.stringify({
-                wallet: data.wallet,
-                readiness: data.readiness,
-                signingEnabled: data.signingEnabled,
-                liveExecutionEnabled: data.liveExecutionEnabled
-            }, null, 2);
+            output.textContent = 'Public wallet saved as metadata only. No seed phrase, private key, wallet signing, or live trading was enabled.';
             event.target.reset();
             document.getElementById('wallet-network').value = 'polygon';
             document.getElementById('wallet-assignments').value = 'trading-research,token-deployment';
             await loadWizard();
+        });
+
+        document.getElementById('owner-add-public-wallet').addEventListener('click', () => {
+            document.querySelector('#wallet-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('wallet-label')?.focus();
+            document.getElementById('owner-setup-output').textContent = 'Add a public wallet address below. Do not enter seed phrases, private keys, or wallet passwords.';
+        });
+
+        document.getElementById('owner-skip-optional-integrations').addEventListener('click', () => {
+            document.getElementById('owner-setup-output').textContent = 'Optional integrations skipped for now. Paper trading remains complete, and live trading remains locked.';
+        });
+
+        document.getElementById('owner-show-advanced-variables').addEventListener('click', () => {
+            localStorage.setItem('etherealai.operatorMode', 'advanced');
+            document.querySelector('[data-operator-mode="advanced"]')?.click();
+            document.body.classList.remove('operator-simple-mode');
+            document.body.classList.add('operator-advanced-mode');
+            document.getElementById('owner-setup-output').textContent = 'Advanced Mode is now visible. Variable names and raw setup gates are shown for technical review.';
         });
 
         loadWizard();

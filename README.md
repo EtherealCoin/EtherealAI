@@ -38,6 +38,8 @@ Every protected operator page now loads the global `What do I do next?` assistan
 
 EtherealAI now defaults to **Simple Operator Mode**. This mode shows large readable task cards, one primary action, plain-English status, and a `Show me how` walkthrough on each main page. Raw IDs, logs, JSON, archived records, debug tables, route diagnostics, and technical filters remain available through **Advanced Developer Mode**, but they are hidden during normal CEO/operator use.
 
+The Setup Wizard now treats Polygon, exchange, GitHub, Cloudflare, and social API credentials as optional future integrations in Simple Mode. Paper trading can remain complete without those keys. Public wallet addresses are added directly through the UI with `Add Public Wallet`; the `.env` file is only for optional API keys and later integrations.
+
 ## Run Locally
 
 ```bash

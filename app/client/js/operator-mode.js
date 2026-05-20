@@ -30,15 +30,15 @@
         },
         '/owner-setup': {
             area: 'Setup Wizard',
-            title: 'Finish Setup One Step At A Time',
-            summary: 'Follow the checklist. Each step explains what is missing, why it matters, and what to click.',
-            primaryAction: { label: 'Verify Setup Now', selector: '#refresh-owner-setup' },
-            keepHeadings: ['Progress', 'Step-by-Step Completion Guide', 'Select .env File Visually', 'Add Public Wallet Address'],
+            title: 'Beginner Owner Setup',
+            summary: 'Your local paper-trading system is complete. Remaining items are optional future integrations, and live trading stays locked.',
+            primaryAction: { label: 'Add Public Wallet', selector: '#owner-add-public-wallet' },
+            keepHeadings: ['Progress', 'Paper Trading Configuration', 'Optional Future Connections', 'Add Public Wallet Address'],
             cards: [
-                ['1. Verify local setup', 'Refresh the wizard and confirm paper/full E2E progress.'],
-                ['2. Select .env visually', 'Check the safe file locally without sending secret values.'],
-                ['3. Add public wallet metadata', 'Use public addresses only. Never enter seed phrases or private keys.'],
-                ['4. Complete the next blocked item', 'Click the one visible fix/verify button for the blocked step.']
+                ['Required Now', 'Paper trading is complete. You can keep building and testing locally.'],
+                ['Optional Later', 'API keys for exchanges, socials, GitHub, Cloudflare, and data providers can wait.'],
+                ['Live Trading Locked', 'Live orders and wallet signing remain disabled.'],
+                ['Developer / Advanced', 'Variable names and raw gates are hidden unless you open Advanced Mode.']
             ]
         },
         '/strategy-lab': {

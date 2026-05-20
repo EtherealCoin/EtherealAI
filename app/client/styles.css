@@ -1504,6 +1504,41 @@ footer {
     white-space: pre-wrap;
 }
 
+.owner-primary-actions button {
+    font-size: 1.05rem;
+    font-weight: 800;
+    min-height: 52px;
+    padding: 13px 18px;
+}
+
+.owner-primary-actions button:first-child {
+    background: #16a34a;
+}
+
+.owner-primary-actions button:first-child:hover {
+    background: #15803d;
+}
+
+.owner-optional-card {
+    border-left: 4px solid #2563eb;
+}
+
+.owner-action-output {
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    color: #14532d;
+    padding: 12px;
+}
+
+.operator-step.owner-optional-connection-card {
+    border-left: 4px solid #2563eb;
+}
+
+.operator-simple-mode .advanced-only {
+    display: none !important;
+}
+
 .operator-mode-bar {
     align-items: center;
     background: #111827;
