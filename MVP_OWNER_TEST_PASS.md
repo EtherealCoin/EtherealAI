@@ -102,6 +102,7 @@ patrick@etherealAI
    - Pass condition: Strategy Lab → Risk opens Risk Profile Configuration with safe paper defaults, editable limits, Current Profile Status, Save Risk Profile, Activate Profile, Kill Switch off guidance, and Verify Paper Risk Gate wired to `/api/v1/owner-setup-wizard/verify/paper_risk_profile_ready`.
    - Pass condition: Simple Mode shows `Run This Strategy Safely` as the primary paper action after a strategy is saved or opened.
    - Pass condition: `Run This Strategy Safely` creates or reuses only local paper components, runs verification, launches a paper simulation, and shows status, simulated trades, P/L, spread/costs, fees/slippage, entry/exit reasons, strategy health, and warnings.
+   - Pass condition: Cross-Exchange, Cross-DEX, and Hybrid DEX/CEX arbitrage strategies use structured arbitrage fields instead of freeform indicator parsing; paper results show `structured_arbitrage_route` rules, buy/sell venues, spread, fees, slippage, liquidity, latency, and no `could not be translated` entry-rule warning.
    - Pass condition: if no matching market data exists, the action creates clearly labeled local sample candles for workflow verification rather than requiring terminal commands or exchange APIs.
    - Pass condition: the one-click paper action keeps live trading, wallet signing, exchange order placement, token deployment, public posting, and credential loading disabled.
 

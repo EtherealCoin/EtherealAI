@@ -56,6 +56,8 @@ The Operator Training Library covers Home, Setup Wizard, Wallet & Funding, Secur
 
 Strategy / Paper / Bots now exposes the Simple Mode action `Run This Strategy Safely`. After the owner saves or opens a strategy, this one button creates or reuses the safe paper session, active safe risk profile, local paper connector, ready paper plan, active local schedule, verifier, and paper run. If no matching market data exists yet, EtherealAI creates clearly labeled local sample candles so the operator can verify the workflow without exchange APIs or terminal commands. Results show running status, simulated trades, P/L, spread/cost assumptions, fees/slippage, entry/exit reasons, strategy health, and warnings. Live trading, wallet signing, exchange orders, token deployment, and external posting remain disabled.
 
+Strategy Lab now has a dedicated structured arbitrage lane for `Cross-Exchange Arbitrage`, `Cross-DEX Arbitrage`, and `Hybrid DEX/CEX Arbitrage`. These strategies use structured fields for buy venues, sell venues, arbitrage type, spread, fees, slippage, liquidity, latency, simultaneous execution, stablecoin pair, and token whitelist. EtherealAI does not try to translate advanced arbitrage paragraphs through the indicator parser; the paper engine generates machine-readable arbitrage rules and simulates local fee/slippage/liquidity/latency-aware buy/sell routes without live venue calls, wallet signing, or order placement.
+
 ## Run Locally
 
 ```bash

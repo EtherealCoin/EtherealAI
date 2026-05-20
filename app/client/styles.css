@@ -1965,6 +1965,44 @@ footer {
     line-height: 1.5;
 }
 
+.arbitrage-builder {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    display: grid;
+    gap: 12px;
+    margin: 12px 0;
+    padding: 16px;
+}
+
+.arbitrage-builder[hidden] {
+    display: none;
+}
+
+.arbitrage-builder h3 {
+    margin: 0;
+}
+
+.arbitrage-builder-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.arbitrage-builder-grid label,
+.checkbox-line {
+    color: #111827;
+    display: grid;
+    font-weight: 800;
+    gap: 6px;
+}
+
+.checkbox-line {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+}
+
 .safe-paper-hero button {
     background: #16a34a;
     border: 0;
@@ -2392,6 +2430,7 @@ footer {
         .training-library-hero,
         .training-video-player,
         .safe-paper-hero,
+        .arbitrage-builder-grid,
         .operator-answer-panel,
         .operator-workflow-steps,
         .operator-manual-link-row,

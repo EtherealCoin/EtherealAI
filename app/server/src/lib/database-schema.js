@@ -125,6 +125,8 @@ function initializeDatabase(db) {
         name TEXT NOT NULL,
         market_symbol TEXT NOT NULL,
         timeframe TEXT NOT NULL,
+        strategy_type TEXT NOT NULL DEFAULT 'indicator',
+        strategy_rules_json TEXT NOT NULL DEFAULT '{}',
         entry_rules TEXT NOT NULL,
         exit_rules TEXT NOT NULL,
         stop_loss REAL,
@@ -135,6 +137,8 @@ function initializeDatabase(db) {
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    db.run("ALTER TABLE trading_strategies ADD COLUMN strategy_type TEXT NOT NULL DEFAULT 'indicator'", () => {});
+    db.run("ALTER TABLE trading_strategies ADD COLUMN strategy_rules_json TEXT NOT NULL DEFAULT '{}'", () => {});
 
     db.run(`
       CREATE TABLE IF NOT EXISTS backtest_runs (

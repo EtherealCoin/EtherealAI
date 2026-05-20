@@ -1,3 +1,9 @@
+const {
+  isArbitrageStrategyType,
+  normalizeArbitrageStrategyRules,
+  buildArbitrageRuleSummary
+} = require('../lib/strategy-arbitrage');
+
 function registerStrategyResearchRoutes(app, {
   requireAuth,
   dbGet,
@@ -68,6 +74,8 @@ function registerStrategyResearchRoutes(app, {
       name,
       marketSymbol,
       timeframe,
+      strategyType = 'indicator',
+      strategyRules = {},
       entryRules,
       exitRules,
       stopLoss = null,
@@ -75,21 +83,38 @@ function registerStrategyResearchRoutes(app, {
       riskNotes = ''
     } = req.body;
 
-    if (!name || !marketSymbol || !timeframe || !entryRules || !exitRules) {
-      return res.status(400).json({ error: 'Name, market, timeframe, entry rules, and exit rules are required' });
+    const safeStrategyType = String(strategyType || 'indicator').trim();
+    const arbitrageStrategy = isArbitrageStrategyType(safeStrategyType);
+    const normalizedRules = arbitrageStrategy
+      ? normalizeArbitrageStrategyRules(strategyRules, safeStrategyType)
+      : {};
+    const generatedArbitrageSummary = arbitrageStrategy
+      ? buildArbitrageRuleSummary(normalizedRules)
+      : '';
+    const safeEntryRules = arbitrageStrategy
+      ? `Structured arbitrage entry rules:\n${generatedArbitrageSummary}`
+      : String(entryRules || '').trim();
+    const safeExitRules = arbitrageStrategy
+      ? 'Structured arbitrage exit rules: simultaneous paper buy/sell route closes in the same simulated decision when the route clears spread, fee, slippage, liquidity, latency, and route-type checks.'
+      : String(exitRules || '').trim();
+
+    if (!name || !marketSymbol || !timeframe || !safeEntryRules || !safeExitRules) {
+      return res.status(400).json({ error: 'Name, market, timeframe, and strategy rules are required' });
     }
 
     try {
       const result = await dbRun(
         `INSERT INTO trading_strategies
-         (name, market_symbol, timeframe, entry_rules, exit_rules, stop_loss, take_profit, risk_notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (name, market_symbol, timeframe, strategy_type, strategy_rules_json, entry_rules, exit_rules, stop_loss, take_profit, risk_notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           name.trim(),
           marketSymbol.trim().toUpperCase(),
           timeframe.trim(),
-          entryRules.trim(),
-          exitRules.trim(),
+          arbitrageStrategy ? safeStrategyType : 'indicator',
+          JSON.stringify(normalizedRules),
+          safeEntryRules,
+          safeExitRules,
           stopLoss === '' ? null : Number(stopLoss),
           takeProfit === '' ? null : Number(takeProfit),
           riskNotes.trim()

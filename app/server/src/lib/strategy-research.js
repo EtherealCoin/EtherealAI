@@ -8,6 +8,8 @@ function parseStrategy(row) {
     name: row.name,
     market_symbol: row.market_symbol,
     timeframe: row.timeframe,
+    strategy_type: row.strategy_type || 'indicator',
+    strategy_rules: JSON.parse(row.strategy_rules_json || '{}'),
     entry_rules: row.entry_rules,
     exit_rules: row.exit_rules,
     stop_loss: row.stop_loss,

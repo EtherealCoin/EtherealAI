@@ -11,10 +11,19 @@ const {
 const {
   createSignalEvaluator
 } = require('./strategy-signals');
+const {
+  isArbitrageStrategyType,
+  runArbitrageBacktest,
+  createArbitragePaperBotDecision
+} = require('./strategy-arbitrage');
 
 function runCandleBacktest(strategy, candles, marketImport, options = {}) {
   if (candles.length < 2) {
     throw new Error('At least two candles are required to run a backtest');
+  }
+
+  if (isArbitrageStrategyType(strategy.strategy_type)) {
+    return runArbitrageBacktest(strategy, candles, marketImport, options);
   }
 
   const normalizedCandles = candles.map(candle => ({
@@ -270,6 +279,7 @@ function evaluatePaperRiskGate(backtestResult, options = {}) {
 function createPaperReplayPayload(strategy, marketImport, backtestResult, riskGateOptions = {}) {
   return {
     mode: 'historical_replay_v1',
+    sourceMode: backtestResult.mode || 'candle_backtest_v1',
     warning: 'Paper replay only. This does not place live orders and must not be treated as live trading readiness.',
     strategy: {
       id: strategy.id,
@@ -302,6 +312,18 @@ function createPaperReplayPayload(strategy, marketImport, backtestResult, riskGa
 function createPaperBotAutomationRunPayload(plan, strategy, riskProfile, marketImport, candles, readiness, options = {}) {
   if (candles.length < 2) {
     throw new Error('At least two candles are required to run a paper bot decision cycle');
+  }
+
+  if (isArbitrageStrategyType(strategy.strategy_type)) {
+    return createArbitragePaperBotDecision(
+      plan,
+      strategy,
+      riskProfile,
+      marketImport,
+      candles,
+      readiness,
+      options
+    );
   }
 
   const normalizedCandles = candles.map(candle => ({

@@ -101,6 +101,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/bot-automation-schedules.js',
     'app/server/src/lib/strategy-math.js',
     'app/server/src/lib/strategy-signals.js',
+    'app/server/src/lib/strategy-arbitrage.js',
     'app/server/src/lib/strategy-engine.js',
     'app/server/src/lib/market-data.js',
     'app/server/src/lib/market-import-files.js',
@@ -1402,6 +1403,8 @@ function checkDatabaseSchemaModule() {
     || createTableStatements.length < 30
     || alterStatements.length < 10
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS users'))
+    || !statements.some(statement => statement.includes("strategy_type TEXT NOT NULL DEFAULT 'indicator'"))
+    || !statements.some(statement => statement.includes("strategy_rules_json TEXT NOT NULL DEFAULT '{}'"))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS bot_automation_plans'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS bot_automation_schedules'))
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS arbitrage_simulation_runs'))
@@ -1424,6 +1427,8 @@ function checkDatabaseSchemaModule() {
     || !statements.some(statement => statement.includes('CREATE TABLE IF NOT EXISTS dev_server_logs'))
     || !statements.some(statement => statement.includes('ALTER TABLE market_data_refresh_schedules ADD COLUMN backfill_start_at TEXT'))
     || !statements.some(statement => statement.includes('ALTER TABLE market_data_import_jobs ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0'))
+    || !runCalls.some(call => call.sql.includes("ALTER TABLE trading_strategies ADD COLUMN strategy_type TEXT NOT NULL DEFAULT 'indicator'") && call.hasCallback)
+    || !runCalls.some(call => call.sql.includes("ALTER TABLE trading_strategies ADD COLUMN strategy_rules_json TEXT NOT NULL DEFAULT '{}'") && call.hasCallback)
     || !runCalls.some(call => call.sql.includes('ALTER TABLE exchange_connectors ADD COLUMN secret_reference_id INTEGER') && call.hasCallback)
   ) {
     fail('database schema module did not preserve schema bootstrap statements');
@@ -3058,6 +3063,8 @@ function checkStrategyResearchModule() {
     name: 'Breakout Fixture',
     market_symbol: 'BTC-USD',
     timeframe: '1h',
+    strategy_type: 'cross_exchange_arbitrage',
+    strategy_rules_json: '{"arbitrageType":"cex_cex","buyVenues":["binance"],"sellVenues":["coinbase"],"minimumSpreadPercent":0.4}',
     entry_rules: 'Close crosses above resistance.',
     exit_rules: 'Close below trailing average.',
     stop_loss: 2,
@@ -3149,6 +3156,9 @@ function checkStrategyResearchModule() {
 
   if (
     strategy.market_symbol !== 'BTC-USD'
+    || strategy.strategy_type !== 'cross_exchange_arbitrage'
+    || strategy.strategy_rules?.arbitrageType !== 'cex_cex'
+    || strategy.strategy_rules?.buyVenues?.[0] !== 'binance'
     || backtest.result?.summary?.totalReturnPercent !== 12.5
     || paperSession.result?.riskGate?.status !== 'passed'
     || sweep.result?.best?.stopLoss !== 2
@@ -3418,6 +3428,66 @@ function checkStrategyEngineModule() {
     },
     { positionOpen: false }
   );
+  const arbitrageStrategy = {
+    id: 51,
+    name: 'Fixture Cross Venue Arb',
+    market_symbol: 'MATIC/USDT',
+    timeframe: '1m',
+    strategy_type: 'hybrid_dex_cex_arbitrage',
+    strategy_rules: {
+      arbitrageType: 'dex_cex',
+      buyVenues: ['quickswap', 'uniswap'],
+      sellVenues: ['binance', 'coinbase'],
+      minimumSpreadPercent: 0.05,
+      estimatedFeePercent: 0.05,
+      slippageTolerancePercent: 0.02,
+      minimumLiquidity: 500,
+      maxExecutionLatencyMs: 1000,
+      simultaneousExecutionRequired: true,
+      stablecoinPair: 'USDT',
+      tokenWhitelist: ['MATIC']
+    },
+    entry_rules: 'structured arbitrage fixture',
+    exit_rules: 'same-cycle fixture',
+    stop_loss: null,
+    take_profit: null
+  };
+  const arbitrageBacktest = runCandleBacktest(arbitrageStrategy, candles, {
+    id: 52,
+    market_symbol: 'MATIC/USDT',
+    timeframe: '1m'
+  }, {
+    initialCapital: 10000
+  });
+  const arbitragePaper = createPaperReplayPayload(arbitrageStrategy, {
+    id: 52,
+    market_symbol: 'MATIC/USDT',
+    timeframe: '1m'
+  }, arbitrageBacktest, {
+    maxDrawdownPercent: 100,
+    maxLossStreak: 99,
+    minTradeCount: 0
+  });
+  const arbitrageBotRun = createPaperBotAutomationRunPayload(
+    {
+      id: 53,
+      name: 'Fixture Arb Bot',
+      mode: 'paper',
+      status: 'active'
+    },
+    arbitrageStrategy,
+    null,
+    {
+      id: 52,
+      market_symbol: 'MATIC/USDT',
+      timeframe: '1m'
+    },
+    candles,
+    {
+      status: 'ready_for_paper',
+      blockingFailures: []
+    }
+  );
   const sweep = createOptimizationSweepPayload(strategy, candles, marketImport, {
     initialCapital: 10000,
     feePercents: [0],
@@ -3455,11 +3525,23 @@ function checkStrategyEngineModule() {
     || Object.prototype.hasOwnProperty.call(backtest, 'liveExecution')
     || riskGate.status !== 'passed'
     || paper.mode !== 'historical_replay_v1'
+    || paper.sourceMode !== 'candle_backtest_v1'
     || !paper.warning.includes('does not place live orders')
     || paper.riskGate.status !== 'passed'
     || botRun.mode !== 'paper_bot_decision_cycle_v1'
     || botRun.liveExecution.enabled !== false
     || !['enter', 'wait'].includes(botRun.decision.action)
+    || arbitrageBacktest.mode !== 'arbitrage_backtest_v1'
+    || arbitrageBacktest.parsedRules.entry.kind !== 'structured_arbitrage_route'
+    || arbitrageBacktest.parsedRules.warnings.some(warning => warning.includes('could not be translated'))
+    || arbitrageBacktest.settings.arbitrageType !== 'dex_cex'
+    || !Array.isArray(arbitrageBacktest.routeModel.buyVenues)
+    || arbitragePaper.mode !== 'historical_replay_v1'
+    || arbitragePaper.sourceMode !== 'arbitrage_backtest_v1'
+    || arbitragePaper.parsedRules.entry.kind !== 'structured_arbitrage_route'
+    || arbitrageBotRun.mode !== 'arbitrage_paper_bot_decision_cycle_v1'
+    || arbitrageBotRun.liveExecution.enabled !== false
+    || !['arbitrage_execute', 'wait'].includes(arbitrageBotRun.decision.action)
     || sweep.mode !== 'optimization_sweep_v1'
     || sweep.searchSpace.totalRunCount !== 1
     || sweep.runs.length !== 1
@@ -6219,11 +6301,30 @@ function checkStrategyLabOneClickSafePaperUi() {
   const html = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
   const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
   const routes = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/bot-automation.js'), 'utf8');
+  const strategyRoutes = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/strategy-research.js'), 'utf8');
+  const arbitrageLib = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/strategy-arbitrage.js'), 'utf8');
   const routeRegistration = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/route-registration.js'), 'utf8');
   const operatorMode = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-mode.js'), 'utf8');
 
   if (
     !html.includes('id="safe-paper-simulator"')
+    || !html.includes('id="strategy-type"')
+    || !html.includes('Cross-Exchange Arbitrage')
+    || !html.includes('Cross-DEX Arbitrage')
+    || !html.includes('Hybrid DEX/CEX Arbitrage')
+    || !html.includes('id="arbitrage-strategy-fields"')
+    || !html.includes('Structured Arbitrage Builder')
+    || !html.includes('id="arb-buy-venues"')
+    || !html.includes('id="arb-sell-venues"')
+    || !html.includes('id="arb-min-spread"')
+    || !html.includes('id="arb-fee-percent"')
+    || !html.includes('id="arb-slippage-percent"')
+    || !html.includes('id="arb-min-liquidity"')
+    || !html.includes('id="arb-max-latency"')
+    || !html.includes('id="arb-simultaneous"')
+    || !html.includes('id="arbitrage-rule-preview"')
+    || !html.includes('function getArbitrageRulesFromForm()')
+    || !html.includes('function updateStrategyBuilderMode()')
     || !html.includes('id="run-this-strategy-safely"')
     || !html.includes('Run This Strategy Safely')
     || !html.includes('EtherealAI automatically creates or reuses the safe paper session, risk profile, local connector, plan, schedule, verifier, and simulation run.')
@@ -6244,9 +6345,20 @@ function checkStrategyLabOneClickSafePaperUi() {
     || !html.includes('/run-safe-paper-test')
     || !html.includes('Live trading and wallet signing stayed disabled.')
     || !styles.includes('.safe-paper-hero')
+    || !styles.includes('.arbitrage-builder')
+    || !styles.includes('.arbitrage-builder-grid')
     || !styles.includes('.safe-paper-results')
     || !styles.includes('.safe-paper-result-card')
     || !styles.includes('.safe-paper-warning-card')
+    || !strategyRoutes.includes('normalizeArbitrageStrategyRules')
+    || !strategyRoutes.includes('buildArbitrageRuleSummary')
+    || !strategyRoutes.includes('strategy_rules_json')
+    || !arbitrageLib.includes('runArbitrageBacktest')
+    || !arbitrageLib.includes('createArbitragePaperBotDecision')
+    || !arbitrageLib.includes('minimumSpreadPercent')
+    || !arbitrageLib.includes('maxExecutionLatencyMs')
+    || !arbitrageLib.includes('simultaneousExecutionRequired')
+    || !arbitrageLib.includes("routeSelection: 'best_net_edge_after_costs'")
     || !routes.includes("app.post('/api/v1/strategies/:id/run-safe-paper-test'")
     || !routes.includes('findOrCreateSafePaperSession')
     || !routes.includes('createLocalSampleMarketImport')

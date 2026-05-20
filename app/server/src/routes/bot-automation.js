@@ -297,6 +297,8 @@ function registerBotAutomationRoutes(app, {
     const metrics = paperResult.metrics || {};
     const settings = paperResult.settings || {};
     const simulatedTrades = paperResult.simulatedTrades || paperResult.trades || [];
+    const isArbitrageReplay = paperResult.sourceMode === 'arbitrage_backtest_v1'
+      || paperResult.parsedRules?.entry?.kind === 'structured_arbitrage_route';
     const usedLocalSampleData = paperResult.marketImport?.source === 'local_sample'
       || paperResult.data?.source === 'local_sample';
     const latestTrades = simulatedTrades.slice(-25).map((trade, index) => ({
@@ -308,10 +310,19 @@ function registerBotAutomationRoutes(app, {
       pnl: trade.pnl,
       netReturnPercent: trade.netReturnPercent,
       exitReason: trade.exitReason,
-      candlesHeld: trade.candlesHeld
+      candlesHeld: trade.candlesHeld,
+      buyVenue: trade.buyVenue,
+      sellVenue: trade.sellVenue,
+      buyVenueType: trade.buyVenueType,
+      sellVenueType: trade.sellVenueType,
+      buyChain: trade.buyChain,
+      sellChain: trade.sellChain,
+      grossSpreadPercent: trade.grossSpreadPercent,
+      latencyMs: trade.latencyMs,
+      liquidityFloor: trade.liquidityFloor
     }));
-    const feePercent = Number(settings.feePercent || 0);
-    const slippagePercent = Number(settings.slippagePercent || 0);
+    const feePercent = Number(settings.estimatedFeePercent ?? settings.feePercent ?? 0);
+    const slippagePercent = Number(settings.slippageTolerancePercent ?? settings.slippagePercent ?? 0);
     const estimatedRoundTripCostPercent = Number(((feePercent + slippagePercent) * 2).toFixed(4));
     const warnings = [
       ...(paperResult.parsedRules?.warnings || []),
@@ -361,8 +372,15 @@ function registerBotAutomationRoutes(app, {
       },
       simulatedTrades: latestTrades,
       spreadAnalysis: {
-        source: 'paper assumptions',
-        note: 'No live venue quote was requested. This is estimated from the safe paper fee and slippage assumptions.',
+        source: isArbitrageReplay ? 'structured arbitrage paper route model' : 'paper assumptions',
+        note: isArbitrageReplay
+          ? 'No live venue quote was requested. Venue prices, liquidity, spread, slippage, fees, and latency are simulated locally from the structured arbitrage rules.'
+          : 'No live venue quote was requested. This is estimated from the safe paper fee and slippage assumptions.',
+        arbitrageType: settings.arbitrageType || null,
+        minimumSpreadPercent: settings.minimumSpreadPercent ?? null,
+        buyVenues: paperResult.routeModel?.buyVenues || [],
+        sellVenues: paperResult.routeModel?.sellVenues || [],
+        latestRoute: latestTrades.length ? latestTrades[latestTrades.length - 1] : null,
         feePercentPerSide: feePercent,
         slippagePercentPerSide: slippagePercent,
         estimatedRoundTripCostPercent,
