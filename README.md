@@ -21,7 +21,7 @@ The current project is intentionally designed for owner-controlled local operati
 ## Key Pages
 
 - `/dashboard` - Mission Control for system health, readiness progress, live-lock status, wallets, security, active bots, blocked gates, next action, model roles, MLX lifecycle, multi-agent coordination, and system memory
-- `/owner-setup` - Setup Wizard for paper 95 to 100 and full E2E readiness 72 to 100 with live trading disabled, including visual `.env` file selection, safe credential presence checks, detected public wallet address display, and step-by-step blocked-gate guidance
+- `/owner-setup` - Beginner Owner Setup for reaching `Local Paper Trading Ready` without live trading, wallet signing, or external provider keys; optional `.env`, exchange, GitHub, Cloudflare, social, and Polygon provider integrations stay in Future Integrations / Advanced Mode
 - `/operator-control` - Wallet & Funding Center for wallet metadata, owner key-control guidance, permissions, project assignment, and revoke workflows
 - `/security-lockdown` - Security Lockdown Center for read-only Mac/network security audit, local attack-surface review, and owner hardening checklist
 - `/owner-proof-packet` - local proof packet, owner acceptance, live-blocker evidence
@@ -32,13 +32,13 @@ The current project is intentionally designed for owner-controlled local operati
 - `/solidity-lab` - token, NFT, website, whitepaper, chain, and ecosystem planning
 - `/social-ops` - local-only social/community draft workflows
 
-Every protected operator page now loads the global `What do I do next?` assistant. It checks the local owner setup, readiness, bot automation, wallet, security, and health APIs, then recommends the safest next action in plain English without enabling live trading or wallet signing.
+Every protected operator page now loads the global `What do I do next?` assistant. It checks the local owner setup, readiness, bot automation, wallet, security, and health APIs, then recommends the safest next action in plain English without enabling live trading or wallet signing. Optional provider/API credentials do not become required next actions once local paper trading is ready.
 
 ## Operator Experience
 
 EtherealAI now defaults to **Simple Operator Mode**. This mode shows large readable task cards, one primary action, plain-English status, and a `Show me how` walkthrough on each main page. Raw IDs, logs, JSON, archived records, debug tables, route diagnostics, and technical filters remain available through **Advanced Developer Mode**, but they are hidden during normal CEO/operator use.
 
-The Setup Wizard now treats Polygon, exchange, GitHub, Cloudflare, and social API credentials as optional future integrations in Simple Mode. Paper trading can remain complete without those keys. Public wallet addresses are added directly through the UI with `Add Public Wallet`; the `.env` file is only for optional API keys and later integrations.
+The Setup Wizard now reports `Core Setup Complete` / `Local Paper Trading Ready` when the local server is healthy, a paper schedule or completed paper run exists, an active paper risk profile exists, live trading is disabled, and wallet signing is disabled. Polygon, exchange, GitHub, Cloudflare, and social API credentials are optional future integrations in Simple Mode. Public wallet addresses are added directly through the UI with `Add Public Wallet`; the `.env` file is only for optional API keys and later integrations.
 
 ## Run Locally
 

@@ -2368,6 +2368,10 @@ function checkOwnerSetupWizardModule() {
     || !unsafeStatus.forbiddenWalletSecretNames.includes('OWNER_SEED_PHRASE')
     || wizard.progress?.paperTrading?.current !== 100
     || wizard.progress?.fullEndToEnd?.current !== 100
+    || wizard.status !== 'local_paper_trading_ready'
+    || wizard.coreSetup?.label !== 'Core Setup Complete'
+    || wizard.coreSetup?.readinessLabel !== 'Local Paper Trading Ready'
+    || wizard.coreSetup?.optionalIntegrationsRequired !== false
     || wizard.envDiscovery?.visualPickerSupported !== true
     || wizard.paperConfiguration?.status !== 'paper_ready'
     || wizard.walletMetadata?.detectedEnvPublicWallets?.length !== 1
@@ -2376,6 +2380,7 @@ function checkOwnerSetupWizardModule() {
     || wizard.safetyBoundary?.seedPhrasesAccepted !== false
     || !wizard.gates?.fullEndToEnd?.some(gate => gate.id === 'high_security_live_approval_locked' && gate.passed)
     || !wizard.gates?.paperTrading?.some(gate => gate.id === 'paper_verification_run_completed' && gate.passed)
+    || !wizard.optionalFutureIntegrations?.some(item => item.id === 'exchange_apis' && item.requiredForPaperTrading === false)
     || !template.includes('Do not add seed phrases')
     || !template.includes('POLYGON_RPC_URL=')
   ) {
@@ -6435,6 +6440,8 @@ function checkOwnerSetupWizardUi() {
     || !header.includes('/owner-setup')
     || !html.includes('Setup Wizard')
     || !html.includes('Paper Trading Complete')
+    || !html.includes('Core Setup Complete')
+    || !html.includes('You can now safely use local paper trading. Live trading and wallet signing remain disabled.')
     || !html.includes('Optional future connections available')
     || !html.includes('live execution disabled')
     || !html.includes('no seed phrases')
@@ -6449,6 +6456,7 @@ function checkOwnerSetupWizardUi() {
     || !html.includes('Paper Trading Configuration')
     || !html.includes('Optional Future Connections')
     || !html.includes('Your local paper-trading system is complete. These remaining items are optional future integrations.')
+    || !html.includes('Status: Optional')
     || !html.includes('Add Public Wallet')
     || !html.includes('Skip Optional Integrations For Now')
     || !html.includes('Show Advanced Variable Names')
@@ -8385,6 +8393,8 @@ async function runServerApiChecks() {
     !ownerSetupPage.ok
     || !ownerSetupHtml.includes('Setup Wizard')
     || !ownerSetupHtml.includes('Paper Trading Complete')
+    || !ownerSetupHtml.includes('Core Setup Complete')
+    || !ownerSetupHtml.includes('You can now safely use local paper trading. Live trading and wallet signing remain disabled.')
     || !ownerSetupHtml.includes('Optional future connections available')
     || !ownerSetupHtml.includes('Select .env File Visually')
     || !ownerSetupHtml.includes('Verify Selected .env File')
@@ -8403,6 +8413,8 @@ async function runServerApiChecks() {
 
   if (
     ownerSetup.body.wizard?.audience !== 'non_technical_owner'
+    || !['local_paper_trading_ready', 'owner_setup_in_progress'].includes(ownerSetup.body.wizard?.status)
+    || ownerSetup.body.wizard?.coreSetup?.optionalIntegrationsRequired !== false
     || ownerSetup.body.wizard?.progress?.paperTrading?.from !== 95
     || ownerSetup.body.wizard?.progress?.paperTrading?.target !== 100
     || ownerSetup.body.wizard?.progress?.paperTrading?.current < 95

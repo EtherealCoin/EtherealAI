@@ -249,12 +249,19 @@
         const health = summary?.health;
         const serverHealthy = health?.server?.ok && health?.database?.ok;
         const liveLocked = !owner?.safetyBoundary?.liveTradingEnabled && !owner?.safetyBoundary?.walletSigningEnabled;
+        const paperWorking = Boolean(owner?.coreSetup?.paperTradingOperational)
+            || owner?.status === 'local_paper_trading_ready'
+            || Number(owner?.progress?.paperTrading?.current || 0) >= 100;
+        const savedWalletCount = owner?.walletMetadata?.savedPublicWallets?.length ?? 0;
+        const securityValue = (security?.summary?.failCount ?? 0) > 0
+            ? 'Unsafe'
+            : ((security?.summary?.reviewCount ?? 0) > 0 ? 'Optional' : 'Working');
         const statuses = [
-            ['Health', serverHealthy ? 'Safe' : 'Review', serverHealthy ? 'Local server is responding.' : 'Open Mission Control and refresh status.'],
-            ['Paper Trading', `${owner?.progress?.paperTrading?.current ?? '?'}%`, `${bot?.paperAutomation?.counts?.activeSchedules ?? 0} active paper schedule(s).`],
-            ['Live Trading', liveLocked ? 'Locked' : 'Review Now', liveLocked ? 'No live order or wallet signing path is active.' : 'Live or signing appears enabled. Review immediately.'],
-            ['Wallets', `${owner?.walletMetadata?.savedPublicWallets?.length ?? 0}`, 'Public metadata only.'],
-            ['Security', security?.summary?.status || 'Review', `${security?.summary?.failCount ?? 0} fix-now item(s).`]
+            ['Health', serverHealthy ? 'Working' : 'Unsafe', serverHealthy ? 'Local server is responding.' : 'Open Mission Control and refresh status.'],
+            ['Paper Trading', paperWorking ? 'Working' : 'Unsafe', `${bot?.paperAutomation?.counts?.activeSchedules ?? 0} active paper schedule(s).`],
+            ['Live Trading', liveLocked ? 'Locked' : 'Unsafe', liveLocked ? 'No live order or wallet signing path is active.' : 'Live or signing appears enabled. Review immediately.'],
+            ['Wallets', savedWalletCount > 0 ? 'Working' : 'Optional', `${savedWalletCount} public metadata record(s).`],
+            ['Security', securityValue, `${security?.summary?.failCount ?? 0} fix-now item(s).`]
         ];
 
         return statuses.map(([label, value, note]) => `

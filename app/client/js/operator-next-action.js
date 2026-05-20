@@ -32,7 +32,7 @@
 
     function firstBlockedGate(wizard, lane) {
         const gates = wizard?.gates?.[lane] || [];
-        return gates.find(gate => !gate.passed) || null;
+        return gates.find(gate => gate.blocking !== false && !gate.passed) || null;
     }
 
     function gateHref(gate = {}) {
@@ -64,16 +64,16 @@
         const operator = data.operator?.summary;
         const security = data.security?.audit;
         const paperProgress = owner?.progress?.paperTrading?.current ?? mvp?.localEndToEndCompletionPercent ?? 0;
-        const fullProgress = owner?.progress?.fullEndToEnd?.current ?? mvp?.endToEndCompletionPercent ?? 0;
         const liveEnabled = Boolean(owner?.safetyBoundary?.liveTradingEnabled || mvp?.liveExecution?.enabled);
         const walletSigningEnabled = Boolean(owner?.safetyBoundary?.walletSigningEnabled);
         const activeSchedules = bot?.paperAutomation?.counts?.activeSchedules ?? 0;
         const readyPaperPlans = bot?.paperAutomation?.counts?.readyPaperPlans ?? 0;
-        const walletCount = owner?.walletMetadata?.savedPublicWallets?.length ?? operator?.counts?.wallets ?? 0;
         const securityFailCount = security?.summary?.failCount ?? 0;
         const securityReviewCount = security?.summary?.reviewCount ?? 0;
         const paperGate = firstBlockedGate(owner, 'paperTrading');
-        const fullGate = firstBlockedGate(owner, 'fullEndToEnd');
+        const coreSetupComplete = Boolean(owner?.coreSetup?.paperTradingOperational)
+            || owner?.status === 'local_paper_trading_ready'
+            || (paperProgress >= 100 && !liveEnabled && !walletSigningEnabled);
 
         if (data.unauthorized) {
             return {
@@ -105,7 +105,7 @@
             };
         }
 
-        if (paperProgress < 100 || paperGate) {
+        if (!coreSetupComplete && (paperProgress < 100 || paperGate)) {
             return {
                 title: 'Finish Paper Trading Setup',
                 why: paperGate?.whyNeeded || 'Paper automation must reach 100% before live-style workflows are considered.',
@@ -117,35 +117,13 @@
             };
         }
 
-        if (walletCount < 1) {
+        if (coreSetupComplete) {
             return {
-                title: 'Add Wallet Public Metadata',
-                why: 'EtherealAI needs public wallet labels and addresses for planning, but it must never receive seed phrases or private keys.',
-                action: 'Open Wallet & Funding Center',
-                href: '/operator-control',
-                detail: 'Add public address metadata only. Signing stays disabled.'
-            };
-        }
-
-        if (fullProgress < 100 || fullGate) {
-            return {
-                title: 'Complete The Next Setup Gate',
-                why: fullGate?.whyNeeded || 'Full E2E setup readiness is not complete yet. This still does not enable live trading.',
-                action: 'Open Setup Wizard',
-                href: gateHref(fullGate),
-                detail: fullGate
-                    ? `${fullGate.label}: ${fullGate.missing || fullGate.evidence || 'Needs owner action.'}`
-                    : `Full E2E readiness is ${fullProgress}%.`
-            };
-        }
-
-        if (readyPaperPlans > 0 && activeSchedules > 0) {
-            return {
-                title: 'Monitor Paper Bots',
-                why: 'Paper automation is ready and active. The safest next step is observation and evidence review.',
-                action: 'Open Bot Control Center',
+                title: 'Your Paper-Trading System Is Operational',
+                why: 'Core setup is complete. Optional provider/API integrations can wait.',
+                action: readyPaperPlans > 0 && activeSchedules > 0 ? 'Open Bot Control Center' : 'Open Paper Trading Center',
                 href: '/strategy-lab#bot-automation',
-                detail: `${readyPaperPlans} ready paper plan(s), ${activeSchedules} active paper schedule(s). Live trading remains locked.`
+                detail: 'Create a strategy, run a paper bot, review paper results, or explore advanced integrations later.'
             };
         }
 
@@ -206,6 +184,16 @@
         const mvp = summary?.mvp?.readiness;
         const bot = summary?.bot?.capabilityPath;
         const security = summary?.security?.audit;
+        const coreSetupComplete = Boolean(owner?.coreSetup?.paperTradingOperational)
+            || owner?.status === 'local_paper_trading_ready'
+            || ((owner?.progress?.paperTrading?.current ?? mvp?.localEndToEndCompletionPercent ?? 0) >= 100
+                && !owner?.safetyBoundary?.liveTradingEnabled
+                && !mvp?.liveExecution?.enabled
+                && !owner?.safetyBoundary?.walletSigningEnabled);
+        const activePaperSchedules = bot?.paperAutomation?.counts?.activeSchedules ?? 0;
+        const securityStatus = (security?.summary?.failCount ?? 0) > 0
+            ? 'Unsafe'
+            : ((security?.summary?.reviewCount ?? 0) > 0 ? 'Optional' : 'Working');
 
         root.innerHTML = `
             <button type="button" id="operator-next-action-button" class="operator-next-action-button">
@@ -221,23 +209,23 @@
                 <div class="operator-next-action-grid">
                     <article>
                         <strong>Paper</strong>
-                        <span>${escapeHtml(owner?.progress?.paperTrading?.current ?? mvp?.localEndToEndCompletionPercent ?? '?')}%</span>
+                        <span>${coreSetupComplete ? 'Working' : 'Unsafe'}</span>
                     </article>
                     <article>
-                        <strong>Full E2E</strong>
-                        <span>${escapeHtml(owner?.progress?.fullEndToEnd?.current ?? mvp?.endToEndCompletionPercent ?? '?')}%</span>
+                        <strong>Future Integrations</strong>
+                        <span>Optional</span>
                     </article>
                     <article>
                         <strong>Live Trading</strong>
-                        <span>${owner?.safetyBoundary?.liveTradingEnabled || mvp?.liveExecution?.enabled ? 'Enabled' : 'Locked'}</span>
+                        <span>${owner?.safetyBoundary?.liveTradingEnabled || mvp?.liveExecution?.enabled ? 'Unsafe' : 'Locked'}</span>
                     </article>
                     <article>
                         <strong>Active Bots</strong>
-                        <span>${escapeHtml(bot?.paperAutomation?.counts?.activeSchedules ?? 0)}</span>
+                        <span>${activePaperSchedules > 0 ? 'Working' : 'Optional'}</span>
                     </article>
                     <article>
                         <strong>Security</strong>
-                        <span>${escapeHtml(security?.summary?.status || 'review')}</span>
+                        <span>${escapeHtml(securityStatus)}</span>
                     </article>
                 </div>
                 <div class="button-row">

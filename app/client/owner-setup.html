@@ -29,6 +29,10 @@
 
         <section class="model-panel">
             <h2>Progress</h2>
+            <div id="core-setup-banner" class="core-setup-banner">
+                <strong>Core Setup Complete</strong>
+                <span>You can now safely use local paper trading. Live trading and wallet signing remain disabled.</span>
+            </div>
             <div id="owner-setup-progress" class="owner-progress-grid">Loading setup progress...</div>
             <div class="button-row">
                 <button id="refresh-owner-setup" type="button">Refresh / Verify All</button>
@@ -155,13 +159,12 @@
         }
 
         function optionalFutureProgressCard(wizard = {}) {
-            const fullProgress = Number(wizard.progress?.fullEndToEnd?.current || 0);
             return `
                 <article class="owner-progress-card owner-optional-card">
                     <h3>Optional Future Connections</h3>
                     <strong>Optional</strong>
                     <p>These are not setup failures. They are future integrations for live trading, social automation, domain work, and external APIs.</p>
-                    <p>Advanced setup readiness: ${fullProgress}% · live trading and wallet signing remain disabled.</p>
+                    <p>Status: Optional · live trading and wallet signing remain disabled.</p>
                 </article>
             `;
         }
@@ -445,26 +448,29 @@
         function renderSetupGuide(steps = []) {
             const element = document.getElementById('owner-setup-guide');
             const savedWallets = currentWizard?.walletMetadata?.savedPublicWallets?.length || 0;
+            const optionalIntegrations = new Map((currentWizard?.optionalFutureIntegrations || [])
+                .map(item => [item.id, item]));
+            const status = id => optionalIntegrations.get(id)?.ownerStatus || 'Optional';
             element.innerHTML = `
                 <article class="operator-step owner-optional-connection-card">
                     <strong>Required Now</strong>
-                    <p>Your local paper-trading system is complete. You can build strategies, run paper tests, and monitor paper bots without adding API keys.</p>
+                    <p>Status: ${currentWizard?.coreSetup?.paperTradingOperational ? 'Working' : 'Unsafe'}. Your local paper-trading system is complete when the core setup banner is green. You can build strategies, run paper tests, and monitor paper bots without adding API keys.</p>
                 </article>
                 <article class="operator-step owner-optional-connection-card">
                     <strong>Market Data Providers: optional</strong>
-                    <p>Only needed later if you want automated external market-data refreshes. Paper trading can continue with local/imported data.</p>
+                    <p>Status: ${escapeHtml(status('market_data_providers'))}. Only needed later if you want automated external market-data refreshes. Paper trading can continue with local/imported data.</p>
                 </article>
                 <article class="operator-step owner-optional-connection-card">
                     <strong>Exchange APIs: optional future live trading</strong>
-                    <p>Coinbase, Kraken, Binance, and similar exchange keys are not needed for paper trading. They belong in a later high-security live-trading phase.</p>
+                    <p>Status: ${escapeHtml(status('exchange_apis'))}. Coinbase, Kraken, Binance, and similar exchange keys are not needed for paper trading. They belong in a later high-security live-trading phase.</p>
                 </article>
                 <article class="operator-step owner-optional-connection-card">
                     <strong>Social/API integrations: optional future automation</strong>
-                    <p>GitHub, Cloudflare, X, Discord, Telegram, and Medium access can wait. Drafting and planning still work locally.</p>
+                    <p>Status: ${escapeHtml(status('social_api_integrations'))}. GitHub, Cloudflare, X, Discord, Telegram, and Medium access can wait. Drafting and planning still work locally.</p>
                 </article>
                 <article class="operator-step owner-optional-connection-card">
                     <strong>Wallet address: add through UI</strong>
-                    <p>Saved public wallet records: ${Number(savedWallets)}. Add public addresses directly with Add Public Wallet. Do not use a hidden file for wallet setup.</p>
+                    <p>Status: ${escapeHtml(status('wallet_metadata'))}. Saved public wallet records: ${Number(savedWallets)}. Add public addresses directly with Add Public Wallet. Do not use a hidden file for wallet setup.</p>
                 </article>
                 <article class="operator-step owner-optional-connection-card">
                     <strong>Live Trading Locked</strong>
@@ -490,6 +496,14 @@
 
         function renderWizard(wizard = {}) {
             currentWizard = wizard;
+            const coreBanner = document.getElementById('core-setup-banner');
+            const coreComplete = Boolean(wizard.coreSetup?.paperTradingOperational);
+            coreBanner.classList.toggle('core-setup-banner-complete', coreComplete);
+            coreBanner.classList.toggle('core-setup-banner-review', !coreComplete);
+            coreBanner.innerHTML = `
+                <strong>${escapeHtml(wizard.coreSetup?.label || (coreComplete ? 'Core Setup Complete' : 'Core Setup Needs Attention'))}</strong>
+                <span>${escapeHtml(wizard.coreSetup?.message || 'You can now safely use local paper trading. Live trading and wallet signing remain disabled.')}</span>
+            `;
             document.getElementById('owner-setup-progress').innerHTML = [
                 progressCard(wizard.progress?.paperTrading || {}),
                 optionalFutureProgressCard(wizard)

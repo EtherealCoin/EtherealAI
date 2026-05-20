@@ -333,16 +333,23 @@ function gate({
   exactlyEnter,
   verifyAction = 'Click Verify. EtherealAI will re-check local state only.',
   evidence = '',
-  blocking = true
+  blocking = true,
+  optional = false,
+  ownerStatus = null
 }) {
+  const normalizedPassed = Boolean(passed);
+  const normalizedBlocking = Boolean(blocking);
+  const normalizedOptional = Boolean(optional || !normalizedBlocking);
+
   return {
     id,
     lane,
     label,
-    status: passed ? 'complete' : 'blocked',
-    passed: Boolean(passed),
-    blocking,
-    missing: passed ? 'Nothing missing.' : missing,
+    status: ownerStatus || (normalizedPassed ? 'complete' : (normalizedOptional ? 'optional' : 'blocked')),
+    passed: normalizedPassed,
+    blocking: normalizedBlocking,
+    optional: normalizedOptional,
+    missing: normalizedPassed ? 'Nothing missing.' : missing,
     whyNeeded,
     safe,
     exactlyEnter,
@@ -412,20 +419,29 @@ function buildOwnerSetupWizard({
     && ['configured', 'planned', 'disabled'].includes(connector.status)
   ));
   const localSecretRefsConfigured = localSecretReferences.filter(ref => ref.status === 'configured');
+  const walletSigningEnabled = Boolean(liveExecution.walletSigningEnabled);
   const liveLocked = liveExecution.enabled === false
     && liveExecution.orderEndpointEnabled === false
-    && liveExecution.goLiveAllowed === false;
+    && liveExecution.goLiveAllowed === false
+    && walletSigningEnabled === false;
+  const localServerHealthy = true;
+  const paperScheduleOrRunReady = paperState.completedRuns.length > 0 || paperState.activeSchedules.length > 0;
+  const corePaperReady = localServerHealthy
+    && paperScheduleOrRunReady
+    && paperState.activeRiskProfiles.length > 0
+    && liveLocked
+    && walletSigningEnabled === false;
   const paperGates = [
     gate({
-      id: 'paper_strategy_and_data_ready',
+      id: 'local_server_healthy',
       lane: 'paper',
-      label: 'Strategy and market data ready',
-      passed: strategies.length > 0 && paperState.usableImports.length > 0,
-      missing: 'A saved strategy and imported market data are needed.',
-      whyNeeded: 'Paper trading needs rules and candles to simulate decisions without touching money.',
-      safe: 'Safe. This uses local data and does not sign wallet transactions.',
-      exactlyEnter: 'In Strategy Lab, save a strategy and import or refresh market data for the same symbol/timeframe.',
-      evidence: `${strategies.length} strateg(ies), ${paperState.usableImports.length} usable import(s)`
+      label: 'Local server healthy',
+      passed: localServerHealthy,
+      missing: 'The local EtherealAI server must be running.',
+      whyNeeded: 'Paper trading runs locally. If this page is loading, the local server is responding.',
+      safe: 'Safe. This is a local health check only.',
+      exactlyEnter: 'Nothing to enter. Keep the local server running.',
+      evidence: 'owner setup API responded'
     }),
     gate({
       id: 'paper_risk_profile_ready',
@@ -439,38 +455,38 @@ function buildOwnerSetupWizard({
       evidence: `${paperState.activeRiskProfiles.length} active ready profile(s)`
     }),
     gate({
-      id: 'paper_replay_or_session_ready',
-      lane: 'paper',
-      label: 'Paper replay evidence ready',
-      passed: paperState.completedPaperSessions.length > 0 || paperState.completedRuns.length > 0,
-      missing: 'A completed paper replay or paper bot run is needed.',
-      whyNeeded: 'This proves the system can simulate without a live wallet or exchange order.',
-      safe: 'Safe. It is paper-only and does not use wallet signing.',
-      exactlyEnter: 'Use Strategy Lab paper replay or the wizard paper verification button after a ready paper bot plan exists.',
-      evidence: `${paperState.completedPaperSessions.length} paper replay(s), ${paperState.completedRuns.length} paper bot run(s)`
-    }),
-    gate({
-      id: 'paper_bot_plan_ready',
-      lane: 'paper',
-      label: 'Paper bot plan ready',
-      passed: paperState.readyPlans.length > 0,
-      missing: 'A paper-mode bot automation plan with no blocking readiness failures is needed.',
-      whyNeeded: 'This links the strategy, risk profile, paper replay, and automation controls.',
-      safe: 'Safe. Paper bot plans cannot place live orders.',
-      exactlyEnter: 'In Strategy Lab Bots, create a paper bot plan tied to the saved strategy, active risk profile, and paper replay.',
-      evidence: `${paperState.readyPlans.length} ready paper plan(s)`
-    }),
-    gate({
       id: 'paper_verification_run_completed',
       lane: 'paper',
-      label: 'Paper verification run completed',
-      passed: paperState.completedRuns.length > 0 || paperState.activeSchedules.length > 0,
-      missing: 'Run one paper verification cycle or activate a paper schedule.',
-      whyNeeded: 'This moves paper trading from ready to verified complete for local E2E.',
-      safe: 'Safe. The wizard runs paper only and never signs a wallet transaction.',
-      exactlyEnter: 'Click Run Paper Verification in this wizard. If no ready plan exists, complete the prior paper gates first.',
-      verifyAction: 'Click Run Paper Verification. EtherealAI will run one paper bot cycle only.',
+      label: 'Paper schedule or run ready',
+      passed: paperScheduleOrRunReady,
+      missing: 'Create or activate one local paper schedule, or complete one paper bot run.',
+      whyNeeded: 'This proves the system can run paper automation locally without real orders.',
+      safe: 'Safe. It is paper-only and does not use wallet signing.',
+      exactlyEnter: 'Use Paper Trading Center or Bot Control Center to create a safe paper plan, then activate a local paper schedule or run one paper verification cycle.',
+      verifyAction: 'Click Verify Paper Trading 100%. EtherealAI will check local paper schedules and completed paper runs only.',
       evidence: `${paperState.completedRuns.length} completed paper run(s), ${paperState.activeSchedules.length} active schedule(s)`
+    }),
+    gate({
+      id: 'paper_live_trading_locked',
+      lane: 'paper',
+      label: 'Live trading locked',
+      passed: liveLocked,
+      missing: 'Live trading must remain disabled.',
+      whyNeeded: 'Paper trading completion must never require live orders or live exchange execution.',
+      safe: 'Safe. This confirms the high-security live boundary is still closed.',
+      exactlyEnter: 'Nothing to enter. Keep live trading disabled.',
+      evidence: liveLocked ? 'live execution disabled, order endpoint disabled, go-live blocked' : 'live boundary needs review'
+    }),
+    gate({
+      id: 'paper_wallet_signing_locked',
+      lane: 'paper',
+      label: 'Wallet signing locked',
+      passed: walletSigningEnabled === false,
+      missing: 'Wallet signing must remain disabled for paper trading.',
+      whyNeeded: 'Paper trading is complete only when no wallet can sign transactions.',
+      safe: 'Safe. This confirms EtherealAI cannot request signatures.',
+      exactlyEnter: 'Nothing to enter. Do not add seed phrases or private keys.',
+      evidence: walletSigningEnabled ? 'wallet signing enabled' : 'wallet signing disabled'
     })
   ];
   const fullE2eGates = [
@@ -488,7 +504,9 @@ function buildOwnerSetupWizard({
         'Enter only approved variable names shown in this wizard.',
         'Never add seed phrases, private keys, wallet passwords, or recovery phrases.'
       ].join('\n'),
-      evidence: envStatus.exists ? `mode ${envStatus.permissionMode || 'unknown'}, ${envStatus.foundAllowedNames.length} approved variable(s)` : 'file missing'
+      evidence: envStatus.exists ? `mode ${envStatus.permissionMode || 'unknown'}, ${envStatus.foundAllowedNames.length} approved variable(s)` : 'file missing',
+      blocking: false,
+      optional: true
     }),
     gate({
       id: 'rpc_provider_ready',
@@ -499,7 +517,9 @@ function buildOwnerSetupWizard({
       whyNeeded: 'Polygon token creation, explorer evidence, and quote adapters need provider access after owner approval.',
       safe: 'Safe. These are provider credentials only; no wallet signing is enabled.',
       exactlyEnter: ['POLYGON_RPC_URL=...', 'POLYGONSCAN_API_KEY=...'].join('\n'),
-      evidence: `POLYGON_RPC_URL=${hasEnv(envStatus, 'POLYGON_RPC_URL') ? 'present' : 'missing'}, POLYGONSCAN_API_KEY=${hasEnv(envStatus, 'POLYGONSCAN_API_KEY') ? 'present' : 'missing'}`
+      evidence: `POLYGON_RPC_URL=${hasEnv(envStatus, 'POLYGON_RPC_URL') ? 'present' : 'missing'}, POLYGONSCAN_API_KEY=${hasEnv(envStatus, 'POLYGONSCAN_API_KEY') ? 'present' : 'missing'}`,
+      blocking: false,
+      optional: true
     }),
     gate({
       id: 'exchange_credentials_ready',
@@ -519,20 +539,22 @@ function buildOwnerSetupWizard({
         '# or KRAKEN_API_KEY/KRAKEN_API_SECRET',
         '# or BINANCE_API_KEY/BINANCE_API_SECRET'
       ].join('\n'),
-      evidence: `Coinbase=${groupComplete(envStatus, ['COINBASE_API_KEY', 'COINBASE_API_SECRET']) ? 'complete' : 'missing'}, Kraken=${groupComplete(envStatus, ['KRAKEN_API_KEY', 'KRAKEN_API_SECRET']) ? 'complete' : 'missing'}, Binance=${groupComplete(envStatus, ['BINANCE_API_KEY', 'BINANCE_API_SECRET']) ? 'complete' : 'missing'}`
+      evidence: `Coinbase=${groupComplete(envStatus, ['COINBASE_API_KEY', 'COINBASE_API_SECRET']) ? 'complete' : 'missing'}, Kraken=${groupComplete(envStatus, ['KRAKEN_API_KEY', 'KRAKEN_API_SECRET']) ? 'complete' : 'missing'}, Binance=${groupComplete(envStatus, ['BINANCE_API_KEY', 'BINANCE_API_SECRET']) ? 'complete' : 'missing'}`,
+      blocking: false,
+      optional: true
     }),
     gate({
       id: 'public_wallet_metadata_ready',
       lane: 'full_e2e',
       label: 'Public wallet addresses attached',
       passed: publicWallets.length > 0,
-      missing: detectedEnvPublicWallets.length
-        ? 'A public wallet address was detected in the .env file. Click Use Detected Public Wallet, then save it as wallet metadata.'
-        : 'Add at least one public wallet address through this wizard.',
+      missing: 'Optional: add a public wallet address through the UI when you want wallet planning metadata.',
       whyNeeded: 'EtherealAI needs labels and public addresses to assign wallets to trading, deployment, treasury, or recovery roles without holding keys.',
       safe: 'Safe. Public addresses are allowed. Seed phrases and private keys are never allowed.',
       exactlyEnter: 'Wallet label, wallet type, chain family, network, and public address only.',
-      evidence: `${publicWallets.length} public wallet metadata record(s), ${detectedEnvPublicWallets.length} detected public .env address(es)`
+      evidence: `${publicWallets.length} public wallet metadata record(s), ${detectedEnvPublicWallets.length} detected public .env address(es)`,
+      blocking: false,
+      optional: true
     }),
     gate({
       id: 'connector_metadata_ready',
@@ -543,7 +565,9 @@ function buildOwnerSetupWizard({
       whyNeeded: 'The system needs a metadata reference showing where credentials live without storing secret values in SQLite.',
       safe: 'Safe. Metadata references store names like COINBASE_API_KEY, not the secret values.',
       exactlyEnter: 'Use Strategy Lab Connectors or add local secret references that point to env var names. Do not paste the actual API key into connector settings.',
-      evidence: `${exchangeConnectors.length} connector(s), ${localSecretRefsConfigured.length} configured local reference(s)`
+      evidence: `${exchangeConnectors.length} connector(s), ${localSecretRefsConfigured.length} configured local reference(s)`,
+      blocking: false,
+      optional: true
     }),
     gate({
       id: 'external_ops_credentials_ready',
@@ -567,7 +591,9 @@ function buildOwnerSetupWizard({
         'CLOUDFLARE_ACCOUNT_ID=...',
         'X_CLIENT_ID=... and X_CLIENT_SECRET=... OR DISCORD_BOT_TOKEN=... OR TELEGRAM_BOT_TOKEN=... OR MEDIUM_INTEGRATION_TOKEN=...'
       ].join('\n'),
-      evidence: `GitHub=${hasEnv(envStatus, 'GITHUB_TOKEN') ? 'present' : 'missing'}, Cloudflare=${groupComplete(envStatus, ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID']) ? 'complete' : 'missing'}`
+      evidence: `GitHub=${hasEnv(envStatus, 'GITHUB_TOKEN') ? 'present' : 'missing'}, Cloudflare=${groupComplete(envStatus, ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID']) ? 'complete' : 'missing'}`,
+      blocking: false,
+      optional: true
     }),
     gate({
       id: 'high_security_live_approval_locked',
@@ -581,14 +607,29 @@ function buildOwnerSetupWizard({
       evidence: liveLocked ? 'live execution disabled, order endpoint disabled, go-live blocked' : 'live lock not confirmed'
     })
   ];
-  const paperProgress = computeProgress(95, paperGates);
+  const paperProgress = corePaperReady ? 100 : computeProgress(95, paperGates);
   const fullE2eProgress = computeProgress(72, fullE2eGates);
-  const blockedGates = [...paperGates, ...fullE2eGates].filter(item => !item.passed);
+  const blockedGates = [...paperGates, ...fullE2eGates].filter(item => item.blocking !== false && !item.passed);
 
   return {
-    status: paperProgress === 100 && fullE2eProgress === 100 ? 'owner_setup_complete_live_disabled' : 'owner_setup_in_progress',
+    status: corePaperReady ? 'local_paper_trading_ready' : 'owner_setup_in_progress',
     generatedAt: new Date().toISOString(),
     audience: 'non_technical_owner',
+    coreSetup: {
+      status: corePaperReady ? 'complete' : 'needs_attention',
+      label: corePaperReady ? 'Core Setup Complete' : 'Core Setup Needs Attention',
+      readinessLabel: corePaperReady ? 'Local Paper Trading Ready' : 'Paper Setup Needs Attention',
+      message: corePaperReady
+        ? 'You can now safely use local paper trading. Live trading and wallet signing remain disabled.'
+        : 'Finish the required paper-trading items. Optional API/provider integrations can wait.',
+      paperTradingOperational: corePaperReady,
+      localServerHealthy,
+      paperScheduleOrRunReady,
+      activeRiskProfilePresent: paperState.activeRiskProfiles.length > 0,
+      liveTradingEnabled: false,
+      walletSigningEnabled: false,
+      optionalIntegrationsRequired: false
+    },
     env: envStatus,
     envDiscovery: {
       secureServerPath: OWNER_ENV_PATH,
@@ -609,11 +650,12 @@ function buildOwnerSetupWizard({
       activeRiskProfiles: paperState.activeRiskProfiles.length,
       completedPaperSessions: paperState.completedPaperSessions.length,
       usableMarketImports: paperState.usableImports.length,
+      corePaperReady,
       status: paperProgress === 100 ? 'paper_ready' : 'paper_setup_needed',
       liveSigningRequired: false,
       explanation: paperProgress === 100
-        ? 'Paper trading has the local evidence needed for setup completion. No live wallet signing was used.'
-        : 'Paper trading still needs the blocked paper gates below. No live wallet signing is required.'
+        ? 'Your paper-trading system is operational. No live wallet signing was used.'
+        : 'Paper trading still needs one active risk profile and one active paper schedule or completed paper run. No live wallet signing is required.'
     },
     walletMetadata: {
       savedPublicWallets: publicWallets.map(wallet => ({
@@ -627,10 +669,10 @@ function buildOwnerSetupWizard({
       })),
       detectedEnvPublicWallets,
       nextAction: publicWallets.length
-        ? 'Review saved wallet metadata and keep signing disabled.'
+        ? 'Wallet setup complete. Review saved public metadata and keep signing disabled.'
         : detectedEnvPublicWallets.length
-          ? 'Use the detected public wallet address to prefill the wallet form, then save metadata.'
-          : 'Add a public wallet address manually or add OWNER_PUBLIC_WALLET_ADDRESS/POLYGON_PUBLIC_WALLET_ADDRESS to the .env file.'
+          ? 'Optional: use the detected public wallet address to prefill the wallet form, or add a public wallet address directly through the UI.'
+          : 'Optional: add a public wallet address directly through the UI when you want wallet planning metadata.'
     },
     progress: {
       paperTrading: {
@@ -653,6 +695,49 @@ function buildOwnerSetupWizard({
       paperTrading: paperGates,
       fullEndToEnd: fullE2eGates
     },
+    optionalFutureIntegrations: [
+      {
+        id: 'market_data_providers',
+        label: 'Market data providers',
+        ownerStatus: groupComplete(envStatus, ['POLYGON_RPC_URL']) ? 'Working' : 'Optional',
+        requiredForPaperTrading: false,
+        plainEnglish: 'Optional later for automated external data refreshes. Local paper trading does not need this.'
+      },
+      {
+        id: 'exchange_apis',
+        label: 'Exchange APIs',
+        ownerStatus: anyGroupComplete(envStatus, [
+          ['COINBASE_API_KEY', 'COINBASE_API_SECRET'],
+          ['KRAKEN_API_KEY', 'KRAKEN_API_SECRET'],
+          ['BINANCE_API_KEY', 'BINANCE_API_SECRET']
+        ]) ? 'Working' : 'Optional',
+        requiredForPaperTrading: false,
+        plainEnglish: 'Optional future live-trading adapter setup. It must stay out of the paper-trading completion path.'
+      },
+      {
+        id: 'social_api_integrations',
+        label: 'Social/API integrations',
+        ownerStatus: (
+          groupComplete(envStatus, ['GITHUB_TOKEN'])
+          || groupComplete(envStatus, ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'])
+          || groupComplete(envStatus, ['X_CLIENT_ID', 'X_CLIENT_SECRET'])
+          || groupComplete(envStatus, ['DISCORD_BOT_TOKEN'])
+          || groupComplete(envStatus, ['TELEGRAM_BOT_TOKEN'])
+          || groupComplete(envStatus, ['MEDIUM_INTEGRATION_TOKEN'])
+        ) ? 'Working' : 'Optional',
+        requiredForPaperTrading: false,
+        plainEnglish: 'Optional later for repository, domain, website, and social automation.'
+      },
+      {
+        id: 'wallet_metadata',
+        label: 'Public wallet metadata',
+        ownerStatus: publicWallets.length > 0 ? 'Working' : 'Optional',
+        requiredForPaperTrading: false,
+        plainEnglish: publicWallets.length > 0
+          ? 'At least one public wallet address is saved in the UI database. Wallet signing remains disabled.'
+          : 'Add public wallet addresses through the UI when needed. Do not use seed phrases or private keys.'
+      }
+    ],
     safetyBoundary: {
       liveTradingEnabled: false,
       walletSigningEnabled: false,
@@ -677,9 +762,7 @@ function buildOwnerSetupWizard({
     })),
     nextOwnerStep: paperProgress < 100
       ? 'Complete the paper trading gates first. No wallet signing is required.'
-      : fullE2eProgress < 100
-        ? 'Complete the local .env and public wallet metadata gates. Live trading remains disabled.'
-        : 'Setup readiness is complete. Keep live trading disabled until the separate high-security approval process is built and manually enabled.'
+      : 'Your paper-trading system is operational. Create a strategy, run a paper bot, review paper results, or explore advanced integrations later.'
   };
 }
 

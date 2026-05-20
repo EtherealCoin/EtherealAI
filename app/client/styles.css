@@ -1402,6 +1402,40 @@ footer {
     padding: 16px;
 }
 
+.core-setup-banner {
+    background: #ecfdf5;
+    border: 1px solid #86efac;
+    border-left: 6px solid #16a34a;
+    border-radius: 8px;
+    color: #14532d;
+    display: grid;
+    gap: 6px;
+    margin: 0 0 16px;
+    padding: 18px;
+    text-align: left;
+}
+
+.core-setup-banner strong {
+    color: #052e16;
+    font-size: 1.6rem;
+}
+
+.core-setup-banner span {
+    font-size: 1.05rem;
+    line-height: 1.45;
+}
+
+.core-setup-banner-review {
+    background: #fff7ed;
+    border-color: #fed7aa;
+    border-left-color: #f97316;
+    color: #7c2d12;
+}
+
+.core-setup-banner-review strong {
+    color: #7c2d12;
+}
+
 .owner-file-picker {
     align-items: end;
     display: grid;
