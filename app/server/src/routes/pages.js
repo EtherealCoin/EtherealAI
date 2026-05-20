@@ -25,6 +25,10 @@ function registerPageRoutes(app, { clientDir }) {
     res.sendFile(path.join(clientDir, 'dashboard.html'));
   });
 
+  app.get('/operator-manual', requirePageAuth, (req, res) => {
+    res.sendFile(path.join(clientDir, 'operator-manual.html'));
+  });
+
   app.get('/operator-control', requirePageAuth, (req, res) => {
     res.sendFile(path.join(clientDir, 'operator-control.html'));
   });

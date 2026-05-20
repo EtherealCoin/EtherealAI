@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EtherealAI Operator Manual</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/dashboard">Mission Control</a>
+        <a href="/owner-setup">Setup Wizard</a>
+        <a href="/strategy-lab">Strategy / Paper / Bots</a>
+        <a href="/operator-control">Wallet & Funding</a>
+        <a href="/security-lockdown">Security</a>
+        <a href="/solidity-lab">Solidity Lab</a>
+        <a href="/social-ops">Social Ops</a>
+        <a href="/creator">Creator Agent</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>Operator Manual</h1>
+        <p>This manual is for running EtherealAI as a non-coder CEO/operator. Use Simple Operator Mode for normal work. Use Advanced Developer Mode only when intentionally reviewing raw logs, records, variables, or diagnostics.</p>
+
+        <section class="model-panel">
+            <h2>Start Here Walkthrough</h2>
+            <div class="operator-step-list">
+                <article>
+                    <strong>1. Open Mission Control</strong>
+                    <span>Check Core Setup, Paper Trading, Wallet Metadata, Security, and Live Trading Lock status.</span>
+                    <a class="cta-button" href="/dashboard">Open Mission Control</a>
+                </article>
+                <article>
+                    <strong>2. Ask What Should I Do Next</strong>
+                    <span>The assistant uses local state and will not route you to optional API/provider keys after paper trading is ready.</span>
+                    <a class="cta-button" href="/dashboard">Use Next Action</a>
+                </article>
+                <article>
+                    <strong>3. Run Local Paper Trading</strong>
+                    <span>Paper trading does not require exchange APIs, live trading, wallet signing, seed phrases, private keys, or terminal commands.</span>
+                    <a class="cta-button" href="/strategy-lab#bot-automation">Open Paper Trading</a>
+                </article>
+                <article>
+                    <strong>4. Add Wallet Metadata</strong>
+                    <span>Add public wallet addresses through the UI only. Never enter wallet passwords, seed phrases, private keys, or recovery phrases.</span>
+                    <a class="cta-button" href="/operator-control">Open Wallet & Funding</a>
+                </article>
+            </div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Operator Manual</h2>
+            <div class="operator-step-list">
+                <article>
+                    <strong>Mission Control</strong>
+                    <span>Use this first. It answers what is ready, what is locked, what needs review, and what button to press next.</span>
+                </article>
+                <article>
+                    <strong>Setup Wizard</strong>
+                    <span>Required Now contains only true local paper-trading requirements. Optional Later contains APIs, socials, GitHub, Cloudflare, exchanges, and provider keys.</span>
+                </article>
+                <article>
+                    <strong>Strategy / Paper / Bots</strong>
+                    <span>Follow the guided flow: create strategy, run backtest, create paper plan, start paper schedule, review results.</span>
+                </article>
+                <article>
+                    <strong>Wallet & Funding</strong>
+                    <span>Public metadata only. Hardware wallet signing and live approvals are future locked-mode workflows.</span>
+                </article>
+                <article>
+                    <strong>Security</strong>
+                    <span>Read Safe, Review Needed, Fix Now, and Optional Later owner tasks. Raw system internals are hidden in Simple Mode.</span>
+                </article>
+                <article>
+                    <strong>Solidity, Social Ops, Creator</strong>
+                    <span>These create local plans, drafts, specs, and blueprints. They do not deploy tokens, post publicly, mutate DNS, or buy domains in Simple Mode.</span>
+                </article>
+            </div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Safety Rules</h2>
+            <div class="operator-step-list">
+                <article>
+                    <strong>Never paste wallet secrets</strong>
+                    <span>No seed phrase, recovery phrase, private key, wallet password, or passphrase belongs in EtherealAI.</span>
+                </article>
+                <article>
+                    <strong>Optional is not failed</strong>
+                    <span>Missing exchange APIs, social tokens, GitHub, Cloudflare, Polygon RPC, and similar future integrations are not setup failures.</span>
+                </article>
+                <article>
+                    <strong>Live trading is locked</strong>
+                    <span>Live orders, wallet signing, token deployment, external posting, and DNS mutation remain disabled until a future high-security approval process exists.</span>
+                </article>
+                <article>
+                    <strong>No terminal commands for normal use</strong>
+                    <span>Operate through buttons, guided flows, and visible forms in Simple Operator Mode.</span>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <script src="/js/operator-next-action.js"></script>
+    <script src="/js/operator-mode.js"></script>
+</body>
+</html>

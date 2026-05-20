@@ -21,6 +21,7 @@ The current project is intentionally designed for owner-controlled local operati
 ## Key Pages
 
 - `/dashboard` - Mission Control for system health, readiness progress, live-lock status, wallets, security, active bots, blocked gates, next action, model roles, MLX lifecycle, multi-agent coordination, and system memory
+- `/operator-manual` - Start Here / Operator Manual for beginner operation, safety rules, wallet handling, paper trading, and page-by-page usage without terminal commands
 - `/owner-setup` - Beginner Owner Setup for reaching `Local Paper Trading Ready` without live trading, wallet signing, or external provider keys; optional `.env`, exchange, GitHub, Cloudflare, social, and Polygon provider integrations stay in Future Integrations / Advanced Mode
 - `/operator-control` - Wallet & Funding Center for wallet metadata, owner key-control guidance, permissions, project assignment, and revoke workflows
 - `/security-lockdown` - Security Lockdown Center for read-only Mac/network security audit, local attack-surface review, and owner hardening checklist
@@ -37,6 +38,16 @@ Every protected operator page now loads the global `What do I do next?` assistan
 ## Operator Experience
 
 EtherealAI now defaults to **Simple Operator Mode**. This mode shows large readable task cards, one primary action, plain-English status, and a `Show me how` walkthrough on each main page. Raw IDs, logs, JSON, archived records, debug tables, route diagnostics, and technical filters remain available through **Advanced Developer Mode**, but they are hidden during normal CEO/operator use.
+
+Simple Operator Mode now renders the same beginner structure across Mission Control, Setup Wizard, Strategy / Paper / Bots, Wallet & Funding, Security, Solidity Lab, Social Ops, Creator Agent, and the Operator Manual:
+
+- What is this?
+- Is it ready?
+- What should I do next?
+- What button do I click?
+- Guided Workflow with one visible button per step
+
+Legacy forms, raw tables, archived records, filters, JSON output, route diagnostics, and internal evidence stay hidden until Advanced Developer Mode is intentionally opened. When a Simple Mode workflow step needs an existing form, EtherealAI reveals only that specific panel as a guided focus instead of exposing the whole developer dashboard.
 
 The Setup Wizard now reports `Core Setup Complete` / `Local Paper Trading Ready` when the local server is healthy, a paper schedule or completed paper run exists, an active paper risk profile exists, live trading is disabled, and wallet signing is disabled. Polygon, exchange, GitHub, Cloudflare, and social API credentials are optional future integrations in Simple Mode. Public wallet addresses are added directly through the UI with `Add Public Wallet`; the `.env` file is only for optional API keys and later integrations.
 

@@ -1697,6 +1697,80 @@ footer {
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
+.operator-answer-panel {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.operator-answer-panel article,
+.operator-guided-workflow,
+.operator-workflow-step,
+.operator-manual-link-row {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+}
+
+.operator-answer-panel article {
+    border-left: 5px solid #2563eb;
+}
+
+.operator-answer-panel span,
+.operator-workflow-step span,
+.operator-guided-workflow p,
+.operator-manual-link-row span {
+    color: #4b5563;
+    line-height: 1.45;
+}
+
+.operator-answer-panel strong {
+    color: #111827;
+    font-size: 1.35rem;
+}
+
+.operator-guided-workflow h2 {
+    color: #111827;
+    margin: 0;
+}
+
+.operator-workflow-steps {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.operator-workflow-step {
+    align-content: start;
+}
+
+.operator-workflow-step button,
+.operator-workflow-step a,
+.operator-manual-link-row a {
+    align-items: center;
+    background: #111827;
+    border: 0;
+    border-radius: 8px;
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-weight: 800;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 14px;
+    text-align: center;
+    text-decoration: none;
+}
+
+.operator-manual-link-row {
+    align-items: center;
+    grid-template-columns: auto 1fr;
+}
+
 .operator-status-tile,
 .operator-task-card {
     background: #f9fafb;
@@ -1755,6 +1829,27 @@ footer {
 
 .operator-simple-mode .operator-simple-collapsed,
 .operator-simple-mode .advanced-operator-tools {
+    display: none !important;
+}
+
+.operator-simple-mode .operator-guided-focus {
+    display: grid !important;
+}
+
+.operator-simple-mode .operator-guided-focus.model-panel {
+    border: 2px solid #22c55e;
+}
+
+.operator-simple-mode .operator-simple-keep .model-output:not(.owner-action-output),
+.operator-simple-mode .operator-simple-keep .comparison-table,
+.operator-simple-mode .operator-simple-keep .timeline-list,
+.operator-simple-mode .operator-simple-keep pre:not(.operator-simple-readable),
+.operator-simple-mode .operator-simple-keep table:not(.operator-simple-readable) {
+    display: none !important;
+}
+
+.operator-simple-mode .operator-simple-keep .advanced-bot-records,
+.operator-simple-mode .operator-simple-keep .compact-details:not(.operator-guided-focus) {
     display: none !important;
 }
 
@@ -1873,6 +1968,9 @@ footer {
         .operator-wizard-header,
         .operator-next-action-grid,
         .operator-workspace-header,
+        .operator-answer-panel,
+        .operator-workflow-steps,
+        .operator-manual-link-row,
         .owner-file-picker,
         .owner-detected-wallet,
         .owner-gate-card > div:first-child {

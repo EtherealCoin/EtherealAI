@@ -8,11 +8,18 @@
             summary: 'Check the system, see what is safe, and press one button for the next recommended action.',
             primaryAction: { label: 'What should I do next?', kind: 'next' },
             keepHeadings: [],
+            readyLabel: 'Mission Control Ready',
+            nextText: 'Press What should I do next. EtherealAI will choose the safest current action from local state.',
             cards: [
                 ['System Health', 'Shows whether the local server and database are responding.'],
                 ['Paper Trading', 'Shows whether paper setup is complete without using real money.'],
                 ['Live Trading Lock', 'Confirms live orders and wallet signing are still blocked.'],
                 ['Security', 'Shows whether the Mac needs owner review or immediate action.']
+            ],
+            workflow: [
+                ['Start here', 'Open the full beginner manual and walkthrough.', { label: 'Open Operator Manual', href: '/operator-manual' }],
+                ['Check next action', 'Ask the local assistant what to do next.', { label: 'What should I do next?', kind: 'next' }],
+                ['Open paper controls', 'Go straight to safe local paper trading.', { label: 'Open Paper Trading', href: '/strategy-lab#bot-automation' }]
             ]
         },
         '/dashboard': {
@@ -21,11 +28,18 @@
             summary: 'Use this page to decide what to do next. Advanced diagnostics are hidden unless you switch modes.',
             primaryAction: { label: 'What should I do next?', kind: 'next' },
             keepHeadings: [],
+            readyLabel: 'Mission Control Ready',
+            nextText: 'Use the next-action button first. It will not route you to optional provider keys after paper trading is ready.',
             cards: [
                 ['Health', 'Server, database, and local model status.'],
                 ['Readiness', 'Paper setup and full E2E setup progress.'],
                 ['Locks', 'Live trading and wallet signing must remain locked.'],
                 ['Next Action', 'The safest next click based on current system state.']
+            ],
+            workflow: [
+                ['Check core setup', 'Confirm local paper operation, wallet metadata, and live locks.', { label: 'Refresh Mission Control', kind: 'next' }],
+                ['Run paper trading', 'Open the guided paper workflow.', { label: 'Open Paper Trading', href: '/strategy-lab#bot-automation' }],
+                ['Review security', 'Open plain-English security tasks.', { label: 'Open Security Review', href: '/security-lockdown' }]
             ]
         },
         '/owner-setup': {
@@ -33,12 +47,19 @@
             title: 'Beginner Owner Setup',
             summary: 'Your local paper-trading system is complete. Remaining items are optional future integrations, and live trading stays locked.',
             primaryAction: { label: 'Add Public Wallet', selector: '#owner-add-public-wallet' },
-            keepHeadings: ['Progress', 'Paper Trading Configuration', 'Optional Future Connections', 'Add Public Wallet Address'],
+            keepHeadings: ['Progress', 'Add Public Wallet Address'],
+            readyLabel: 'Core Setup Complete',
+            nextText: 'Paper trading is ready. Add public wallet metadata only when you want wallet labels for planning.',
             cards: [
                 ['Required Now', 'Paper trading is complete. You can keep building and testing locally.'],
                 ['Optional Later', 'API keys for exchanges, socials, GitHub, Cloudflare, and data providers can wait.'],
                 ['Live Trading Locked', 'Live orders and wallet signing remain disabled.'],
                 ['Developer / Advanced', 'Variable names and raw gates are hidden unless you open Advanced Mode.']
+            ],
+            workflow: [
+                ['Confirm paper readiness', 'Verify local paper setup without live trading or wallet signing.', { label: 'Refresh Setup Status', selector: '#refresh-owner-setup' }],
+                ['Add public wallet', 'Save public address metadata through the UI only.', { label: 'Add Public Wallet', selector: '#owner-add-public-wallet' }],
+                ['Skip optional integrations', 'Keep API keys, socials, GitHub, Cloudflare, and provider keys for later.', { label: 'Skip Optional Integrations', selector: '#owner-skip-optional-integrations' }]
             ]
         },
         '/strategy-lab': {
@@ -46,13 +67,22 @@
             title: 'Build, Paper Test, Then Monitor',
             summary: 'Create the strategy in plain English, test it with paper trading, then monitor paper bots. Live mode stays locked.',
             primaryAction: { label: 'Use Safe Defaults And Finish Paper Setup', selector: '#bot-operator-safe-defaults' },
-            keepIds: ['strategy-entry', 'risk-profile-configuration', 'bot-automation'],
-            keepHeadings: ['Strategy Builder'],
+            keepIds: [],
+            keepHeadings: [],
+            readyLabel: 'Paper Trading Ready',
+            nextText: 'Use the guided paper workflow. It creates only local paper records and does not need exchange APIs or wallet signing.',
             cards: [
-                ['1. Build the idea', 'Answer the strategy form questions in plain English.'],
-                ['2. Use safe paper limits', 'Set paper-only risk limits before automation.'],
-                ['3. Create a paper plan', 'One click creates safe local paper records.'],
-                ['4. Verify 100%', 'Verify paper trading without wallet signing or live orders.']
+                ['Strategy Builder', 'Describe the idea in plain English.'],
+                ['Backtest', 'Run local research before automation.'],
+                ['Paper Plan', 'Create a local paper-only automation plan.'],
+                ['Paper Schedule', 'Start or monitor a local paper schedule.']
+            ],
+            workflow: [
+                ['1. Create strategy', 'Open the plain-English strategy builder.', { label: 'Create Strategy', selector: '#strategy-entry' }],
+                ['2. Run backtest', 'Open local backtest controls. This uses local data only.', { label: 'Run Backtest', selector: '#research-suite' }],
+                ['3. Create paper plan', 'Use safe defaults to create a paper plan.', { label: 'Create Safe Paper Plan', selector: '#bot-operator-safe-defaults' }],
+                ['4. Start paper schedule', 'Create or activate a local paper schedule.', { label: 'Start Paper Schedule', selector: '#bot-operator-create-schedule' }],
+                ['5. Review results', 'Review paper runs and active paper schedules.', { label: 'Review Paper Results', selector: '#bot-automation' }]
             ]
         },
         '/operator-control': {
@@ -60,12 +90,19 @@
             title: 'Add Wallets Without Giving EtherealAI The Keys',
             summary: 'Attach public wallet labels and purposes only. Seed phrases, private keys, and wallet passwords stay outside the system.',
             primaryAction: { label: 'Review Wallet Readiness', selector: '#refresh-operator-center' },
-            keepHeadings: ['Wallet Onboarding Wizard', 'Owner Key Takeover Mode', 'Attach Wallet Metadata', 'Connected Wallets'],
+            keepHeadings: ['Attach Wallet Metadata'],
+            readyLabel: 'Wallet Metadata Ready',
+            nextText: 'Add public wallet metadata through the visible form. Never enter seed phrases, private keys, or wallet passwords.',
             cards: [
                 ['1. Choose wallet purpose', 'Trading research, token deployment, treasury, or recovery.'],
                 ['2. Add public address', 'Public address and label only. No secret material.'],
                 ['3. Scope permissions', 'Keep dangerous actions blocked unless a future owner approval flow exists.'],
                 ['4. Review readiness', 'Record the safe owner-control checkpoint.']
+            ],
+            workflow: [
+                ['Choose purpose', 'Use a label that explains what the wallet is for.', { label: 'Open Wallet Form', selector: '#wallet-form' }],
+                ['Add public address', 'Paste public address only. No secret material.', { label: 'Add Public Wallet', selector: '#wallet-public-address' }],
+                ['Review wallet metadata', 'Refresh the saved wallet list after saving.', { label: 'Review Wallets', selector: '#refresh-operator-center' }]
             ]
         },
         '/security-lockdown': {
@@ -73,12 +110,19 @@
             title: 'Turn Security Findings Into Owner Tasks',
             summary: 'Simple status first: safe, review needed, or fix now. Raw system details stay in Advanced Mode.',
             primaryAction: { label: 'Refresh Security Status', selector: '#refresh-security-audit' },
-            keepHeadings: ['Security Snapshot', 'Priority Owner Actions', 'Manual Mac Lockdown Checklist', 'Emergency Containment'],
+            keepHeadings: ['Security Snapshot', 'Priority Owner Actions'],
+            readyLabel: 'Security Review Available',
+            nextText: 'Refresh the audit, then handle Fix Now items first. Raw ports, processes, and logs are in Advanced Mode.',
             cards: [
                 ['Safe', 'No immediate action needed for that check.'],
                 ['Review Needed', 'You should inspect the item before using sensitive accounts.'],
                 ['Fix Now', 'Handle this before expanding automation.'],
                 ['Emergency', 'Containment steps if the Mac or network is suspected compromised.']
+            ],
+            workflow: [
+                ['Refresh audit', 'Update the local read-only security status.', { label: 'Refresh Security Status', selector: '#refresh-security-audit' }],
+                ['Review owner tasks', 'Open plain-English security actions.', { label: 'View Priority Actions', selector: '#priority-actions' }],
+                ['Emergency shutdown', 'Open containment steps if compromise is suspected.', { label: 'Open Emergency Steps', selector: '#emergency-containment' }]
             ]
         },
         '/solidity-lab': {
@@ -86,12 +130,19 @@
             title: 'Create A Token Project Without Deploying',
             summary: 'Draft token specs, website, whitepaper, listing plan, and ecosystem blueprint locally. Deployment remains locked.',
             primaryAction: { label: 'Select Polygon Defaults', selector: '#select-polygon-token-options' },
-            keepHeadings: ['Deployment Boundary', 'Contract Spec', 'Token Ecosystem Studio', 'Token Ecosystem Projects'],
+            keepHeadings: ['Deployment Boundary', 'Contract Spec'],
+            readyLabel: 'Token Planning Ready',
+            nextText: 'Choose chain and token features, then save a local spec. Deployment remains locked.',
             cards: [
                 ['1. Pick chain', 'Polygon, Base, Solana, BNB, Avalanche, or another supported chain.'],
                 ['2. Choose token features', 'Rewards, staking, NFT utility, website, whitepaper, listing evidence, and more.'],
                 ['3. Save the ecosystem project', 'Create the local planning packet.'],
                 ['4. Review before deployment', 'No blockchain broadcast happens in this mode.']
+            ],
+            workflow: [
+                ['Pick blockchain', 'Use Polygon defaults or choose another chain.', { label: 'Select Polygon Defaults', selector: '#select-polygon-token-options' }],
+                ['Define token', 'Open the token spec form.', { label: 'Create Token Spec', selector: '#contract-form' }],
+                ['Build ecosystem plan', 'Open website, whitepaper, listing, and social planning.', { label: 'Open Ecosystem Studio', selector: '#load-ecosystem-catalog' }]
             ]
         },
         '/social-ops': {
@@ -99,12 +150,19 @@
             title: 'Create Community Content Locally',
             summary: 'Draft posts, launch updates, community manager plans, and listing evidence content without public posting.',
             primaryAction: { label: 'Generate Local Draft', selector: '#social-generate-form button[type="submit"]' },
-            keepHeadings: ['Local-Only Safety', 'AI Draft Generator', 'Token Community Manager', 'Draft Post'],
+            keepHeadings: ['Local-Only Safety', 'AI Draft Generator'],
+            readyLabel: 'Local Drafting Ready',
+            nextText: 'Generate a local draft, review it, then post manually later. Public posting remains disabled.',
             cards: [
                 ['1. Pick the purpose', 'Announcement, progress update, community reply, or listing campaign.'],
                 ['2. Generate draft', 'The AI writes locally only.'],
                 ['3. Review safety flags', 'Avoid fake activity, fake volume, bribery, or misleading claims.'],
                 ['4. Owner posts manually', 'External posting remains disabled.']
+            ],
+            workflow: [
+                ['Choose content type', 'Pick the purpose and channel for a local draft.', { label: 'Open Draft Generator', selector: '#social-generate-form' }],
+                ['Generate draft', 'Create local-only social copy.', { label: 'Generate Local Draft', selector: '#social-generate-form button[type="submit"]' }],
+                ['Review queue', 'Open saved local drafts.', { label: 'Review Drafts', selector: '#social-post-list' }]
             ]
         },
         '/creator': {
@@ -112,12 +170,39 @@
             title: 'Describe What You Want Built',
             summary: 'Use normal language. EtherealAI creates a local plan first and waits before risky file or command actions.',
             primaryAction: { label: 'Create Plan', selector: '#creator-form button[type="submit"]' },
-            keepHeadings: ['New Build Request', 'Current Plan', 'Task Activity'],
+            keepHeadings: ['New Build Request'],
+            readyLabel: 'Creator Ready',
+            nextText: 'Describe the result you want. EtherealAI will make a local plan before file or command execution.',
             cards: [
                 ['1. Name the build', 'Use a plain title you will recognize.'],
                 ['2. Describe the result', 'Tell EtherealAI what you want, not how to code it.'],
                 ['3. Create a plan', 'The first output is a local plan.'],
                 ['4. Review before execution', 'File changes and commands remain controlled.']
+            ],
+            workflow: [
+                ['Describe the build', 'Write the outcome in normal language.', { label: 'Open Build Request', selector: '#creator-form' }],
+                ['Create local plan', 'Generate a plan without live external side effects.', { label: 'Create Plan', selector: '#creator-form button[type="submit"]' }],
+                ['Review tasks', 'Open current plan and task activity.', { label: 'Review Plan', selector: '#task-list' }]
+            ]
+        },
+        '/operator-manual': {
+            area: 'Start Here',
+            title: 'Beginner Operator Manual',
+            summary: 'A guided owner manual for running EtherealAI without terminal commands or developer workflows.',
+            primaryAction: { label: 'What should I do next?', kind: 'next' },
+            keepHeadings: ['Start Here Walkthrough', 'Operator Manual', 'Safety Rules'],
+            readyLabel: 'Training Ready',
+            nextText: 'Read Start Here first, then use the page buttons. Advanced controls remain hidden until intentionally opened.',
+            cards: [
+                ['Start Here', 'Use Mission Control and What should I do next first.'],
+                ['Paper First', 'Local paper trading works without live money, APIs, or wallet signing.'],
+                ['Wallet Safety', 'Only public wallet addresses go into the UI.'],
+                ['Advanced Later', 'Raw variables, JSON, logs, and APIs are for Advanced Mode.']
+            ],
+            workflow: [
+                ['Start at Mission Control', 'Check core status and next action.', { label: 'Open Mission Control', href: '/dashboard' }],
+                ['Set up paper trading', 'Open guided local paper operation.', { label: 'Open Paper Trading', href: '/strategy-lab#bot-automation' }],
+                ['Add wallet metadata', 'Add public addresses only.', { label: 'Open Wallet Center', href: '/operator-control' }]
             ]
         },
         '/server-route-inventory': {
@@ -206,6 +291,11 @@
                 return;
             }
 
+            if (panel.classList.contains('operator-guided-focus')) {
+                panel.classList.add('operator-simple-keep');
+                return;
+            }
+
             if (panel.classList.contains('model-panel') && isKeptForSimple(panel, config)) {
                 panel.classList.add('operator-simple-keep');
                 return;
@@ -214,7 +304,7 @@
             panel.classList.add('operator-simple-collapsed');
         });
 
-        document.querySelectorAll('.advanced-operator-tools, .comparison-table, .model-output, .timeline-list, .owner-gate-list').forEach(panel => {
+        document.querySelectorAll('.advanced-operator-tools, .comparison-table, .model-output, .timeline-list, .owner-gate-list, .compact-details').forEach(panel => {
             if (!panel.closest('.operator-simple-keep')) {
                 panel.classList.add('operator-simple-collapsed');
             }
@@ -232,14 +322,90 @@
 
     function actionMarkup(action = {}) {
         if (action.kind === 'next') {
-            return '<button type="button" class="operator-primary-action" data-operator-next>What should I do next?</button>';
+            return '<button type="button" class="operator-primary-action" data-operator-next data-operator-recommended-action>What should I do next?</button>';
         }
 
         if (action.href) {
-            return `<a class="operator-primary-action" href="${escapeHtml(action.href)}">${escapeHtml(action.label)}</a>`;
+            return `<a class="operator-primary-action" href="${escapeHtml(action.href)}" data-operator-recommended-action>${escapeHtml(action.label)}</a>`;
         }
 
-        return `<button type="button" class="operator-primary-action" data-operator-click="${escapeHtml(action.selector || '')}">${escapeHtml(action.label || 'Continue')}</button>`;
+        return `<button type="button" class="operator-primary-action" data-operator-click="${escapeHtml(action.selector || '')}" data-operator-recommended-action>${escapeHtml(action.label || 'Continue')}</button>`;
+    }
+
+    function stepActionMarkup(action = {}) {
+        if (action.kind === 'next') {
+            return '<button type="button" data-operator-next>What should I do next?</button>';
+        }
+
+        if (action.href) {
+            return `<a href="${escapeHtml(action.href)}">${escapeHtml(action.label || 'Open')}</a>`;
+        }
+
+        return `<button type="button" data-operator-click="${escapeHtml(action.selector || '')}">${escapeHtml(action.label || 'Open')}</button>`;
+    }
+
+    function renderWorkflow(steps = []) {
+        if (!steps.length) {
+            return '';
+        }
+
+        return `
+            <section class="operator-guided-workflow" data-operator-workflow>
+                <div>
+                    <h2>Guided Workflow</h2>
+                    <p>Use these steps in order. Each step has one visible button, and advanced records stay hidden unless you open Advanced Mode.</p>
+                </div>
+                <div class="operator-workflow-steps">
+                    ${steps.map(([title, body, action]) => `
+                        <article class="operator-workflow-step">
+                            <strong>${escapeHtml(title)}</strong>
+                            <span>${escapeHtml(body)}</span>
+                            ${stepActionMarkup(action)}
+                        </article>
+                    `).join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    function renderReadiness(summary = null, config = {}) {
+        const owner = summary?.owner?.wizard;
+        const security = summary?.security?.audit;
+        const health = summary?.health;
+        const coreComplete = Boolean(owner?.coreSetup?.paperTradingOperational)
+            || owner?.status === 'local_paper_trading_ready'
+            || Number(owner?.progress?.paperTrading?.current || 0) >= 100;
+        const walletCount = owner?.walletMetadata?.savedPublicWallets?.length ?? 0;
+        const liveLocked = !owner?.safetyBoundary?.liveTradingEnabled && !owner?.safetyBoundary?.walletSigningEnabled;
+        const serverHealthy = health?.server?.ok && health?.database?.ok;
+        const securityText = (security?.summary?.failCount ?? 0) > 0
+            ? 'Fix Now'
+            : ((security?.summary?.reviewCount ?? 0) > 0 ? 'Review Needed' : 'Safe');
+
+        return `
+            <section class="operator-answer-panel" data-operator-answers>
+                <article>
+                    <span>What is this?</span>
+                    <strong>${escapeHtml(config.area || 'Operator Workspace')}</strong>
+                    <p>${escapeHtml(config.summary || 'Use the guided controls for this page.')}</p>
+                </article>
+                <article>
+                    <span>Is it ready?</span>
+                    <strong>${escapeHtml(coreComplete ? (config.readyLabel || 'Ready') : 'Not Ready')}</strong>
+                    <p>${serverHealthy ? 'Local server is responding.' : 'Local server status needs review.'}</p>
+                </article>
+                <article>
+                    <span>What should I do next?</span>
+                    <strong>${escapeHtml(coreComplete ? 'Operate paper safely' : 'Finish local paper setup')}</strong>
+                    <p>${escapeHtml(config.nextText || 'Use the recommended button first.')}</p>
+                </article>
+                <article>
+                    <span>Safety</span>
+                    <strong>${liveLocked ? 'Live Trading Locked' : 'Unsafe'}</strong>
+                    <p>Wallet metadata: ${walletCount > 0 ? 'Present' : 'Optional'} · Security: ${securityText}</p>
+                </article>
+            </section>
+        `;
     }
 
     function renderStatus(summary = null) {
@@ -312,8 +478,14 @@
             <div id="operator-simple-status" class="operator-status-grid">
                 <article class="operator-status-tile"><span>Status</span><strong>Loading</strong><small>Checking local system.</small></article>
             </div>
+            <div id="operator-simple-answers">${renderReadiness(null, config)}</div>
+            ${renderWorkflow(config.workflow || [])}
             <div class="operator-task-grid">
                 ${renderCards(config.cards)}
+            </div>
+            <div class="operator-manual-link-row">
+                <a href="/operator-manual">Start Here / Operator Manual</a>
+                <span>No terminal commands are required for normal Simple Mode operation.</span>
             </div>
         `;
 
@@ -321,6 +493,7 @@
 
         const summary = await loadSummary();
         document.getElementById('operator-simple-status').innerHTML = renderStatus(summary);
+        document.getElementById('operator-simple-answers').innerHTML = renderReadiness(summary, config);
     }
 
     function renderModeBar() {
@@ -370,11 +543,22 @@
             return;
         }
 
+        const panel = target.classList?.contains('model-panel') || target.classList?.contains('ceo-workflow-map')
+            ? target
+            : target.closest('.model-panel, .ceo-workflow-map, details, section');
+        if (panel && panel.id !== 'simple-operator-workspace' && !panel.closest('#simple-operator-workspace')) {
+            panel.classList.add('operator-guided-focus', 'operator-simple-keep');
+            panel.classList.remove('operator-simple-collapsed');
+            if (panel.tagName === 'DETAILS') {
+                panel.open = true;
+            }
+        }
+        classifyPagePanels();
         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
         target.classList.add('operator-highlight-target');
         setTimeout(() => target.classList.remove('operator-highlight-target'), 1800);
 
-        if (target.tagName === 'BUTTON') {
+        if (target.tagName === 'BUTTON' && !target.disabled) {
             target.click();
         }
     }
@@ -397,6 +581,9 @@
 
         function draw() {
             const [title, body] = steps[index];
+            document.querySelectorAll('.operator-highlight-target').forEach(item => item.classList.remove('operator-highlight-target'));
+            const recommended = document.querySelector('[data-operator-recommended-action]');
+            recommended?.classList.add('operator-highlight-target');
             overlay.innerHTML = `
                 <section class="operator-tutorial-card" role="dialog" aria-modal="true" aria-label="Operator tutorial">
                     <div class="operator-page-label">YouTube-style walkthrough · Chapter ${index + 1} of ${steps.length}</div>
@@ -404,7 +591,7 @@
                     <p>${escapeHtml(body)}</p>
                     <div class="operator-tutorial-script">
                         <strong>Script:</strong>
-                        <span>${escapeHtml(body)} Pause here, complete the visible action, then continue to the next chapter.</span>
+                        <span>${escapeHtml(body)} The recommended next button is highlighted on the page. Pause here, complete the visible action, then continue to the next chapter.</span>
                     </div>
                     <div class="button-row">
                         <button type="button" data-tutorial-prev ${index === 0 ? 'disabled' : ''}>Back</button>
@@ -426,7 +613,10 @@
                 index += 1;
                 draw();
             });
-            overlay.querySelector('[data-tutorial-close]')?.addEventListener('click', () => overlay.remove());
+            overlay.querySelector('[data-tutorial-close]')?.addEventListener('click', () => {
+                document.querySelectorAll('.operator-highlight-target').forEach(item => item.classList.remove('operator-highlight-target'));
+                overlay.remove();
+            });
         }
 
         draw();

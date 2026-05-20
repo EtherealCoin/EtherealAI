@@ -2323,8 +2323,15 @@ function checkOwnerSetupWizardModule() {
     statSync: () => ({ mode: 0o644 }),
     readFileSync: () => unsafeEnv
   };
+  const missingFs = {
+    statSync: () => {
+      throw new Error('missing fixture');
+    },
+    readFileSync: () => ''
+  };
   const safeStatus = readOwnerEnvStatus({ fsModule: safeFs, envPath: '/tmp/ethereal-owner.env' });
   const unsafeStatus = readOwnerEnvStatus({ fsModule: unsafeFs, envPath: '/tmp/ethereal-owner.env' });
+  const missingStatus = readOwnerEnvStatus({ fsModule: missingFs, envPath: '/tmp/missing-ethereal-owner.env' });
   const wizard = buildOwnerSetupWizard({
     envStatus: safeStatus,
     wallets: [{
@@ -2356,6 +2363,28 @@ function checkOwnerSetupWizardModule() {
       goLiveAllowed: false
     }
   });
+  const noEnvPaperWizard = buildOwnerSetupWizard({
+    envStatus: missingStatus,
+    wallets: [],
+    strategies: [],
+    riskProfiles: [{
+      id: 2,
+      status: 'active',
+      max_order_value: 100,
+      max_position_value: 500,
+      max_daily_loss: 50,
+      max_open_trades: 2,
+      kill_switch_enabled: false
+    }],
+    runs: [{ id: 2, mode: 'paper', status: 'completed' }],
+    schedules: [],
+    liveExecution: {
+      enabled: false,
+      orderEndpointEnabled: false,
+      goLiveAllowed: false,
+      walletSigningEnabled: false
+    }
+  });
   const template = buildOwnerEnvTemplate();
 
   if (
@@ -2372,6 +2401,13 @@ function checkOwnerSetupWizardModule() {
     || wizard.coreSetup?.label !== 'Core Setup Complete'
     || wizard.coreSetup?.readinessLabel !== 'Local Paper Trading Ready'
     || wizard.coreSetup?.optionalIntegrationsRequired !== false
+    || noEnvPaperWizard.status !== 'local_paper_trading_ready'
+    || noEnvPaperWizard.progress?.paperTrading?.current !== 100
+    || noEnvPaperWizard.coreSetup?.paperTradingOperational !== true
+    || noEnvPaperWizard.coreSetup?.optionalIntegrationsRequired !== false
+    || noEnvPaperWizard.walletMetadata?.nextAction?.includes('OWNER_PUBLIC_WALLET_ADDRESS')
+    || !noEnvPaperWizard.gates?.fullEndToEnd?.some(gate => gate.id === 'rpc_provider_ready' && gate.blocking === false && gate.optional === true)
+    || !noEnvPaperWizard.gates?.fullEndToEnd?.some(gate => gate.id === 'exchange_credentials_ready' && gate.blocking === false && gate.optional === true)
     || wizard.envDiscovery?.visualPickerSupported !== true
     || wizard.paperConfiguration?.status !== 'paper_ready'
     || wizard.walletMetadata?.detectedEnvPublicWallets?.length !== 1
@@ -6718,6 +6754,73 @@ function checkHomeLocalProofUi() {
   pass('home local proof status UI');
 }
 
+function checkSimpleOperatorModeUsabilityRefactor() {
+  const operatorMode = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-mode.js'), 'utf8');
+  const operatorNext = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-next-action.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+  const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
+  const manual = fs.readFileSync(path.join(projectRoot, 'app/client/operator-manual.html'), 'utf8');
+  const mainPages = [
+    'app/client/dashboard.html',
+    'app/client/owner-setup.html',
+    'app/client/strategy-lab.html',
+    'app/client/operator-control.html',
+    'app/client/security-lockdown.html',
+    'app/client/solidity-lab.html',
+    'app/client/social-ops.html',
+    'app/client/creator.html',
+    'app/client/operator-manual.html'
+  ];
+
+  if (
+    !operatorMode.includes('data-operator-answers')
+    || !operatorMode.includes('Guided Workflow')
+    || !operatorMode.includes('data-operator-recommended-action')
+    || !operatorMode.includes('Start Here / Operator Manual')
+    || !operatorMode.includes('No terminal commands are required for normal Simple Mode operation.')
+    || !operatorMode.includes('operator-guided-focus')
+    || !operatorMode.includes('The recommended next button is highlighted on the page.')
+    || !operatorMode.includes("'/operator-manual'")
+    || !operatorMode.includes('Create strategy')
+    || !operatorMode.includes('Run backtest')
+    || !operatorMode.includes('Create paper plan')
+    || !operatorMode.includes('Start paper schedule')
+    || !operatorMode.includes('Review results')
+    || !operatorMode.includes('Working')
+    || !operatorMode.includes('Optional')
+    || !operatorMode.includes('Locked')
+    || !operatorMode.includes('Unsafe')
+    || operatorNext.includes('fullProgress < 100')
+    || operatorNext.includes('Add Wallet Public Metadata')
+    || !operatorNext.includes('Optional provider/API integrations can wait.')
+    || !operatorNext.includes('Your Paper-Trading System Is Operational')
+    || !styles.includes('.operator-answer-panel')
+    || !styles.includes('.operator-guided-workflow')
+    || !styles.includes('.operator-simple-mode .operator-simple-keep .model-output:not(.owner-action-output)')
+    || !styles.includes('.operator-simple-mode .operator-guided-focus')
+    || !pages.includes("app.get('/operator-manual', requirePageAuth")
+    || !manual.includes('Start Here Walkthrough')
+    || !manual.includes('Paper trading does not require exchange APIs, live trading, wallet signing, seed phrases, private keys, or terminal commands.')
+    || !manual.includes('Optional is not failed')
+    || !manual.includes('No terminal commands for normal use')
+  ) {
+    fail('simple operator mode shell did not expose the beginner operator workflow, manual, or nonblocking next-action behavior');
+  }
+
+  for (const relativePath of mainPages) {
+    const html = fs.readFileSync(path.join(projectRoot, relativePath), 'utf8');
+
+    if (
+      !html.includes('/js/operator-next-action.js')
+      || !html.includes('/js/operator-mode.js')
+    ) {
+      fail(`${relativePath} is missing the global beginner operator shell scripts`);
+    }
+  }
+
+  pass('simple operator mode beginner usability refactor');
+}
+
 function checkAuthenticatedProofBanners() {
   const proofPages = [
     'app/client/creator.html',
@@ -9559,6 +9662,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.path === '/operator-control' && route.file === 'app/server/src/routes/pages.js')
     || !inventory.routes.some(route => route.path === '/security-lockdown' && route.file === 'app/server/src/routes/pages.js')
     || !inventory.routes.some(route => route.path === '/owner-setup' && route.file === 'app/server/src/routes/pages.js')
+    || !inventory.routes.some(route => route.path === '/operator-manual' && route.file === 'app/server/src/routes/pages.js')
     || !inventory.routes.some(route => route.path === '/owner-proof-packet' && route.file === 'app/server/src/routes/pages.js')
   ) {
     fail('server route inventory did not expose expected modularization inventory data');
@@ -9961,6 +10065,7 @@ async function main() {
   checkInlineScripts('app/client/owner-proof-packet.html');
   checkInlineScripts('app/client/mvp-test-pass.html');
   checkInlineScripts('app/client/server-route-inventory.html');
+  checkInlineScripts('app/client/operator-manual.html');
   checkStrategyLabSafetyDossierExportUi();
   checkStrategyLabRiskProfileSetupUi();
   checkStrategyLabBotOperatorWizardUi();
@@ -9971,6 +10076,7 @@ async function main() {
   checkMacSecurityLockdownUi();
   checkOwnerProofPacketUi();
   checkHomeLocalProofUi();
+  checkSimpleOperatorModeUsabilityRefactor();
   checkAuthenticatedProofBanners();
   checkRouteInventoryOwnerProofUi();
   checkLocalOnlySurfaceCues();
