@@ -64,25 +64,24 @@
         },
         '/strategy-lab': {
             area: 'Strategy / Paper / Bots',
-            title: 'Build, Paper Test, Then Monitor',
-            summary: 'Create the strategy in plain English, test it with paper trading, then monitor paper bots. Live mode stays locked.',
-            primaryAction: { label: 'Use Safe Defaults And Finish Paper Setup', selector: '#bot-operator-safe-defaults' },
+            title: 'Build A Strategy, Then Run One Safe Paper Test',
+            summary: 'Create the strategy in plain English, then click one button. EtherealAI handles paper sessions, risk, connector, plan, schedule, verification, and simulation in the background.',
+            primaryAction: { label: 'Run This Strategy Safely', selector: '#run-this-strategy-safely' },
             keepIds: [],
             keepHeadings: [],
             readyLabel: 'Paper Trading Ready',
-            nextText: 'Use the guided paper workflow. It creates only local paper records and does not need exchange APIs or wallet signing.',
+            nextText: 'Use Run This Strategy Safely. Advanced infrastructure objects stay hidden unless you intentionally open Advanced Mode.',
             cards: [
                 ['Strategy Builder', 'Describe the idea in plain English.'],
-                ['Backtest', 'Run local research before automation.'],
-                ['Paper Plan', 'Create a local paper-only automation plan.'],
-                ['Paper Schedule', 'Start or monitor a local paper schedule.']
+                ['Safe Paper Test', 'One click creates, connects, verifies, and runs the local simulation.'],
+                ['Results', 'Review simulated trades, P/L, spread/costs, entry/exit reasons, health, and warnings.'],
+                ['Live Lock', 'No wallet signing, no exchange order, and no live trading.']
             ],
             workflow: [
                 ['1. Create strategy', 'Open the plain-English strategy builder.', { label: 'Create Strategy', selector: '#strategy-entry' }],
-                ['2. Run backtest', 'Open local backtest controls. This uses local data only.', { label: 'Run Backtest', selector: '#research-suite' }],
-                ['3. Create paper plan', 'Use safe defaults to create a paper plan.', { label: 'Create Safe Paper Plan', selector: '#bot-operator-safe-defaults' }],
-                ['4. Start paper schedule', 'Create or activate a local paper schedule.', { label: 'Start Paper Schedule', selector: '#bot-operator-create-schedule' }],
-                ['5. Review results', 'Review paper runs and active paper schedules.', { label: 'Review Paper Results', selector: '#bot-automation' }]
+                ['2. Run safe paper test', 'Let EtherealAI create and connect all paper-only components automatically.', { label: 'Run This Strategy Safely', selector: '#run-this-strategy-safely' }],
+                ['3. Review results', 'Read simulated trades, P/L, costs, reasons, health, and warnings.', { label: 'Review Paper Results', selector: '#safe-paper-results' }],
+                ['4. Advanced records', 'Open only if you intentionally need raw plans, schedules, connectors, or IDs.', { label: 'Open Advanced Paper Records', selector: '#bot-automation' }]
             ]
         },
         '/operator-control': {

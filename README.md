@@ -30,7 +30,7 @@ The current project is intentionally designed for owner-controlled local operati
 - `/mvp-test-pass` - owner test pass and evidence checklist
 - `/server-route-inventory` - Advanced / Developer Tools for route map, safety boundaries, raw evidence, and developer checks
 - `/creator` - local AI builder workflow
-- `/strategy-lab` - Strategy, Paper Trading, and Bot Control for strategy research, paper automation, safety controls, non-coder Risk Profile Configuration, and a Bot Operator Wizard that can finish paper setup without live trading or wallet signing
+- `/strategy-lab` - Strategy, Paper Trading, and Bot Control for strategy research, one-click safe paper simulation, paper automation, safety controls, non-coder Risk Profile Configuration, and advanced bot records hidden behind Developer Mode
 - `/solidity-lab` - token, NFT, website, whitepaper, chain, and ecosystem planning
 - `/social-ops` - local-only social/community draft workflows
 
@@ -53,6 +53,8 @@ Legacy forms, raw tables, archived records, filters, JSON output, route diagnost
 The Setup Wizard now reports `Local E2E Complete` when the local server is healthy, a paper schedule or completed paper run exists, an active paper risk profile exists, public wallet metadata exists, live trading is disabled, and wallet signing is disabled. Live E2E is shown separately as locked for future owner-approved security work. Polygon, Base, Ethereum, BNB, Avalanche, Solana, and future chains are selectable per project, token, strategy, or wallet; no blockchain is the system default. Chain-provider, exchange, GitHub, Cloudflare, and social API credentials are optional future integrations in Simple Mode. Public wallet addresses are added directly through the UI with `Add Public Wallet`; the `.env` file is only for optional API keys and later integrations.
 
 The Operator Training Library covers Home, Setup Wizard, Wallet & Funding, Security, Proof Packet, MVP Test Pass, Route Inventory, Creator Agent, Strategy / Paper / Bots, Solidity Lab, and Social Ops. Each module explains page purpose, buttons, fields, what not to enter, operating order, safe defaults, plain-English errors, success state, and the live-trading/wallet-signing safety boundary. Video mode currently provides in-app placeholder players, asset plans for later rendered videos, chapter narration, exact click instructions, replay controls, and transcripts.
+
+Strategy / Paper / Bots now exposes the Simple Mode action `Run This Strategy Safely`. After the owner saves or opens a strategy, this one button creates or reuses the safe paper session, active safe risk profile, local paper connector, ready paper plan, active local schedule, verifier, and paper run. If no matching market data exists yet, EtherealAI creates clearly labeled local sample candles so the operator can verify the workflow without exchange APIs or terminal commands. Results show running status, simulated trades, P/L, spread/cost assumptions, fees/slippage, entry/exit reasons, strategy health, and warnings. Live trading, wallet signing, exchange orders, token deployment, and external posting remain disabled.
 
 ## Run Locally
 

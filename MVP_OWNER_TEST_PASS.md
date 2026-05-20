@@ -100,10 +100,14 @@ patrick@etherealAI
    - Pass condition: Local Verification, MVP Readiness, Automation Safety, and Launch Readiness panels load.
    - Pass condition: launch status remains blocked and `live_order_endpoint_enabled` remains blocked.
    - Pass condition: Strategy Lab → Risk opens Risk Profile Configuration with safe paper defaults, editable limits, Current Profile Status, Save Risk Profile, Activate Profile, Kill Switch off guidance, and Verify Paper Risk Gate wired to `/api/v1/owner-setup-wizard/verify/paper_risk_profile_ready`.
+   - Pass condition: Simple Mode shows `Run This Strategy Safely` as the primary paper action after a strategy is saved or opened.
+   - Pass condition: `Run This Strategy Safely` creates or reuses only local paper components, runs verification, launches a paper simulation, and shows status, simulated trades, P/L, spread/costs, fees/slippage, entry/exit reasons, strategy health, and warnings.
+   - Pass condition: if no matching market data exists, the action creates clearly labeled local sample candles for workflow verification rather than requiring terminal commands or exchange APIs.
+   - Pass condition: the one-click paper action keeps live trading, wallet signing, exchange order placement, token deployment, public posting, and credential loading disabled.
 
 7. Test Strategy Lab research locally.
    - Save a strategy.
-   - Import or queue candle data.
+   - Import or queue candle data for realistic research, or use `Run This Strategy Safely` for a local sample-data workflow check.
    - Run backtest, optimization sweep, split test, walk-forward test, and paper replay.
    - Pass condition: artifacts persist and appear in tables without enabling live execution.
 
@@ -157,8 +161,8 @@ patrick@etherealAI
 
 - Paper bot schedules can run local paper decision cycles automatically.
 - Strategy Lab, Owner Proof Packet, and System Memory show an Automated Paper Path panel backed by `/api/v1/bot-automation-capability-path`, with Future Live Automation blocked until a later reviewed implementation phase.
-- Strategy Lab Bots now opens as a non-technical Operator Wizard with seven visible steps: select strategy, select passed paper session, select active paper risk profile, select safe paper connector, create a ready paper plan, create/activate a local paper schedule, and verify paper trading at `100%`.
-- The `Use Safe Defaults and Finish Paper Setup` button creates or selects only paper/local records. It does not enable live trading, wallet signing, exchange orders, token deployment, or social posting.
+- Strategy Lab Simple Mode now starts with `Run This Strategy Safely`, a one-button paper workflow that creates or reuses the paper session, safe risk profile, local paper connector, ready plan, active schedule, verifier, and local simulation run. The older seven-step Bot Operator Wizard remains available under Advanced Developer Mode for inspection and repair.
+- `Run This Strategy Safely` creates or selects only paper/local records. It does not enable live trading, wallet signing, exchange orders, token deployment, credential loading, or social posting.
 - Owner Proof Packet includes a Paper Automation Runbook for monitor-only owner testing: review ready paper plans, activate or review a paper schedule, inspect the latest paper run, export local evidence, and record local MVP acceptance while live actions stay blocked.
 - The workflow can create local plan, schedule, paper-run, readiness, go-live-review, and dossier evidence records.
 - Strategy Lab exports are local evidence snapshots only: filtered plan/run/schedule JSON or CSV, safety dossier JSON, and dossier history CSV.

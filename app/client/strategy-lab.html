@@ -110,6 +110,32 @@
             </form>
         </section>
 
+        <section class="model-panel" id="safe-paper-simulator">
+            <h2>Safe Paper Simulation</h2>
+            <p class="inline-status">Simple Mode action: create or open a strategy, then click one button. EtherealAI automatically creates or reuses the safe paper session, risk profile, local connector, plan, schedule, verifier, and simulation run. No live trading. No wallet signing. No exchange orders.</p>
+            <div class="safe-paper-hero">
+                <div>
+                    <span>Selected Strategy</span>
+                    <strong id="safe-paper-selected-strategy">No strategy selected yet.</strong>
+                    <small id="safe-paper-selected-detail">Save or open a strategy first. EtherealAI will handle sessions, profiles, connectors, plans, and schedules in the background.</small>
+                </div>
+                <button type="button" id="run-this-strategy-safely">Run This Strategy Safely</button>
+            </div>
+            <div id="safe-paper-progress" class="operator-progress-checklist">
+                <article class="operator-check-blocked">
+                    <strong>Waiting for strategy</strong>
+                    <span>Save or open a strategy, then run the safe paper test.</span>
+                </article>
+            </div>
+            <div id="safe-paper-results" class="safe-paper-results">
+                <article>
+                    <span>Status</span>
+                    <strong>Ready when you are</strong>
+                    <small>The simulation summary will appear here after the safe paper run.</small>
+                </article>
+            </div>
+        </section>
+
         <section class="model-panel" id="exchange-connectors">
             <h2>Saved Strategies</h2>
             <div id="strategy-list" class="task-list">Loading strategies...</div>
@@ -1227,6 +1253,7 @@
             const list = document.getElementById('strategy-list');
             availableStrategies = strategies;
             renderBotOperatorWizard();
+            updateSafePaperSelectedStrategy();
 
             if (!strategies.length) {
                 list.innerHTML = '<p>No strategies saved yet.</p>';
@@ -1267,6 +1294,7 @@
 
             renderBotPlanSelectors();
             selectBotOperatorStrategy(data.strategy.id);
+            updateSafePaperSelectedStrategy();
 
             const latestBacktest = data.backtests[0];
             document.getElementById('backtest-results').textContent = [
@@ -1916,6 +1944,244 @@
             }
 
             output.textContent = [message, detail].filter(Boolean).join('\n\n');
+        }
+
+        function setSafePaperProgress(state, items = []) {
+            const output = document.getElementById('safe-paper-progress');
+
+            if (!output) {
+                return;
+            }
+
+            const normalizedItems = items.length
+                ? items
+                : [{ label: state || 'Ready', detail: 'Run This Strategy Safely when a strategy is selected.', passed: false }];
+
+            output.innerHTML = normalizedItems.map(item => `
+                <article class="${item.passed ? 'operator-check-pass' : 'operator-check-blocked'}">
+                    <strong>${escapeHtml(item.label)}</strong>
+                    <span>${escapeHtml(item.detail || '')}</span>
+                </article>
+            `).join('');
+        }
+
+        function updateSafePaperSelectedStrategy() {
+            const name = document.getElementById('safe-paper-selected-strategy');
+            const detail = document.getElementById('safe-paper-selected-detail');
+            const button = document.getElementById('run-this-strategy-safely');
+            const strategy = selectedStrategy
+                || availableStrategies.find(item => String(item.id) === String(selectedStrategyId))
+                || availableStrategies[0]
+                || null;
+
+            if (!name || !detail || !button) {
+                return;
+            }
+
+            if (!strategy) {
+                name.textContent = 'No strategy selected yet.';
+                detail.textContent = 'Save or open a strategy first. EtherealAI will handle sessions, profiles, connectors, plans, and schedules in the background.';
+                button.disabled = true;
+                return;
+            }
+
+            name.textContent = `#${strategy.id} ${strategy.name}`;
+            detail.textContent = `${strategy.market_symbol} · ${strategy.timeframe} · local paper simulation only`;
+            button.disabled = false;
+        }
+
+        function renderSafePaperFailure(data = {}) {
+            const output = document.getElementById('safe-paper-results');
+            const fixes = data.oneClickFixes || [];
+
+            setSafePaperProgress('Fix needed', [
+                {
+                    label: 'Safe paper test needs one fix',
+                    detail: data.plainEnglishError || data.error || 'The safe paper run could not finish.',
+                    passed: false
+                },
+                ...fixes.map(fix => ({
+                    label: fix.label || 'Retry',
+                    detail: fix.description || 'Apply the fix, then retry.',
+                    passed: false
+                }))
+            ]);
+
+            output.innerHTML = `
+                <article class="safe-paper-warning-card">
+                    <span>What happened?</span>
+                    <strong>${escapeHtml(data.plainEnglishError || data.error || 'Safe paper test did not finish.')}</strong>
+                    <small>${escapeHtml(fixes[0]?.description || 'Click Run This Strategy Safely again after the visible fix is handled.')}</small>
+                    <button type="button" data-safe-paper-retry>Retry Safe Paper Test</button>
+                </article>
+            `;
+            output.querySelector('[data-safe-paper-retry]')?.addEventListener('click', runSelectedStrategySafely);
+        }
+
+        function formatMoney(value) {
+            const number = Number(value);
+
+            if (!Number.isFinite(number)) {
+                return '-';
+            }
+
+            return `$${number.toLocaleString(undefined, {
+                maximumFractionDigits: 2,
+                minimumFractionDigits: 2
+            })}`;
+        }
+
+        function renderSafePaperResults(data = {}) {
+            const output = document.getElementById('safe-paper-results');
+            const results = data.results || {};
+            const pAndL = results.pAndL || {};
+            const running = results.runningStatus || {};
+            const spread = results.spreadAnalysis || {};
+            const feesAndSlippage = results.feesAndSlippage || {};
+            const health = results.strategyHealth || {};
+            const reasons = results.entryExitReasons || {};
+            const trades = results.simulatedTrades || [];
+            const warnings = results.warnings || [];
+
+            setSafePaperProgress('Complete', (data.verification?.checks || []).map(check => ({
+                label: check,
+                detail: 'Complete',
+                passed: true
+            })));
+
+            output.innerHTML = `
+                <article class="safe-paper-result-card safe-paper-status-card">
+                    <span>Status</span>
+                    <strong>${escapeHtml(running.label || data.message || 'Safe paper simulation complete')}</strong>
+                    <small>Schedule #${escapeHtml(running.scheduleId || '-')} · Run #${escapeHtml(running.latestRunId || '-')} · Live trading and wallet signing stayed disabled.</small>
+                </article>
+                <article class="safe-paper-result-card">
+                    <span>P/L</span>
+                    <strong>${formatMoney(pAndL.realizedPnl)}</strong>
+                    <small>Return ${pAndL.totalReturnPercent ?? '-'}% · final equity ${formatMoney(pAndL.finalEquity)}</small>
+                </article>
+                <article class="safe-paper-result-card">
+                    <span>Trades</span>
+                    <strong>${escapeHtml(pAndL.tradeCount ?? trades.length ?? 0)}</strong>
+                    <small>Win rate ${pAndL.winRatePercent ?? '-'}% · max drawdown ${pAndL.maxDrawdownPercent ?? '-'}%</small>
+                </article>
+                <article class="safe-paper-result-card">
+                    <span>Spread / Costs</span>
+                    <strong>${escapeHtml(spread.estimatedRoundTripCostPercent ?? '-')}%</strong>
+                    <small>Fees/slippage: ${escapeHtml(feesAndSlippage.summary || `fee ${spread.feePercentPerSide ?? '-'}% + slippage ${spread.slippagePercentPerSide ?? '-'}% per side`)}</small>
+                </article>
+                <article class="safe-paper-result-card">
+                    <span>Latest Decision</span>
+                    <strong>${escapeHtml(reasons.latestDecision?.action || 'wait')}</strong>
+                    <small>${escapeHtml(reasons.latestDecision?.reason || 'No decision reason available yet.')}</small>
+                </article>
+                <article class="safe-paper-result-card">
+                    <span>Strategy Health</span>
+                    <strong>${escapeHtml(health.status || 'review')}</strong>
+                    <small>${escapeHtml(health.summary || 'Review the paper results before changing strategy size or rules.')}</small>
+                </article>
+                <section class="safe-paper-table-card">
+                    <h3>Simulated Trades</h3>
+                    <div class="comparison-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Entry</th>
+                                    <th>Exit</th>
+                                    <th>P/L</th>
+                                    <th>Return</th>
+                                    <th>Exit reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${trades.length ? trades.slice(-10).map(trade => `
+                                    <tr>
+                                        <td>${escapeHtml(trade.number)}</td>
+                                        <td>${escapeHtml(trade.entryPrice ?? '-')}</td>
+                                        <td>${escapeHtml(trade.exitPrice ?? '-')}</td>
+                                        <td>${formatMoney(trade.pnl)}</td>
+                                        <td>${escapeHtml(trade.netReturnPercent ?? '-')}%</td>
+                                        <td>${escapeHtml(trade.exitReason || '-')}</td>
+                                    </tr>
+                                `).join('') : '<tr><td colspan="6">No simulated trades were produced yet. Review entry rules or market data.</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                <section class="safe-paper-table-card">
+                    <h3>Warnings</h3>
+                    <ul>
+                        ${warnings.map(warning => `<li>${escapeHtml(warning)}</li>`).join('') || '<li>No warnings returned.</li>'}
+                    </ul>
+                </section>
+            `;
+        }
+
+        async function runSelectedStrategySafely() {
+            const strategy = selectedStrategy
+                || availableStrategies.find(item => String(item.id) === String(selectedStrategyId))
+                || availableStrategies[0]
+                || null;
+
+            if (!strategy) {
+                renderSafePaperFailure({
+                    plainEnglishError: 'Create or open a strategy first.',
+                    oneClickFixes: [
+                        {
+                            label: 'Open Strategy Builder',
+                            description: 'Fill out the strategy form, save it, then click Run This Strategy Safely.'
+                        }
+                    ]
+                });
+                document.getElementById('strategy-entry')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            selectedStrategyId = strategy.id;
+            selectedStrategy = strategy;
+            updateSafePaperSelectedStrategy();
+            setSafePaperProgress('Running', [
+                { label: 'Building safe paper test', detail: 'Creating or reusing safe paper components automatically.', passed: true },
+                { label: 'Launching local simulation', detail: 'No live orders, wallet signing, or exchange credentials are used.', passed: false }
+            ]);
+            document.getElementById('safe-paper-results').innerHTML = `
+                <article class="safe-paper-result-card safe-paper-status-card">
+                    <span>Running</span>
+                    <strong>EtherealAI is running the safe paper simulation...</strong>
+                    <small>Sessions, risk profiles, connectors, plans, and schedules are handled in the background.</small>
+                </article>
+            `;
+
+            const response = await fetch(`/api/v1/strategies/${strategy.id}/run-safe-paper-test`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    initialCapital: 10000,
+                    feePercent: 0.1,
+                    slippagePercent: 0.05
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                renderSafePaperFailure(data);
+                return;
+            }
+
+            renderSafePaperResults(data);
+            await Promise.all([
+                loadPaperSessions(),
+                loadRiskProfiles(),
+                loadConnectors(),
+                loadBotPlans(),
+                loadBotRuns(),
+                loadBotSchedules(),
+                loadBotAutomationCapabilityPath(),
+                loadBotOperatorOwnerSetupWizard()
+            ]);
         }
 
         function setOperatorSelectOptions(select, options, {
@@ -7778,6 +8044,7 @@
         document.getElementById('bot-operator-activate-schedule').addEventListener('click', activateOperatorPaperSchedule);
         document.getElementById('bot-operator-verify').addEventListener('click', verifyOperatorPaperTrading);
         document.getElementById('bot-operator-safe-finish').addEventListener('click', useOperatorSafeDefaultsAndFinish);
+        document.getElementById('run-this-strategy-safely').addEventListener('click', runSelectedStrategySafely);
         document.getElementById('bot-operator-refresh').addEventListener('click', async () => {
             setOperatorStatus('Refreshing paper setup records...', 'Reloading strategies, sessions, risk profiles, connectors, plans, schedules, and Owner Setup progress.');
             await Promise.all([

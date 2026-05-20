@@ -6215,6 +6215,68 @@ function checkStrategyLabBotOperatorWizardUi() {
   pass('Strategy Lab Bot Operator Wizard UI');
 }
 
+function checkStrategyLabOneClickSafePaperUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+  const routes = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/bot-automation.js'), 'utf8');
+  const routeRegistration = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/route-registration.js'), 'utf8');
+  const operatorMode = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-mode.js'), 'utf8');
+
+  if (
+    !html.includes('id="safe-paper-simulator"')
+    || !html.includes('id="run-this-strategy-safely"')
+    || !html.includes('Run This Strategy Safely')
+    || !html.includes('EtherealAI automatically creates or reuses the safe paper session, risk profile, local connector, plan, schedule, verifier, and simulation run.')
+    || !html.includes('id="safe-paper-results"')
+    || !html.includes('id="safe-paper-progress"')
+    || !html.includes('runningStatus')
+    || !html.includes('simulatedTrades')
+    || !html.includes('pAndL')
+    || !html.includes('spreadAnalysis')
+    || !html.includes('feesAndSlippage')
+    || !html.includes('entryExitReasons')
+    || !html.includes('strategyHealth')
+    || !html.includes('warnings')
+    || !html.includes('Retry Safe Paper Test')
+    || !html.includes('function updateSafePaperSelectedStrategy()')
+    || !html.includes('function renderSafePaperResults(data = {})')
+    || !html.includes('async function runSelectedStrategySafely()')
+    || !html.includes('/run-safe-paper-test')
+    || !html.includes('Live trading and wallet signing stayed disabled.')
+    || !styles.includes('.safe-paper-hero')
+    || !styles.includes('.safe-paper-results')
+    || !styles.includes('.safe-paper-result-card')
+    || !styles.includes('.safe-paper-warning-card')
+    || !routes.includes("app.post('/api/v1/strategies/:id/run-safe-paper-test'")
+    || !routes.includes('findOrCreateSafePaperSession')
+    || !routes.includes('createLocalSampleMarketImport')
+    || !routes.includes('Local sample candles were generated because no matching local market data existed')
+    || !routes.includes('findOrCreateSafeRiskProfile')
+    || !routes.includes('findOrCreateSafeConnector')
+    || !routes.includes('findOrCreateReadyPaperPlan')
+    || !routes.includes('findOrCreateActivePaperSchedule')
+    || !routes.includes('runBotAutomationSchedule(scheduleResult.schedule.id, { force: true })')
+    || !routes.includes('plainEnglishError')
+    || !routes.includes('oneClickFixes')
+    || !routes.includes('walletSigningEnabled: false')
+    || !routes.includes('liveTradingEnabled: false')
+    || !routes.includes('spreadAnalysis')
+    || !routes.includes('simulatedTrades')
+    || !routes.includes('strategyHealth')
+    || !routeRegistration.includes('parseStrategy: parsers.parseStrategy')
+    || !routeRegistration.includes('parseRiskProfile: parsers.parseRiskProfile')
+    || !routeRegistration.includes('runCandleBacktest')
+    || !routeRegistration.includes('createPaperReplayPayload')
+    || !routeRegistration.includes('insertDecisionLogs')
+    || !operatorMode.includes('Run This Strategy Safely')
+    || !operatorMode.includes('Advanced infrastructure objects stay hidden unless you intentionally open Advanced Mode.')
+  ) {
+    fail('Strategy Lab one-click safe paper simulation UI or route is missing automatic orchestration coverage');
+  }
+
+  pass('Strategy Lab one-click safe paper simulation UI');
+}
+
 function checkMvpTestPassOwnerWorkflowUi() {
   const html = fs.readFileSync(path.join(projectRoot, 'app/client/mvp-test-pass.html'), 'utf8');
 
@@ -6803,9 +6865,9 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !operatorMode.includes("'/operator-manual'")
     || !operatorMode.includes("'/operator-training'")
     || !operatorMode.includes('Create strategy')
-    || !operatorMode.includes('Run backtest')
-    || !operatorMode.includes('Create paper plan')
-    || !operatorMode.includes('Start paper schedule')
+    || !operatorMode.includes('Run This Strategy Safely')
+    || !operatorMode.includes('Safe Paper Test')
+    || !operatorMode.includes('Advanced records')
     || !operatorMode.includes('Review results')
     || !operatorMode.includes('Select Chain-Neutral Defaults')
     || operatorMode.includes('Select Polygon Defaults')
@@ -9738,6 +9800,7 @@ async function runServerApiChecks() {
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects/:id/workspace' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects/:id/website-deploy-package' && route.file === 'app/server/src/routes/solidity-lab.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/token-ecosystem-projects/:id/cloudflare-dns-plan' && route.file === 'app/server/src/routes/solidity-lab.js')
+    || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/strategies/:id/run-safe-paper-test' && route.file === 'app/server/src/routes/bot-automation.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-capability-path' && route.file === 'app/server/src/routes/bot-automation.js')
     || !inventory.routes.some(route => route.method === 'GET' && route.path === '/api/v1/bot-automation-plans' && route.file === 'app/server/src/routes/bot-automation.js')
     || !inventory.routes.some(route => route.method === 'POST' && route.path === '/api/v1/bot-automation-plans' && route.file === 'app/server/src/routes/bot-automation.js')
@@ -10197,6 +10260,7 @@ async function main() {
   checkStrategyLabSafetyDossierExportUi();
   checkStrategyLabRiskProfileSetupUi();
   checkStrategyLabBotOperatorWizardUi();
+  checkStrategyLabOneClickSafePaperUi();
   checkMvpTestPassOwnerWorkflowUi();
   checkDashboardMvpReadinessUi();
   checkOperatorControlCenterUi();

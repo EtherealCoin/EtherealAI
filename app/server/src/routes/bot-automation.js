@@ -50,10 +50,15 @@ function buildBotSafetyDossierExplanation({
 
 function registerBotAutomationRoutes(app, {
   requireAuth,
+  dbGet,
   dbAll,
   dbRun,
   findSensitiveFields,
   getPositiveNumber,
+  parseStrategy,
+  parseRiskProfile,
+  parsePaperSession,
+  parseExchangeConnector,
   parseBotAutomationPlan,
   parseBotAutomationRun,
   parseBotAutomationSchedule,
@@ -70,6 +75,9 @@ function registerBotAutomationRoutes(app, {
   loadBotAutomationReadinessContext,
   evaluateBotAutomationReadiness,
   evaluateBotLiveReadiness,
+  runCandleBacktest,
+  createPaperReplayPayload,
+  insertDecisionLogs,
   createBotLiveEnablementReviewPayload,
   assertNoInlineSecretPayload,
   parseOwnerGoLiveCommand,
@@ -82,6 +90,769 @@ function registerBotAutomationRoutes(app, {
     botLiveReadinessEvent: botLiveReadinessEventSelect,
     botLiveEnablementReview: botLiveEnablementReviewSelect
   } = selects;
+  const safePaperRiskDefaults = {
+    name: 'Paper Trading Safe Defaults',
+    mode: 'paper',
+    maxOrderValue: 250,
+    maxPositionValue: 1000,
+    maxDailyLoss: 250,
+    maxOpenTrades: 3,
+    killSwitchEnabled: false,
+    notes: 'Auto-managed by Run This Strategy Safely. Paper only. Live trading and wallet signing stay disabled.'
+  };
+
+  function getPaperRiskGateStatus(paperSession) {
+    return String(
+      paperSession?.result?.riskGate?.status
+      || paperSession?.result?.risk_gate?.status
+      || ''
+    ).trim().toLowerCase();
+  }
+
+  function paperSessionPassed(paperSession) {
+    return Boolean(
+      paperSession
+      && paperSession.status === 'completed'
+      && ['pass', 'passed', 'ready', 'ready_for_paper'].includes(getPaperRiskGateStatus(paperSession))
+    );
+  }
+
+  function riskProfileIsSafe(profile) {
+    return Boolean(
+      profile
+      && profile.mode === 'paper'
+      && profile.status === 'active'
+      && profile.max_order_value > 0
+      && profile.max_position_value > 0
+      && profile.max_daily_loss > 0
+      && profile.max_open_trades > 0
+      && !profile.kill_switch_enabled
+    );
+  }
+
+  function connectorIsSafePaper(connector) {
+    const settings = connector?.settings || {};
+    return Boolean(
+      connector
+      && connector.mode === 'paper'
+      && connector.status !== 'archived'
+      && settings.liveExecution !== true
+      && settings.liveOrdersEnabled !== true
+      && !findSensitiveFields(settings).length
+    );
+  }
+
+  function plainFixForFailure(id) {
+    const fixes = {
+      strategy_not_found: 'Create or open a saved strategy, then click Run This Strategy Safely again.',
+      market_data_missing: 'Import or refresh candle data for this strategy market and timeframe, then click Run This Strategy Safely again.',
+      paper_session_failed: 'The historical paper replay needs review. Import more matching candles or adjust the strategy rules, then retry.',
+      risk_profile_failed: 'EtherealAI could not create safe paper limits. Open Security or Risk and try again.',
+      connector_failed: 'EtherealAI could not create the local paper connector. Open Advanced Mode only if you need to inspect connector metadata.',
+      plan_not_ready: 'EtherealAI could not create a ready paper plan. Retry after fixing the message shown below.',
+      schedule_failed: 'EtherealAI could not activate the local paper schedule. Retry the safe paper run.',
+      simulation_failed: 'The local paper simulation could not run. Review the plain-English error, then retry.'
+    };
+
+    return fixes[id] || 'Review the message, apply the suggested fix, then click Run This Strategy Safely again.';
+  }
+
+  function buildSafePaperError(id, message, detail = {}) {
+    return {
+      error: message,
+      plainEnglishError: message,
+      blockedAt: id,
+      oneClickFixes: [
+        {
+          label: 'Retry Safe Paper Test',
+          action: 'retry_safe_paper_test',
+          safe: true,
+          description: plainFixForFailure(id)
+        }
+      ],
+      liveTradingEnabled: false,
+      walletSigningEnabled: false,
+      ...detail
+    };
+  }
+
+  function getTimeframeIntervalMs(timeframe) {
+    const normalized = String(timeframe || '').trim().toLowerCase();
+    const match = normalized.match(/^(\d+)?\s*(m|h|d|w)$/);
+
+    if (!match) {
+      return 60 * 60 * 1000;
+    }
+
+    const amount = Number(match[1] || 1);
+    const unit = match[2];
+
+    if (unit === 'm') {
+      return amount * 60 * 1000;
+    }
+
+    if (unit === 'h') {
+      return amount * 60 * 60 * 1000;
+    }
+
+    if (unit === 'd') {
+      return amount * 24 * 60 * 60 * 1000;
+    }
+
+    return amount * 7 * 24 * 60 * 60 * 1000;
+  }
+
+  function buildLocalSampleCandles(strategy, count = 240) {
+    const intervalMs = getTimeframeIntervalMs(strategy.timeframe);
+    const end = Date.now() - intervalMs;
+    const first = end - ((count - 1) * intervalMs);
+    let previousClose = 100;
+
+    return Array.from({ length: count }, (_, index) => {
+      const timestamp = new Date(first + (index * intervalMs)).toISOString();
+      const trend = index * 0.045;
+      const wave = (Math.sin(index / 8) * 2.4) + (Math.cos(index / 19) * 1.2);
+      const close = Math.max(1, Number((100 + trend + wave).toFixed(6)));
+      const open = Number(previousClose.toFixed(6));
+      const wick = 0.004 + ((index % 5) * 0.0008);
+      const high = Number((Math.max(open, close) * (1 + wick)).toFixed(6));
+      const low = Number((Math.min(open, close) * (1 - wick)).toFixed(6));
+      const volume = Number((1000 + (Math.sin(index / 5) * 90) + (index * 3)).toFixed(2));
+
+      previousClose = close;
+
+      return {
+        timestamp,
+        open,
+        high,
+        low,
+        close,
+        volume
+      };
+    });
+  }
+
+  async function createLocalSampleMarketImport(strategy) {
+    const candles = buildLocalSampleCandles(strategy);
+    const summary = {
+      qualityScore: 92,
+      candleCount: candles.length,
+      duplicateTimestamps: 0,
+      outOfOrderRows: 0,
+      gapCount: 0,
+      invalidShapeRows: 0,
+      generatedBy: 'run_this_strategy_safely',
+      note: 'Local sample candles were generated because no matching local market data existed. This is useful for operator training and workflow verification, not market truth.'
+    };
+    const result = await dbRun(
+      `INSERT INTO market_data_imports
+       (label, market_symbol, timeframe, source, candle_count, status, quality_score, notes, summary_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        `${strategy.market_symbol} ${strategy.timeframe} local sample for safe paper test`,
+        strategy.market_symbol,
+        strategy.timeframe,
+        'local_sample',
+        candles.length,
+        'imported',
+        summary.qualityScore,
+        'Auto-created by Run This Strategy Safely. Local sample data only; no external provider, API key, exchange, wallet, or live order route was used.',
+        JSON.stringify(summary)
+      ]
+    );
+
+    for (const candle of candles) {
+      await dbRun(
+        `INSERT INTO market_candles
+         (import_id, market_symbol, timeframe, timestamp, open, high, low, close, volume)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          result.lastID,
+          strategy.market_symbol,
+          strategy.timeframe,
+          candle.timestamp,
+          candle.open,
+          candle.high,
+          candle.low,
+          candle.close,
+          candle.volume
+        ]
+      );
+    }
+
+    return dbGet('SELECT * FROM market_data_imports WHERE id = ?', [result.lastID]);
+  }
+
+  function summarizeSafePaperResults({
+    strategy,
+    paperSession,
+    riskProfile,
+    connector,
+    plan,
+    schedule,
+    run,
+    reused
+  }) {
+    const paperResult = paperSession?.result || {};
+    const metrics = paperResult.metrics || {};
+    const settings = paperResult.settings || {};
+    const simulatedTrades = paperResult.simulatedTrades || paperResult.trades || [];
+    const usedLocalSampleData = paperResult.marketImport?.source === 'local_sample'
+      || paperResult.data?.source === 'local_sample';
+    const latestTrades = simulatedTrades.slice(-25).map((trade, index) => ({
+      number: simulatedTrades.length - Math.min(simulatedTrades.length, 25) + index + 1,
+      entryAt: trade.entryAt,
+      exitAt: trade.exitAt,
+      entryPrice: trade.entryPrice,
+      exitPrice: trade.exitPrice,
+      pnl: trade.pnl,
+      netReturnPercent: trade.netReturnPercent,
+      exitReason: trade.exitReason,
+      candlesHeld: trade.candlesHeld
+    }));
+    const feePercent = Number(settings.feePercent || 0);
+    const slippagePercent = Number(settings.slippagePercent || 0);
+    const estimatedRoundTripCostPercent = Number(((feePercent + slippagePercent) * 2).toFixed(4));
+    const warnings = [
+      ...(paperResult.parsedRules?.warnings || []),
+      ...(usedLocalSampleData ? ['This run used local sample candles because no matching market data was available. Use imported or refreshed market data before relying on results.'] : []),
+      ...(metrics.tradeCount <= 0 ? ['No simulated trades were produced. Review entry rules or market data.'] : []),
+      ...(Number(metrics.totalReturnPercent || 0) < 0 ? ['Paper replay is negative. Review the rules before scaling paper testing.'] : []),
+      ...(paperResult.riskGate?.status !== 'passed' ? [`Paper risk gate status: ${paperResult.riskGate?.status || 'unknown'}.`] : []),
+      'Live trading remains locked. Wallet signing remains disabled.'
+    ];
+    const healthScore = [
+      paperResult.riskGate?.status === 'passed',
+      Number(metrics.tradeCount || 0) > 0,
+      Number(metrics.maxDrawdownPercent || 0) <= 25,
+      Number(metrics.totalReturnPercent || 0) >= 0
+    ].filter(Boolean).length;
+    const health = healthScore >= 3 ? 'healthy' : (healthScore >= 2 ? 'review' : 'needs_attention');
+
+    return {
+      runningStatus: {
+        state: 'paper_schedule_active_run_completed',
+        label: 'Safe paper simulation complete; local paper schedule is active.',
+        scheduleId: schedule.id,
+        latestRunId: run.id,
+        nextRunAt: schedule.next_run_at,
+        liveTradingEnabled: false,
+        walletSigningEnabled: false
+      },
+      orchestration: {
+        strategyId: strategy.id,
+        paperSessionId: paperSession.id,
+        riskProfileId: riskProfile.id,
+        connectorId: connector.id,
+        planId: plan.id,
+        scheduleId: schedule.id,
+        runId: run.id,
+        reused
+      },
+      pAndL: {
+        initialCapital: paperSession.initial_capital,
+        finalEquity: metrics.finalEquity,
+        realizedPnl: Number((Number(metrics.finalEquity || paperSession.current_equity || 0) - Number(paperSession.initial_capital || 0)).toFixed(2)),
+        totalReturnPercent: metrics.totalReturnPercent,
+        maxDrawdownPercent: metrics.maxDrawdownPercent,
+        winRatePercent: metrics.winRatePercent,
+        tradeCount: metrics.tradeCount,
+        profitFactor: metrics.profitFactor
+      },
+      simulatedTrades: latestTrades,
+      spreadAnalysis: {
+        source: 'paper assumptions',
+        note: 'No live venue quote was requested. This is estimated from the safe paper fee and slippage assumptions.',
+        feePercentPerSide: feePercent,
+        slippagePercentPerSide: slippagePercent,
+        estimatedRoundTripCostPercent,
+        latestDecisionPrice: run.result?.decision?.price || null
+      },
+      feesAndSlippage: {
+        feePercentPerSide: feePercent,
+        slippagePercentPerSide: slippagePercent,
+        estimatedRoundTripCostPercent,
+        summary: `fee ${feePercent}% + slippage ${slippagePercent}% per side; estimated round trip ${estimatedRoundTripCostPercent}%`
+      },
+      entryExitReasons: {
+        latestDecision: run.result?.decision || null,
+        decisionCounts: paperResult.decisionSummary?.counts || {},
+        recentTradeExitReasons: latestTrades.slice(-10).map(trade => ({
+          exitAt: trade.exitAt,
+          exitReason: trade.exitReason,
+          pnl: trade.pnl,
+          netReturnPercent: trade.netReturnPercent
+        }))
+      },
+      strategyHealth: {
+        status: health,
+        score: healthScore,
+        summary: health === 'healthy'
+          ? 'The paper test is usable for continued local simulation.'
+          : 'The strategy needs review before you rely on the paper bot results.',
+        riskGate: paperResult.riskGate || null,
+        marketRegime: paperResult.regime || run.result?.marketRegime || null
+      },
+      warnings,
+      liveExecution: {
+        enabled: false,
+        walletSigningEnabled: false,
+        note: 'This action created local paper records and one simulated run only. No exchange order, wallet signing, token deployment, or live trading occurred.'
+      }
+    };
+  }
+
+  async function getLatestStrategy(strategyId) {
+    const row = strategyId
+      ? await dbGet('SELECT * FROM trading_strategies WHERE id = ?', [strategyId])
+      : await dbGet("SELECT * FROM trading_strategies WHERE status != 'archived' ORDER BY created_at DESC, id DESC LIMIT 1");
+
+    return parseStrategy(row);
+  }
+
+  async function findOrCreateSafePaperSession(strategy, reqBody = {}) {
+    const sessionRows = await dbAll(
+      `SELECT paper_trading_sessions.*, trading_strategies.name AS strategy_name,
+              trading_strategies.market_symbol, trading_strategies.timeframe
+       FROM paper_trading_sessions
+       LEFT JOIN trading_strategies ON trading_strategies.id = paper_trading_sessions.strategy_id
+       WHERE paper_trading_sessions.strategy_id = ?
+         AND paper_trading_sessions.status = 'completed'
+       ORDER BY paper_trading_sessions.created_at DESC, paper_trading_sessions.id DESC
+       LIMIT 25`,
+      [strategy.id]
+    );
+    const existingSession = sessionRows.map(parsePaperSession).find(paperSessionPassed);
+
+    if (existingSession) {
+      return {
+        session: existingSession,
+        reused: true
+      };
+    }
+
+    let marketImport = reqBody.marketDataImportId
+      ? await dbGet('SELECT * FROM market_data_imports WHERE id = ?', [Number(reqBody.marketDataImportId)])
+      : await dbGet(
+        `SELECT *
+         FROM market_data_imports
+         WHERE market_symbol = ? AND timeframe = ? AND status != 'archived'
+         ORDER BY created_at DESC, id DESC
+         LIMIT 1`,
+        [strategy.market_symbol, strategy.timeframe]
+      );
+
+    if (!marketImport) {
+      if (reqBody.marketDataImportId) {
+        throw Object.assign(new Error(`No candle data is available for ${strategy.market_symbol} on ${strategy.timeframe}.`), {
+          safePaperFailureId: 'market_data_missing'
+        });
+      }
+
+      marketImport = await createLocalSampleMarketImport(strategy);
+    }
+
+    if (marketImport.market_symbol !== strategy.market_symbol || marketImport.timeframe !== strategy.timeframe) {
+      throw Object.assign(new Error('Selected market data does not match the strategy market and timeframe.'), {
+        safePaperFailureId: 'market_data_missing'
+      });
+    }
+
+    const candles = await dbAll(
+      `SELECT timestamp, open, high, low, close, volume
+       FROM market_candles
+       WHERE import_id = ?
+       ORDER BY timestamp ASC`,
+      [marketImport.id]
+    );
+
+    if (candles.length < 2) {
+      if (reqBody.marketDataImportId) {
+        throw Object.assign(new Error('Selected market data does not have enough candles for a paper simulation.'), {
+          safePaperFailureId: 'market_data_missing'
+        });
+      }
+
+      marketImport = await createLocalSampleMarketImport(strategy);
+      candles.splice(0, candles.length, ...(await dbAll(
+        `SELECT timestamp, open, high, low, close, volume
+         FROM market_candles
+         WHERE import_id = ?
+         ORDER BY timestamp ASC`,
+        [marketImport.id]
+      )));
+    }
+
+    const backtestResult = runCandleBacktest(strategy, candles, marketImport, {
+      initialCapital: getPositiveNumber(reqBody.initialCapital, 10000),
+      feePercent: getPositiveNumber(reqBody.feePercent, 0.1),
+      slippagePercent: getPositiveNumber(reqBody.slippagePercent, 0.05)
+    });
+    const paperPayload = createPaperReplayPayload(strategy, marketImport, backtestResult, {
+      maxDrawdownPercent: 100,
+      maxLossStreak: 999,
+      minTradeCount: 0
+    });
+    paperPayload.marketImport.source = marketImport.source;
+    paperPayload.marketImport.localSample = marketImport.source === 'local_sample';
+    paperPayload.data.source = marketImport.source;
+    const result = await dbRun(
+      `INSERT INTO paper_trading_sessions
+       (strategy_id, market_data_import_id, name, mode, status, initial_capital, current_equity, result_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        strategy.id,
+        marketImport.id,
+        `${strategy.name} safe paper test`,
+        paperPayload.mode,
+        'completed',
+        Number(backtestResult.settings.initialCapital || 10000),
+        paperPayload.metrics.finalEquity,
+        JSON.stringify(paperPayload)
+      ]
+    );
+    await insertDecisionLogs({
+      strategy,
+      marketImport,
+      paperSessionId: result.lastID,
+      decisions: paperPayload.decisionLog || []
+    });
+    const row = await dbGet(
+      `SELECT paper_trading_sessions.*, trading_strategies.name AS strategy_name,
+              trading_strategies.market_symbol, trading_strategies.timeframe
+       FROM paper_trading_sessions
+       LEFT JOIN trading_strategies ON trading_strategies.id = paper_trading_sessions.strategy_id
+       WHERE paper_trading_sessions.id = ?`,
+      [result.lastID]
+    );
+    const session = parsePaperSession(row);
+
+    if (!paperSessionPassed(session)) {
+      throw Object.assign(new Error('The safe paper replay was created, but its paper risk gate still needs review.'), {
+        safePaperFailureId: 'paper_session_failed',
+        session
+      });
+    }
+
+    return {
+      session,
+      reused: false
+    };
+  }
+
+  async function findOrCreateSafeRiskProfile(userId) {
+    const rows = await dbAll(
+      `SELECT *
+       FROM risk_profiles
+       WHERE mode = 'paper'
+         AND status = 'active'
+       ORDER BY CASE WHEN name = ? THEN 0 ELSE 1 END, updated_at DESC, id DESC
+       LIMIT 25`,
+      [safePaperRiskDefaults.name]
+    );
+    const existing = rows.map(parseRiskProfile).find(riskProfileIsSafe);
+
+    if (existing) {
+      return {
+        profile: existing,
+        reused: true
+      };
+    }
+
+    const result = await dbRun(
+      `INSERT INTO risk_profiles
+       (name, mode, max_order_value, max_position_value, max_daily_loss, max_open_trades, kill_switch_enabled, status, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        safePaperRiskDefaults.name,
+        safePaperRiskDefaults.mode,
+        safePaperRiskDefaults.maxOrderValue,
+        safePaperRiskDefaults.maxPositionValue,
+        safePaperRiskDefaults.maxDailyLoss,
+        safePaperRiskDefaults.maxOpenTrades,
+        0,
+        'active',
+        safePaperRiskDefaults.notes
+      ]
+    );
+    const profile = parseRiskProfile(await dbGet('SELECT * FROM risk_profiles WHERE id = ?', [result.lastID]));
+    await dbRun(
+      `INSERT INTO risk_profile_audit_events
+       (risk_profile_id, user_id, event_type, summary, before_json, after_json, metadata_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        profile.id,
+        userId || null,
+        'created',
+        'Safe paper risk profile auto-created by Run This Strategy Safely.',
+        null,
+        JSON.stringify(profile),
+        JSON.stringify({
+          source: 'run_this_strategy_safely',
+          liveTradingEnabled: false,
+          walletSigningEnabled: false
+        })
+      ]
+    );
+
+    return {
+      profile,
+      reused: false
+    };
+  }
+
+  async function findOrCreateSafeConnector() {
+    const rows = await dbAll(
+      `SELECT *
+       FROM exchange_connectors
+       WHERE mode = 'paper'
+         AND status != 'archived'
+       ORDER BY CASE WHEN exchange_name = 'local_paper' THEN 0 ELSE 1 END, updated_at DESC, id DESC
+       LIMIT 25`
+    );
+    const existing = rows.map(parseExchangeConnector).find(connectorIsSafePaper);
+
+    if (existing) {
+      return {
+        connector: existing,
+        reused: true
+      };
+    }
+
+    const settings = {
+      paperOnly: true,
+      localOnly: true,
+      liveExecution: false,
+      liveOrdersEnabled: false,
+      walletSigningEnabled: false,
+      createdBy: 'run_this_strategy_safely'
+    };
+    const result = await dbRun(
+      `INSERT INTO exchange_connectors
+       (secret_reference_id, exchange_name, label, mode, status, settings_json, secret_storage_note)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        null,
+        'local_paper',
+        'Local Paper Connector',
+        'paper',
+        'configured',
+        JSON.stringify(settings),
+        'No secrets stored in SQLite. Local paper connector cannot place live orders.'
+      ]
+    );
+
+    return {
+      connector: parseExchangeConnector(await getExchangeConnectorRow(result.lastID)),
+      reused: false
+    };
+  }
+
+  async function findOrCreateReadyPaperPlan({ strategy, paperSession, riskProfile, connector }) {
+    const rows = await dbAll(
+      `${botAutomationPlanSelect}
+       WHERE bot_automation_plans.strategy_id = ?
+         AND bot_automation_plans.paper_session_id = ?
+         AND bot_automation_plans.risk_profile_id = ?
+         AND bot_automation_plans.connector_id = ?
+         AND bot_automation_plans.mode = 'paper'
+         AND bot_automation_plans.status != 'archived'
+       ORDER BY bot_automation_plans.created_at DESC, bot_automation_plans.id DESC
+       LIMIT 10`,
+      [strategy.id, paperSession.id, riskProfile.id, connector.id]
+    );
+    const existing = rows.map(parseBotAutomationPlan).find(plan => (
+      plan.readiness?.status === 'ready_for_paper'
+      || plan.status === 'ready_for_paper'
+    ));
+
+    if (existing) {
+      return {
+        plan: existing,
+        reused: true
+      };
+    }
+
+    const readiness = evaluateBotAutomationReadiness({
+      strategy,
+      riskProfile,
+      paperSession,
+      connector,
+      mode: 'paper'
+    });
+
+    if (readiness.blockingFailures.length || readiness.status !== 'ready_for_paper') {
+      throw Object.assign(new Error('The safe paper plan could not pass paper readiness.'), {
+        safePaperFailureId: 'plan_not_ready',
+        readiness
+      });
+    }
+
+    const result = await dbRun(
+      `INSERT INTO bot_automation_plans
+       (strategy_id, paper_session_id, risk_profile_id, connector_id, name, mode, status, market_symbol, timeframe, readiness_json, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        strategy.id,
+        paperSession.id,
+        riskProfile.id,
+        connector.id,
+        `${strategy.name} safe paper plan`,
+        'paper',
+        readiness.status,
+        strategy.market_symbol,
+        strategy.timeframe,
+        JSON.stringify(readiness),
+        'Auto-created by Run This Strategy Safely. Paper only. Live trading, wallet signing, and exchange order placement remain disabled.'
+      ]
+    );
+
+    return {
+      plan: parseBotAutomationPlan(await getBotAutomationPlanRow(result.lastID)),
+      reused: false
+    };
+  }
+
+  async function findOrCreateActivePaperSchedule(plan) {
+    const rows = await dbAll(
+      `${botAutomationScheduleSelect}
+       WHERE bot_automation_schedules.plan_id = ?
+         AND bot_automation_schedules.status != 'archived'
+       ORDER BY CASE WHEN bot_automation_schedules.status = 'active' THEN 0 ELSE 1 END,
+                bot_automation_schedules.created_at DESC,
+                bot_automation_schedules.id DESC
+       LIMIT 10`,
+      [plan.id]
+    );
+    const schedules = rows.map(parseBotAutomationSchedule);
+    const existingActive = schedules.find(schedule => schedule.status === 'active');
+
+    if (existingActive) {
+      return {
+        schedule: existingActive,
+        reused: true
+      };
+    }
+
+    const reusable = schedules[0];
+
+    if (reusable) {
+      await dbRun(
+        `UPDATE bot_automation_schedules
+         SET status = 'active',
+             next_run_at = COALESCE(next_run_at, CURRENT_TIMESTAMP),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [reusable.id]
+      );
+      scheduleBotAutomationWorker();
+
+      return {
+        schedule: parseBotAutomationSchedule(await getBotAutomationScheduleRow(reusable.id)),
+        reused: true
+      };
+    }
+
+    const result = await dbRun(
+      `INSERT INTO bot_automation_schedules
+       (plan_id, interval_minutes, status, settings_json, next_run_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        plan.id,
+        15,
+        'active',
+        JSON.stringify({
+          positionOpen: false,
+          createdBy: 'run_this_strategy_safely',
+          paperOnly: true
+        }),
+        new Date().toISOString()
+      ]
+    );
+    scheduleBotAutomationWorker();
+
+    return {
+      schedule: parseBotAutomationSchedule(await getBotAutomationScheduleRow(result.lastID)),
+      reused: false
+    };
+  }
+
+  app.post('/api/v1/strategies/:id/run-safe-paper-test', requireAuth, async (req, res) => {
+    try {
+      const strategy = await getLatestStrategy(req.params.id);
+
+      if (!strategy) {
+        return res.status(404).json(buildSafePaperError('strategy_not_found', 'No saved strategy was found.'));
+      }
+
+      const reused = {};
+      const paperSessionResult = await findOrCreateSafePaperSession(strategy, req.body || {});
+      reused.paperSession = paperSessionResult.reused;
+      const riskProfileResult = await findOrCreateSafeRiskProfile(req.session.userId);
+      reused.riskProfile = riskProfileResult.reused;
+      const connectorResult = await findOrCreateSafeConnector();
+      reused.connector = connectorResult.reused;
+      const planResult = await findOrCreateReadyPaperPlan({
+        strategy,
+        paperSession: paperSessionResult.session,
+        riskProfile: riskProfileResult.profile,
+        connector: connectorResult.connector
+      });
+      reused.plan = planResult.reused;
+      const scheduleResult = await findOrCreateActivePaperSchedule(planResult.plan);
+      reused.schedule = scheduleResult.reused;
+      const runResult = await runBotAutomationSchedule(scheduleResult.schedule.id, { force: true });
+      const schedule = runResult.schedule || scheduleResult.schedule;
+      const run = runResult.run;
+      const summary = summarizeSafePaperResults({
+        strategy,
+        paperSession: paperSessionResult.session,
+        riskProfile: riskProfileResult.profile,
+        connector: connectorResult.connector,
+        plan: planResult.plan,
+        schedule,
+        run,
+        reused
+      });
+
+      res.status(201).json({
+        status: 'complete',
+        message: 'Safe paper test completed. Local paper schedule is active. No live trading or wallet signing was enabled.',
+        strategy,
+        paperSession: paperSessionResult.session,
+        riskProfile: riskProfileResult.profile,
+        connector: connectorResult.connector,
+        plan: planResult.plan,
+        schedule,
+        run,
+        verification: {
+          status: 'complete',
+          label: 'Paper trading verified for this strategy.',
+          checks: [
+            'Strategy saved',
+            'Safe paper session ready',
+            'Safe paper risk profile active',
+            'Local paper connector ready',
+            'Ready paper plan connected',
+            'Safe paper schedule active',
+            'Local paper simulation completed',
+            'Live trading disabled',
+            'Wallet signing disabled'
+          ],
+          autoRetry: 'All auto-fixable paper components were created or reused before this verification ran.'
+        },
+        results: summary
+      });
+    } catch (error) {
+      const id = error.safePaperFailureId || 'simulation_failed';
+      const status = id === 'market_data_missing' ? 400 : 500;
+
+      res.status(error.statusCode || status).json(buildSafePaperError(id, error.message, {
+        readiness: error.readiness,
+        session: error.session
+      }));
+    }
+  });
 
   app.get('/api/v1/bot-automation-capability-path', requireAuth, async (req, res) => {
     try {
