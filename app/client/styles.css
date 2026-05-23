@@ -4699,6 +4699,8 @@ footer {
 
 .live-launch-status-grid,
 .live-scan-controls,
+.live-sandbox-safety-grid,
+.live-sandbox-controls,
 .live-roadmap-phases,
 .live-approval-center,
 .live-candidate-list,
@@ -4713,6 +4715,7 @@ footer {
 }
 
 .live-launch-status-grid article,
+.live-sandbox-safety-grid article,
 .live-next-card,
 .live-phase-card,
 .live-approval-item,
@@ -4724,6 +4727,7 @@ footer {
 }
 
 .live-launch-status-grid article span,
+.live-sandbox-safety-grid article span,
 .live-phase-card span,
 .live-approval-item span,
 .live-candidate-card span,
@@ -4737,6 +4741,7 @@ footer {
 }
 
 .live-launch-status-grid article strong,
+.live-sandbox-safety-grid article strong,
 .live-next-card strong,
 .live-phase-card strong,
 .live-approval-item strong,
@@ -4747,6 +4752,7 @@ footer {
 }
 
 .live-launch-status-grid article small,
+.live-sandbox-safety-grid article small,
 .live-paper-sim-result small,
 .live-candidate-card p,
 .live-phase-card p {
@@ -4760,7 +4766,23 @@ footer {
     margin: 16px 0;
 }
 
-.live-scan-controls label {
+.live-sandbox-safety-grid {
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    margin: 18px 0;
+}
+
+.live-sandbox-controls {
+    align-items: end;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    margin: 16px 0;
+}
+
+.live-sandbox-vault {
+    margin: 14px 0;
+}
+
+.live-scan-controls label,
+.live-sandbox-controls label {
     color: var(--text-primary);
     font-weight: 800;
 }
@@ -4929,11 +4951,13 @@ footer {
 :root[data-theme="night"] .live-candidate-card,
 :root[data-theme="night"] .live-next-card,
 :root[data-theme="night"] .live-paper-sim-result,
+:root[data-theme="night"] .live-sandbox-safety-grid article,
 :root:not([data-theme="day"]) .live-phase-card,
 :root:not([data-theme="day"]) .live-approval-item,
 :root:not([data-theme="day"]) .live-candidate-card,
 :root:not([data-theme="day"]) .live-next-card,
-:root:not([data-theme="day"]) .live-paper-sim-result {
+:root:not([data-theme="day"]) .live-paper-sim-result,
+:root:not([data-theme="day"]) .live-sandbox-safety-grid article {
     background: var(--surface-muted) !important;
     border-color: var(--border) !important;
     color: var(--text-primary) !important;

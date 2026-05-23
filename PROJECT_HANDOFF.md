@@ -426,6 +426,57 @@ Keep `.aider*` ignored as it already is.
 
 ## Suggested Next Steps
 
+## Latest Phase 3B Update: Sandbox/Testnet Execution
+
+Phase 3B has been implemented as a sandbox/testnet execution layer while production live trading remains locked.
+
+New backend files and routes:
+
+- Added `app/server/src/lib/exchange-sandbox-execution.js`.
+- Added `GET /api/v1/live-trading-launch/phase3b/status`.
+- Added `POST /api/v1/live-trading-launch/phase3b/sandbox-test-trade`.
+- Added `POST /api/v1/exchange-connectors/:id/sandbox-credentials`.
+- Added `DELETE /api/v1/exchange-connectors/:id/sandbox-credentials`.
+- Added `POST /api/v1/live-trading-launch/phase3c/emergency-stop`.
+
+New database tables:
+
+- `sandbox_order_tests`
+- `sandbox_order_events`
+- `live_trading_safety_events`
+
+Supported Phase 3B adapters:
+
+- Binance Spot Testnet: complete adapter for place/status/cancel lifecycle.
+- OKX Demo Trading: complete adapter with `x-simulated-trading: 1`.
+- Bybit Testnet: complete adapter for place/status/cancel lifecycle.
+- Kraken: prepared/manual-docs-required; no general retail spot sandbox is treated as complete yet.
+- Coinbase: prepared/manual-docs-required; sandbox auth depends on owner account/API-key type.
+
+Operator UI:
+
+- `/live-trading-launch` now includes `Phase 3B: Sandbox/Testnet Execution`.
+- Simple action: `Run Sandbox Test Trade`.
+- Optional vault panel: `Save Sandbox/Testnet API Key`.
+- Phase 3C preparation: tiny-live-test checklist, emergency stop, audit log, rollback/disable-live-connectors action.
+
+Safety state:
+
+- Production live trading is still locked.
+- Wallet signing is still disabled.
+- Withdrawals are still disabled.
+- No production order endpoint is exposed.
+- Sandbox credentials are stored only in `~/EtherealAI_Secrets/exchange-sandbox-vault.json`.
+- If sandbox safety checks fail, no exchange order endpoint is called.
+
+Verification completed:
+
+- `npm test` passed.
+- `git diff --check` passed.
+- Browser verification passed at `http://127.0.0.1:3000/live-trading-launch?v=phase3b`.
+- Browser verified that `Run Sandbox Test Trade` rejects safely without sandbox credentials and explains the missing key.
+- Screenshot saved at `/Users/ethereal/Desktop/EtherealAI_Phase3B_Sandbox_Test_Check.png`.
+
 1. In VS Code, use `File > Save All`.
 2. Do not close VS Code until all tabs are saved.
 3. Restart Continue or VS Code so the updated `~/.continue/config.yaml` model roles load.

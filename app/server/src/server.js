@@ -196,6 +196,26 @@ const {
   buildPhase3Status
 } = require('./lib/exchange-live-safety');
 const {
+  SANDBOX_ORDER_LIFECYCLE_STATUSES,
+  SANDBOX_ORDER_TYPES,
+  SANDBOX_EXCHANGE_ADAPTERS,
+  DEFAULT_SANDBOX_POLICY,
+  getSandboxAdapter,
+  getSandboxReferenceName,
+  sanitizeSandboxCredentialInput,
+  sanitizeSandboxPermissionsChecklist,
+  saveSandboxVaultCredentials,
+  loadSandboxVaultCredentials,
+  deleteSandboxVaultCredentials,
+  getSandboxVaultStatus,
+  normalizeSandboxOrderDraft,
+  evaluateSandboxOrderSafety,
+  runSandboxOrderLifecycle,
+  buildPhase3BSandboxStatus,
+  buildPhase3CPreparation,
+  createPlainEnglishSandboxError
+} = require('./lib/exchange-sandbox-execution');
+const {
   parseSocialPost,
   reviewSocialContent
 } = require('./lib/social-ops');
@@ -819,6 +839,24 @@ registerEtherealRoutes(app, {
   buildPhase3AReadiness,
   buildPhase3BPreparationPlan,
   buildPhase3Status,
+  sandboxOrderLifecycleStatuses: SANDBOX_ORDER_LIFECYCLE_STATUSES,
+  sandboxOrderTypes: SANDBOX_ORDER_TYPES,
+  sandboxExchangeAdapters: SANDBOX_EXCHANGE_ADAPTERS,
+  defaultSandboxPolicy: DEFAULT_SANDBOX_POLICY,
+  getSandboxAdapter,
+  getSandboxReferenceName,
+  sanitizeSandboxCredentialInput,
+  sanitizeSandboxPermissionsChecklist,
+  saveSandboxVaultCredentials,
+  loadSandboxVaultCredentials,
+  deleteSandboxVaultCredentials,
+  getSandboxVaultStatus,
+  normalizeSandboxOrderDraft,
+  evaluateSandboxOrderSafety,
+  runSandboxOrderLifecycle,
+  buildPhase3BSandboxStatus,
+  buildPhase3CPreparation,
+  createPlainEnglishSandboxError,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,

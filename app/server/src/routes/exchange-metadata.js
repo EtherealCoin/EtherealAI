@@ -55,6 +55,24 @@ function registerExchangeMetadataRoutes(app, {
   buildPhase3AReadiness,
   buildPhase3BPreparationPlan,
   buildPhase3Status,
+  sandboxOrderLifecycleStatuses,
+  sandboxOrderTypes,
+  sandboxExchangeAdapters,
+  defaultSandboxPolicy,
+  getSandboxAdapter,
+  getSandboxReferenceName,
+  sanitizeSandboxCredentialInput,
+  sanitizeSandboxPermissionsChecklist,
+  saveSandboxVaultCredentials,
+  loadSandboxVaultCredentials,
+  deleteSandboxVaultCredentials,
+  getSandboxVaultStatus,
+  normalizeSandboxOrderDraft,
+  evaluateSandboxOrderSafety,
+  runSandboxOrderLifecycle,
+  buildPhase3BSandboxStatus,
+  buildPhase3CPreparation,
+  createPlainEnglishSandboxError,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,
@@ -101,6 +119,62 @@ function registerExchangeMetadataRoutes(app, {
         browserLocalStorageUsed: false,
         ...updates
       }
+    };
+  }
+
+  function mergeSandboxConnectionSettings(connector, updates = {}) {
+    const currentSettings = connector?.settings && typeof connector.settings === 'object'
+      ? connector.settings
+      : {};
+    const currentConnection = currentSettings.sandboxConnection && typeof currentSettings.sandboxConnection === 'object'
+      ? currentSettings.sandboxConnection
+      : {};
+
+    return {
+      ...currentSettings,
+      sandboxConnection: {
+        ...currentConnection,
+        sandboxOnly: true,
+        liveTradingEnabled: false,
+        withdrawalsEnabled: false,
+        walletSigningEnabled: false,
+        productionOrderEndpointEnabled: false,
+        valuesDisplayed: false,
+        browserLocalStorageUsed: false,
+        ...updates
+      }
+    };
+  }
+
+  function parseSandboxOrderTest(row) {
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      user_id: row.user_id,
+      connector_id: row.connector_id,
+      risk_profile_id: row.risk_profile_id,
+      exchange_name: row.exchange_name,
+      symbol: row.symbol,
+      side: row.side,
+      order_type: row.order_type,
+      quantity: row.quantity,
+      limit_price: row.limit_price,
+      notional_usd: row.notional_usd,
+      client_order_id: row.client_order_id,
+      exchange_order_id: row.exchange_order_id,
+      status: row.status,
+      safety: JSON.parse(row.safety_json || '{}'),
+      request: JSON.parse(row.request_json || '{}'),
+      result: JSON.parse(row.result_json || '{}'),
+      live_trading_enabled: Boolean(row.live_trading_enabled),
+      wallet_signing_enabled: Boolean(row.wallet_signing_enabled),
+      withdrawals_enabled: Boolean(row.withdrawals_enabled),
+      production_order_endpoint_enabled: Boolean(row.production_order_endpoint_enabled),
+      created_at: row.created_at,
+      updated_at: row.updated_at
     };
   }
 
@@ -179,6 +253,25 @@ function registerExchangeMetadataRoutes(app, {
     return loadReadOnlyVaultCredentials(referenceName);
   }
 
+  async function loadConnectorSandboxCredentialsForUser(connector, userId) {
+    const referenceName = connector.settings?.sandboxConnection?.referenceName || null;
+
+    if (!referenceName) {
+      return null;
+    }
+
+    const reference = await dbGet(
+      'SELECT * FROM local_secret_references WHERE user_id = ? AND reference_name = ? AND status = ?',
+      [userId, referenceName, 'configured']
+    );
+
+    if (!reference) {
+      return null;
+    }
+
+    return loadSandboxVaultCredentials(referenceName);
+  }
+
   async function getActiveLiveReadinessRiskProfile() {
     return dbGet(
       `SELECT *
@@ -187,6 +280,80 @@ function registerExchangeMetadataRoutes(app, {
          AND kill_switch_enabled = 0
        ORDER BY updated_at DESC, id DESC
        LIMIT 1`
+    );
+  }
+
+  async function getLatestSandboxOrderTests(userId, limit = 10) {
+    const rows = await dbAll(
+      `SELECT *
+       FROM sandbox_order_tests
+       WHERE user_id = ?
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`,
+      [userId, limit]
+    );
+
+    return rows.map(parseSandboxOrderTest);
+  }
+
+  async function findOrCreateSandboxConnector({ exchangeName }) {
+    const exchangeId = normalizeExchangeId(exchangeName);
+    const rows = await dbAll(
+      `${exchangeConnectorSelect}
+       ORDER BY exchange_connectors.created_at DESC
+       LIMIT 500`
+    );
+    const existing = rows.map(parseExchangeConnector).find(connector => (
+      normalizeExchangeId(connector.settings?.registryId || connector.exchange_name) === exchangeId
+    ));
+
+    if (existing) {
+      return existing;
+    }
+
+    const entry = getExchangeConnectorRegistryEntry(exchangeId);
+
+    if (!entry) {
+      return null;
+    }
+
+    const placeholder = createExchangeConnectorPlaceholderInput(entry, {
+      mode: 'sandbox',
+      status: 'disabled'
+    });
+    const result = await dbRun(
+      `INSERT INTO exchange_connectors
+       (exchange_name, label, mode, status, settings_json, secret_storage_note)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        placeholder.exchangeName,
+        placeholder.label,
+        'sandbox',
+        'disabled',
+        JSON.stringify({
+          ...(placeholder.settings || {}),
+          sandboxConnection: {
+            sandboxOnly: true,
+            connectionStatus: 'not_connected',
+            liveTradingEnabled: false,
+            withdrawalsEnabled: false,
+            walletSigningEnabled: false,
+            productionOrderEndpointEnabled: false
+          }
+        }),
+        'No credential values stored in SQLite.'
+      ]
+    );
+
+    return parseExchangeConnector(await getExchangeConnectorRow(result.lastID));
+  }
+
+  async function recordSandboxOrderEvent({ testId, userId, status, summary, payload = {} }) {
+    await dbRun(
+      `INSERT INTO sandbox_order_events
+       (sandbox_order_test_id, user_id, status, summary, payload_json)
+       VALUES (?, ?, ?, ?, ?)`,
+      [testId || null, userId, status, summary, JSON.stringify(payload || {})]
     );
   }
 
@@ -501,6 +668,35 @@ function registerExchangeMetadataRoutes(app, {
     }
   });
 
+  app.get('/api/v1/live-trading-launch/phase3b/status', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const [vaultStatus, latestTests] = await Promise.all([
+        getSandboxVaultStatus(),
+        getLatestSandboxOrderTests(req.session.userId, 10)
+      ]);
+      const phase3B = buildPhase3BSandboxStatus({ connectors, vaultStatus, latestTests });
+      const phase3C = buildPhase3CPreparation({ latestSandboxTests: latestTests });
+
+      res.json({
+        phase3B,
+        phase3C,
+        adapters: Object.values(sandboxExchangeAdapters || {}),
+        orderLifecycleStatuses: sandboxOrderLifecycleStatuses || [],
+        sandboxOrderTypes: sandboxOrderTypes || [],
+        latestTests,
+        safetyBoundary: phase3B.safetyBoundary
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post('/api/v1/live-trading-launch/phase3a/readiness', requireAuth, async (req, res) => {
     try {
       const symbol = req.body?.symbol || 'BTC/USDT';
@@ -538,6 +734,472 @@ function registerExchangeMetadataRoutes(app, {
           ? createPlainEnglishExchangeError('Phase 3A authenticated account readiness', error)
           : error.message
       });
+    }
+  });
+
+  app.post('/api/v1/exchange-connectors/:id/sandbox-credentials', requireAuth, async (req, res) => {
+    try {
+      const connector = parseExchangeConnector(await getExchangeConnectorRow(req.params.id));
+
+      if (!connector) {
+        return res.status(404).json({ error: 'Exchange connector not found' });
+      }
+
+      const exchangeId = normalizeExchangeId(connector.settings?.registryId || connector.exchange_name);
+      const adapter = getSandboxAdapter(exchangeId);
+
+      if (!adapter || adapter.adapterStatus !== 'complete') {
+        return res.status(400).json({
+          error: `${adapter?.displayName || connector.label} sandbox/testnet execution is not complete yet. Use Binance, OKX, or Bybit first.`,
+          liveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          productionOrderEndpointEnabled: false
+        });
+      }
+
+      const permissions = sanitizeSandboxPermissionsChecklist(req.body?.permissionsChecklist || {});
+
+      if (permissions.missing.length) {
+        return res.status(400).json({
+          error: 'Complete the sandbox/testnet safety checklist before saving this key.',
+          missing: permissions.missing,
+          nextClick: 'Check every sandbox safety box, then click Save Sandbox Key.',
+          liveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          productionOrderEndpointEnabled: false
+        });
+      }
+
+      const credentials = sanitizeSandboxCredentialInput(req.body?.credentials || req.body || {}, adapter);
+      const referenceName = getSandboxReferenceName({
+        userId: req.session.userId,
+        connectorId: connector.id,
+        exchangeName: exchangeId
+      });
+      const reference = await upsertReadOnlyLocalReference({
+        userId: req.session.userId,
+        existingReferenceId: null,
+        label: `${adapter.displayName} Sandbox/Testnet API Vault`,
+        referenceName,
+        notes: 'Encrypted local sandbox/testnet vault reference only. Production/live keys are not accepted for this workflow.'
+      });
+      const saved = await saveSandboxVaultCredentials({
+        referenceName,
+        connector,
+        exchangeName: exchangeId,
+        credentials,
+        permissionsChecklist: permissions.checklist
+      });
+      const previousConnection = connector.settings?.sandboxConnection || {};
+      const settings = mergeSandboxConnectionSettings(connector, {
+        referenceName,
+        localReferenceId: reference.id,
+        connectionStatus: 'sandbox_key_saved',
+        plainEnglishStatus: 'Sandbox/testnet key saved locally. You can now run a sandbox test trade. Production live trading remains locked.',
+        lastCredentialRotationAt: saved.rotatedAt,
+        rotationNumber: Number(previousConnection.rotationNumber || 0) + 1,
+        permissionsChecklist: permissions.checklist,
+        apiKeyFingerprint: saved.apiKeyFingerprint,
+        adapterStatus: adapter.adapterStatus,
+        sandboxMode: adapter.sandboxMode
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET mode = ?, status = ?, settings_json = ?, secret_storage_note = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          'sandbox',
+          'configured',
+          JSON.stringify(settings),
+          'Sandbox/testnet credential values are encrypted in the local owner vault. SQLite stores only a local reference.',
+          connector.id
+        ]
+      );
+
+      res.status(201).json({
+        connector: parseExchangeConnector(await getExchangeConnectorRow(connector.id)),
+        reference,
+        vault: {
+          stored: true,
+          referenceName: saved.referenceName,
+          apiKeyFingerprint: saved.apiKeyFingerprint,
+          hasExtraPhrase: saved.hasExtraPhrase,
+          rotatedAt: saved.rotatedAt,
+          secretValuesReturned: false
+        },
+        nextClick: 'Click Run Sandbox Test Trade.',
+        safetyBoundary: {
+          sandboxOnly: true,
+          liveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          productionOrderEndpointEnabled: false,
+          privateValuesReturnedToUi: false
+        }
+      });
+    } catch (error) {
+      res.status(error.statusCode || 500).json({
+        error: createPlainEnglishSandboxError
+          ? createPlainEnglishSandboxError(req.body?.exchangeName || 'sandbox exchange', error)
+          : error.message
+      });
+    }
+  });
+
+  app.delete('/api/v1/exchange-connectors/:id/sandbox-credentials', requireAuth, async (req, res) => {
+    try {
+      const connector = parseExchangeConnector(await getExchangeConnectorRow(req.params.id));
+
+      if (!connector) {
+        return res.status(404).json({ error: 'Exchange connector not found' });
+      }
+
+      const referenceName = connector.settings?.sandboxConnection?.referenceName || null;
+      const deletion = referenceName
+        ? await deleteSandboxVaultCredentials(referenceName)
+        : { deleted: false, referenceName: null };
+
+      if (referenceName) {
+        await dbRun(
+          `UPDATE local_secret_references
+           SET status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = ? AND reference_name = ?`,
+          [
+            'disabled',
+            'Sandbox/testnet exchange API vault entry was deleted by owner action.',
+            req.session.userId,
+            referenceName
+          ]
+        );
+      }
+
+      const settings = mergeSandboxConnectionSettings(connector, {
+        referenceName: null,
+        localReferenceId: null,
+        connectionStatus: 'not_connected',
+        plainEnglishStatus: 'Sandbox/testnet key deleted. Production live trading is still locked.',
+        lastDeletedAt: new Date().toISOString(),
+        apiKeyFingerprint: null,
+        permissionsChecklist: null
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET settings_json = ?, secret_storage_note = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          JSON.stringify(settings),
+          'No credential values stored in SQLite.',
+          connector.id
+        ]
+      );
+
+      res.json({
+        deleted: deletion.deleted,
+        connector: parseExchangeConnector(await getExchangeConnectorRow(connector.id)),
+        nextClick: 'Save a new sandbox/testnet key later if needed.',
+        safetyBoundary: {
+          liveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          productionOrderEndpointEnabled: false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase3b/sandbox-test-trade', requireAuth, async (req, res) => {
+    let testId = null;
+
+    try {
+      const order = normalizeSandboxOrderDraft(req.body?.order || req.body || {});
+      const adapter = getSandboxAdapter(order.exchangeName);
+      const connector = await findOrCreateSandboxConnector({ exchangeName: order.exchangeName });
+      const [riskProfile, credentials, recentTests] = await Promise.all([
+        getActiveLiveReadinessRiskProfile(),
+        connector ? loadConnectorSandboxCredentialsForUser(connector, req.session.userId) : Promise.resolve(null),
+        getLatestSandboxOrderTests(req.session.userId, 20)
+      ]);
+      const marketContext = {
+        liquidityUsd: 1000000,
+        slippagePercent: 0.05,
+        priceTimestamp: new Date().toISOString(),
+        ...(req.body?.marketContext || {})
+      };
+      const recentOrderFingerprints = recentTests
+        .map(test => test.safety?.orderFingerprint || test.request?.orderFingerprint)
+        .filter(Boolean);
+      const safety = evaluateSandboxOrderSafety({
+        order,
+        adapter,
+        connector,
+        credentials,
+        riskProfile,
+        marketContext,
+        recentOrderFingerprints,
+        policy: {
+          ...(defaultSandboxPolicy || {}),
+          ...(req.body?.policy || {})
+        }
+      });
+      const insert = await dbRun(
+        `INSERT INTO sandbox_order_tests
+         (user_id, connector_id, risk_profile_id, exchange_name, symbol, side, order_type, quantity,
+          limit_price, notional_usd, client_order_id, status, safety_json, request_json,
+          live_trading_enabled, wallet_signing_enabled, withdrawals_enabled, production_order_endpoint_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          connector?.id || null,
+          riskProfile?.id || null,
+          order.exchangeName,
+          order.symbol,
+          order.side,
+          order.orderType,
+          order.quantity,
+          order.limitPrice || null,
+          order.notionalUsd || 0,
+          order.clientOrderId,
+          'created',
+          JSON.stringify(safety),
+          JSON.stringify({ order, marketContext, orderFingerprint: safety.orderFingerprint }),
+          0,
+          0,
+          0,
+          0
+        ]
+      );
+      testId = insert.lastID;
+
+      await recordSandboxOrderEvent({
+        testId,
+        userId: req.session.userId,
+        status: 'created',
+        summary: 'Sandbox order test created locally. Production live trading is locked.',
+        payload: { order, safetyBoundary: safety.safetyBoundary }
+      });
+
+      if (!safety.passed) {
+        const resultScreen = {
+          exchange: adapter?.displayName || order.displayName,
+          symbol: order.symbol,
+          orderType: order.orderType,
+          sandboxAmount: order.notionalUsd || order.quantity,
+          entryPrice: order.limitPrice || null,
+          fillStatus: 'rejected',
+          fees: 0,
+          rejectionReason: safety.checks.find(check => !check.passed)?.note || 'Sandbox safety check failed.'
+        };
+
+        await dbRun(
+          `UPDATE sandbox_order_tests
+           SET status = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND user_id = ?`,
+          [
+            'rejected',
+            JSON.stringify({ resultScreen, safetyBoundary: safety.safetyBoundary }),
+            testId,
+            req.session.userId
+          ]
+        );
+        await recordSandboxOrderEvent({
+          testId,
+          userId: req.session.userId,
+          status: 'rejected',
+          summary: 'Sandbox safety checks blocked the order. No exchange order endpoint was called.',
+          payload: { resultScreen, failedChecks: safety.checks.filter(check => !check.passed) }
+        });
+
+        return res.status(409).json({
+          test: parseSandboxOrderTest(await dbGet('SELECT * FROM sandbox_order_tests WHERE id = ? AND user_id = ?', [testId, req.session.userId])),
+          resultScreen,
+          safety,
+          nextClick: safety.checks.find(check => !check.passed)?.nextAction || 'Fix the blocked safety check, then retry.',
+          safetyBoundary: safety.safetyBoundary
+        });
+      }
+
+      await recordSandboxOrderEvent({
+        testId,
+        userId: req.session.userId,
+        status: 'submitted',
+        summary: `${adapter.displayName} sandbox/testnet adapter is submitting the test order.`,
+        payload: { orderType: order.orderType, exchangeName: order.exchangeName }
+      });
+      await dbRun(
+        `UPDATE sandbox_order_tests
+         SET status = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        ['submitted', testId, req.session.userId]
+      );
+
+      const lifecycle = await runSandboxOrderLifecycle({ order, credentials, adapter });
+
+      await dbRun(
+        `UPDATE sandbox_order_tests
+         SET status = ?, exchange_order_id = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        [
+          lifecycle.status,
+          lifecycle.exchangeOrderId || null,
+          JSON.stringify(lifecycle),
+          testId,
+          req.session.userId
+        ]
+      );
+      await recordSandboxOrderEvent({
+        testId,
+        userId: req.session.userId,
+        status: lifecycle.status,
+        summary: `Sandbox/testnet order lifecycle finished with status ${lifecycle.status}.`,
+        payload: {
+          exchangeOrderId: lifecycle.exchangeOrderId,
+          resultScreen: lifecycle.resultScreen,
+          safetyBoundary: lifecycle.safetyBoundary
+        }
+      });
+
+      res.json({
+        test: parseSandboxOrderTest(await dbGet('SELECT * FROM sandbox_order_tests WHERE id = ? AND user_id = ?', [testId, req.session.userId])),
+        resultScreen: lifecycle.resultScreen,
+        lifecycle,
+        safety,
+        nextClick: 'Review the sandbox result, then repeat with a small test case if needed.',
+        safetyBoundary: lifecycle.safetyBoundary
+      });
+    } catch (error) {
+      const exchangeName = req.body?.order?.exchangeName || req.body?.exchangeName || 'sandbox exchange';
+      const message = createPlainEnglishSandboxError
+        ? createPlainEnglishSandboxError(exchangeName, error)
+        : error.message;
+
+      if (testId) {
+        await dbRun(
+          `UPDATE sandbox_order_tests
+           SET status = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND user_id = ?`,
+          [
+            'rejected',
+            JSON.stringify({
+              resultScreen: {
+                exchange: exchangeName,
+                fillStatus: 'rejected',
+                rejectionReason: message
+              },
+              rawError: error?.body || null,
+              safetyBoundary: {
+                sandboxOnly: true,
+                liveTradingEnabled: false,
+                walletSigningEnabled: false,
+                withdrawalsEnabled: false,
+                productionOrderEndpointEnabled: false
+              }
+            }),
+            testId,
+            req.session.userId
+          ]
+        );
+        await recordSandboxOrderEvent({
+          testId,
+          userId: req.session.userId,
+          status: 'rejected',
+          summary: message,
+          payload: { rawError: error?.body || null }
+        });
+      }
+
+      res.status(500).json({
+        error: message,
+        test: testId
+          ? parseSandboxOrderTest(await dbGet('SELECT * FROM sandbox_order_tests WHERE id = ? AND user_id = ?', [testId, req.session.userId]))
+          : null,
+        safetyBoundary: {
+          sandboxOnly: true,
+          liveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          productionOrderEndpointEnabled: false
+        }
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase3c/emergency-stop', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      let disabledCount = 0;
+
+      for (const connector of connectors) {
+        const settings = {
+          ...(connector.settings || {}),
+          liveConnection: {
+            ...(connector.settings?.liveConnection || {}),
+            liveTradingEnabled: false,
+            orderEndpointEnabled: false,
+            disabledByEmergencyStopAt: new Date().toISOString()
+          },
+          sandboxConnection: {
+            ...(connector.settings?.sandboxConnection || {}),
+            productionOrderEndpointEnabled: false,
+            liveTradingEnabled: false,
+            walletSigningEnabled: false,
+            withdrawalsEnabled: false
+          }
+        };
+        const nextMode = String(connector.mode || '').includes('live') ? 'read_only' : connector.mode;
+        const nextStatus = String(connector.mode || '').includes('live') ? 'disabled' : connector.status;
+
+        await dbRun(
+          `UPDATE exchange_connectors
+           SET mode = ?, status = ?, settings_json = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          [nextMode, nextStatus, JSON.stringify(settings), connector.id]
+        );
+        disabledCount += String(connector.mode || '').includes('live') ? 1 : 0;
+      }
+
+      await dbRun(
+        `INSERT INTO live_trading_safety_events
+         (user_id, event_type, status, summary, payload_json)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          'emergency_stop_disable_live_connectors',
+          'complete',
+          'Emergency stop reviewed all connectors and disabled any future live execution flags.',
+          JSON.stringify({
+            disabledCount,
+            liveTradingEnabled: false,
+            walletSigningEnabled: false,
+            withdrawalsEnabled: false,
+            productionOrderEndpointEnabled: false
+          })
+        ]
+      );
+
+      res.json({
+        status: 'complete',
+        disabledCount,
+        summary: 'Emergency stop complete. Any live connector flags are disabled. This action did not enable trading.',
+        safetyBoundary: {
+          liveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          productionOrderEndpointEnabled: false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   });
 

@@ -160,9 +160,105 @@
         </section>
 
         <section class="model-panel">
-            <h2>Phase 3B: Prepared But Locked</h2>
-            <p class="inline-status">This is the next implementation stage: sandbox/testnet order placement, cancel, order status tracking, partial-fill handling, reconciliation, duplicate-order prevention, and kill switch enforcement. It is planned only; sandbox and live orders are not enabled.</p>
-            <div id="phase3b-plan" class="phase3-results">Phase 3B plan will appear after Phase 3A readiness is scanned.</div>
+            <h2>Phase 3B: Sandbox/Testnet Execution</h2>
+            <p class="inline-status">Run a sandbox/testnet order lifecycle before any future real-money trading. This can create, track, cancel, and reconcile sandbox orders only. Real live trading, withdrawals, and wallet signing remain locked.</p>
+            <div class="live-sandbox-safety-grid">
+                <article class="status-success">
+                    <span>Sandbox/Testnet</span>
+                    <strong>Allowed</strong>
+                    <small>Only after safety checks pass.</small>
+                </article>
+                <article class="status-warning">
+                    <span>Production Live Orders</span>
+                    <strong>Locked</strong>
+                    <small>No production order endpoint is exposed.</small>
+                </article>
+                <article class="status-success">
+                    <span>Withdrawals</span>
+                    <strong>Disabled</strong>
+                    <small>Required before every test.</small>
+                </article>
+                <article class="status-success">
+                    <span>Wallet Signing</span>
+                    <strong>Disabled</strong>
+                    <small>No seed phrase or private key is used.</small>
+                </article>
+            </div>
+            <div class="live-sandbox-controls">
+                <label for="phase3b-exchange">
+                    Exchange
+                    <select id="phase3b-exchange">
+                        <option value="binance">Binance Spot Testnet</option>
+                        <option value="okx">OKX Demo Trading</option>
+                        <option value="bybit">Bybit Testnet</option>
+                        <option value="kraken">Kraken validate-only prepared</option>
+                        <option value="coinbase">Coinbase sandbox prepared</option>
+                    </select>
+                </label>
+                <label for="phase3b-symbol">
+                    Market
+                    <input id="phase3b-symbol" type="text" value="BTC/USDT">
+                </label>
+                <label for="phase3b-side">
+                    Side
+                    <select id="phase3b-side">
+                        <option value="buy">Buy</option>
+                        <option value="sell">Sell</option>
+                    </select>
+                </label>
+                <label for="phase3b-order-type">
+                    Order type
+                    <select id="phase3b-order-type">
+                        <option value="limit">Limit</option>
+                        <option value="post_only">Post-only</option>
+                        <option value="ioc">IOC</option>
+                        <option value="market">Market</option>
+                    </select>
+                </label>
+                <label for="phase3b-quantity">
+                    Sandbox quantity
+                    <input id="phase3b-quantity" type="number" value="0.1" min="0" step="0.0001">
+                </label>
+                <label for="phase3b-limit-price">
+                    Limit price
+                    <input id="phase3b-limit-price" type="number" value="100" min="0" step="0.01">
+                </label>
+            </div>
+            <div class="button-row">
+                <button id="run-sandbox-test-trade" type="button">Run Sandbox Test Trade</button>
+                <button id="refresh-phase3b-status" type="button">Refresh Sandbox Status</button>
+                <button id="phase3c-emergency-stop" type="button" class="secondary-button">Emergency Stop / Disable Live Connectors</button>
+            </div>
+            <details class="compact-details live-sandbox-vault">
+                <summary>Save Sandbox/Testnet API Key</summary>
+                <p class="inline-status">Use only a sandbox/testnet API key. Do not paste a production live key here. Secret values are saved to the local encrypted vault and are never displayed again.</p>
+                <div class="live-sandbox-controls">
+                    <label for="phase3b-api-key">
+                        Sandbox API key
+                        <input id="phase3b-api-key" type="password" autocomplete="off">
+                    </label>
+                    <label for="phase3b-api-secret">
+                        Sandbox API secret
+                        <input id="phase3b-api-secret" type="password" autocomplete="off">
+                    </label>
+                    <label for="phase3b-passphrase">
+                        Passphrase if exchange requires it
+                        <input id="phase3b-passphrase" type="password" autocomplete="off">
+                    </label>
+                </div>
+                <div class="phase3a-checklist">
+                    <label class="checkbox-line"><input id="phase3b-check-sandbox-key" type="checkbox"> This is a sandbox/testnet key.</label>
+                    <label class="checkbox-line"><input id="phase3b-check-not-production" type="checkbox"> This is not a production/live key.</label>
+                    <label class="checkbox-line"><input id="phase3b-check-sandbox-only" type="checkbox"> Order permission is sandbox/testnet only.</label>
+                    <label class="checkbox-line"><input id="phase3b-check-withdrawals" type="checkbox"> Withdrawals are disabled.</label>
+                    <label class="checkbox-line"><input id="phase3b-check-no-live" type="checkbox"> I understand this does not enable live trading.</label>
+                </div>
+                <button id="save-sandbox-key" type="button">Save Sandbox Key To Local Vault</button>
+                <div id="phase3b-vault-result" class="phase3-results">No sandbox key saved from this page yet.</div>
+            </details>
+            <div id="phase3b-plan" class="phase3-results">Loading Phase 3B sandbox status...</div>
+            <div id="phase3b-result" class="phase3-results">No sandbox test trade has run yet.</div>
+            <div id="phase3c-prep" class="phase3-results">Phase 3C preparation checklist will appear here.</div>
         </section>
 
         <section class="model-panel">
@@ -191,6 +287,7 @@
         let latestAccountAware = null;
         let latestPhase3A = null;
         let latestPhase3B = null;
+        let latestPhase3C = null;
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -396,7 +493,37 @@
 
         function renderPhase3BPlan(phase3B) {
             latestPhase3B = phase3B;
-            document.getElementById('phase3b-plan').innerHTML = `
+            const adapters = phase3B?.supportedExchanges || [];
+
+            document.getElementById('phase3b-plan').innerHTML = adapters.length ? `
+                <article class="phase3-account-card status-info">
+                    <div>
+                        <span>${escapeHtml(phase3B?.status || 'sandbox_ready_locked_from_live')}</span>
+                        <strong>${escapeHtml(phase3B?.title || 'Phase 3B: Sandbox/Testnet Execution')}</strong>
+                    </div>
+                    <p>${escapeHtml(phase3B?.plainEnglishStatus || 'Sandbox/testnet order lifecycle testing is available for supported adapters. Live trading remains locked.')}</p>
+                    <div class="phase3a-exchange-grid">
+                        ${adapters.map(adapter => `
+                            <article class="phase3-account-card ${adapter.adapterStatus === 'complete' ? 'status-success' : 'status-warning'}">
+                                <div>
+                                    <span>${escapeHtml(adapter.simpleStatus || adapter.adapterStatus)}</span>
+                                    <strong>${escapeHtml(adapter.displayName)}</strong>
+                                </div>
+                                <p>${escapeHtml(adapter.notes || '')}</p>
+                                <div class="live-candidate-metrics">
+                                    <span>Mode: ${escapeHtml(adapter.sandboxMode)}</span>
+                                    <span>Connector: ${adapter.connectorExists ? 'ready' : 'created on first run'}</span>
+                                    <span>Key: ${adapter.sandboxCredentialsSaved ? 'saved' : 'not saved'}</span>
+                                    <span>Cancel: ${adapter.supportsCancel ? 'yes' : 'not yet'}</span>
+                                    <span>Status: ${adapter.supportsOrderStatus ? 'yes' : 'not yet'}</span>
+                                    <span>Live: locked</span>
+                                </div>
+                            </article>
+                        `).join('')}
+                    </div>
+                    <p class="workflow-helper-text"><b>Next:</b> ${escapeHtml(phase3B?.nextRecommendedAction || 'Choose Binance, OKX, or Bybit and run a sandbox test trade.')}</p>
+                </article>
+            ` : `
                 <article class="phase3-account-card status-warning">
                     <div>
                         <span>${escapeHtml(phase3B?.status || 'prepared_locked')}</span>
@@ -413,6 +540,77 @@
                     </div>
                     <p><b>Blocked until:</b> ${escapeHtml((phase3B?.blockedUntil || []).join(' '))}</p>
                     <p>Order endpoint implemented: ${phase3B?.orderEndpointImplemented ? 'yes' : 'no'} · Sandbox orders enabled: ${phase3B?.sandboxOrdersEnabled ? 'yes' : 'no'} · Tiny live orders enabled: ${phase3B?.tinyLiveOrdersEnabled ? 'yes' : 'no'}</p>
+                </article>
+            `;
+        }
+
+        function renderPhase3CPrep(phase3C) {
+            latestPhase3C = phase3C;
+            document.getElementById('phase3c-prep').innerHTML = `
+                <article class="phase3-account-card status-warning">
+                    <div>
+                        <span>${escapeHtml(phase3C?.status || 'locked_future_approval_required')}</span>
+                        <strong>${escapeHtml(phase3C?.title || 'Phase 3C: Tiny Live Test Preparation')}</strong>
+                    </div>
+                    <p>${escapeHtml(phase3C?.plainEnglishStatus || 'Tiny live test mode is still locked.')}</p>
+                    <div class="phase3a-checklist">
+                        ${(phase3C?.checklist || []).map(item => `
+                            <article class="${item.status === 'complete' ? 'status-success' : item.status === 'available_safety_action' ? 'status-info' : 'status-warning'}">
+                                <strong>${escapeHtml(item.label)}</strong>
+                                <span>${escapeHtml(item.note || item.status)}</span>
+                            </article>
+                        `).join('')}
+                    </div>
+                </article>
+            `;
+        }
+
+        function renderSandboxResult(data, fallbackStatus = '') {
+            const result = data?.resultScreen || data?.test?.result?.resultScreen || {};
+            const safety = data?.safety || data?.test?.safety || {};
+            const checks = safety.checks || [];
+            const status = result.fillStatus || data?.test?.status || fallbackStatus || 'review';
+
+            document.getElementById('phase3b-result').innerHTML = `
+                <article class="phase3-account-card ${status === 'rejected' ? 'status-warning' : 'status-success'}">
+                    <div>
+                        <span>${escapeHtml(status)}</span>
+                        <strong>Sandbox Test Trade Result</strong>
+                    </div>
+                    <div class="read-only-spread-summary">
+                        <article>
+                            <span>Exchange</span>
+                            <strong>${escapeHtml(result.exchange || data?.test?.exchange_name || 'N/A')}</strong>
+                            <small>${escapeHtml(data?.test?.symbol || result.symbol || '')}</small>
+                        </article>
+                        <article>
+                            <span>Order Type</span>
+                            <strong>${escapeHtml(result.orderType || data?.test?.order_type || 'N/A')}</strong>
+                            <small>${escapeHtml(data?.test?.side || '')}</small>
+                        </article>
+                        <article>
+                            <span>Amount</span>
+                            <strong>${escapeHtml(result.sandboxAmount ?? data?.test?.notional_usd ?? 'N/A')}</strong>
+                            <small>Sandbox/testnet only</small>
+                        </article>
+                        <article>
+                            <span>Entry Price</span>
+                            <strong>${escapeHtml(result.entryPrice ?? data?.test?.limit_price ?? 'N/A')}</strong>
+                            <small>Fees: ${escapeHtml(result.fees ?? 0)}</small>
+                        </article>
+                    </div>
+                    ${result.rejectionReason ? `<p><b>Why it stopped:</b> ${escapeHtml(result.rejectionReason)}</p>` : '<p>Sandbox lifecycle completed. Review the audit trail before moving further.</p>'}
+                    ${checks.length ? `
+                        <div class="phase3a-checklist">
+                            ${checks.map(check => `
+                                <article class="${check.passed ? 'status-success' : 'status-warning'}">
+                                    <strong>${check.passed ? 'Complete' : 'Fix'} · ${escapeHtml(check.label)}</strong>
+                                    <span>${escapeHtml(check.note || check.nextAction || '')}</span>
+                                </article>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    <p class="workflow-helper-text">Live trading remains locked. Wallet signing remains disabled. Withdrawals remain disabled.</p>
                 </article>
             `;
         }
@@ -479,7 +677,7 @@
                 </article>
             `).join('');
 
-            if (phase3B) {
+            if (phase3B?.supportedExchanges) {
                 renderPhase3BPlan(phase3B);
             }
         }
@@ -549,6 +747,153 @@
             renderPhase3AReadiness(data.phase3A, data.phase3B);
             renderAccountScan(data.accountScan);
             renderPhase3Status(data.phase3);
+        }
+
+        async function loadPhase3BStatus() {
+            const response = await fetch('/api/v1/live-trading-launch/phase3b/status');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase3b-plan').textContent = data.error || 'Unable to load Phase 3B sandbox status.';
+                return null;
+            }
+
+            renderPhase3BPlan(data.phase3B);
+            renderPhase3CPrep(data.phase3C);
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                roadmap: latestLiveRoadmap,
+                latestLiveScan,
+                latestPhase3Status,
+                latestAccountScan,
+                latestAccountAware,
+                phase3B: data.phase3B,
+                phase3C: data.phase3C,
+                latestSandboxTests: data.latestTests
+            }, null, 2);
+            return data.phase3B;
+        }
+
+        async function ensureSandboxConnector(exchangeName) {
+            const current = (latestPhase3B?.supportedExchanges || []).find(adapter => adapter.exchangeName === exchangeName);
+
+            if (current?.connectorId) {
+                return current.connectorId;
+            }
+
+            await fetch('/api/v1/exchange-connectors/placeholders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    scope: 'single',
+                    exchangeId: exchangeName,
+                    mode: 'read_only'
+                })
+            });
+            const phase3B = await loadPhase3BStatus();
+            const refreshed = (phase3B?.supportedExchanges || []).find(adapter => adapter.exchangeName === exchangeName);
+            return refreshed?.connectorId || null;
+        }
+
+        async function saveSandboxKey() {
+            const exchangeName = document.getElementById('phase3b-exchange').value;
+            const connectorId = await ensureSandboxConnector(exchangeName);
+            const output = document.getElementById('phase3b-vault-result');
+
+            if (!connectorId) {
+                output.textContent = 'Create the exchange connector placeholder first, then retry.';
+                return;
+            }
+
+            output.textContent = 'Saving sandbox/testnet key to the local encrypted vault. Secret values will not be displayed again.';
+            const response = await fetch(`/api/v1/exchange-connectors/${connectorId}/sandbox-credentials`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    credentials: {
+                        apiKey: document.getElementById('phase3b-api-key').value,
+                        apiSecret: document.getElementById('phase3b-api-secret').value,
+                        passphrase: document.getElementById('phase3b-passphrase').value
+                    },
+                    permissionsChecklist: {
+                        sandboxKeyCreated: document.getElementById('phase3b-check-sandbox-key').checked,
+                        productionKeyNotUsed: document.getElementById('phase3b-check-not-production').checked,
+                        sandboxTradingOnly: document.getElementById('phase3b-check-sandbox-only').checked,
+                        withdrawalsDisabled: document.getElementById('phase3b-check-withdrawals').checked,
+                        ownerUnderstandsNoLiveOrders: document.getElementById('phase3b-check-no-live').checked
+                    }
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Sandbox key was not saved.';
+                return;
+            }
+
+            document.getElementById('phase3b-api-key').value = '';
+            document.getElementById('phase3b-api-secret').value = '';
+            document.getElementById('phase3b-passphrase').value = '';
+            output.innerHTML = `
+                <article class="phase3-account-card status-success">
+                    <strong>Sandbox key saved</strong>
+                    <span>Fingerprint ${escapeHtml(data.vault?.apiKeyFingerprint || 'saved')} · secret values were not returned to the UI.</span>
+                    <small>Next: Run Sandbox Test Trade. Live trading remains locked.</small>
+                </article>
+            `;
+            await loadPhase3BStatus();
+        }
+
+        async function runSandboxTestTrade() {
+            const output = document.getElementById('phase3b-result');
+            output.textContent = 'Running sandbox/testnet safety checks. If a check fails, no exchange order endpoint will be called.';
+            const response = await fetch('/api/v1/live-trading-launch/phase3b/sandbox-test-trade', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order: {
+                        exchangeName: document.getElementById('phase3b-exchange').value,
+                        symbol: document.getElementById('phase3b-symbol').value || 'BTC/USDT',
+                        side: document.getElementById('phase3b-side').value,
+                        orderType: document.getElementById('phase3b-order-type').value,
+                        quantity: Number(document.getElementById('phase3b-quantity').value || 0),
+                        limitPrice: Number(document.getElementById('phase3b-limit-price').value || 0)
+                    },
+                    marketContext: {
+                        liquidityUsd: 1000000,
+                        slippagePercent: 0.05,
+                        priceTimestamp: new Date().toISOString()
+                    }
+                })
+            });
+            const data = await response.json();
+
+            renderSandboxResult(data, response.ok ? 'accepted' : 'rejected');
+            await loadPhase3BStatus();
+        }
+
+        async function emergencyStopLiveConnectors() {
+            const output = document.getElementById('phase3c-prep');
+            output.textContent = 'Running emergency stop. This disables live connector flags only and does not enable trading.';
+            const response = await fetch('/api/v1/live-trading-launch/phase3c/emergency-stop', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Emergency stop failed.';
+                return;
+            }
+
+            output.innerHTML = `
+                <article class="phase3-account-card status-success">
+                    <strong>${escapeHtml(data.status)}</strong>
+                    <span>${escapeHtml(data.summary)}</span>
+                    <small>Disabled live connectors: ${escapeHtml(data.disabledCount || 0)}. Wallet signing and withdrawals remain disabled.</small>
+                </article>
+            `;
+            await loadPhase3BStatus();
         }
 
         async function runReadOnlyScan() {
@@ -733,9 +1078,14 @@
         document.getElementById('run-dryrun-safety').addEventListener('click', runDryRunSafetyReview);
         document.getElementById('run-account-aware-arb').addEventListener('click', updateAccountAwareArbitrage);
         document.getElementById('run-spread-replay').addEventListener('click', replayLatestSpreadScan);
+        document.getElementById('refresh-phase3b-status').addEventListener('click', loadPhase3BStatus);
+        document.getElementById('save-sandbox-key').addEventListener('click', saveSandboxKey);
+        document.getElementById('run-sandbox-test-trade').addEventListener('click', runSandboxTestTrade);
+        document.getElementById('phase3c-emergency-stop').addEventListener('click', emergencyStopLiveConnectors);
 
         loadRoadmap();
         loadPhase3Status();
+        loadPhase3BStatus();
         scanPhase3AReadiness();
     </script>
     <script src="/js/operator-training.js"></script>

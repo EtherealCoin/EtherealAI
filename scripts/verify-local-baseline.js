@@ -77,6 +77,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/exchange-metadata.js',
     'app/server/src/lib/exchange-readonly-connections.js',
     'app/server/src/lib/exchange-live-safety.js',
+    'app/server/src/lib/exchange-sandbox-execution.js',
     'app/server/src/lib/local-model-routing.js',
     'app/server/src/lib/local-model-runtime.js',
     'app/server/src/lib/live-execution-handoff.js',
@@ -3427,6 +3428,129 @@ async function checkExchangeLiveSafetyModule() {
   }
 
   pass('exchange live safety module');
+}
+
+function checkExchangeSandboxExecutionModule() {
+  const {
+    SANDBOX_ORDER_LIFECYCLE_STATUSES,
+    SANDBOX_ORDER_TYPES,
+    SANDBOX_EXCHANGE_ADAPTERS,
+    DEFAULT_SANDBOX_POLICY,
+    getSandboxReferenceName,
+    sanitizeSandboxCredentialInput,
+    sanitizeSandboxPermissionsChecklist,
+    normalizeSandboxOrderDraft,
+    evaluateSandboxOrderSafety,
+    buildPhase3BSandboxStatus,
+    buildPhase3CPreparation,
+    createPlainEnglishSandboxError
+  } = require(path.join(projectRoot, 'app/server/src/lib/exchange-sandbox-execution'));
+  const permissions = sanitizeSandboxPermissionsChecklist({
+    sandboxKeyCreated: true,
+    productionKeyNotUsed: true,
+    sandboxTradingOnly: true,
+    withdrawalsDisabled: true,
+    ownerUnderstandsNoLiveOrders: true
+  });
+  const missingPermissions = sanitizeSandboxPermissionsChecklist({});
+  const credentials = sanitizeSandboxCredentialInput({
+    apiKey: 'fixture-key',
+    apiSecret: 'fixture-secret'
+  }, SANDBOX_EXCHANGE_ADAPTERS.binance);
+  const order = normalizeSandboxOrderDraft({
+    exchangeName: 'binance',
+    symbol: 'BTC/USDT',
+    side: 'buy',
+    orderType: 'post-only',
+    quantity: 0.1,
+    limitPrice: 100
+  });
+  const safety = evaluateSandboxOrderSafety({
+    order,
+    adapter: SANDBOX_EXCHANGE_ADAPTERS.binance,
+    connector: { id: 1, label: 'Binance Sandbox' },
+    credentials: {
+      ...credentials,
+      permissionsChecklist: permissions.checklist
+    },
+    riskProfile: {
+      id: 7,
+      name: 'Sandbox Fixture Risk',
+      status: 'active',
+      max_order_value: 25,
+      max_daily_loss: 50,
+      kill_switch_enabled: 0
+    },
+    marketContext: {
+      liquidityUsd: 1000000,
+      slippagePercent: 0.05,
+      priceTimestamp: new Date().toISOString()
+    }
+  });
+  const blockedSafety = evaluateSandboxOrderSafety({
+    order,
+    adapter: SANDBOX_EXCHANGE_ADAPTERS.kraken,
+    connector: { id: 2, label: 'Kraken Sandbox' },
+    credentials: null,
+    riskProfile: null,
+    marketContext: {
+      liquidityUsd: 0,
+      slippagePercent: 1,
+      priceTimestamp: new Date(Date.now() - 60000).toISOString()
+    }
+  });
+  const phase3B = buildPhase3BSandboxStatus({
+    connectors: [{
+      id: 1,
+      exchange_name: 'binance',
+      label: 'Binance Sandbox',
+      settings: { registryId: 'binance' }
+    }],
+    vaultStatus: {
+      entries: [{ exchangeName: 'binance' }]
+    },
+    latestTests: []
+  });
+  const phase3C = buildPhase3CPreparation({
+    latestSandboxTests: [{ status: 'canceled' }]
+  });
+
+  if (
+    !SANDBOX_ORDER_LIFECYCLE_STATUSES.includes('created')
+    || !SANDBOX_ORDER_LIFECYCLE_STATUSES.includes('partially_filled')
+    || !SANDBOX_ORDER_LIFECYCLE_STATUSES.includes('canceled')
+    || !SANDBOX_ORDER_TYPES.includes('post_only')
+    || !SANDBOX_ORDER_TYPES.includes('ioc')
+    || SANDBOX_EXCHANGE_ADAPTERS.binance.adapterStatus !== 'complete'
+    || SANDBOX_EXCHANGE_ADAPTERS.okx.adapterStatus !== 'complete'
+    || SANDBOX_EXCHANGE_ADAPTERS.bybit.adapterStatus !== 'complete'
+    || SANDBOX_EXCHANGE_ADAPTERS.kraken.adapterStatus !== 'manual_docs_required'
+    || SANDBOX_EXCHANGE_ADAPTERS.coinbase.adapterStatus !== 'manual_docs_required'
+    || DEFAULT_SANDBOX_POLICY.productionLiveTradingEnabled !== false
+    || DEFAULT_SANDBOX_POLICY.productionOrderEndpointEnabled !== false
+    || !getSandboxReferenceName({ userId: 1, connectorId: 2, exchangeName: 'binance' }).startsWith('exchange-sandbox:')
+    || permissions.missing.length !== 0
+    || missingPermissions.missing.length < 5
+    || credentials.apiKey !== 'fixture-key'
+    || order.orderType !== 'post_only'
+    || order.exchangeSymbol !== 'BTCUSDT'
+    || safety.passed !== true
+    || safety.safetyBoundary.productionOrderEndpointEnabled !== false
+    || safety.safetyBoundary.walletSigningEnabled !== false
+    || blockedSafety.passed !== false
+    || !blockedSafety.checks.some(check => check.id === 'sandbox_adapter' && !check.passed)
+    || phase3B.completeAdapters.length !== 3
+    || !phase3B.manualDocsRequired.includes('kraken')
+    || !phase3B.supportedExchanges.some(exchange => exchange.exchangeName === 'binance' && exchange.connectorId === 1 && exchange.sandboxCredentialsSaved)
+    || phase3B.safetyBoundary.liveTradingEnabled !== false
+    || phase3C.status !== 'locked_future_approval_required'
+    || !phase3C.checklist.some(item => item.label === 'Emergency stop')
+    || !/no live order/.test(createPlainEnglishSandboxError('binance', new Error('401 unauthorized')).toLowerCase())
+  ) {
+    fail('exchange sandbox execution module did not preserve Phase 3B sandbox lifecycle and live-locked safety boundaries');
+  }
+
+  pass('exchange sandbox execution module');
 }
 
 function checkStrategyResearchModule() {
@@ -6896,6 +7020,8 @@ function checkLiveTradingLaunchCenterUi() {
   const routeRegistration = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/route-registration.js'), 'utf8');
   const readOnlyConnections = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-readonly-connections.js'), 'utf8');
   const liveSafety = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-live-safety.js'), 'utf8');
+  const sandboxExecution = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-sandbox-execution.js'), 'utf8');
+  const schema = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/database-schema.js'), 'utf8');
   const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
   const strategyLab = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
   const operatorControl = fs.readFileSync(path.join(projectRoot, 'app/client/operator-control.html'), 'utf8');
@@ -6912,8 +7038,10 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('Phase 3A: Authenticated Account Readiness')
     || !html.includes('Refresh Account Readiness')
     || !html.includes('Scan Authenticated Readiness')
-    || !html.includes('Phase 3B: Prepared But Locked')
-    || !html.includes('sandbox/testnet order placement')
+    || !html.includes('Phase 3B: Sandbox/Testnet Execution')
+    || !html.includes('Run Sandbox Test Trade')
+    || !html.includes('Save Sandbox/Testnet API Key')
+    || !html.includes('Emergency Stop / Disable Live Connectors')
     || !html.includes('Scan Read-Only Accounts')
     || !html.includes('Run Dry-Run Safety Review')
     || !html.includes('Replay Latest Spread Scan')
@@ -6923,6 +7051,10 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('/api/v1/live-trading-launch/paper-simulate-opportunity')
     || !html.includes('/api/v1/live-trading-launch/phase3/status')
     || !html.includes('/api/v1/live-trading-launch/phase3a/readiness')
+    || !html.includes('/api/v1/live-trading-launch/phase3b/status')
+    || !html.includes('/api/v1/live-trading-launch/phase3b/sandbox-test-trade')
+    || !html.includes('/api/v1/live-trading-launch/phase3c/emergency-stop')
+    || !html.includes('/sandbox-credentials')
     || !html.includes('/api/v1/live-trading-launch/authenticated-read-only-scan')
     || !html.includes('/api/v1/live-trading-launch/dry-run-order-safety')
     || !html.includes('/api/v1/live-trading-launch/account-aware-arbitrage')
@@ -6937,11 +7069,18 @@ function checkLiveTradingLaunchCenterUi() {
     || !styles.includes('.phase3-account-card')
     || !styles.includes('.phase3a-checklist')
     || !styles.includes('.phase3a-exchange-grid')
+    || !styles.includes('.live-sandbox-safety-grid')
+    || !styles.includes('.live-sandbox-controls')
     || !routes.includes("app.get('/api/v1/live-trading-launch/roadmap'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/read-only-scan'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/paper-simulate-opportunity'")
     || !routes.includes("app.get('/api/v1/live-trading-launch/phase3/status'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase3a/readiness'")
+    || !routes.includes("app.get('/api/v1/live-trading-launch/phase3b/status'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/phase3b/sandbox-test-trade'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/phase3c/emergency-stop'")
+    || !routes.includes("app.post('/api/v1/exchange-connectors/:id/sandbox-credentials'")
+    || !routes.includes("app.delete('/api/v1/exchange-connectors/:id/sandbox-credentials'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/authenticated-read-only-scan'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/dry-run-order-safety'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/account-aware-arbitrage'")
@@ -6953,12 +7092,16 @@ function checkLiveTradingLaunchCenterUi() {
     || !server.includes('buildPhase3Status')
     || !server.includes('buildPhase3AReadiness')
     || !server.includes('buildPhase3BPreparationPlan')
+    || !server.includes('SANDBOX_EXCHANGE_ADAPTERS')
+    || !server.includes('runSandboxOrderLifecycle')
     || !routeRegistration.includes('scanReadOnlyArbitrageOpportunities')
     || !routeRegistration.includes('createPaperSimulationForOpportunity')
     || !routeRegistration.includes('scanAuthenticatedReadOnlyAccounts')
     || !routeRegistration.includes('evaluateLiveExecutionSafety')
     || !routeRegistration.includes('buildPhase3AReadiness')
     || !routeRegistration.includes('buildPhase3BPreparationPlan')
+    || !routeRegistration.includes('buildPhase3BSandboxStatus')
+    || !routeRegistration.includes('runSandboxOrderLifecycle')
     || !readOnlyConnections.includes('EXPANDED_READONLY_MARKET_VENUES')
     || !readOnlyConnections.includes('fetchKucoinMarketSnapshot')
     || !readOnlyConnections.includes('fetchGateMarketSnapshot')
@@ -6985,6 +7128,14 @@ function checkLiveTradingLaunchCenterUi() {
     || !liveSafety.includes('scanAuthenticatedReadOnlyAccounts')
     || !liveSafety.includes('evaluateLiveExecutionSafety')
     || !liveSafety.includes('buildOutcomeBenchmark')
+    || !sandboxExecution.includes('SANDBOX_ORDER_LIFECYCLE_STATUSES')
+    || !sandboxExecution.includes('submitBinanceSandboxOrder')
+    || !sandboxExecution.includes('submitOkxSandboxOrder')
+    || !sandboxExecution.includes('submitBybitSandboxOrder')
+    || !sandboxExecution.includes('productionLiveTradingEnabled: false')
+    || !schema.includes('CREATE TABLE IF NOT EXISTS sandbox_order_tests')
+    || !schema.includes('CREATE TABLE IF NOT EXISTS sandbox_order_events')
+    || !schema.includes('CREATE TABLE IF NOT EXISTS live_trading_safety_events')
     || !dashboard.includes('/live-trading-launch')
     || !strategyLab.includes('/live-trading-launch')
     || !operatorControl.includes('/live-trading-launch')
@@ -10967,6 +11118,7 @@ async function main() {
   checkExchangeMetadataModule();
   checkExchangeReadOnlyConnectionsModule();
   await checkExchangeLiveSafetyModule();
+  checkExchangeSandboxExecutionModule();
   checkStrategyResearchModule();
   await checkStrategyDecisionLogRuntimeModule();
   checkStrategyMathModule();
