@@ -76,6 +76,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/db-row-lookups.js',
     'app/server/src/lib/exchange-metadata.js',
     'app/server/src/lib/exchange-readonly-connections.js',
+    'app/server/src/lib/exchange-live-safety.js',
     'app/server/src/lib/local-model-routing.js',
     'app/server/src/lib/local-model-runtime.js',
     'app/server/src/lib/live-execution-handoff.js',
@@ -3258,6 +3259,132 @@ function checkExchangeReadOnlyConnectionsModule() {
   }
 
   pass('exchange read-only connection module');
+}
+
+async function checkExchangeLiveSafetyModule() {
+  const {
+    PHASE3_RECOMMENDED_EXCHANGES,
+    UNIVERSAL_ORDER_TYPES,
+    DEFAULT_LIVE_SAFETY_POLICY,
+    EXCHANGE_CAPABILITY_MATRIX,
+    WEBSOCKET_STREAM_SPECS,
+    scanAuthenticatedReadOnlyAccounts,
+    normalizeUniversalOrderDraft,
+    evaluateLiveExecutionSafety,
+    buildWebSocketHealthPlan,
+    buildAccountAwareArbitrageView,
+    replaySpreadHistory,
+    buildOutcomeBenchmark,
+    buildPhase3Status
+  } = require(path.join(projectRoot, 'app/server/src/lib/exchange-live-safety'));
+  const connectors = [
+    {
+      id: 1,
+      exchange_name: 'binance',
+      label: 'Binance fixture',
+      status: 'configured',
+      secret_reference_status: 'configured',
+      settings: {
+        registryId: 'binance',
+        readOnlyConnection: {
+          connectionStatus: 'read_only_connected'
+        }
+      }
+    }
+  ];
+  const accountScan = await scanAuthenticatedReadOnlyAccounts({
+    connectors,
+    credentialLoader: async () => null
+  });
+  const order = normalizeUniversalOrderDraft({
+    type: 'post-only',
+    side: 'buy',
+    symbol: 'BTC-USDT',
+    notionalUsd: 100,
+    liveExecutionRequested: true
+  });
+  const blockedSafety = evaluateLiveExecutionSafety({
+    order,
+    marketContext: {
+      estimatedSlippagePercent: 0.2,
+      latencyMs: 1500,
+      priceAgeMs: 3000,
+      liquidityUsd: 50,
+      netSpreadPercent: -0.2
+    },
+    accountContext: {
+      withdrawalPermission: 'enabled_on_exchange_key_review_required'
+    }
+  });
+  const websocketPlan = buildWebSocketHealthPlan();
+  const accountAware = buildAccountAwareArbitrageView({
+    scan: {
+      candidates: [{
+        symbol: 'BTC/USDT',
+        buyVenue: 'Binance',
+        buyExchangeName: 'binance',
+        sellVenue: 'Kraken',
+        sellExchangeName: 'kraken',
+        grossSpreadPercent: 0.4,
+        estimatedNetProfitPercent: 0.12,
+        slippagePercent: 0.1,
+        latencyRiskPercent: 0.02,
+        limitingLiquidityUsd: 20000,
+        tradeSizeUsd: 1000,
+        latencyMs: 300,
+        accepted: true
+      }]
+    },
+    accountScan: {
+      profiles: [{
+        exchangeName: 'binance',
+        status: 'read_only_account_connected',
+        feeTier: { takerFeePercent: 0.001 }
+      }, {
+        exchangeName: 'kraken',
+        status: 'read_only_account_connected',
+        feeTier: { takerFeePercent: 0.002 }
+      }]
+    }
+  });
+  const replay = replaySpreadHistory({ candidates: accountAware.candidates });
+  const benchmark = buildOutcomeBenchmark({ accountAwareCandidate: accountAware.candidates[0] });
+  const phase3 = buildPhase3Status({ connectors, accountScan });
+
+  if (
+    !PHASE3_RECOMMENDED_EXCHANGES.includes('binance')
+    || !PHASE3_RECOMMENDED_EXCHANGES.includes('coinbase')
+    || !PHASE3_RECOMMENDED_EXCHANGES.includes('kraken')
+    || !PHASE3_RECOMMENDED_EXCHANGES.includes('okx')
+    || !PHASE3_RECOMMENDED_EXCHANGES.includes('bybit')
+    || !UNIVERSAL_ORDER_TYPES.includes('bracket')
+    || DEFAULT_LIVE_SAFETY_POLICY.liveExecutionLocked !== true
+    || DEFAULT_LIVE_SAFETY_POLICY.dryRunOnly !== true
+    || !EXCHANGE_CAPABILITY_MATRIX.binance?.sandboxSupport
+    || !EXCHANGE_CAPABILITY_MATRIX.bybit?.websocketSupport
+    || WEBSOCKET_STREAM_SPECS.coinbase?.orderEntryEnabled !== false
+    || accountScan.status !== 'waiting_for_read_only_keys'
+    || accountScan.safetyBoundary.liveTradingEnabled !== false
+    || order.type !== 'post_only'
+    || order.dryRun !== true
+    || blockedSafety.status !== 'blocked'
+    || !blockedSafety.failures.includes('live execution is locked')
+    || !blockedSafety.failures.includes('withdrawal permission needs owner review and disablement')
+    || blockedSafety.safetyBoundary.orderEndpointEnabled !== false
+    || websocketPlan.streams.length < 5
+    || websocketPlan.health.some(item => item.orderEntryEnabled !== false)
+    || accountAware.candidates[0].estimatedAccountAwareNetProfitPercent >= accountAware.candidates[0].grossSpreadPercent
+    || accountAware.spreadHeatmap[0].confidenceScore <= 0
+    || replay.summary.samples !== 1
+    || benchmark.comparison.realWorldFeeAdjustedOutcomePercent >= benchmark.comparison.estimatedLiveOutcomePercent
+    || phase3.status !== 'locked_building'
+    || phase3.safetyBoundary.liveTradingEnabled !== false
+    || phase3.universalOrderModel.liveOrderEndpointImplemented !== false
+  ) {
+    fail('exchange live safety module did not preserve Phase 3 authenticated-read-only, dry-run, websocket, benchmark, or live-locked behavior');
+  }
+
+  pass('exchange live safety module');
 }
 
 function checkStrategyResearchModule() {
@@ -6726,6 +6853,7 @@ function checkLiveTradingLaunchCenterUi() {
   const server = fs.readFileSync(path.join(projectRoot, 'app/server/src/server.js'), 'utf8');
   const routeRegistration = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/route-registration.js'), 'utf8');
   const readOnlyConnections = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-readonly-connections.js'), 'utf8');
+  const liveSafety = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-live-safety.js'), 'utf8');
   const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
   const strategyLab = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
   const operatorControl = fs.readFileSync(path.join(projectRoot, 'app/client/operator-control.html'), 'utf8');
@@ -6738,24 +6866,44 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('Advanced Developer Mode')
     || !html.includes('Local paper simulation only')
     || !html.includes('Live trading, withdrawals, wallet signing, and order endpoints remain locked')
+    || !html.includes('Phase 3 Operator Dashboard')
+    || !html.includes('Scan Read-Only Accounts')
+    || !html.includes('Run Dry-Run Safety Review')
+    || !html.includes('Replay Latest Spread Scan')
+    || !html.includes('Execution Safety Score')
     || !html.includes('/api/v1/live-trading-launch/roadmap')
     || !html.includes('/api/v1/live-trading-launch/read-only-scan')
     || !html.includes('/api/v1/live-trading-launch/paper-simulate-opportunity')
+    || !html.includes('/api/v1/live-trading-launch/phase3/status')
+    || !html.includes('/api/v1/live-trading-launch/authenticated-read-only-scan')
+    || !html.includes('/api/v1/live-trading-launch/dry-run-order-safety')
+    || !html.includes('/api/v1/live-trading-launch/account-aware-arbitrage')
+    || !html.includes('/api/v1/live-trading-launch/replay-spread-history')
     || html.includes('localStorage')
     || html.includes('sessionStorage')
     || !styles.includes('.live-launch-status-grid')
     || !styles.includes('.live-scan-controls')
     || !styles.includes('.live-candidate-card')
     || !styles.includes('.live-approval-center')
+    || !styles.includes('.phase3-dashboard-grid')
+    || !styles.includes('.phase3-account-card')
     || !routes.includes("app.get('/api/v1/live-trading-launch/roadmap'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/read-only-scan'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/paper-simulate-opportunity'")
+    || !routes.includes("app.get('/api/v1/live-trading-launch/phase3/status'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/authenticated-read-only-scan'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/dry-run-order-safety'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/account-aware-arbitrage'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/replay-spread-history'")
     || !pages.includes("app.get('/live-trading-launch', requirePageAuth")
     || !server.includes('EXPANDED_READONLY_MARKET_VENUES')
     || !server.includes('scanReadOnlyArbitrageOpportunities')
     || !server.includes('buildLiveTradingLaunchRoadmap')
+    || !server.includes('buildPhase3Status')
     || !routeRegistration.includes('scanReadOnlyArbitrageOpportunities')
     || !routeRegistration.includes('createPaperSimulationForOpportunity')
+    || !routeRegistration.includes('scanAuthenticatedReadOnlyAccounts')
+    || !routeRegistration.includes('evaluateLiveExecutionSafety')
     || !readOnlyConnections.includes('EXPANDED_READONLY_MARKET_VENUES')
     || !readOnlyConnections.includes('fetchKucoinMarketSnapshot')
     || !readOnlyConnections.includes('fetchGateMarketSnapshot')
@@ -6770,6 +6918,14 @@ function checkLiveTradingLaunchCenterUi() {
     || !readOnlyConnections.includes('withdrawalsEnabled: false')
     || !readOnlyConnections.includes('walletSigningEnabled: false')
     || !readOnlyConnections.includes('orderEndpointEnabled: false')
+    || !liveSafety.includes('DEFAULT_LIVE_SAFETY_POLICY')
+    || !liveSafety.includes('globalKillSwitchEnabled: true')
+    || !liveSafety.includes('dryRunOnly: true')
+    || !liveSafety.includes('orderEndpointEnabled: false')
+    || !liveSafety.includes('ordersPlaced: false')
+    || !liveSafety.includes('scanAuthenticatedReadOnlyAccounts')
+    || !liveSafety.includes('evaluateLiveExecutionSafety')
+    || !liveSafety.includes('buildOutcomeBenchmark')
     || !dashboard.includes('/live-trading-launch')
     || !strategyLab.includes('/live-trading-launch')
     || !operatorControl.includes('/live-trading-launch')
@@ -10751,6 +10907,7 @@ async function main() {
   await checkCompanyIdentityModule();
   checkExchangeMetadataModule();
   checkExchangeReadOnlyConnectionsModule();
+  await checkExchangeLiveSafetyModule();
   checkStrategyResearchModule();
   await checkStrategyDecisionLogRuntimeModule();
   checkStrategyMathModule();

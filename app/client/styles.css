@@ -4815,6 +4815,69 @@ footer {
     text-transform: none;
 }
 
+.phase3-dashboard-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    margin-top: 16px;
+}
+
+.phase3-dashboard-grid > article,
+.phase3-panel,
+.phase3-results,
+.phase3-mini-card,
+.phase3-account-card {
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    padding: 14px;
+}
+
+.phase3-dashboard-grid > article span,
+.phase3-mini-card span,
+.phase3-account-card span {
+    color: inherit;
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.phase3-dashboard-grid > article strong,
+.phase3-panel h3,
+.phase3-mini-card strong,
+.phase3-account-card strong {
+    color: inherit;
+}
+
+.phase3-panel,
+.phase3-results {
+    display: grid;
+    gap: 10px;
+}
+
+.phase3-panel h3 {
+    font-size: 1rem;
+    margin: 0 0 6px;
+}
+
+.phase3-mini-card,
+.phase3-account-card {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.phase3-mini-card small,
+.phase3-account-card small,
+.phase3-account-card p {
+    color: inherit;
+    line-height: 1.5;
+}
+
 .live-phase-card button:disabled,
 .live-approval-item button:disabled {
     cursor: not-allowed;
@@ -4838,6 +4901,21 @@ footer {
 :root:not([data-theme="day"]) .live-candidate-card,
 :root:not([data-theme="day"]) .live-next-card,
 :root:not([data-theme="day"]) .live-paper-sim-result {
+    background: var(--surface-muted) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+:root[data-theme="night"] .phase3-dashboard-grid > article,
+:root[data-theme="night"] .phase3-panel,
+:root[data-theme="night"] .phase3-results,
+:root[data-theme="night"] .phase3-mini-card,
+:root[data-theme="night"] .phase3-account-card,
+:root:not([data-theme="day"]) .phase3-dashboard-grid > article,
+:root:not([data-theme="day"]) .phase3-panel,
+:root:not([data-theme="day"]) .phase3-results,
+:root:not([data-theme="day"]) .phase3-mini-card,
+:root:not([data-theme="day"]) .phase3-account-card {
     background: var(--surface-muted) !important;
     border-color: var(--border) !important;
     color: var(--text-primary) !important;

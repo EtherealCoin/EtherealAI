@@ -38,6 +38,19 @@ function registerExchangeMetadataRoutes(app, {
   buildLiveTradingLaunchRoadmap,
   buildReadOnlyConnectionSummary,
   createPlainEnglishExchangeError,
+  phase3RecommendedExchanges,
+  universalOrderTypes,
+  defaultLiveSafetyPolicy,
+  exchangeCapabilityMatrix,
+  websocketStreamSpecs,
+  scanAuthenticatedReadOnlyAccounts,
+  normalizeUniversalOrderDraft,
+  evaluateLiveExecutionSafety,
+  buildWebSocketHealthPlan,
+  buildAccountAwareArbitrageView,
+  replaySpreadHistory,
+  buildOutcomeBenchmark,
+  buildPhase3Status,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,
@@ -144,6 +157,22 @@ function registerExchangeMetadataRoutes(app, {
       'SELECT * FROM local_secret_references WHERE id = ? AND user_id = ?',
       [result.lastID, userId]
     ));
+  }
+
+  async function loadConnectorReadOnlyCredentialsForUser(connector, userId) {
+    const localReference = connector.secret_reference_id
+      ? parseLocalSecretReference(await dbGet(
+        'SELECT * FROM local_secret_references WHERE id = ? AND user_id = ?',
+        [connector.secret_reference_id, userId]
+      ))
+      : null;
+    const referenceName = connector.settings?.readOnlyConnection?.referenceName || localReference?.reference_name || null;
+
+    if (!referenceName) {
+      return null;
+    }
+
+    return loadReadOnlyVaultCredentials(referenceName);
   }
 
   app.get('/api/v1/local-secret-provider-capabilities', requireAuth, (req, res) => {
@@ -414,6 +443,137 @@ function registerExchangeMetadataRoutes(app, {
 
       res.json({
         roadmap: buildLiveTradingLaunchRoadmap({ connectors })
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/live-trading-launch/phase3/status', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+
+      res.json({
+        phase3: buildPhase3Status({ connectors }),
+        capabilityMatrix: Object.values(exchangeCapabilityMatrix || {}),
+        websocketPlan: buildWebSocketHealthPlan(),
+        universalOrderModel: {
+          supportedTypes: universalOrderTypes || [],
+          dryRunOnly: true,
+          liveOrderEndpointImplemented: false
+        },
+        defaultSafetyPolicy: defaultLiveSafetyPolicy,
+        recommendedExchanges: phase3RecommendedExchanges || [],
+        websocketStreamSpecs: Object.values(websocketStreamSpecs || {}),
+        safetyBoundary: {
+          readOnlyAccountData: true,
+          liveTradingEnabled: false,
+          withdrawalsEnabled: false,
+          walletSigningEnabled: false,
+          orderEndpointEnabled: false,
+          ordersPlaced: false,
+          dryRunOnly: true
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/authenticated-read-only-scan', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const accountScan = await scanAuthenticatedReadOnlyAccounts({
+        connectors,
+        symbol: req.body?.symbol || 'BTC/USDT',
+        credentialLoader: connector => loadConnectorReadOnlyCredentialsForUser(connector, req.session.userId)
+      });
+
+      res.json({
+        accountScan,
+        phase3: buildPhase3Status({ connectors, accountScan }),
+        safetyBoundary: accountScan.safetyBoundary
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishExchangeError
+          ? createPlainEnglishExchangeError('Authenticated read-only account scan', error)
+          : error.message
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/dry-run-order-safety', requireAuth, async (req, res) => {
+    try {
+      const review = evaluateLiveExecutionSafety({
+        order: req.body?.order || req.body || {},
+        policy: {
+          ...(defaultLiveSafetyPolicy || {}),
+          ...(req.body?.policy || {})
+        },
+        marketContext: req.body?.marketContext || {},
+        accountContext: req.body?.accountContext || {},
+        recentOrderFingerprints: Array.isArray(req.body?.recentOrderFingerprints) ? req.body.recentOrderFingerprints : []
+      });
+
+      res.json({
+        review,
+        normalizedOrder: normalizeUniversalOrderDraft(req.body?.order || req.body || {}),
+        safetyBoundary: review.safetyBoundary
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/account-aware-arbitrage', requireAuth, (req, res) => {
+    try {
+      const accountAware = buildAccountAwareArbitrageView({
+        scan: req.body?.scan || null,
+        accountScan: req.body?.accountScan || null
+      });
+
+      res.json({
+        accountAware,
+        benchmark: buildOutcomeBenchmark({
+          candidate: req.body?.candidate || req.body?.scan?.bestCandidate || null,
+          accountAwareCandidate: accountAware.candidates?.[0] || null
+        }),
+        safetyBoundary: accountAware.safetyBoundary
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/replay-spread-history', requireAuth, (req, res) => {
+    try {
+      const candidates = Array.isArray(req.body?.candidates)
+        ? req.body.candidates
+        : Array.isArray(req.body?.scan?.candidates)
+          ? req.body.scan.candidates
+          : [];
+      const replay = replaySpreadHistory({
+        candidates,
+        fillAssumption: req.body?.fillAssumption || {}
+      });
+
+      res.json({
+        replay,
+        benchmark: buildOutcomeBenchmark({
+          candidate: candidates[0] || null
+        }),
+        safetyBoundary: replay.safetyBoundary
       });
     } catch (error) {
       res.status(500).json({ error: error.message });

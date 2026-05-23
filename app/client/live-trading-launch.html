@@ -27,6 +27,7 @@
             <div class="button-row">
                 <button id="refresh-live-roadmap" type="button">Refresh Launch Status</button>
                 <button id="run-readonly-scan" type="button">Run Read-Only Arbitrage Scan</button>
+                <button id="refresh-phase3-status" type="button">Refresh Phase 3 Safety</button>
                 <a class="cta-button" href="/strategy-lab#exchange-connector-manager">Open Exchange Connectors</a>
             </div>
         </section>
@@ -93,6 +94,59 @@
         </section>
 
         <section class="model-panel">
+            <h2>Phase 3 Operator Dashboard</h2>
+            <p class="inline-status">Authenticated read-only account checks, exchange capability matrix, websocket stream specs, dry-run safety review, spread replay, and outcome benchmarks. This still cannot place orders.</p>
+            <div class="button-row">
+                <button id="scan-authenticated-accounts" type="button">Scan Read-Only Accounts</button>
+                <button id="run-dryrun-safety" type="button">Run Dry-Run Safety Review</button>
+                <button id="run-account-aware-arb" type="button">Update Account-Aware Arbitrage</button>
+                <button id="run-spread-replay" type="button">Replay Latest Spread Scan</button>
+            </div>
+            <div class="phase3-dashboard-grid">
+                <article>
+                    <span>Account Balances</span>
+                    <strong id="phase3-account-status">Waiting</strong>
+                    <small id="phase3-account-detail">Add read-only exchange keys when ready.</small>
+                </article>
+                <article>
+                    <span>Active Connectors</span>
+                    <strong id="phase3-connector-count">0</strong>
+                    <small>Read-only or configured connectors only.</small>
+                </article>
+                <article>
+                    <span>WebSocket Health</span>
+                    <strong id="phase3-websocket-status">Specs Ready</strong>
+                    <small>Market data only; persistent streams not auto-running.</small>
+                </article>
+                <article>
+                    <span>Execution Safety Score</span>
+                    <strong id="phase3-safety-score">Locked</strong>
+                    <small>Global kill switch stays on.</small>
+                </article>
+            </div>
+            <div class="phase3-dashboard-grid">
+                <div class="phase3-panel">
+                    <h3>Capability Matrix</h3>
+                    <div id="phase3-capability-matrix">Loading exchange capabilities...</div>
+                </div>
+                <div class="phase3-panel">
+                    <h3>WebSocket Streams</h3>
+                    <div id="phase3-websocket-health">Loading websocket specs...</div>
+                </div>
+                <div class="phase3-panel">
+                    <h3>Spread Heatmap</h3>
+                    <div id="phase3-spread-heatmap">Run a scan to build the heatmap.</div>
+                </div>
+                <div class="phase3-panel">
+                    <h3>Outcome Benchmark</h3>
+                    <div id="phase3-benchmark-panel">No benchmark yet.</div>
+                </div>
+            </div>
+            <div id="phase3-account-results" class="phase3-results">No authenticated read-only account scan has run yet.</div>
+            <div id="phase3-safety-results" class="phase3-results">No dry-run safety review has run yet.</div>
+        </section>
+
+        <section class="model-panel">
             <h2>Launch Roadmap</h2>
             <div id="live-roadmap-phases" class="live-roadmap-phases">Loading phases...</div>
         </section>
@@ -113,6 +167,9 @@
     <script>
         let latestLiveRoadmap = null;
         let latestLiveScan = null;
+        let latestPhase3Status = null;
+        let latestAccountScan = null;
+        let latestAccountAware = null;
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -232,8 +289,99 @@
 
             document.getElementById('live-launch-raw').textContent = JSON.stringify({
                 roadmap: latestLiveRoadmap,
-                latestLiveScan
+                latestLiveScan,
+                latestPhase3Status,
+                latestAccountScan,
+                latestAccountAware
             }, null, 2);
+        }
+
+        function renderPhase3Status(phase3) {
+            latestPhase3Status = phase3;
+            document.getElementById('phase3-account-status').textContent = `${phase3.accountReadiness?.readOnlyAccountProfiles || 0} connected`;
+            document.getElementById('phase3-account-detail').textContent = `${phase3.accountReadiness?.withdrawalsVerifiedDisabled || 0} withdrawal-disabled verification(s); live remains locked.`;
+            document.getElementById('phase3-connector-count').textContent = phase3.accountReadiness?.activeConnectors || 0;
+            document.getElementById('phase3-websocket-status').textContent = phase3.websocketPlan?.status === 'spec_ready_not_running' ? 'Specs Ready' : 'Review';
+            document.getElementById('phase3-safety-score').textContent = phase3.operatorDashboard?.executionSafetyScore || 'Locked';
+
+            document.getElementById('phase3-capability-matrix').innerHTML = (phase3.capabilityMatrix || []).map(item => `
+                <article class="phase3-mini-card">
+                    <strong>${escapeHtml(item.displayName)}</strong>
+                    <span>Spot ${item.spot ? 'yes' : 'no'} · Futures ${item.futures ? 'yes' : 'no'} · Margin ${item.margin ? 'yes' : 'no'}</span>
+                    <small>Sandbox: ${escapeHtml(item.sandboxSupport ? 'available' : 'not confirmed')} · WebSocket: ${escapeHtml(item.websocketSupport ? 'available' : 'not confirmed')}</small>
+                    <small>Orders modeled: ${escapeHtml((item.orderTypes || []).join(', '))}</small>
+                </article>
+            `).join('');
+
+            document.getElementById('phase3-websocket-health').innerHTML = (phase3.websocketPlan?.health || []).map(item => `
+                <article class="phase3-mini-card">
+                    <strong>${escapeHtml(item.displayName)}</strong>
+                    <span>${escapeHtml(item.status)}</span>
+                    <small>${escapeHtml(item.endpoint)}</small>
+                </article>
+            `).join('');
+
+            renderPhase3Heatmap(phase3.operatorDashboard?.spreadHeatmap || []);
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                roadmap: latestLiveRoadmap,
+                latestLiveScan,
+                latestPhase3Status,
+                latestAccountScan,
+                latestAccountAware
+            }, null, 2);
+        }
+
+        function renderPhase3Heatmap(rows = []) {
+            document.getElementById('phase3-spread-heatmap').innerHTML = rows.length ? rows.map(item => `
+                <article class="phase3-mini-card">
+                    <strong>${escapeHtml(item.route)}</strong>
+                    <span>Net ${formatPercent(item.estimatedNetProfitPercent)} · confidence ${escapeHtml(item.confidenceScore)}</span>
+                    <small>Safety score ${escapeHtml(item.executionSafetyScore)}</small>
+                </article>
+            `).join('') : 'Run a read-only scan, then update account-aware arbitrage.';
+        }
+
+        function renderAccountScan(accountScan) {
+            latestAccountScan = accountScan;
+            document.getElementById('phase3-account-status').textContent = `${accountScan.totals?.connected || 0} connected`;
+            document.getElementById('phase3-account-detail').textContent = accountScan.plainEnglishSummary || 'No authenticated account data yet.';
+            document.getElementById('phase3-account-results').innerHTML = (accountScan.profiles || []).map(profile => `
+                <article class="phase3-account-card ${profile.status === 'read_only_account_connected' ? 'status-success' : 'status-warning'}">
+                    <div>
+                        <span>${escapeHtml(profile.status)}</span>
+                        <strong>${escapeHtml(profile.displayName)}</strong>
+                    </div>
+                    <p>${escapeHtml(profile.plainEnglishStatus)}</p>
+                    <div class="live-candidate-metrics">
+                        <span>Assets: ${escapeHtml(profile.balances?.nonZeroAssetCount || 0)}</span>
+                        <span>Maker fee: ${formatPercent(Number(profile.feeTier?.makerFeePercent || 0) * 100)}</span>
+                        <span>Taker fee: ${formatPercent(Number(profile.feeTier?.takerFeePercent || 0) * 100)}</span>
+                        <span>Positions: ${escapeHtml(profile.positions?.count || 0)}</span>
+                        <span>Withdrawals: ${escapeHtml(profile.withdrawalPermission || 'not verified')}</span>
+                    </div>
+                </article>
+            `).join('') || 'No recommended read-only account connectors found yet.';
+        }
+
+        function renderSafetyReview(review) {
+            document.getElementById('phase3-safety-score').textContent = review.executionSafetyScore;
+            document.getElementById('phase3-safety-results').innerHTML = `
+                <article class="phase3-account-card ${review.status === 'blocked' ? 'status-warning' : 'status-success'}">
+                    <div>
+                        <span>${escapeHtml(review.status)}</span>
+                        <strong>Universal Order Dry Run</strong>
+                    </div>
+                    <p>${escapeHtml(review.nextOwnerAction)}</p>
+                    <div class="live-candidate-metrics">
+                        <span>Type: ${escapeHtml(review.normalizedOrder?.type)}</span>
+                        <span>Market: ${escapeHtml(review.normalizedOrder?.symbol)}</span>
+                        <span>Size: ${formatUsd(review.normalizedOrder?.notionalUsd)}</span>
+                        <span>Live requested: ${escapeHtml(review.normalizedOrder?.liveExecutionRequested ? 'yes' : 'no')}</span>
+                    </div>
+                    ${review.failures?.length ? `<p><b>Blocked by:</b> ${escapeHtml(review.failures.join(' '))}</p>` : ''}
+                    ${review.warnings?.length ? `<p><b>Warnings:</b> ${escapeHtml(review.warnings.join(' '))}</p>` : ''}
+                </article>
+            `;
         }
 
         async function loadRoadmap() {
@@ -246,6 +394,18 @@
             }
 
             renderRoadmap(data.roadmap);
+        }
+
+        async function loadPhase3Status() {
+            const response = await fetch('/api/v1/live-trading-launch/phase3/status');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase3-account-results').textContent = data.error || 'Unable to load Phase 3 status.';
+                return;
+            }
+
+            renderPhase3Status(data.phase3);
         }
 
         async function runReadOnlyScan() {
@@ -278,6 +438,109 @@
 
             renderRoadmap(data.roadmap);
             renderScan(data.scan);
+        }
+
+        async function scanAuthenticatedAccounts() {
+            document.getElementById('phase3-account-results').textContent = 'Scanning authenticated read-only account connections. No orders, withdrawals, or wallet signing can run from this action.';
+            const response = await fetch('/api/v1/live-trading-launch/authenticated-read-only-scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: document.getElementById('live-scan-symbol').value || 'BTC/USDT'
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase3-account-results').textContent = data.error || 'Authenticated read-only scan failed.';
+                return;
+            }
+
+            renderAccountScan(data.accountScan);
+            renderPhase3Status(data.phase3);
+        }
+
+        async function runDryRunSafetyReview() {
+            const candidate = latestLiveScan?.bestCandidate || {};
+            const response = await fetch('/api/v1/live-trading-launch/dry-run-order-safety', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order: {
+                        type: 'limit',
+                        side: 'buy',
+                        symbol: candidate.symbol || document.getElementById('live-scan-symbol').value || 'BTC/USDT',
+                        notionalUsd: Number(document.getElementById('live-scan-order-size').value || 1000),
+                        dryRun: true,
+                        liveExecutionRequested: false,
+                        sandboxRequested: false,
+                        ownerApproved: false
+                    },
+                    marketContext: {
+                        estimatedSlippagePercent: 0.05,
+                        latencyMs: candidate.latencyMs || 0,
+                        priceAgeMs: 500,
+                        liquidityUsd: candidate.limitingLiquidityUsd || 0,
+                        netSpreadPercent: candidate.estimatedNetProfitPercent || 0
+                    }
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase3-safety-results').textContent = data.error || 'Dry-run safety review failed.';
+                return;
+            }
+
+            renderSafetyReview(data.review);
+        }
+
+        async function updateAccountAwareArbitrage() {
+            const response = await fetch('/api/v1/live-trading-launch/account-aware-arbitrage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    scan: latestLiveScan,
+                    accountScan: latestAccountScan
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase3-spread-heatmap').textContent = data.error || 'Account-aware arbitrage update failed.';
+                return;
+            }
+
+            latestAccountAware = data.accountAware;
+            renderPhase3Heatmap(data.accountAware?.spreadHeatmap || []);
+            document.getElementById('phase3-benchmark-panel').textContent = data.benchmark?.comparison
+                ? `Paper ${formatPercent(data.benchmark.comparison.paperOpportunityPercent)} · estimated live ${formatPercent(data.benchmark.comparison.estimatedLiveOutcomePercent)} · conservative real-world ${formatPercent(data.benchmark.comparison.realWorldFeeAdjustedOutcomePercent)}`
+                : 'No benchmark yet.';
+        }
+
+        async function replayLatestSpreadScan() {
+            const response = await fetch('/api/v1/live-trading-launch/replay-spread-history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    scan: latestLiveScan,
+                    candidates: latestAccountAware?.candidates || latestLiveScan?.candidates || []
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase3-benchmark-panel').textContent = data.error || 'Replay failed.';
+                return;
+            }
+
+            document.getElementById('phase3-benchmark-panel').innerHTML = `
+                <article class="phase3-mini-card">
+                    <strong>Replay / Fill Simulation</strong>
+                    <span>${escapeHtml(data.replay?.summary?.accepted || 0)} accepted · ${escapeHtml(data.replay?.summary?.rejected || 0)} rejected</span>
+                    <small>Average simulated fill net: ${formatPercent(data.replay?.summary?.averageSimulatedFillNetPercent)}</small>
+                </article>
+            `;
         }
 
         async function paperSimulateCandidate(index) {
@@ -317,8 +580,14 @@
 
         document.getElementById('refresh-live-roadmap').addEventListener('click', loadRoadmap);
         document.getElementById('run-readonly-scan').addEventListener('click', runReadOnlyScan);
+        document.getElementById('refresh-phase3-status').addEventListener('click', loadPhase3Status);
+        document.getElementById('scan-authenticated-accounts').addEventListener('click', scanAuthenticatedAccounts);
+        document.getElementById('run-dryrun-safety').addEventListener('click', runDryRunSafetyReview);
+        document.getElementById('run-account-aware-arb').addEventListener('click', updateAccountAwareArbitrage);
+        document.getElementById('run-spread-replay').addEventListener('click', replayLatestSpreadScan);
 
         loadRoadmap();
+        loadPhase3Status();
     </script>
     <script src="/js/operator-training.js"></script>
     <script src="/js/operator-mode.js"></script>

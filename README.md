@@ -132,6 +132,18 @@ Strategy Lab now includes Phase 2 read-only exchange setup under `Exchange Conne
 - Account API keys remain optional. The scanner can run against public read-only endpoints first, and account-specific read-only keys can be connected later for better fee/limit checks.
 - Live trading, withdrawals, wallet signing, and order endpoints remain disabled.
 
+Phase 3 adds authenticated safety infrastructure while preserving the lock:
+
+- Authenticated read-only account scans for Binance, Coinbase, Kraken, OKX, and Bybit where read-only credentials are configured.
+- Normalized account views for balances, fee tiers, account limits, positions, subaccount metadata, margin/futures metadata, and withdrawal-permission review status.
+- Exchange capability matrix for spot, futures, margin, sandbox/testnet support, WebSocket support, rate-limit notes, order types, and hedge mode support.
+- Universal dry-run order model for market, limit, post-only, IOC, reduce-only, TP/SL, and bracket order drafts.
+- Live execution safety review with global kill switch, max order size, max daily loss, stale-price rejection, liquidity minimums, latency/slippage guards, duplicate-order prevention, dry-run mode, and manual confirmation gates.
+- WebSocket stream specs for Binance, Coinbase, Kraken, OKX, and Bybit are modeled as market-data-only and not auto-running.
+- Replay and benchmark panels compare paper opportunity, estimated live outcome, and conservative real-world fee-adjusted outcome.
+
+Phase 3 still does **not** add a live order route.
+
 ## Multi-Agent Coordination
 
 The local multi-agent layer includes:

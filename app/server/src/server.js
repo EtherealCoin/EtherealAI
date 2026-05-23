@@ -177,6 +177,21 @@ const {
   createPlainEnglishExchangeError
 } = require('./lib/exchange-readonly-connections');
 const {
+  PHASE3_RECOMMENDED_EXCHANGES,
+  UNIVERSAL_ORDER_TYPES,
+  DEFAULT_LIVE_SAFETY_POLICY,
+  EXCHANGE_CAPABILITY_MATRIX,
+  WEBSOCKET_STREAM_SPECS,
+  scanAuthenticatedReadOnlyAccounts,
+  normalizeUniversalOrderDraft,
+  evaluateLiveExecutionSafety,
+  buildWebSocketHealthPlan,
+  buildAccountAwareArbitrageView,
+  replaySpreadHistory,
+  buildOutcomeBenchmark,
+  buildPhase3Status
+} = require('./lib/exchange-live-safety');
+const {
   parseSocialPost,
   reviewSocialContent
 } = require('./lib/social-ops');
@@ -783,6 +798,19 @@ registerEtherealRoutes(app, {
   buildLiveTradingLaunchRoadmap,
   buildReadOnlyConnectionSummary,
   createPlainEnglishExchangeError,
+  phase3RecommendedExchanges: PHASE3_RECOMMENDED_EXCHANGES,
+  universalOrderTypes: UNIVERSAL_ORDER_TYPES,
+  defaultLiveSafetyPolicy: DEFAULT_LIVE_SAFETY_POLICY,
+  exchangeCapabilityMatrix: EXCHANGE_CAPABILITY_MATRIX,
+  websocketStreamSpecs: WEBSOCKET_STREAM_SPECS,
+  scanAuthenticatedReadOnlyAccounts,
+  normalizeUniversalOrderDraft,
+  evaluateLiveExecutionSafety,
+  buildWebSocketHealthPlan,
+  buildAccountAwareArbitrageView,
+  replaySpreadHistory,
+  buildOutcomeBenchmark,
+  buildPhase3Status,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,
