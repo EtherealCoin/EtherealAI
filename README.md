@@ -121,6 +121,17 @@ Strategy Lab now includes Phase 2 read-only exchange setup under `Exchange Conne
 - Live trading, withdrawals, wallet signing, and order endpoints remain locked.
 - The read-only price compare can compare supported public market prices and gross spreads without placing orders.
 
+## Live Trading Launch Center
+
+`/live-trading-launch` is the owner-facing roadmap for moving toward real live trading without unlocking it.
+
+- Phase 1 adds expanded read-only public market snapshots for Binance, Coinbase, Kraken, OKX, Bybit, KuCoin, Gate.io, MEXC, Bitget, Bitstamp, Gemini USD markets, Crypto.com, and Hyperliquid where public endpoints allow it.
+- Phase 2 adds a read-only arbitrage scanner that compares best buy versus best sell venues, estimates gross spread, fees, slippage, latency risk, visible liquidity, and net paper edge.
+- The operator can click `Run Read-Only Arbitrage Scan` and then `Paper Simulate This Opportunity`.
+- The page includes a locked Live Trading Approval Center for future trading permissions, withdrawal-disabled verification, risk limits, kill switch, owner approval, audit log, signing boundary, compliance checklist, dry-run proof, and small-capital test mode.
+- Account API keys remain optional. The scanner can run against public read-only endpoints first, and account-specific read-only keys can be connected later for better fee/limit checks.
+- Live trading, withdrawals, wallet signing, and order endpoints remain disabled.
+
 ## Multi-Agent Coordination
 
 The local multi-agent layer includes:

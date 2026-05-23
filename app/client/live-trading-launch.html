@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Trading Launch Center</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/dashboard">Mission Control</a>
+        <a href="/owner-setup">Setup Wizard</a>
+        <a href="/operator-control">Wallet & Funding</a>
+        <a href="/security-lockdown">Security</a>
+        <a href="/strategy-lab">Strategy / Paper / Bots</a>
+        <a href="/live-trading-launch">Live Trading Launch</a>
+        <a href="/solidity-lab">Solidity Lab</a>
+        <a href="/social-ops">Social Ops</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main class="container live-launch-shell">
+        <section class="mission-hero live-launch-hero">
+            <span class="eyebrow">Locked by design</span>
+            <h1>Live Trading Launch Center</h1>
+            <p>This page builds the safe path toward live trading without unlocking it. Start with read-only market intelligence, paper simulate opportunities, then work through future owner approval gates one by one.</p>
+            <div class="button-row">
+                <button id="refresh-live-roadmap" type="button">Refresh Launch Status</button>
+                <button id="run-readonly-scan" type="button">Run Read-Only Arbitrage Scan</button>
+                <a class="cta-button" href="/strategy-lab#exchange-connector-manager">Open Exchange Connectors</a>
+            </div>
+        </section>
+
+        <section class="live-launch-status-grid" aria-label="Live launch status">
+            <article class="status-success">
+                <span>Read-Only Mode</span>
+                <strong>Working</strong>
+                <small>Market data only. No orders.</small>
+            </article>
+            <article class="status-info">
+                <span>Paper Simulation</span>
+                <strong>Available</strong>
+                <small>Use this before any live approval.</small>
+            </article>
+            <article class="status-warning">
+                <span>Live Test Mode</span>
+                <strong>Locked</strong>
+                <small>Future owner approval required.</small>
+            </article>
+            <article class="status-success">
+                <span>Withdrawals</span>
+                <strong>Disabled</strong>
+                <small>Must stay disabled.</small>
+            </article>
+        </section>
+
+        <section class="model-panel">
+            <h2>What Should I Do Next?</h2>
+            <div id="live-next-action" class="live-next-action">Loading safest next action...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Read-Only Arbitrage Scanner</h2>
+            <p class="inline-status">Phase 1 and Phase 2: compare reachable public/read-only market data, estimate edge after fees, slippage, latency, and liquidity, then paper simulate. This cannot place trades.</p>
+            <div class="live-scan-controls">
+                <label for="live-scan-symbol">
+                    Market
+                    <input id="live-scan-symbol" type="text" value="BTC/USDT">
+                </label>
+                <label for="live-scan-order-size">
+                    Paper test size USD
+                    <input id="live-scan-order-size" type="number" value="1000" min="1" step="50">
+                </label>
+                <label for="live-scan-min-net">
+                    Minimum net edge %
+                    <input id="live-scan-min-net" type="number" value="0.02" min="0" step="0.01">
+                </label>
+                <label for="live-scan-min-liquidity">
+                    Minimum visible liquidity USD
+                    <input id="live-scan-min-liquidity" type="number" value="250" min="0" step="50">
+                </label>
+                <label for="live-scan-max-latency">
+                    Max read latency ms
+                    <input id="live-scan-max-latency" type="number" value="1500" min="100" step="100">
+                </label>
+                <label class="checkbox-line">
+                    <input id="live-scan-connected-only" type="checkbox">
+                    Connected venues only
+                </label>
+            </div>
+            <div id="live-scan-summary" class="live-scan-summary">No read-only scan has run yet.</div>
+            <div id="live-candidate-list" class="live-candidate-list">Run a scan to see plain-English arbitrage candidates.</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Launch Roadmap</h2>
+            <div id="live-roadmap-phases" class="live-roadmap-phases">Loading phases...</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Live Trading Approval Center</h2>
+            <p class="inline-status">These are the gates required before any tiny controlled live trade. Locked is the correct state until every safety item is complete.</p>
+            <div id="live-approval-center" class="live-approval-center">Loading locked requirements...</div>
+        </section>
+
+        <details class="compact-details advanced-operator-tools">
+            <summary>Advanced Developer Mode</summary>
+            <p class="inline-status">Raw roadmap and scanner JSON for technical review. Simple Mode above is the operator surface.</p>
+            <pre id="live-launch-raw" class="model-output">No advanced data loaded yet.</pre>
+        </details>
+    </main>
+
+    <script>
+        let latestLiveRoadmap = null;
+        let latestLiveScan = null;
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function statusClass(status) {
+            if (status === 'working' || status === 'complete' || status === 'in_progress') return 'status-success';
+            if (status === 'locked') return 'status-warning';
+            if (status === 'blocked') return 'status-danger';
+            return 'status-info';
+        }
+
+        function formatPercent(value) {
+            const number = Number(value);
+            return Number.isFinite(number) ? `${number.toFixed(4)}%` : 'N/A';
+        }
+
+        function formatUsd(value) {
+            const number = Number(value);
+            return Number.isFinite(number) ? `$${number.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'N/A';
+        }
+
+        function renderRoadmap(roadmap) {
+            latestLiveRoadmap = roadmap;
+            document.getElementById('live-next-action').innerHTML = `
+                <article class="live-next-card">
+                    <strong>${escapeHtml(roadmap.nextRecommendedAction || 'Run a read-only scan.')}</strong>
+                    <span>${escapeHtml(roadmap.simpleStatus || 'Live trading is locked.')}</span>
+                </article>
+            `;
+
+            document.getElementById('live-roadmap-phases').innerHTML = (roadmap.phases || []).map(phase => `
+                <article class="live-phase-card ${statusClass(phase.status)}">
+                    <div>
+                        <span>${escapeHtml(phase.status)}</span>
+                        <strong>${escapeHtml(phase.title)}</strong>
+                    </div>
+                    <p><b>Done:</b> ${escapeHtml((phase.done || []).join(' ' ) || 'Nothing yet.')}</p>
+                    <p><b>Missing:</b> ${escapeHtml((phase.missing || []).join(' ' ) || 'Nothing listed.')}</p>
+                    <button type="button" ${phase.status === 'locked' ? 'disabled' : ''}>${escapeHtml(phase.nextButton || 'Review')}</button>
+                </article>
+            `).join('');
+
+            document.getElementById('live-approval-center').innerHTML = (roadmap.approvalCenter?.requirements || []).map(item => `
+                <article class="live-approval-item ${statusClass(item.status)}">
+                    <div>
+                        <span>${escapeHtml(item.status)}</span>
+                        <strong>${escapeHtml(item.label)}</strong>
+                    </div>
+                    <button type="button" ${item.status === 'locked' ? 'disabled' : ''}>${escapeHtml(item.button || 'Review')}</button>
+                </article>
+            `).join('');
+
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                roadmap,
+                latestLiveScan
+            }, null, 2);
+        }
+
+        function renderScan(scan) {
+            latestLiveScan = scan;
+            const candidates = scan.candidates || [];
+
+            document.getElementById('live-scan-summary').innerHTML = `
+                <div class="read-only-spread-summary">
+                    <article>
+                        <span>Venues Working</span>
+                        <strong>${escapeHtml(scan.venueSummary?.working || 0)}</strong>
+                        <small>${escapeHtml(scan.venueSummary?.errors || 0)} endpoint issue(s)</small>
+                    </article>
+                    <article>
+                        <span>Best Candidate</span>
+                        <strong>${escapeHtml(scan.bestCandidate?.buyVenue || 'None')} → ${escapeHtml(scan.bestCandidate?.sellVenue || '')}</strong>
+                        <small>${escapeHtml(scan.plainEnglishSummary || '')}</small>
+                    </article>
+                    <article>
+                        <span>Accepted</span>
+                        <strong>${escapeHtml((scan.acceptedCandidates || []).length)}</strong>
+                        <small>Must still be paper simulated.</small>
+                    </article>
+                    <article>
+                        <span>Live Trading</span>
+                        <strong>Locked</strong>
+                        <small>No orders, no signing, no withdrawals.</small>
+                    </article>
+                </div>
+            `;
+
+            document.getElementById('live-candidate-list').innerHTML = candidates.length ? candidates.map((candidate, index) => `
+                <article class="live-candidate-card ${candidate.accepted ? 'status-success' : 'status-warning'}">
+                    <div>
+                        <span>${candidate.accepted ? 'Paper candidate' : 'Rejected for now'}</span>
+                        <strong>${escapeHtml(candidate.buyVenue)} → ${escapeHtml(candidate.sellVenue)}</strong>
+                    </div>
+                    <p>${escapeHtml(candidate.plainEnglish)}</p>
+                    <div class="live-candidate-metrics">
+                        <span>Gross: ${formatPercent(candidate.grossSpreadPercent)}</span>
+                        <span>Costs: ${formatPercent(candidate.totalEstimatedCostPercent)}</span>
+                        <span>Net: ${formatPercent(candidate.estimatedNetProfitPercent)}</span>
+                        <span>Paper P/L: ${formatUsd(candidate.estimatedNetProfitUsd)}</span>
+                        <span>Latency: ${escapeHtml(candidate.latencyMs)} ms</span>
+                        <span>Liquidity: ${formatUsd(candidate.limitingLiquidityUsd)}</span>
+                    </div>
+                    ${candidate.rejectionReasons?.length ? `<p><b>Why not yet:</b> ${escapeHtml(candidate.rejectionReasons.join(' '))}</p>` : ''}
+                    <button type="button" data-paper-simulate="${index}">Paper Simulate This Opportunity</button>
+                </article>
+            `).join('') : '<p class="workflow-helper-text">No candidates yet. Try a different symbol, lower the minimum net edge, or connect more read-only venues.</p>';
+
+            document.querySelectorAll('button[data-paper-simulate]').forEach(button => {
+                button.addEventListener('click', () => paperSimulateCandidate(Number(button.dataset.paperSimulate)));
+            });
+
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                roadmap: latestLiveRoadmap,
+                latestLiveScan
+            }, null, 2);
+        }
+
+        async function loadRoadmap() {
+            const response = await fetch('/api/v1/live-trading-launch/roadmap');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('live-next-action').textContent = data.error || 'Unable to load launch roadmap.';
+                return;
+            }
+
+            renderRoadmap(data.roadmap);
+        }
+
+        async function runReadOnlyScan() {
+            const output = document.getElementById('live-scan-summary');
+            output.textContent = 'Running read-only market scan. No orders, wallet signing, or withdrawals are possible from this scan.';
+
+            const response = await fetch('/api/v1/live-trading-launch/read-only-scan', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    symbol: document.getElementById('live-scan-symbol').value || 'BTC/USDT',
+                    orderSizeUsd: Number(document.getElementById('live-scan-order-size').value || 1000),
+                    minNetProfitPercent: Number(document.getElementById('live-scan-min-net').value || 0.02),
+                    minLiquidityUsd: Number(document.getElementById('live-scan-min-liquidity').value || 250),
+                    maxLatencyMs: Number(document.getElementById('live-scan-max-latency').value || 1500),
+                    connectedOnly: document.getElementById('live-scan-connected-only').checked === true,
+                    includeExpanded: true,
+                    maxVenues: 13,
+                    maxCandidates: 12
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Read-only scan failed.';
+                return;
+            }
+
+            renderRoadmap(data.roadmap);
+            renderScan(data.scan);
+        }
+
+        async function paperSimulateCandidate(index) {
+            const candidate = latestLiveScan?.candidates?.[index];
+            if (!candidate) {
+                return;
+            }
+
+            const response = await fetch('/api/v1/live-trading-launch/paper-simulate-opportunity', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ opportunity: candidate })
+            });
+            const data = await response.json();
+            const target = document.getElementById('live-scan-summary');
+
+            if (!response.ok) {
+                target.textContent = data.error || 'Paper simulation failed.';
+                return;
+            }
+
+            target.innerHTML += `
+                <article class="live-paper-sim-result status-info">
+                    <strong>Paper Simulation Created</strong>
+                    <span>${escapeHtml(data.simulation?.opportunity?.buyVenue)} → ${escapeHtml(data.simulation?.opportunity?.sellVenue)} · estimated paper P/L ${formatUsd(data.simulation?.opportunity?.estimatedNetProfitUsd)}</span>
+                    <small>Local paper simulation only. Live trading, withdrawals, wallet signing, and order endpoints remain locked.</small>
+                </article>
+            `;
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                roadmap: latestLiveRoadmap,
+                latestLiveScan,
+                latestPaperSimulation: data.simulation
+            }, null, 2);
+        }
+
+        document.getElementById('refresh-live-roadmap').addEventListener('click', loadRoadmap);
+        document.getElementById('run-readonly-scan').addEventListener('click', runReadOnlyScan);
+
+        loadRoadmap();
+    </script>
+    <script src="/js/operator-training.js"></script>
+    <script src="/js/operator-mode.js"></script>
+</body>
+</html>

@@ -3142,16 +3142,30 @@ function checkExchangeReadOnlyConnectionsModule() {
     EXCHANGE_READONLY_VAULT_KEY_PATH,
     RECOMMENDED_READONLY_EXCHANGES,
     QUOTE_ONLY_CONNECTORS,
+    EXPANDED_READONLY_MARKET_VENUES,
     EXCHANGE_READONLY_SETUP_GUIDES,
     DEX_QUOTE_ONLY_SETUP_GUIDES,
     sanitizeCredentialInput,
     sanitizePermissionsChecklist,
     buildReadOnlyConnectionSummary,
+    scanReadOnlyArbitrageOpportunities,
+    createPaperSimulationForOpportunity,
+    buildLiveTradingLaunchRoadmap,
     createPlainEnglishPublicMarketDataError,
     createPlainEnglishExchangeError
   } = require(path.join(projectRoot, 'app/server/src/lib/exchange-readonly-connections'));
   const requiredCex = ['binance', 'coinbase', 'kraken', 'okx', 'bybit'];
   const requiredQuoteOnly = ['uniswap', 'jupiter', 'one-inch', 'gmx', 'hyperliquid'];
+  const requiredExpandedVenues = [
+    'kucoin',
+    'gate-io',
+    'mexc',
+    'bitget',
+    'bitstamp',
+    'gemini',
+    'crypto-com-us',
+    'hyperliquid'
+  ];
   const permissions = sanitizePermissionsChecklist({
     readOnlyEnabled: true,
     tradingDisabled: true,
@@ -3197,6 +3211,15 @@ function checkExchangeReadOnlyConnectionsModule() {
       }
     }
   ]);
+  const launchRoadmap = buildLiveTradingLaunchRoadmap({ connectors: [] });
+  const paperSimulation = createPaperSimulationForOpportunity({
+    symbol: 'BTC/USDT',
+    buyVenue: 'OKX',
+    sellVenue: 'Kraken',
+    grossSpreadPercent: 0.44,
+    estimatedNetProfitPercent: 0.11,
+    tradeSizeUsd: 1000
+  });
 
   if (
     !OWNER_SECRETS_DIR.endsWith('EtherealAI_Secrets')
@@ -3204,6 +3227,7 @@ function checkExchangeReadOnlyConnectionsModule() {
     || !EXCHANGE_READONLY_VAULT_KEY_PATH.endsWith('exchange-readonly-vault.key')
     || requiredCex.some(exchange => !RECOMMENDED_READONLY_EXCHANGES.includes(exchange))
     || requiredQuoteOnly.some(exchange => !QUOTE_ONLY_CONNECTORS.includes(exchange))
+    || requiredExpandedVenues.some(exchange => !EXPANDED_READONLY_MARKET_VENUES.includes(exchange))
     || requiredCex.some(exchange => !EXCHANGE_READONLY_SETUP_GUIDES[exchange]?.permissionsChecklist?.some(item => /withdraw/i.test(item)))
     || requiredQuoteOnly.some(exchange => !DEX_QUOTE_ONLY_SETUP_GUIDES[exchange]?.warning)
     || permissions.missing.length !== 0
@@ -3214,6 +3238,18 @@ function checkExchangeReadOnlyConnectionsModule() {
     || summary.safetyBoundary.liveTradingEnabled !== false
     || summary.safetyBoundary.withdrawalsEnabled !== false
     || summary.safetyBoundary.walletSigningEnabled !== false
+    || typeof scanReadOnlyArbitrageOpportunities !== 'function'
+    || launchRoadmap.phases.length !== 5
+    || launchRoadmap.approvalCenter.status !== 'locked'
+    || launchRoadmap.safetyBoundary.liveTradingEnabled !== false
+    || launchRoadmap.safetyBoundary.withdrawalsEnabled !== false
+    || launchRoadmap.safetyBoundary.walletSigningEnabled !== false
+    || launchRoadmap.safetyBoundary.orderEndpointEnabled !== false
+    || !launchRoadmap.phases.some(phase => phase.id === 'phase_2_arbitrage_intelligence' && /Paper simulation/.test(phase.done.join(' ')))
+    || paperSimulation.status !== 'paper_simulation_created'
+    || paperSimulation.safetyBoundary.paperOnly !== true
+    || paperSimulation.safetyBoundary.liveTradingEnabled !== false
+    || paperSimulation.safetyBoundary.orderEndpointEnabled !== false
     || !/read-only/.test(createPlainEnglishExchangeError('Binance', new Error('401 unauthorized')).toLowerCase())
     || !/public market-data/.test(createPlainEnglishPublicMarketDataError('Bybit', new Error('403 forbidden')).toLowerCase())
     || /private key|credential check/.test(createPlainEnglishPublicMarketDataError('Bybit', new Error('403 forbidden')).toLowerCase())
@@ -6680,6 +6716,68 @@ function checkExchangeConnectorManagerUi() {
   }
 
   pass('Exchange Connector Manager UI');
+}
+
+function checkLiveTradingLaunchCenterUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/live-trading-launch.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+  const routes = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/exchange-metadata.js'), 'utf8');
+  const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
+  const server = fs.readFileSync(path.join(projectRoot, 'app/server/src/server.js'), 'utf8');
+  const routeRegistration = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/route-registration.js'), 'utf8');
+  const readOnlyConnections = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-readonly-connections.js'), 'utf8');
+  const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
+  const strategyLab = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
+  const operatorControl = fs.readFileSync(path.join(projectRoot, 'app/client/operator-control.html'), 'utf8');
+
+  if (
+    !html.includes('Live Trading Launch Center')
+    || !html.includes('Run Read-Only Arbitrage Scan')
+    || !html.includes('Paper Simulate This Opportunity')
+    || !html.includes('Live Trading Approval Center')
+    || !html.includes('Advanced Developer Mode')
+    || !html.includes('Local paper simulation only')
+    || !html.includes('Live trading, withdrawals, wallet signing, and order endpoints remain locked')
+    || !html.includes('/api/v1/live-trading-launch/roadmap')
+    || !html.includes('/api/v1/live-trading-launch/read-only-scan')
+    || !html.includes('/api/v1/live-trading-launch/paper-simulate-opportunity')
+    || html.includes('localStorage')
+    || html.includes('sessionStorage')
+    || !styles.includes('.live-launch-status-grid')
+    || !styles.includes('.live-scan-controls')
+    || !styles.includes('.live-candidate-card')
+    || !styles.includes('.live-approval-center')
+    || !routes.includes("app.get('/api/v1/live-trading-launch/roadmap'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/read-only-scan'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/paper-simulate-opportunity'")
+    || !pages.includes("app.get('/live-trading-launch', requirePageAuth")
+    || !server.includes('EXPANDED_READONLY_MARKET_VENUES')
+    || !server.includes('scanReadOnlyArbitrageOpportunities')
+    || !server.includes('buildLiveTradingLaunchRoadmap')
+    || !routeRegistration.includes('scanReadOnlyArbitrageOpportunities')
+    || !routeRegistration.includes('createPaperSimulationForOpportunity')
+    || !readOnlyConnections.includes('EXPANDED_READONLY_MARKET_VENUES')
+    || !readOnlyConnections.includes('fetchKucoinMarketSnapshot')
+    || !readOnlyConnections.includes('fetchGateMarketSnapshot')
+    || !readOnlyConnections.includes('fetchMexcMarketSnapshot')
+    || !readOnlyConnections.includes('fetchBitgetMarketSnapshot')
+    || !readOnlyConnections.includes('fetchBitstampMarketSnapshot')
+    || !readOnlyConnections.includes('fetchCryptoComMarketSnapshot')
+    || !readOnlyConnections.includes('scanReadOnlyArbitrageOpportunities')
+    || !readOnlyConnections.includes('createArbitrageCandidate')
+    || !readOnlyConnections.includes('marketDataOnly: true')
+    || !readOnlyConnections.includes('liveTradingEnabled: false')
+    || !readOnlyConnections.includes('withdrawalsEnabled: false')
+    || !readOnlyConnections.includes('walletSigningEnabled: false')
+    || !readOnlyConnections.includes('orderEndpointEnabled: false')
+    || !dashboard.includes('/live-trading-launch')
+    || !strategyLab.includes('/live-trading-launch')
+    || !operatorControl.includes('/live-trading-launch')
+  ) {
+    fail('Live Trading Launch Center is missing Phase 1/2 UI, routes, scanner wiring, or locked safety boundaries');
+  }
+
+  pass('Live Trading Launch Center UI');
 }
 
 function checkMvpTestPassOwnerWorkflowUi() {
@@ -10683,6 +10781,7 @@ async function main() {
   checkInlineScripts('app/client/creator.html');
   checkInlineScripts('app/client/dashboard.html');
   checkInlineScripts('app/client/operator-control.html');
+  checkInlineScripts('app/client/live-trading-launch.html');
   checkInlineScripts('app/client/owner-setup.html');
   checkInlineScripts('app/client/security-lockdown.html');
   checkInlineScripts('app/client/owner-proof-packet.html');
@@ -10695,6 +10794,7 @@ async function main() {
   checkStrategyLabBotOperatorWizardUi();
   checkStrategyLabOneClickSafePaperUi();
   checkExchangeConnectorManagerUi();
+  checkLiveTradingLaunchCenterUi();
   checkMvpTestPassOwnerWorkflowUi();
   checkDashboardMvpReadinessUi();
   checkOperatorControlCenterUi();

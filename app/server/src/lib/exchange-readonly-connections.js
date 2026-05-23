@@ -8,6 +8,25 @@ const EXCHANGE_READONLY_VAULT_PATH = path.join(OWNER_SECRETS_DIR, 'exchange-read
 const EXCHANGE_READONLY_VAULT_KEY_PATH = path.join(OWNER_SECRETS_DIR, 'exchange-readonly-vault.key');
 const RECOMMENDED_READONLY_EXCHANGES = ['binance', 'coinbase', 'kraken', 'okx', 'bybit'];
 const QUOTE_ONLY_CONNECTORS = ['uniswap', 'jupiter', 'one-inch', 'gmx', 'hyperliquid'];
+const EXPANDED_READONLY_MARKET_VENUES = [
+  'binance',
+  'coinbase',
+  'kraken',
+  'okx',
+  'bybit',
+  'kucoin',
+  'gate-io',
+  'mexc',
+  'bitget',
+  'bitstamp',
+  'gemini',
+  'crypto-com-us',
+  'hyperliquid'
+];
+const DEFAULT_TAKER_FEE_PERCENT = 0.1;
+const DEFAULT_MAKER_FEE_PERCENT = 0.08;
+const DEFAULT_SLIPPAGE_PERCENT = 0.05;
+const DEFAULT_LATENCY_BUFFER_PERCENT = 0.02;
 
 const EXCHANGE_READONLY_SETUP_GUIDES = {
   binance: {
@@ -224,7 +243,9 @@ function normalizeTradingSymbol(symbol = 'BTC/USDT') {
     quote,
     canonical: `${base === 'XBT' ? 'BTC' : base}/${quote}`,
     compact: `${base === 'XBT' ? 'BTC' : base}${quote}`,
+    compactLower: `${base === 'XBT' ? 'BTC' : base}${quote}`.toLowerCase(),
     dash: `${base === 'XBT' ? 'BTC' : base}-${quote}`,
+    underscore: `${base === 'XBT' ? 'BTC' : base}_${quote}`,
     kraken: `${base === 'BTC' ? 'XBT' : base}${quote}`
   };
 }
@@ -561,6 +582,78 @@ async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 8000) {
   }
 }
 
+async function fetchJsonWithTiming(url, options = {}, timeoutMs = 8000) {
+  const startedAt = Date.now();
+  const body = await fetchJsonWithTimeout(url, options, timeoutMs);
+
+  return {
+    body,
+    latencyMs: Date.now() - startedAt
+  };
+}
+
+function toFiniteNumber(value, fallback = null) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function normalizeSize(value) {
+  const number = toFiniteNumber(value, null);
+  return number && number > 0 ? number : null;
+}
+
+function buildMarketSnapshot({
+  exchangeName,
+  displayName,
+  symbol,
+  bid,
+  ask,
+  bidSize = null,
+  askSize = null,
+  last = null,
+  quoteVolume24h = null,
+  baseVolume24h = null,
+  makerFeePercent = DEFAULT_MAKER_FEE_PERCENT,
+  takerFeePercent = DEFAULT_TAKER_FEE_PERCENT,
+  source,
+  latencyMs
+}) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const normalizedBid = toFiniteNumber(bid, null);
+  const normalizedAsk = toFiniteNumber(ask, null);
+  const normalizedBidSize = normalizeSize(bidSize);
+  const normalizedAskSize = normalizeSize(askSize);
+  const topBidLiquidityUsd = normalizedBid && normalizedBidSize ? normalizedBid * normalizedBidSize : null;
+  const topAskLiquidityUsd = normalizedAsk && normalizedAskSize ? normalizedAsk * normalizedAskSize : null;
+  const topLiquidityUsd = [topBidLiquidityUsd, topAskLiquidityUsd]
+    .filter(value => Number.isFinite(value) && value > 0)
+    .reduce((min, value) => Math.min(min, value), Number.POSITIVE_INFINITY);
+
+  return {
+    exchangeName: normalizeExchangeName(exchangeName),
+    displayName,
+    symbol: normalized.canonical,
+    bid: normalizedBid,
+    ask: normalizedAsk,
+    bidSize: normalizedBidSize,
+    askSize: normalizedAskSize,
+    last: toFiniteNumber(last, null),
+    quoteVolume24h: toFiniteNumber(quoteVolume24h, null),
+    baseVolume24h: toFiniteNumber(baseVolume24h, null),
+    topBidLiquidityUsd,
+    topAskLiquidityUsd,
+    topLiquidityUsd: Number.isFinite(topLiquidityUsd) ? topLiquidityUsd : null,
+    makerFeePercent,
+    takerFeePercent,
+    source,
+    latencyMs,
+    fetchedAt: new Date().toISOString(),
+    readOnly: true,
+    orderEndpointUsed: false,
+    walletSigningUsed: false
+  };
+}
+
 function hmacHex(secret, payload) {
   return crypto.createHmac('sha256', secret).update(payload).digest('hex');
 }
@@ -670,6 +763,284 @@ async function fetchHyperliquidMid(symbol) {
   };
 }
 
+async function fetchBinanceMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const { body, latencyMs } = await fetchJsonWithTiming(`https://api.binance.com/api/v3/ticker/bookTicker?symbol=${normalized.compact}`);
+
+  return buildMarketSnapshot({
+    exchangeName: 'binance',
+    displayName: 'Binance',
+    symbol,
+    bid: body.bidPrice,
+    ask: body.askPrice,
+    bidSize: body.bidQty,
+    askSize: body.askQty,
+    makerFeePercent: 0.1,
+    takerFeePercent: 0.1,
+    source: 'public bookTicker',
+    latencyMs
+  });
+}
+
+async function fetchCoinbaseMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const { body, latencyMs } = await fetchJsonWithTiming(`https://api.exchange.coinbase.com/products/${normalized.dash}/book?level=1`);
+  const bid = body.bids?.[0] || [];
+  const ask = body.asks?.[0] || [];
+
+  return buildMarketSnapshot({
+    exchangeName: 'coinbase',
+    displayName: 'Coinbase',
+    symbol,
+    bid: bid[0],
+    ask: ask[0],
+    bidSize: bid[1],
+    askSize: ask[1],
+    makerFeePercent: 0.4,
+    takerFeePercent: 0.6,
+    source: 'public level-1 book',
+    latencyMs
+  });
+}
+
+async function fetchKrakenMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const { body, latencyMs } = await fetchJsonWithTiming(`https://api.kraken.com/0/public/Depth?pair=${normalized.kraken}&count=1`);
+  const result = body.result || {};
+  const book = result[Object.keys(result)[0]] || {};
+  const bid = book.bids?.[0] || [];
+  const ask = book.asks?.[0] || [];
+
+  return buildMarketSnapshot({
+    exchangeName: 'kraken',
+    displayName: 'Kraken',
+    symbol,
+    bid: bid[0],
+    ask: ask[0],
+    bidSize: bid[1],
+    askSize: ask[1],
+    makerFeePercent: 0.25,
+    takerFeePercent: 0.4,
+    source: 'public depth',
+    latencyMs
+  });
+}
+
+async function fetchOkxMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const { body, latencyMs } = await fetchJsonWithTiming(`https://www.okx.com/api/v5/market/books?instId=${normalized.dash}&sz=1`);
+  const book = body.data?.[0] || {};
+  const bid = book.bids?.[0] || [];
+  const ask = book.asks?.[0] || [];
+
+  return buildMarketSnapshot({
+    exchangeName: 'okx',
+    displayName: 'OKX',
+    symbol,
+    bid: bid[0],
+    ask: ask[0],
+    bidSize: bid[1],
+    askSize: ask[1],
+    makerFeePercent: 0.08,
+    takerFeePercent: 0.1,
+    source: 'public order book',
+    latencyMs
+  });
+}
+
+async function fetchBybitMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const { body, latencyMs } = await fetchJsonWithTiming(`https://api.bybit.com/v5/market/orderbook?category=spot&symbol=${normalized.compact}&limit=1`);
+  const book = body.result || {};
+  const bid = book.b?.[0] || [];
+  const ask = book.a?.[0] || [];
+
+  return buildMarketSnapshot({
+    exchangeName: 'bybit',
+    displayName: 'Bybit',
+    symbol,
+    bid: bid[0],
+    ask: ask[0],
+    bidSize: bid[1],
+    askSize: ask[1],
+    makerFeePercent: 0.1,
+    takerFeePercent: 0.1,
+    source: 'public spot order book',
+    latencyMs
+  });
+}
+
+async function fetchKucoinMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const { body, latencyMs } = await fetchJsonWithTiming(`https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=${normalized.dash}`);
+  const ticker = body.data || {};
+
+  return buildMarketSnapshot({
+    exchangeName: 'kucoin',
+    displayName: 'KuCoin',
+    symbol,
+    bid: ticker.bestBid || ticker.price,
+    ask: ticker.bestAsk || ticker.price,
+    bidSize: ticker.bestBidSize,
+    askSize: ticker.bestAskSize,
+    last: ticker.price,
+    makerFeePercent: 0.1,
+    takerFeePercent: 0.1,
+    source: 'public level-1 order book',
+    latencyMs
+  });
+}
+
+async function fetchGateMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const { body, latencyMs } = await fetchJsonWithTiming(`https://api.gateio.ws/api/v4/spot/tickers?currency_pair=${normalized.underscore}`);
+  const ticker = Array.isArray(body) ? body[0] : body;
+
+  return buildMarketSnapshot({
+    exchangeName: 'gate-io',
+    displayName: 'Gate.io',
+    symbol,
+    bid: ticker.highest_bid,
+    ask: ticker.lowest_ask,
+    last: ticker.last,
+    baseVolume24h: ticker.base_volume,
+    quoteVolume24h: ticker.quote_volume,
+    makerFeePercent: 0.2,
+    takerFeePercent: 0.2,
+    source: 'public spot ticker',
+    latencyMs
+  });
+}
+
+async function fetchMexcMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const { body, latencyMs } = await fetchJsonWithTiming(`https://api.mexc.com/api/v3/ticker/bookTicker?symbol=${normalized.compact}`);
+
+  return buildMarketSnapshot({
+    exchangeName: 'mexc',
+    displayName: 'MEXC',
+    symbol,
+    bid: body.bidPrice,
+    ask: body.askPrice,
+    bidSize: body.bidQty,
+    askSize: body.askQty,
+    makerFeePercent: 0.1,
+    takerFeePercent: 0.1,
+    source: 'public bookTicker',
+    latencyMs
+  });
+}
+
+async function fetchBitgetMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const { body, latencyMs } = await fetchJsonWithTiming(`https://api.bitget.com/api/v2/spot/market/tickers?symbol=${normalized.compact}`);
+  const ticker = body.data?.[0] || {};
+
+  return buildMarketSnapshot({
+    exchangeName: 'bitget',
+    displayName: 'Bitget',
+    symbol,
+    bid: ticker.bidPr,
+    ask: ticker.askPr,
+    bidSize: ticker.bidSz,
+    askSize: ticker.askSz,
+    last: ticker.lastPr,
+    quoteVolume24h: ticker.quoteVolume,
+    baseVolume24h: ticker.baseVolume,
+    makerFeePercent: 0.1,
+    takerFeePercent: 0.1,
+    source: 'public spot ticker',
+    latencyMs
+  });
+}
+
+async function fetchBitstampMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const { body, latencyMs } = await fetchJsonWithTiming(`https://www.bitstamp.net/api/v2/ticker/${normalized.compactLower}/`);
+
+  return buildMarketSnapshot({
+    exchangeName: 'bitstamp',
+    displayName: 'Bitstamp',
+    symbol,
+    bid: body.bid,
+    ask: body.ask,
+    last: body.last,
+    baseVolume24h: body.volume,
+    makerFeePercent: 0.3,
+    takerFeePercent: 0.4,
+    source: 'public ticker',
+    latencyMs
+  });
+}
+
+async function fetchGeminiMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  if (normalized.quote !== 'USD') {
+    throw new Error(`Gemini public ticker is skipped for ${normalized.canonical}; use a USD market such as ${normalized.base}/USD to compare Gemini without mixing quote assets.`);
+  }
+
+  const geminiSymbol = `${normalized.base}${normalized.quote}`.toLowerCase();
+  const { body, latencyMs } = await fetchJsonWithTiming(`https://api.gemini.com/v1/pubticker/${geminiSymbol}`);
+
+  return buildMarketSnapshot({
+    exchangeName: 'gemini',
+    displayName: 'Gemini',
+    symbol,
+    bid: body.bid,
+    ask: body.ask,
+    last: body.last,
+    baseVolume24h: body.volume?.[normalized.base],
+    makerFeePercent: 0.2,
+    takerFeePercent: 0.4,
+    source: 'public ticker',
+    latencyMs
+  });
+}
+
+async function fetchCryptoComMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const { body, latencyMs } = await fetchJsonWithTiming(`https://api.crypto.com/exchange/v1/public/get-ticker?instrument_name=${normalized.underscore}`);
+  const ticker = body.result?.data?.[0] || {};
+
+  return buildMarketSnapshot({
+    exchangeName: 'crypto-com-us',
+    displayName: 'Crypto.com',
+    symbol,
+    bid: ticker.b,
+    ask: ticker.k,
+    last: ticker.a,
+    quoteVolume24h: ticker.vv,
+    baseVolume24h: ticker.v,
+    makerFeePercent: 0.075,
+    takerFeePercent: 0.075,
+    source: 'public ticker',
+    latencyMs
+  });
+}
+
+async function fetchHyperliquidMarketSnapshot(symbol) {
+  const normalized = normalizeTradingSymbol(symbol);
+  const { body, latencyMs } = await fetchJsonWithTiming('https://api.hyperliquid.xyz/info', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'allMids' })
+  });
+  const mid = body[normalized.base];
+
+  return buildMarketSnapshot({
+    exchangeName: 'hyperliquid',
+    displayName: 'Hyperliquid',
+    symbol,
+    bid: mid,
+    ask: mid,
+    last: mid,
+    makerFeePercent: 0.015,
+    takerFeePercent: 0.045,
+    source: 'public allMids',
+    latencyMs
+  });
+}
+
 const PUBLIC_TICKER_FETCHERS = {
   binance: fetchBinanceTicker,
   coinbase: fetchCoinbaseTicker,
@@ -677,6 +1048,21 @@ const PUBLIC_TICKER_FETCHERS = {
   okx: fetchOkxTicker,
   bybit: fetchBybitTicker,
   hyperliquid: fetchHyperliquidMid
+};
+const READONLY_MARKET_SNAPSHOT_FETCHERS = {
+  binance: fetchBinanceMarketSnapshot,
+  coinbase: fetchCoinbaseMarketSnapshot,
+  kraken: fetchKrakenMarketSnapshot,
+  okx: fetchOkxMarketSnapshot,
+  bybit: fetchBybitMarketSnapshot,
+  kucoin: fetchKucoinMarketSnapshot,
+  'gate-io': fetchGateMarketSnapshot,
+  mexc: fetchMexcMarketSnapshot,
+  bitget: fetchBitgetMarketSnapshot,
+  bitstamp: fetchBitstampMarketSnapshot,
+  gemini: fetchGeminiMarketSnapshot,
+  'crypto-com-us': fetchCryptoComMarketSnapshot,
+  hyperliquid: fetchHyperliquidMarketSnapshot
 };
 
 async function testBinanceCredentials(credentials) {
@@ -967,6 +1353,457 @@ async function testReadOnlyExchangeConnection({ connector, registryEntry, creden
   }
 }
 
+function getConnectorExchangeName(connector = {}) {
+  return normalizeExchangeName(connector.settings?.registryId || connector.exchange_name || connector.exchangeName);
+}
+
+function buildReadOnlyVenueList(connectors = [], {
+  includeExpanded = true,
+  connectedOnly = false
+} = {}) {
+  const venues = new Map();
+
+  if (includeExpanded) {
+    for (const exchangeName of EXPANDED_READONLY_MARKET_VENUES) {
+      venues.set(exchangeName, {
+        exchangeName,
+        connectorId: null,
+        connected: false,
+        source: 'expanded-read-only-registry'
+      });
+    }
+  }
+
+  for (const connector of connectors) {
+    const exchangeName = getConnectorExchangeName(connector);
+    if (!exchangeName) {
+      continue;
+    }
+
+    const readOnlyConnection = connector.settings?.readOnlyConnection || {};
+    const connected = connector.secret_reference_status === 'configured'
+      || readOnlyConnection.connectionStatus === 'read_only_connected'
+      || readOnlyConnection.connectionStatus === 'quote_only_connected';
+
+    venues.set(exchangeName, {
+      exchangeName,
+      connectorId: connector.id || null,
+      connected,
+      source: 'saved-connector'
+    });
+  }
+
+  return Array.from(venues.values()).filter(venue => (
+    READONLY_MARKET_SNAPSHOT_FETCHERS[venue.exchangeName]
+    && (!connectedOnly || venue.connected)
+  ));
+}
+
+async function fetchReadOnlyMarketSnapshot(exchangeName, symbol = 'BTC/USDT') {
+  const normalizedExchange = normalizeExchangeName(exchangeName);
+  const fetcher = READONLY_MARKET_SNAPSHOT_FETCHERS[normalizedExchange];
+
+  if (!fetcher) {
+    throw new Error(`${exchangeName} does not have a read-only market snapshot fetcher yet.`);
+  }
+
+  const snapshot = await fetcher(symbol);
+
+  if (!Number.isFinite(snapshot.bid) || !Number.isFinite(snapshot.ask) || snapshot.bid <= 0 || snapshot.ask <= 0) {
+    throw new Error(`${exchangeName} returned an incomplete read-only market snapshot for ${symbol}.`);
+  }
+
+  return snapshot;
+}
+
+async function collectReadOnlyMarketSnapshots({
+  connectors = [],
+  symbol = 'BTC/USDT',
+  venues = [],
+  connectedOnly = false,
+  includeExpanded = true,
+  maxVenues = 16
+} = {}) {
+  const requestedVenues = Array.isArray(venues) && venues.length
+    ? venues.map(normalizeExchangeName).filter(Boolean).map(exchangeName => ({ exchangeName }))
+    : buildReadOnlyVenueList(connectors, { includeExpanded, connectedOnly });
+  const unique = [];
+  const seen = new Set();
+
+  for (const venue of requestedVenues) {
+    const exchangeName = normalizeExchangeName(venue.exchangeName);
+    if (!exchangeName || seen.has(exchangeName) || !READONLY_MARKET_SNAPSHOT_FETCHERS[exchangeName]) {
+      continue;
+    }
+
+    seen.add(exchangeName);
+    unique.push({ ...venue, exchangeName });
+
+    if (unique.length >= maxVenues) {
+      break;
+    }
+  }
+
+  const results = await Promise.all(unique.map(async venue => {
+    try {
+      return {
+        status: 'ok',
+        connectorId: venue.connectorId || null,
+        connected: Boolean(venue.connected),
+        snapshot: await fetchReadOnlyMarketSnapshot(venue.exchangeName, symbol)
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        connectorId: venue.connectorId || null,
+        exchangeName: venue.exchangeName,
+        displayName: venue.exchangeName,
+        error: createPlainEnglishPublicMarketDataError(venue.exchangeName, error)
+      };
+    }
+  }));
+
+  return {
+    symbol: normalizeTradingSymbol(symbol).canonical,
+    requestedVenueCount: unique.length,
+    okCount: results.filter(result => result.status === 'ok').length,
+    errorCount: results.filter(result => result.status === 'error').length,
+    results,
+    safetyBoundary: {
+      marketDataOnly: true,
+      liveTradingEnabled: false,
+      withdrawalsEnabled: false,
+      walletSigningEnabled: false,
+      orderEndpointEnabled: false,
+      ordersPlaced: false
+    },
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function createArbitrageCandidate({ buy, sell, options }) {
+  const buyAsk = buy.ask;
+  const sellBid = sell.bid;
+  const grossSpreadPercent = ((sellBid - buyAsk) / buyAsk) * 100;
+  const combinedFeePercent = Number(buy.takerFeePercent || DEFAULT_TAKER_FEE_PERCENT)
+    + Number(sell.takerFeePercent || DEFAULT_TAKER_FEE_PERCENT);
+  const slippagePercent = Number(options.slippagePercent ?? DEFAULT_SLIPPAGE_PERCENT) * 2;
+  const latencyMs = Math.max(Number(buy.latencyMs || 0), Number(sell.latencyMs || 0));
+  const latencyRiskPercent = latencyMs > Number(options.maxLatencyMs || 1500)
+    ? DEFAULT_LATENCY_BUFFER_PERCENT * 3
+    : DEFAULT_LATENCY_BUFFER_PERCENT;
+  const totalEstimatedCostPercent = combinedFeePercent + slippagePercent + latencyRiskPercent;
+  const estimatedNetProfitPercent = grossSpreadPercent - totalEstimatedCostPercent;
+  const tradeSizeUsd = Number(options.orderSizeUsd || 1000);
+  const estimatedNetProfitUsd = (tradeSizeUsd * estimatedNetProfitPercent) / 100;
+  const buyLiquidity = buy.topAskLiquidityUsd || buy.quoteVolume24h || null;
+  const sellLiquidity = sell.topBidLiquidityUsd || sell.quoteVolume24h || null;
+  const limitingLiquidityUsd = [buyLiquidity, sellLiquidity]
+    .filter(value => Number.isFinite(value) && value > 0)
+    .reduce((min, value) => Math.min(min, value), Number.POSITIVE_INFINITY);
+  const normalizedLiquidityUsd = Number.isFinite(limitingLiquidityUsd) ? limitingLiquidityUsd : null;
+  const liquidityOk = normalizedLiquidityUsd === null
+    ? false
+    : normalizedLiquidityUsd >= Number(options.minLiquidityUsd || 250);
+  const spreadOk = grossSpreadPercent >= Number(options.minGrossSpreadPercent || 0.05);
+  const netOk = estimatedNetProfitPercent >= Number(options.minNetProfitPercent || 0.02);
+  const latencyOk = latencyMs <= Number(options.maxLatencyMs || 1500);
+  const accepted = spreadOk && netOk && liquidityOk && latencyOk;
+
+  return {
+    id: `${buy.exchangeName}_to_${sell.exchangeName}_${Date.now()}`,
+    symbol: buy.symbol,
+    buyVenue: buy.displayName,
+    buyExchangeName: buy.exchangeName,
+    buyPrice: buyAsk,
+    sellVenue: sell.displayName,
+    sellExchangeName: sell.exchangeName,
+    sellPrice: sellBid,
+    grossSpreadPercent,
+    combinedFeePercent,
+    slippagePercent,
+    latencyRiskPercent,
+    totalEstimatedCostPercent,
+    estimatedNetProfitPercent,
+    estimatedNetProfitUsd,
+    tradeSizeUsd,
+    latencyMs,
+    limitingLiquidityUsd: normalizedLiquidityUsd,
+    status: accepted ? 'paper_simulation_candidate' : 'rejected_for_now',
+    accepted,
+    rejectionReasons: [
+      spreadOk ? null : 'Spread is too small before costs.',
+      netOk ? null : 'Estimated net profit is too small after fees, slippage, and latency buffer.',
+      liquidityOk ? null : 'Visible top-of-book liquidity is too low or unavailable.',
+      latencyOk ? null : 'Read-only endpoint latency is above the selected tolerance.'
+    ].filter(Boolean),
+    plainEnglish: accepted
+      ? `Buy ${buy.symbol} on ${buy.displayName}, sell on ${sell.displayName}, then paper simulate before any live-trading approval. Estimated net edge is ${estimatedNetProfitPercent.toFixed(4)}% after fees, slippage, and latency buffer.`
+      : `No paper candidate yet: ${[
+        spreadOk ? null : 'spread too small',
+        netOk ? null : 'net edge too small',
+        liquidityOk ? null : 'liquidity too low or unavailable',
+        latencyOk ? null : 'latency too high'
+      ].filter(Boolean).join(', ')}.`,
+    safetyBoundary: {
+      readOnlyMarketData: true,
+      liveTradingEnabled: false,
+      withdrawalsEnabled: false,
+      walletSigningEnabled: false,
+      orderEndpointEnabled: false,
+      ordersPlaced: false
+    }
+  };
+}
+
+async function scanReadOnlyArbitrageOpportunities({
+  connectors = [],
+  symbol = 'BTC/USDT',
+  venues = [],
+  connectedOnly = false,
+  includeExpanded = true,
+  minGrossSpreadPercent = 0.05,
+  minNetProfitPercent = 0.02,
+  minLiquidityUsd = 250,
+  maxLatencyMs = 1500,
+  orderSizeUsd = 1000,
+  slippagePercent = DEFAULT_SLIPPAGE_PERCENT,
+  maxVenues = 16,
+  maxCandidates = 12
+} = {}) {
+  const snapshots = await collectReadOnlyMarketSnapshots({
+    connectors,
+    symbol,
+    venues,
+    connectedOnly,
+    includeExpanded,
+    maxVenues
+  });
+  const validSnapshots = snapshots.results
+    .filter(result => result.status === 'ok')
+    .map(result => result.snapshot)
+    .filter(snapshot => Number.isFinite(snapshot.bid) && Number.isFinite(snapshot.ask) && snapshot.bid > 0 && snapshot.ask > 0);
+  const options = {
+    minGrossSpreadPercent,
+    minNetProfitPercent,
+    minLiquidityUsd,
+    maxLatencyMs,
+    orderSizeUsd,
+    slippagePercent
+  };
+  const candidates = [];
+
+  for (const buy of validSnapshots) {
+    for (const sell of validSnapshots) {
+      if (buy.exchangeName === sell.exchangeName) {
+        continue;
+      }
+
+      const candidate = createArbitrageCandidate({ buy, sell, options });
+      if (candidate.grossSpreadPercent > 0) {
+        candidates.push(candidate);
+      }
+    }
+  }
+
+  candidates.sort((a, b) => b.estimatedNetProfitPercent - a.estimatedNetProfitPercent);
+
+  const acceptedCandidates = candidates.filter(candidate => candidate.accepted);
+  const bestCandidate = acceptedCandidates[0] || candidates[0] || null;
+
+  return {
+    symbol: snapshots.symbol,
+    scanMode: connectedOnly ? 'connected-read-only-venues' : 'expanded-public-read-only-venues',
+    options,
+    venueSummary: {
+      requested: snapshots.requestedVenueCount,
+      working: snapshots.okCount,
+      errors: snapshots.errorCount
+    },
+    snapshots: snapshots.results,
+    candidates: candidates.slice(0, maxCandidates),
+    acceptedCandidates: acceptedCandidates.slice(0, maxCandidates),
+    bestCandidate,
+    plainEnglishSummary: bestCandidate
+      ? bestCandidate.accepted
+        ? `Best read-only candidate: buy on ${bestCandidate.buyVenue}, sell on ${bestCandidate.sellVenue}. Paper simulate it before any live approval.`
+        : 'Spreads were detected, but no candidate passed the full fee, slippage, latency, and liquidity checks.'
+      : 'No cross-venue spread was detected from the currently reachable read-only market-data endpoints.',
+    safetyBoundary: {
+      marketDataOnly: true,
+      liveTradingEnabled: false,
+      withdrawalsEnabled: false,
+      walletSigningEnabled: false,
+      orderEndpointEnabled: false,
+      ordersPlaced: false
+    },
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function createPaperSimulationForOpportunity(opportunity = {}) {
+  const tradeSizeUsd = Number(opportunity.tradeSizeUsd || 1000);
+  const estimatedNetProfitPercent = Number(opportunity.estimatedNetProfitPercent || 0);
+  const estimatedNetProfitUsd = (tradeSizeUsd * estimatedNetProfitPercent) / 100;
+
+  return {
+    status: 'paper_simulation_created',
+    title: 'Local paper simulation only',
+    opportunity: {
+      symbol: opportunity.symbol,
+      buyVenue: opportunity.buyVenue,
+      sellVenue: opportunity.sellVenue,
+      grossSpreadPercent: Number(opportunity.grossSpreadPercent || 0),
+      estimatedNetProfitPercent,
+      estimatedNetProfitUsd,
+      tradeSizeUsd
+    },
+    steps: [
+      'Freeze the read-only snapshot.',
+      'Pretend to buy at the visible ask.',
+      'Pretend to sell at the visible bid.',
+      'Subtract estimated exchange fees, slippage, and latency buffer.',
+      'Record the result as research only.'
+    ],
+    safetyBoundary: {
+      paperOnly: true,
+      liveTradingEnabled: false,
+      withdrawalsEnabled: false,
+      walletSigningEnabled: false,
+      orderEndpointEnabled: false,
+      ordersPlaced: false
+    },
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function buildLiveTradingLaunchRoadmap({
+  connectors = [],
+  latestScan = null
+} = {}) {
+  const connectionSummary = buildReadOnlyConnectionSummary(connectors);
+  const connectedCount = connectionSummary.categories.connected.length;
+
+  return {
+    title: 'Live Trading Launch Roadmap',
+    currentMode: 'read_only_and_paper_only',
+    simpleStatus: 'Live trading is locked. EtherealAI is building the safe path toward it.',
+    nextRecommendedAction: connectedCount > 0
+      ? 'Run a read-only arbitrage scan and paper simulate the best opportunity.'
+      : 'Run a public read-only market scan now. Connect read-only exchange API keys later only when you want account-specific fee and limit checks.',
+    phases: [
+      {
+        id: 'phase_1_read_only_api_expansion',
+        title: 'Phase 1: Read-Only API Expansion',
+        status: 'in_progress',
+        done: [
+          'Read-only connector registry exists.',
+          'Encrypted local vault exists for API values.',
+          'Expanded public market snapshot scanner exists.',
+          'Withdrawals, trading, wallet signing, and orders remain disabled.'
+        ],
+        missing: [
+          'Owner-provided read-only API keys for preferred exchanges.',
+          'Per-venue real fee tier verification where exchanges require account access.',
+          'Additional token-address quote mappings for DEX aggregators.'
+        ],
+        nextButton: 'Run Read-Only Market Scan'
+      },
+      {
+        id: 'phase_2_arbitrage_intelligence',
+        title: 'Phase 2: Arbitrage Intelligence Engine',
+        status: latestScan ? 'in_progress' : 'ready_to_start',
+        done: [
+          'Best buy vs best sell comparison exists.',
+          'Fee, slippage, latency, liquidity, and net profit checks exist.',
+          'Plain-English candidate output exists.',
+          'Paper simulation action exists.'
+        ],
+        missing: [
+          'Historical quote snapshot storage.',
+          'Route-specific DEX token address mapping.',
+          'Multi-hop and cross-chain route modeling.'
+        ],
+        nextButton: 'Scan For Read-Only Opportunities'
+      },
+      {
+        id: 'phase_3_live_trading_readiness',
+        title: 'Phase 3: Live Trading Readiness System',
+        status: 'locked',
+        done: [
+          'Live lock boundary exists.',
+          'Risk profiles and kill switch exist for paper mode.'
+        ],
+        missing: [
+          'Trading permission verification.',
+          'Withdrawal disabled verification for each exchange.',
+          'Owner manual approval workflow.',
+          'Legal/compliance checklist.',
+          'Funding wallet separation.',
+          'Dry-run proof package.',
+          'Emergency stop drill.'
+        ],
+        nextButton: 'Review Locked Live Requirements'
+      },
+      {
+        id: 'phase_4_live_test_mode',
+        title: 'Phase 4: Live Test Mode',
+        status: 'locked',
+        done: [],
+        missing: [
+          'One exchange approved.',
+          'One symbol approved.',
+          'One strategy approved.',
+          'Tiny max trade size approved.',
+          'Manual owner approval recorded.'
+        ],
+        nextButton: 'Locked Until Phase 3 Passes'
+      },
+      {
+        id: 'phase_5_production_live_mode',
+        title: 'Phase 5: Production Live Mode',
+        status: 'locked',
+        done: [],
+        missing: [
+          'Repeated successful live test runs.',
+          'Scaling rules.',
+          'Capital limits.',
+          'Treasury controls.',
+          'Alerts and monitoring.',
+          'Rollback procedures.'
+        ],
+        nextButton: 'Locked Until Live Test Proof Exists'
+      }
+    ],
+    approvalCenter: {
+      status: 'locked',
+      requirements: [
+        { id: 'exchange_trading_permissions', label: 'Exchange trading permissions verified', status: 'locked', button: 'Future: Verify Trading Permissions' },
+        { id: 'withdrawals_disabled', label: 'Withdrawals disabled on every live venue', status: 'locked', button: 'Future: Verify Withdrawals Disabled' },
+        { id: 'max_order_limits', label: 'Max order limits set', status: 'locked', button: 'Future: Set Live Limits' },
+        { id: 'max_daily_loss', label: 'Max daily loss set', status: 'locked', button: 'Future: Set Daily Loss Limit' },
+        { id: 'max_open_positions', label: 'Max open positions set', status: 'locked', button: 'Future: Set Position Limit' },
+        { id: 'kill_switch', label: 'Emergency kill switch tested', status: 'locked', button: 'Future: Run Kill Switch Drill' },
+        { id: 'manual_owner_approval', label: 'Manual owner approval recorded', status: 'locked', button: 'Future: Owner Approval' },
+        { id: 'audit_log', label: 'Audit log enabled', status: 'working', button: 'Review Proof Packet' },
+        { id: 'hardware_wallet_boundary', label: 'Hardware wallet / signing boundary defined', status: 'locked', button: 'Future: Define Signing Boundary' },
+        { id: 'legal_compliance', label: 'Legal/compliance checklist complete', status: 'locked', button: 'Future: Compliance Checklist' },
+        { id: 'funding_separation', label: 'Funding wallet separation complete', status: 'locked', button: 'Future: Review Wallet Funding' },
+        { id: 'dry_run_proof', label: 'Dry-run proof exists', status: 'locked', button: 'Future: Generate Dry-Run Proof' },
+        { id: 'small_capital_test', label: 'Small-capital test mode configured', status: 'locked', button: 'Future: Configure Tiny Test Mode' }
+      ]
+    },
+    safetyBoundary: {
+      liveTradingEnabled: false,
+      withdrawalsEnabled: false,
+      walletSigningEnabled: false,
+      orderEndpointEnabled: false,
+      productionLiveModeEnabled: false
+    },
+    generatedAt: new Date().toISOString()
+  };
+}
+
 async function compareReadOnlyPrices({ connectors = [], symbol = 'BTC/USDT', connectedOnly = false } = {}) {
   const candidateConnectors = connectors.filter(connector => {
     const exchangeName = normalizeExchangeName(connector.settings?.registryId || connector.exchange_name);
@@ -1117,6 +1954,7 @@ module.exports = {
   EXCHANGE_READONLY_VAULT_KEY_PATH,
   RECOMMENDED_READONLY_EXCHANGES,
   QUOTE_ONLY_CONNECTORS,
+  EXPANDED_READONLY_MARKET_VENUES,
   EXCHANGE_READONLY_SETUP_GUIDES,
   DEX_QUOTE_ONLY_SETUP_GUIDES,
   normalizeExchangeName,
@@ -1130,8 +1968,13 @@ module.exports = {
   deleteReadOnlyVaultCredentials,
   getReadOnlyVaultStatus,
   fetchPublicTicker,
+  fetchReadOnlyMarketSnapshot,
+  collectReadOnlyMarketSnapshots,
   testReadOnlyExchangeConnection,
   compareReadOnlyPrices,
+  scanReadOnlyArbitrageOpportunities,
+  createPaperSimulationForOpportunity,
+  buildLiveTradingLaunchRoadmap,
   buildReadOnlyConnectionSummary,
   createPlainEnglishPublicMarketDataError,
   createPlainEnglishExchangeError

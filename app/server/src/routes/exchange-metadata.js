@@ -23,6 +23,7 @@ function registerExchangeMetadataRoutes(app, {
   dexQuoteOnlySetupGuides,
   recommendedReadOnlyExchanges,
   quoteOnlyConnectors,
+  expandedReadOnlyMarketVenues,
   sanitizeCredentialInput,
   sanitizePermissionsChecklist,
   getReadOnlyReferenceName,
@@ -32,6 +33,9 @@ function registerExchangeMetadataRoutes(app, {
   getReadOnlyVaultStatus,
   testReadOnlyExchangeConnection,
   compareReadOnlyPrices,
+  scanReadOnlyArbitrageOpportunities,
+  createPaperSimulationForOpportunity,
+  buildLiveTradingLaunchRoadmap,
   buildReadOnlyConnectionSummary,
   createPlainEnglishExchangeError,
   evaluateExchangeConnectorReadiness,
@@ -328,6 +332,7 @@ function registerExchangeMetadataRoutes(app, {
       res.json({
         recommendedFirst: recommendedReadOnlyExchanges || [],
         quoteOnlyConnectors: quoteOnlyConnectors || [],
+        expandedReadOnlyMarketVenues: expandedReadOnlyMarketVenues || [],
         cexGuides: Object.values(exchangeReadOnlySetupGuides || {}),
         quoteOnlyGuides: Object.values(dexQuoteOnlySetupGuides || {}),
         safetyModel: {
@@ -395,6 +400,78 @@ function registerExchangeMetadataRoutes(app, {
           ? createPlainEnglishExchangeError('Exchange price comparison', error)
           : error.message
       });
+    }
+  });
+
+  app.get('/api/v1/live-trading-launch/roadmap', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+
+      res.json({
+        roadmap: buildLiveTradingLaunchRoadmap({ connectors })
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/read-only-scan', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const scan = await scanReadOnlyArbitrageOpportunities({
+        connectors,
+        symbol: req.body?.symbol || 'BTC/USDT',
+        venues: Array.isArray(req.body?.venues) ? req.body.venues : [],
+        connectedOnly: req.body?.connectedOnly === true,
+        includeExpanded: req.body?.includeExpanded !== false,
+        minGrossSpreadPercent: req.body?.minGrossSpreadPercent,
+        minNetProfitPercent: req.body?.minNetProfitPercent,
+        minLiquidityUsd: req.body?.minLiquidityUsd,
+        maxLatencyMs: req.body?.maxLatencyMs,
+        orderSizeUsd: req.body?.orderSizeUsd,
+        slippagePercent: req.body?.slippagePercent,
+        maxVenues: req.body?.maxVenues,
+        maxCandidates: req.body?.maxCandidates
+      });
+
+      res.json({
+        scan,
+        roadmap: buildLiveTradingLaunchRoadmap({ connectors, latestScan: scan })
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishExchangeError
+          ? createPlainEnglishExchangeError('Read-only arbitrage scan', error)
+          : error.message
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/paper-simulate-opportunity', requireAuth, (req, res) => {
+    try {
+      res.json({
+        simulation: createPaperSimulationForOpportunity(req.body?.opportunity || {}),
+        safetyBoundary: {
+          paperOnly: true,
+          liveTradingEnabled: false,
+          withdrawalsEnabled: false,
+          walletSigningEnabled: false,
+          orderEndpointEnabled: false,
+          ordersPlaced: false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   });
 

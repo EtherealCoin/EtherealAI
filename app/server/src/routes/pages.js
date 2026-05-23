@@ -65,6 +65,10 @@ function registerPageRoutes(app, { clientDir }) {
     res.sendFile(path.join(clientDir, 'strategy-lab.html'));
   });
 
+  app.get('/live-trading-launch', requirePageAuth, (req, res) => {
+    res.sendFile(path.join(clientDir, 'live-trading-launch.html'));
+  });
+
   app.get('/solidity-lab', requirePageAuth, (req, res) => {
     res.sendFile(path.join(clientDir, 'solidity-lab.html'));
   });
