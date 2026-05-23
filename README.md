@@ -146,14 +146,20 @@ Phase 3 adds authenticated safety infrastructure while preserving the lock:
   - The operator can click `Run Sandbox Test Trade` from `/live-trading-launch`.
   - Sandbox safety checks run before any sandbox endpoint call: connector exists, sandbox key present, production key not used, withdrawals disabled, active risk profile, max order size, max daily loss, liquidity, stale price, slippage, duplicate order prevention, and production boundary lock.
   - If safety checks fail, the app shows the exact reason in plain English and does not call an exchange order endpoint.
-  - Phase 3C preparation adds a tiny-live-test checklist, emergency stop, audit log, and rollback/disable-live-connectors action. Tiny live orders remain locked.
+  - Phase 3C now adds a locked Tiny Live Test Mode:
+    - Binance Spot is the first implemented tiny-live adapter; Coinbase, Kraken, OKX, and Bybit are prepared but locked until exchange-specific production spot validation is completed.
+    - Tiny live keys are stored only in `~/EtherealAI_Secrets/exchange-tiny-live-vault.json` with AES-256-GCM encryption and a permission-locked local key.
+    - SQLite stores local vault references, previews, order tests, order events, safety readiness JSON, result JSON, and hashed owner confirmation evidence only.
+    - The operator can use `Refresh Tiny Live Readiness`, `Preview Tiny Live Order`, `Place One Tiny Live Order`, `Track Latest Tiny Live Order`, `Cancel Latest Tiny Live Order`, and `Emergency Stop / Disable Live Connectors`.
+    - Preview is safe and cannot place an order. Place is blocked unless every gate passes: one exchange, spot only, tiny size, live key saved, authenticated permission detection, withdrawals disabled, no margin/futures/leverage, successful sandbox evidence, active risk profile, kill switch off, fresh price, liquidity, slippage, duplicate-order prevention, exact manual owner confirmation phrase, and automation locked.
+    - Emergency stop disables future live flags and preserves wallet signing, withdrawals, margin, futures, leverage, and automation as disabled.
 - Exchange capability matrix for spot, futures, margin, sandbox/testnet support, WebSocket support, rate-limit notes, order types, and hedge mode support.
 - Universal dry-run order model for market, limit, post-only, IOC, reduce-only, TP/SL, and bracket order drafts.
 - Live execution safety review with global kill switch, max order size, max daily loss, stale-price rejection, liquidity minimums, latency/slippage guards, duplicate-order prevention, dry-run mode, and manual confirmation gates.
 - WebSocket stream specs for Binance, Coinbase, Kraken, OKX, and Bybit are modeled as market-data-only and not auto-running.
 - Replay and benchmark panels compare paper opportunity, estimated live outcome, and conservative real-world fee-adjusted outcome.
 
-Phase 3 still does **not** add a production live order route. Production live trading, production order endpoints, withdrawals, and wallet signing remain disabled.
+Phase 3C adds only one tightly gated production spot order path for a manually approved tiny test. It does **not** add autonomous live trading, unrestricted production order routing, withdrawals, wallet signing, margin, futures, leverage, or scaling.
 
 ## Multi-Agent Coordination
 

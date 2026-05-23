@@ -30,7 +30,7 @@ Current rough completion estimate:
 
 - Owner-test local MVP: 100% after the local owner acceptance record; 99% before owner acceptance in a fresh database.
 - Local E2E path: complete for safe local paper operation when MVP readiness, paper automation, public wallet metadata, live-disabled state, and wallet-signing-disabled state are satisfied.
-- Live E2E path: locked because credential loading, live exchange adapters, live order endpoint, external posting, deployment, and executable go-live acceptance are intentionally blocked until future owner-approved security work.
+- Live E2E path: locked because credential loading, autonomous live exchange adapters, unrestricted live order endpoints, external posting, deployment, and executable go-live acceptance are intentionally blocked until future owner-approved security work. Phase 3C now includes one tightly gated manual tiny-live spot-test path, but unrestricted live trading, automated scaling, withdrawals, wallet signing, external posting, deployment, and executable go-live acceptance remain intentionally blocked.
 
 The `/owner-setup` wizard now separates Local E2E from Live E2E: paper setup can move from `95%` to `100%`, Local E2E can complete for safe paper operation, and Live E2E stays locked until a future owner-approved live/security phase. Locked Live E2E does not enable live orders, wallet signing, deployment, DNS mutation, or public posting.
 
@@ -52,8 +52,10 @@ The `/owner-setup` wizard now separates Local E2E from Live E2E: paper setup can
 - Strategy Lab now has a structured arbitrage strategy lane for `Cross-Exchange Arbitrage`, `Cross-DEX Arbitrage`, and `Hybrid DEX/CEX Arbitrage`. The UI collects buy venues, sell venues, arbitrage type, minimum spread, maker/taker fees, slippage tolerance, minimum liquidity, max latency, simultaneous execution, stablecoin pair, token whitelist, and top-volume filters. The backend stores these rules in `trading_strategies.strategy_type` and `strategy_rules_json`, bypasses the indicator parser for arbitrage, and runs local fee/slippage/liquidity/latency-aware route simulations with no live orders or wallet signing. Safe Paper results now include exchange spread comparisons, accepted/rejected route reasons, projected net after costs, timing assumptions, and top-volume filter status.
 - Strategy Lab now includes a chain-neutral `Exchange Connector Manager`. It exposes a safe registry for CEX, US-compliant CEX, futures/derivatives, Ethereum DEX, Solana DEX, BNB Chain DEX, Arbitrum/Avalanche/Polygon DEX, cross-chain aggregator, decentralized perpetual, hybrid, and P2P venues. The manager creates default-OFF connector placeholders, supports recommended-first setup, hides unsupported/manual venues, and runs local read-only safety tests. It does not store API keys in the UI, call exchanges, enable withdrawals, enable live trading, or enable wallet signing.
 - `/live-trading-launch` is the non-coder Live Trading Launch Center. It starts the safe path toward live trading without unlocking it. Phase 1 adds expanded public/read-only market snapshot support for Binance, Coinbase, Kraken, OKX, Bybit, KuCoin, Gate.io, MEXC, Bitget, Bitstamp, Gemini USD markets, Crypto.com, and Hyperliquid where endpoints allow it. Phase 2 adds a read-only arbitrage scanner that compares best buy versus best sell venues, estimates gross spread, fees, slippage, latency risk, visible liquidity, and net paper edge, then lets the owner click `Paper Simulate This Opportunity`. Account API keys are optional for later account-specific fee/limit checks. The page also shows the locked Live Trading Approval Center for future trading permissions, withdrawal-disabled verification, risk limits, kill switch, owner approval, audit log, signing boundary, compliance checklist, dry-run proof, and small-capital test mode. Browser verification saved `/Users/ethereal/Desktop/EtherealAI_Live_Trading_Launch_Center_Check.png`. Live trading, withdrawals, wallet signing, and order endpoints remain disabled.
-- Phase 3 is now started inside `/live-trading-launch` without unlocking live trading. The new Phase 3 Operator Dashboard adds authenticated read-only account scan infrastructure for Binance, Coinbase, Kraken, OKX, and Bybit; a normalized account view for balances, fee tiers, limits, positions, subaccount metadata, margin/futures metadata, and withdrawal-permission review status; an exchange capability matrix; market-data-only WebSocket stream specs; a universal dry-run order model covering market, limit, post-only, IOC, reduce-only, TP/SL, and bracket drafts; live execution safety review with global kill switch, max order size, max daily loss, stale-price rejection, liquidity minimums, latency/slippage guards, duplicate-order prevention, dry-run mode, and manual confirmation gates; account-aware arbitrage scoring; spread replay; and paper-vs-estimated-live-vs-real-world benchmark output. No live order route was added.
-- Phase 3A is now added inside `/live-trading-launch` as Authenticated Account Readiness. It accepts credentials only through the secure local exchange vault, then scans Binance, Coinbase, Kraken, OKX, and Bybit for authenticated read-only account access, permission/withdrawal signals, balances, maker/taker fees, account limits, symbol trading rules, minimum order sizes/notional, rate-limit notes, and futures/margin availability where available. It shows per-exchange statuses: `Not Connected`, `Public Market Data Only`, `Authenticated Read-Only`, `Trading Permission Present But Locked`, `Unsafe Permissions Detected`, and `Error`. It also adds the Phase 3B prepared-but-locked plan for sandbox/testnet orders, tiny live approval, cancel, order tracking, partial fills, reconciliation, duplicate-order prevention, and kill switch enforcement. Browser verification saved `/Users/ethereal/Desktop/EtherealAI_Phase3A_Account_Readiness_Check.png`. No order endpoint was added.
+- Phase 3 is now active inside `/live-trading-launch` without unlocking autonomous live trading. The Phase 3 Operator Dashboard adds authenticated read-only account scan infrastructure for Binance, Coinbase, Kraken, OKX, and Bybit; a normalized account view for balances, fee tiers, limits, positions, subaccount metadata, margin/futures metadata, and withdrawal-permission review status; an exchange capability matrix; market-data-only WebSocket stream specs; a universal dry-run order model covering market, limit, post-only, IOC, reduce-only, TP/SL, and bracket drafts; live execution safety review with global kill switch, max order size, max daily loss, stale-price rejection, liquidity minimums, latency/slippage guards, duplicate-order prevention, dry-run mode, and manual confirmation gates; account-aware arbitrage scoring; spread replay; and paper-vs-estimated-live-vs-real-world benchmark output.
+- Phase 3A is now added inside `/live-trading-launch` as Authenticated Account Readiness. It accepts credentials only through the secure local exchange vault, then scans Binance, Coinbase, Kraken, OKX, and Bybit for authenticated read-only account access, permission/withdrawal signals, balances, maker/taker fees, account limits, symbol trading rules, minimum order sizes/notional, rate-limit notes, and futures/margin availability where available. It shows per-exchange statuses: `Not Connected`, `Public Market Data Only`, `Authenticated Read-Only`, `Trading Permission Present But Locked`, `Unsafe Permissions Detected`, and `Error`. Browser verification saved `/Users/ethereal/Desktop/EtherealAI_Phase3A_Account_Readiness_Check.png`.
+- Phase 3B adds sandbox/testnet execution for Binance Spot Testnet, OKX Demo Trading, and Bybit Testnet, with Kraken/Coinbase prepared but locked pending exact owner account/API validation. Browser verification saved `/Users/ethereal/Desktop/EtherealAI_Phase3B_Sandbox_Test_Check.png`.
+- Phase 3C adds `Tiny Live Test Mode`: a default-locked, manual-only, one-exchange/one-symbol/one-tiny-spot-order flow. Binance Spot is the first implemented tiny-live adapter; Coinbase, Kraken, OKX, and Bybit remain prepared but locked. The flow includes a separate tiny-live encrypted vault, permission detector, withdrawal-disabled verifier, active risk/kill-switch checks, stale-price/liquidity/slippage/duplicate guards, order preview, exact manual owner confirmation phrase, place-one-order route, cancel, status tracking, balance reconciliation hooks, audit events, and emergency disable-all-live-connectors. Browser verification saved `/Users/ethereal/Desktop/EtherealAI_Phase3C_Tiny_Live_Locked_Check.png`. Automated live trading, wallet signing, withdrawals, margin, futures, leverage, and scaling remain disabled.
 - The same Bots section keeps advanced bot records and evidence exports behind a collapsible `Advanced Bot Records and Evidence Exports` panel, including the automated bot capability path backed by `/api/v1/bot-automation-capability-path`.
 - `/strategy-lab#risk-profile-configuration` is the non-coder Risk Profile Configuration panel. It has safe paper defaults, editable max order/position/daily-loss/open-trade limits, Current Profile Status, Save Risk Profile, Activate Profile, Kill Switch off guidance, and Verify Paper Risk Gate wired to the owner setup gate verifier.
 - `/api/v1/system-memory` includes `ownerEvidence`, `ownerAcceptance`, `botAutomationCapabilityPath`, owner proof surfaces for the owner proof packet, dashboard readiness, MVP test pass, Owner Setup Wizard, Operator Control, Mac Security Lockdown, route inventory, Strategy Lab, Social Ops, and Solidity Lab, export-surface references, wallet-control counts/recent events, full-live blocker IDs, and external-surface boundaries for Social Ops, Solidity Lab, owner setup, wallet control, and Mac security.
@@ -426,6 +428,63 @@ Keep `.aider*` ignored as it already is.
 
 ## Suggested Next Steps
 
+## Latest Phase 3C Update: Tiny Live Test Mode
+
+Phase 3C has been implemented as the smallest safe real-money path, but it remains locked unless every safety gate passes and the owner manually confirms.
+
+New backend file and routes:
+
+- Added `app/server/src/lib/exchange-tiny-live-execution.js`.
+- Added `GET /api/v1/live-trading-launch/phase3c/status`.
+- Added `POST /api/v1/exchange-connectors/:id/tiny-live-credentials`.
+- Added `DELETE /api/v1/exchange-connectors/:id/tiny-live-credentials`.
+- Added `POST /api/v1/live-trading-launch/phase3c/preview`.
+- Added `POST /api/v1/live-trading-launch/phase3c/place`.
+- Added `POST /api/v1/live-trading-launch/phase3c/orders/:id/cancel`.
+- Added `GET /api/v1/live-trading-launch/phase3c/orders/:id/status`.
+- Expanded `POST /api/v1/live-trading-launch/phase3c/emergency-stop` to also hard-lock tiny-live connector flags.
+
+New database tables:
+
+- `tiny_live_order_tests`
+- `tiny_live_order_events`
+
+Supported Phase 3C adapters:
+
+- Binance Spot: complete first adapter for one manual tiny spot test.
+- Coinbase: prepared/locked.
+- Kraken: prepared/locked.
+- OKX: prepared/locked.
+- Bybit: prepared/locked.
+
+Operator UI:
+
+- `/live-trading-launch` now includes `Phase 3C: Tiny Live Test Mode`.
+- The page shows `Safe to test / Not safe to test`, missing gates, ready/not-ready exchange cards, exact next action, and why live trading remains locked.
+- The owner can save a tiny-live key to the local encrypted vault, refresh readiness, preview, place one manually approved tiny spot order, track status, cancel, and run emergency stop.
+- Preview cannot place an order.
+- Place cannot call an exchange order endpoint unless every gate passes and the owner types the exact manual approval phrase.
+
+Safety state:
+
+- Default state remains locked.
+- Start scope is one exchange, one symbol, one tiny order, spot only.
+- Automated live trading is disabled.
+- Wallet signing is disabled.
+- Withdrawals are disabled.
+- Margin, futures, and leverage are disabled.
+- No autonomous scaling or bot-driven live execution exists.
+- Tiny-live credentials are stored only in `~/EtherealAI_Secrets/exchange-tiny-live-vault.json`.
+
+Verification completed:
+
+- `npm test` passed.
+- `git diff --check` passed.
+- Server restarted successfully on `127.0.0.1:3000`.
+- Browser verification passed at `http://127.0.0.1:3000/live-trading-launch?v=phase3c`.
+- Browser verified that Phase 3C renders locked, the approval center shows missing gates, preview without a tiny-live key is blocked, and preview does not place an order.
+- Screenshot saved at `/Users/ethereal/Desktop/EtherealAI_Phase3C_Tiny_Live_Locked_Check.png`.
+
 ## Latest Phase 3B Update: Sandbox/Testnet Execution
 
 Phase 3B has been implemented as a sandbox/testnet execution layer while production live trading remains locked.
@@ -465,7 +524,7 @@ Safety state:
 - Production live trading is still locked.
 - Wallet signing is still disabled.
 - Withdrawals are still disabled.
-- No production order endpoint is exposed.
+- No unrestricted production order endpoint is exposed. Phase 3C adds only a later manually confirmed tiny spot-test path.
 - Sandbox credentials are stored only in `~/EtherealAI_Secrets/exchange-sandbox-vault.json`.
 - If sandbox safety checks fail, no exchange order endpoint is called.
 

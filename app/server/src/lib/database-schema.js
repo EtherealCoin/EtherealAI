@@ -620,6 +620,54 @@ function initializeDatabase(db) {
     `);
 
     db.run(`
+      CREATE TABLE IF NOT EXISTS tiny_live_order_tests (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        connector_id INTEGER,
+        risk_profile_id INTEGER,
+        exchange_name TEXT NOT NULL,
+        symbol TEXT NOT NULL,
+        side TEXT NOT NULL,
+        order_type TEXT NOT NULL,
+        quantity REAL NOT NULL DEFAULT 0,
+        limit_price REAL,
+        notional_usd REAL NOT NULL DEFAULT 0,
+        max_test_order_usd REAL NOT NULL DEFAULT 0,
+        client_order_id TEXT NOT NULL,
+        exchange_order_id TEXT,
+        status TEXT NOT NULL DEFAULT 'preview_blocked',
+        readiness_json TEXT NOT NULL DEFAULT '{}',
+        preview_json TEXT NOT NULL DEFAULT '{}',
+        result_json TEXT NOT NULL DEFAULT '{}',
+        owner_confirmation_hash TEXT,
+        automated_live_trading_enabled INTEGER NOT NULL DEFAULT 0,
+        wallet_signing_enabled INTEGER NOT NULL DEFAULT 0,
+        withdrawals_enabled INTEGER NOT NULL DEFAULT 0,
+        margin_enabled INTEGER NOT NULL DEFAULT 0,
+        futures_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(connector_id) REFERENCES exchange_connectors(id),
+        FOREIGN KEY(risk_profile_id) REFERENCES risk_profiles(id)
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS tiny_live_order_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tiny_live_order_test_id INTEGER,
+        user_id INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        payload_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(tiny_live_order_test_id) REFERENCES tiny_live_order_tests(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+
+    db.run(`
       CREATE TABLE IF NOT EXISTS arbitrage_simulation_runs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,

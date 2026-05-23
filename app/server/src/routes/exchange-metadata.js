@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+
 function registerExchangeMetadataRoutes(app, {
   requireAuth,
   dbGet,
@@ -73,6 +75,28 @@ function registerExchangeMetadataRoutes(app, {
   buildPhase3BSandboxStatus,
   buildPhase3CPreparation,
   createPlainEnglishSandboxError,
+  tinyLiveOwnerConfirmationPhrase,
+  tinyLiveOrderStatuses,
+  defaultTinyLivePolicy,
+  tinyLiveExchangeAdapters,
+  getTinyLiveAdapter,
+  getTinyLiveReferenceName,
+  sanitizeTinyLiveCredentialInput,
+  sanitizeTinyLivePermissionsChecklist,
+  saveTinyLiveVaultCredentials,
+  loadTinyLiveVaultCredentials,
+  deleteTinyLiveVaultCredentials,
+  getTinyLiveVaultStatus,
+  normalizeTinyLiveOrderDraft,
+  createTinyLiveOrderFingerprint,
+  detectTinyLivePermissions,
+  evaluateTinyLiveOrderSafety,
+  createTinyLiveOrderPreview,
+  runTinyLiveOrderLifecycle,
+  cancelTinyLiveOrder,
+  getTinyLiveOrderStatus,
+  buildTinyLiveApprovalCenter,
+  createPlainEnglishTinyLiveError,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,
@@ -146,6 +170,34 @@ function registerExchangeMetadataRoutes(app, {
     };
   }
 
+  function mergeTinyLiveConnectionSettings(connector, updates = {}) {
+    const currentSettings = connector?.settings && typeof connector.settings === 'object'
+      ? connector.settings
+      : {};
+    const currentConnection = currentSettings.tinyLiveConnection && typeof currentSettings.tinyLiveConnection === 'object'
+      ? currentSettings.tinyLiveConnection
+      : {};
+
+    return {
+      ...currentSettings,
+      tinyLiveConnection: {
+        ...currentConnection,
+        manualTinyLiveOnly: true,
+        automatedLiveTradingEnabled: false,
+        unrestrictedLiveTradingEnabled: false,
+        liveTradingLocked: true,
+        walletSigningEnabled: false,
+        withdrawalsEnabled: false,
+        marginEnabled: false,
+        futuresEnabled: false,
+        leverageEnabled: false,
+        valuesDisplayed: false,
+        browserLocalStorageUsed: false,
+        ...updates
+      }
+    };
+  }
+
   function parseSandboxOrderTest(row) {
     if (!row) {
       return null;
@@ -173,6 +225,41 @@ function registerExchangeMetadataRoutes(app, {
       wallet_signing_enabled: Boolean(row.wallet_signing_enabled),
       withdrawals_enabled: Boolean(row.withdrawals_enabled),
       production_order_endpoint_enabled: Boolean(row.production_order_endpoint_enabled),
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    };
+  }
+
+  function parseTinyLiveOrderTest(row) {
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      user_id: row.user_id,
+      connector_id: row.connector_id,
+      risk_profile_id: row.risk_profile_id,
+      exchange_name: row.exchange_name,
+      symbol: row.symbol,
+      side: row.side,
+      order_type: row.order_type,
+      quantity: row.quantity,
+      limit_price: row.limit_price,
+      notional_usd: row.notional_usd,
+      max_test_order_usd: row.max_test_order_usd,
+      client_order_id: row.client_order_id,
+      exchange_order_id: row.exchange_order_id,
+      status: row.status,
+      readiness: JSON.parse(row.readiness_json || '{}'),
+      preview: JSON.parse(row.preview_json || '{}'),
+      result: JSON.parse(row.result_json || '{}'),
+      owner_confirmation_hash_present: Boolean(row.owner_confirmation_hash),
+      automated_live_trading_enabled: Boolean(row.automated_live_trading_enabled),
+      wallet_signing_enabled: Boolean(row.wallet_signing_enabled),
+      withdrawals_enabled: Boolean(row.withdrawals_enabled),
+      margin_enabled: Boolean(row.margin_enabled),
+      futures_enabled: Boolean(row.futures_enabled),
       created_at: row.created_at,
       updated_at: row.updated_at
     };
@@ -272,6 +359,25 @@ function registerExchangeMetadataRoutes(app, {
     return loadSandboxVaultCredentials(referenceName);
   }
 
+  async function loadConnectorTinyLiveCredentialsForUser(connector, userId) {
+    const referenceName = connector.settings?.tinyLiveConnection?.referenceName || null;
+
+    if (!referenceName) {
+      return null;
+    }
+
+    const reference = await dbGet(
+      'SELECT * FROM local_secret_references WHERE user_id = ? AND reference_name = ? AND status = ?',
+      [userId, referenceName, 'configured']
+    );
+
+    if (!reference) {
+      return null;
+    }
+
+    return loadTinyLiveVaultCredentials(referenceName);
+  }
+
   async function getActiveLiveReadinessRiskProfile() {
     return dbGet(
       `SELECT *
@@ -294,6 +400,19 @@ function registerExchangeMetadataRoutes(app, {
     );
 
     return rows.map(parseSandboxOrderTest);
+  }
+
+  async function getLatestTinyLiveOrderTests(userId, limit = 10) {
+    const rows = await dbAll(
+      `SELECT *
+       FROM tiny_live_order_tests
+       WHERE user_id = ?
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`,
+      [userId, limit]
+    );
+
+    return rows.map(parseTinyLiveOrderTest);
   }
 
   async function findOrCreateSandboxConnector({ exchangeName }) {
@@ -348,6 +467,62 @@ function registerExchangeMetadataRoutes(app, {
     return parseExchangeConnector(await getExchangeConnectorRow(result.lastID));
   }
 
+  async function findOrCreateTinyLiveConnector({ exchangeName }) {
+    const exchangeId = normalizeExchangeId(exchangeName);
+    const rows = await dbAll(
+      `${exchangeConnectorSelect}
+       ORDER BY exchange_connectors.created_at DESC
+       LIMIT 500`
+    );
+    const existing = rows.map(parseExchangeConnector).find(connector => (
+      normalizeExchangeId(connector.settings?.registryId || connector.exchange_name) === exchangeId
+    ));
+
+    if (existing) {
+      return existing;
+    }
+
+    const entry = getExchangeConnectorRegistryEntry(exchangeId);
+
+    if (!entry) {
+      return null;
+    }
+
+    const placeholder = createExchangeConnectorPlaceholderInput(entry, {
+      mode: 'read_only',
+      status: 'disabled',
+      labelSuffix: 'Tiny Live Locked Placeholder'
+    });
+    const result = await dbRun(
+      `INSERT INTO exchange_connectors
+       (exchange_name, label, mode, status, settings_json, secret_storage_note)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        placeholder.exchangeName,
+        placeholder.label,
+        'read_only',
+        'disabled',
+        JSON.stringify({
+          ...(placeholder.settings || {}),
+          tinyLiveConnection: {
+            manualTinyLiveOnly: true,
+            connectionStatus: 'not_connected',
+            liveTradingLocked: true,
+            automatedLiveTradingEnabled: false,
+            walletSigningEnabled: false,
+            withdrawalsEnabled: false,
+            marginEnabled: false,
+            futuresEnabled: false,
+            leverageEnabled: false
+          }
+        }),
+        'No credential values stored in SQLite.'
+      ]
+    );
+
+    return parseExchangeConnector(await getExchangeConnectorRow(result.lastID));
+  }
+
   async function recordSandboxOrderEvent({ testId, userId, status, summary, payload = {} }) {
     await dbRun(
       `INSERT INTO sandbox_order_events
@@ -355,6 +530,132 @@ function registerExchangeMetadataRoutes(app, {
        VALUES (?, ?, ?, ?, ?)`,
       [testId || null, userId, status, summary, JSON.stringify(payload || {})]
     );
+  }
+
+  async function recordTinyLiveOrderEvent({ testId, userId, status, summary, payload = {} }) {
+    await dbRun(
+      `INSERT INTO tiny_live_order_events
+       (tiny_live_order_test_id, user_id, status, summary, payload_json)
+       VALUES (?, ?, ?, ?, ?)`,
+      [testId || null, userId, status, summary, JSON.stringify(payload || {})]
+    );
+  }
+
+  async function getTinyLiveExchangeReadiness({ connectors, userId }) {
+    const readiness = {};
+
+    for (const connector of connectors) {
+      const exchangeId = normalizeExchangeId(connector.settings?.registryId || connector.exchange_name);
+      const adapter = getTinyLiveAdapter(exchangeId);
+
+      if (!adapter || !connector.settings?.tinyLiveConnection?.referenceName) {
+        continue;
+      }
+
+      try {
+        const credentials = await loadConnectorTinyLiveCredentialsForUser(connector, userId);
+
+        if (credentials) {
+          readiness[exchangeId] = await detectTinyLivePermissions({ credentials, adapter });
+        }
+      } catch (error) {
+        readiness[exchangeId] = {
+          status: 'error',
+          canTrade: false,
+          canWithdraw: null,
+          spotAllowed: false,
+          marginDetected: null,
+          futuresDetected: null,
+          plainEnglishStatus: createPlainEnglishTinyLiveError
+            ? createPlainEnglishTinyLiveError(exchangeId, error)
+            : error.message
+        };
+      }
+    }
+
+    return readiness;
+  }
+
+  async function buildTinyLiveSafetyContext({
+    userId,
+    orderInput,
+    marketContext = {},
+    ownerConfirmation = '',
+    policy = {},
+    ignoreTestId = null
+  }) {
+    const order = normalizeTinyLiveOrderDraft(orderInput || {});
+    const adapter = getTinyLiveAdapter(order.exchangeName);
+    const connector = await findOrCreateTinyLiveConnector({ exchangeName: order.exchangeName });
+    const [riskProfile, credentials, latestSandboxTests, latestTinyLiveOrders] = await Promise.all([
+      getActiveLiveReadinessRiskProfile(),
+      connector ? loadConnectorTinyLiveCredentialsForUser(connector, userId) : Promise.resolve(null),
+      getLatestSandboxOrderTests(userId, 25),
+      getLatestTinyLiveOrderTests(userId, 25)
+    ]);
+    let livePermission = null;
+
+    if (credentials && adapter) {
+      try {
+        livePermission = await detectTinyLivePermissions({ credentials, adapter });
+      } catch (error) {
+        livePermission = {
+          status: 'error',
+          canTrade: false,
+          canWithdraw: null,
+          spotAllowed: false,
+          marginDetected: null,
+          futuresDetected: null,
+          plainEnglishStatus: createPlainEnglishTinyLiveError
+            ? createPlainEnglishTinyLiveError(order.exchangeName, error)
+            : error.message
+        };
+      }
+    }
+
+    const recentOrderFingerprints = latestTinyLiveOrders
+      .filter(test => Number(test.id) !== Number(ignoreTestId || 0))
+      .filter(test => Date.now() - Date.parse(test.created_at || new Date().toISOString()) <= Number(defaultTinyLivePolicy?.duplicateOrderWindowMs || 120000))
+      .map(test => test.readiness?.orderFingerprint || test.preview?.orderFingerprint)
+      .filter(Boolean);
+    const effectiveMarketContext = {
+      liquidityUsd: 1000000,
+      slippagePercent: 0.05,
+      priceTimestamp: new Date().toISOString(),
+      ...(marketContext || {})
+    };
+    const safety = evaluateTinyLiveOrderSafety({
+      order,
+      adapter,
+      connector,
+      credentials,
+      livePermission,
+      readOnlyProfile: null,
+      riskProfile,
+      sandboxEvidence: latestSandboxTests,
+      marketContext: effectiveMarketContext,
+      recentOrderFingerprints,
+      ownerConfirmation,
+      policy: {
+        ...(defaultTinyLivePolicy || {}),
+        ...(policy || {})
+      }
+    });
+    const preview = createTinyLiveOrderPreview({ order, safety, adapter, livePermission });
+
+    return {
+      order,
+      adapter,
+      connector,
+      credentials,
+      riskProfile,
+      latestSandboxTests,
+      latestTinyLiveOrders,
+      livePermission,
+      marketContext: effectiveMarketContext,
+      safety,
+      preview
+    };
   }
 
   app.get('/api/v1/local-secret-provider-capabilities', requireAuth, (req, res) => {
@@ -697,6 +998,50 @@ function registerExchangeMetadataRoutes(app, {
     }
   });
 
+  app.get('/api/v1/live-trading-launch/phase3c/status', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const [vaultStatus, latestSandboxTests, latestTinyLiveOrders, riskProfile] = await Promise.all([
+        getTinyLiveVaultStatus(),
+        getLatestSandboxOrderTests(req.session.userId, 25),
+        getLatestTinyLiveOrderTests(req.session.userId, 25),
+        getActiveLiveReadinessRiskProfile()
+      ]);
+      const exchangeReadiness = await getTinyLiveExchangeReadiness({
+        connectors,
+        userId: req.session.userId
+      });
+      const center = buildTinyLiveApprovalCenter({
+        connectors,
+        vaultStatus,
+        latestSandboxTests,
+        latestTinyLiveOrders,
+        riskProfile,
+        exchangeReadiness
+      });
+
+      res.json({
+        center,
+        adapters: Object.values(tinyLiveExchangeAdapters || {}),
+        orderStatuses: tinyLiveOrderStatuses || [],
+        latestOrders: latestTinyLiveOrders,
+        approvalPhrase: tinyLiveOwnerConfirmationPhrase,
+        safetyBoundary: center.safetyBoundary
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishTinyLiveError
+          ? createPlainEnglishTinyLiveError('tiny live approval center', error)
+          : error.message
+      });
+    }
+  });
+
   app.post('/api/v1/live-trading-launch/phase3a/readiness', requireAuth, async (req, res) => {
     try {
       const symbol = req.body?.symbol || 'BTC/USDT';
@@ -906,6 +1251,183 @@ function registerExchangeMetadataRoutes(app, {
           walletSigningEnabled: false,
           withdrawalsEnabled: false,
           productionOrderEndpointEnabled: false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/exchange-connectors/:id/tiny-live-credentials', requireAuth, async (req, res) => {
+    try {
+      const connector = parseExchangeConnector(await getExchangeConnectorRow(req.params.id));
+
+      if (!connector) {
+        return res.status(404).json({ error: 'Exchange connector not found' });
+      }
+
+      const exchangeId = normalizeExchangeId(connector.settings?.registryId || connector.exchange_name);
+      const adapter = getTinyLiveAdapter(exchangeId);
+
+      if (!adapter || adapter.adapterStatus !== 'complete') {
+        return res.status(400).json({
+          error: `${adapter?.displayName || connector.label} tiny live mode is not complete yet. Use Binance first. Coinbase, Kraken, OKX, and Bybit stay prepared but locked.`,
+          automatedLiveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          marginEnabled: false,
+          futuresEnabled: false
+        });
+      }
+
+      const permissions = sanitizeTinyLivePermissionsChecklist(req.body?.permissionsChecklist || {});
+
+      if (permissions.missing.length) {
+        return res.status(400).json({
+          error: 'Complete every tiny live safety checkbox before saving this key.',
+          missing: permissions.missing,
+          nextClick: 'Check every tiny live safety box, then click Save Tiny Live API Key.',
+          automatedLiveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          marginEnabled: false,
+          futuresEnabled: false
+        });
+      }
+
+      const credentials = sanitizeTinyLiveCredentialInput(req.body?.credentials || req.body || {}, adapter);
+      const referenceName = getTinyLiveReferenceName({
+        userId: req.session.userId,
+        connectorId: connector.id,
+        exchangeName: exchangeId
+      });
+      const reference = await upsertReadOnlyLocalReference({
+        userId: req.session.userId,
+        existingReferenceId: null,
+        label: `${adapter.displayName} Tiny Live Manual Test Vault`,
+        referenceName,
+        notes: 'Encrypted local tiny-live vault reference. Allows only owner-gated manual spot test flow. No withdrawals, wallet signing, margin, futures, or automated trading.'
+      });
+      const saved = await saveTinyLiveVaultCredentials({
+        referenceName,
+        connector,
+        exchangeName: exchangeId,
+        credentials,
+        permissionsChecklist: permissions.checklist
+      });
+      const previousConnection = connector.settings?.tinyLiveConnection || {};
+      const settings = mergeTinyLiveConnectionSettings(connector, {
+        referenceName,
+        localReferenceId: reference.id,
+        connectionStatus: 'tiny_live_key_saved_locked',
+        plainEnglishStatus: 'Tiny live key saved locally. The system can now verify permissions, but live trading stays locked until preview and manual confirmation pass.',
+        lastCredentialRotationAt: saved.rotatedAt,
+        rotationNumber: Number(previousConnection.rotationNumber || 0) + 1,
+        permissionsChecklist: permissions.checklist,
+        apiKeyFingerprint: saved.apiKeyFingerprint,
+        adapterStatus: adapter.adapterStatus
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET settings_json = ?, secret_storage_note = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          JSON.stringify(settings),
+          'Tiny live credential values are encrypted in the local owner vault. SQLite stores only a local reference.',
+          connector.id
+        ]
+      );
+
+      res.status(201).json({
+        connector: parseExchangeConnector(await getExchangeConnectorRow(connector.id)),
+        reference,
+        vault: {
+          stored: true,
+          referenceName: saved.referenceName,
+          apiKeyFingerprint: saved.apiKeyFingerprint,
+          hasExtraPhrase: saved.hasExtraPhrase,
+          rotatedAt: saved.rotatedAt,
+          secretValuesReturned: false
+        },
+        nextClick: 'Click Refresh Tiny Live Readiness, then Preview Tiny Live Order.',
+        safetyBoundary: {
+          manualTinyLiveOnly: true,
+          automatedLiveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          marginEnabled: false,
+          futuresEnabled: false,
+          privateValuesReturnedToUi: false
+        }
+      });
+    } catch (error) {
+      res.status(error.statusCode || 500).json({
+        error: createPlainEnglishTinyLiveError
+          ? createPlainEnglishTinyLiveError(req.body?.exchangeName || 'tiny live exchange', error)
+          : error.message
+      });
+    }
+  });
+
+  app.delete('/api/v1/exchange-connectors/:id/tiny-live-credentials', requireAuth, async (req, res) => {
+    try {
+      const connector = parseExchangeConnector(await getExchangeConnectorRow(req.params.id));
+
+      if (!connector) {
+        return res.status(404).json({ error: 'Exchange connector not found' });
+      }
+
+      const referenceName = connector.settings?.tinyLiveConnection?.referenceName || null;
+      const deletion = referenceName
+        ? await deleteTinyLiveVaultCredentials(referenceName)
+        : { deleted: false, referenceName: null };
+
+      if (referenceName) {
+        await dbRun(
+          `UPDATE local_secret_references
+           SET status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = ? AND reference_name = ?`,
+          [
+            'disabled',
+            'Tiny live exchange API vault entry was deleted by owner action.',
+            req.session.userId,
+            referenceName
+          ]
+        );
+      }
+
+      const settings = mergeTinyLiveConnectionSettings(connector, {
+        referenceName: null,
+        localReferenceId: null,
+        connectionStatus: 'not_connected',
+        plainEnglishStatus: 'Tiny live key deleted. Automated live trading is still locked.',
+        lastDeletedAt: new Date().toISOString(),
+        apiKeyFingerprint: null,
+        permissionsChecklist: null
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET settings_json = ?, secret_storage_note = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          JSON.stringify(settings),
+          'No credential values stored in SQLite.',
+          connector.id
+        ]
+      );
+
+      res.json({
+        deleted: deletion.deleted,
+        connector: parseExchangeConnector(await getExchangeConnectorRow(connector.id)),
+        nextClick: 'Save a new tiny live key later if needed.',
+        safetyBoundary: {
+          automatedLiveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          marginEnabled: false,
+          futuresEnabled: false
         }
       });
     } catch (error) {
@@ -1129,6 +1651,464 @@ function registerExchangeMetadataRoutes(app, {
     }
   });
 
+  app.post('/api/v1/live-trading-launch/phase3c/preview', requireAuth, async (req, res) => {
+    try {
+      const context = await buildTinyLiveSafetyContext({
+        userId: req.session.userId,
+        orderInput: req.body?.order || req.body || {},
+        marketContext: req.body?.marketContext || {},
+        ownerConfirmation: req.body?.ownerConfirmation || '',
+        policy: req.body?.policy || {}
+      });
+      const manualCheckOnlyMissing = context.safety.missing.length === 1
+        && context.safety.missing[0]?.id === 'manual_owner_confirmation';
+      const previewReady = context.safety.passed || manualCheckOnlyMissing;
+      const status = previewReady ? 'preview_ready' : 'preview_blocked';
+      const insert = await dbRun(
+        `INSERT INTO tiny_live_order_tests
+         (user_id, connector_id, risk_profile_id, exchange_name, symbol, side, order_type, quantity,
+          limit_price, notional_usd, max_test_order_usd, client_order_id, status, readiness_json,
+          preview_json, automated_live_trading_enabled, wallet_signing_enabled, withdrawals_enabled,
+          margin_enabled, futures_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          context.connector?.id || null,
+          context.riskProfile?.id || null,
+          context.order.exchangeName,
+          context.order.symbol,
+          context.order.side,
+          context.order.orderType,
+          context.order.quantity,
+          context.order.limitPrice || null,
+          context.order.notionalUsd || 0,
+          context.order.maxTestOrderUsd || 0,
+          context.order.clientOrderId,
+          status,
+          JSON.stringify(context.safety),
+          JSON.stringify(context.preview),
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      );
+
+      await recordTinyLiveOrderEvent({
+        testId: insert.lastID,
+        userId: req.session.userId,
+        status,
+        summary: previewReady
+          ? 'Tiny live order preview is ready. The real order still requires manual owner confirmation.'
+          : 'Tiny live order preview is blocked. No exchange order endpoint was called.',
+        payload: {
+          preview: context.preview,
+          failedChecks: context.safety.missing,
+          safetyBoundary: context.safety.safetyBoundary
+        }
+      });
+
+      res.status(previewReady ? 201 : 409).json({
+        previewId: insert.lastID,
+        preview: context.preview,
+        safety: context.safety,
+        test: parseTinyLiveOrderTest(await dbGet('SELECT * FROM tiny_live_order_tests WHERE id = ? AND user_id = ?', [insert.lastID, req.session.userId])),
+        nextClick: previewReady
+          ? `Type "${tinyLiveOwnerConfirmationPhrase}" and click Place One Tiny Live Order.`
+          : context.safety.nextClick,
+        safetyBoundary: {
+          ...context.safety.safetyBoundary,
+          orderEndpointCalled: false
+        }
+      });
+    } catch (error) {
+      const exchangeName = req.body?.order?.exchangeName || req.body?.exchangeName || 'tiny live exchange';
+      res.status(error.statusCode || 500).json({
+        error: createPlainEnglishTinyLiveError
+          ? createPlainEnglishTinyLiveError(exchangeName, error)
+          : error.message,
+        safetyBoundary: {
+          tinyLiveManualTestImplemented: true,
+          orderEndpointCalled: false,
+          automatedLiveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false
+        }
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase3c/place', requireAuth, async (req, res) => {
+    const previewId = Number(req.body?.previewId || req.body?.id || 0);
+
+    try {
+      const existingRow = previewId
+        ? await dbGet('SELECT * FROM tiny_live_order_tests WHERE id = ? AND user_id = ?', [previewId, req.session.userId])
+        : null;
+
+      if (!existingRow) {
+        return res.status(404).json({
+          error: 'Create a tiny live order preview first, then place the order from that preview.',
+          nextClick: 'Click Preview Tiny Live Order.'
+        });
+      }
+
+      const existing = parseTinyLiveOrderTest(existingRow);
+      const ownerConfirmation = String(req.body?.ownerConfirmation || '').trim();
+      const orderInput = {
+        exchangeName: existing.exchange_name,
+        symbol: existing.symbol,
+        side: existing.side,
+        orderType: existing.order_type,
+        quantity: existing.quantity,
+        limitPrice: existing.limit_price,
+        notionalUsd: existing.notional_usd,
+        maxTestOrderUsd: existing.max_test_order_usd,
+        clientOrderId: existing.client_order_id
+      };
+      const context = await buildTinyLiveSafetyContext({
+        userId: req.session.userId,
+        orderInput,
+        marketContext: req.body?.marketContext || {},
+        ownerConfirmation,
+        policy: req.body?.policy || {},
+        ignoreTestId: existing.id
+      });
+      const ownerConfirmationHash = ownerConfirmation
+        ? crypto.createHash('sha256').update(`${req.session.userId}:${ownerConfirmation}`).digest('hex')
+        : null;
+
+      await dbRun(
+        `UPDATE tiny_live_order_tests
+         SET readiness_json = ?, preview_json = ?, owner_confirmation_hash = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        [
+          JSON.stringify(context.safety),
+          JSON.stringify(context.preview),
+          ownerConfirmationHash,
+          existing.id,
+          req.session.userId
+        ]
+      );
+
+      if (!context.safety.passed) {
+        await dbRun(
+          `UPDATE tiny_live_order_tests
+           SET status = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND user_id = ?`,
+          [
+            'rejected',
+            JSON.stringify({
+              resultScreen: {
+                exchange: context.adapter?.displayName || context.order.displayName,
+                symbol: context.order.symbol,
+                orderType: context.order.orderType,
+                notionalUsd: context.order.notionalUsd,
+                fillStatus: 'rejected',
+                rejectionReason: context.safety.missing[0]?.note || 'Tiny live safety check failed.'
+              },
+              failedChecks: context.safety.missing,
+              safetyBoundary: {
+                ...context.safety.safetyBoundary,
+                orderEndpointCalled: false
+              }
+            }),
+            existing.id,
+            req.session.userId
+          ]
+        );
+        await recordTinyLiveOrderEvent({
+          testId: existing.id,
+          userId: req.session.userId,
+          status: 'rejected',
+          summary: 'Tiny live safety gates blocked the order. No exchange order endpoint was called.',
+          payload: { failedChecks: context.safety.missing }
+        });
+
+        return res.status(409).json({
+          test: parseTinyLiveOrderTest(await dbGet('SELECT * FROM tiny_live_order_tests WHERE id = ? AND user_id = ?', [existing.id, req.session.userId])),
+          safety: context.safety,
+          nextClick: context.safety.nextClick,
+          safetyBoundary: {
+            ...context.safety.safetyBoundary,
+            orderEndpointCalled: false
+          }
+        });
+      }
+
+      await dbRun(
+        `UPDATE tiny_live_order_tests
+         SET status = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        ['approved', existing.id, req.session.userId]
+      );
+      await recordTinyLiveOrderEvent({
+        testId: existing.id,
+        userId: req.session.userId,
+        status: 'approved',
+        summary: 'Owner manually approved one tiny live spot order. Automated live trading remains disabled.',
+        payload: {
+          order: context.order,
+          safetyBoundary: context.safety.safetyBoundary
+        }
+      });
+
+      const lifecycle = await runTinyLiveOrderLifecycle({
+        order: context.order,
+        credentials: context.credentials,
+        adapter: context.adapter
+      });
+
+      await dbRun(
+        `UPDATE tiny_live_order_tests
+         SET status = ?, exchange_order_id = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        [
+          lifecycle.status,
+          lifecycle.exchangeOrderId || null,
+          JSON.stringify(lifecycle),
+          existing.id,
+          req.session.userId
+        ]
+      );
+      await recordTinyLiveOrderEvent({
+        testId: existing.id,
+        userId: req.session.userId,
+        status: lifecycle.status,
+        summary: `Tiny live spot order lifecycle finished with status ${lifecycle.status}.`,
+        payload: {
+          exchangeOrderId: lifecycle.exchangeOrderId,
+          resultScreen: lifecycle.resultScreen,
+          safetyBoundary: lifecycle.safetyBoundary
+        }
+      });
+
+      res.json({
+        test: parseTinyLiveOrderTest(await dbGet('SELECT * FROM tiny_live_order_tests WHERE id = ? AND user_id = ?', [existing.id, req.session.userId])),
+        resultScreen: lifecycle.resultScreen,
+        lifecycle,
+        safety: context.safety,
+        nextClick: 'Track order status or cancel the order if it is still open.',
+        safetyBoundary: {
+          ...lifecycle.safetyBoundary,
+          automatedLiveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false
+        }
+      });
+    } catch (error) {
+      const message = createPlainEnglishTinyLiveError
+        ? createPlainEnglishTinyLiveError(req.body?.exchangeName || 'tiny live exchange', error)
+        : error.message;
+
+      if (previewId) {
+        await dbRun(
+          `UPDATE tiny_live_order_tests
+           SET status = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND user_id = ?`,
+          [
+            'rejected',
+            JSON.stringify({
+              resultScreen: {
+                fillStatus: 'rejected',
+                rejectionReason: message
+              },
+              rawError: error?.body || null,
+              safetyBoundary: {
+                orderEndpointCalled: false,
+                automatedLiveTradingEnabled: false,
+                walletSigningEnabled: false,
+                withdrawalsEnabled: false
+              }
+            }),
+            previewId,
+            req.session.userId
+          ]
+        );
+        await recordTinyLiveOrderEvent({
+          testId: previewId,
+          userId: req.session.userId,
+          status: 'rejected',
+          summary: message,
+          payload: { rawError: error?.body || null }
+        });
+      }
+
+      res.status(error.status || 500).json({
+        error: message,
+        test: previewId
+          ? parseTinyLiveOrderTest(await dbGet('SELECT * FROM tiny_live_order_tests WHERE id = ? AND user_id = ?', [previewId, req.session.userId]))
+          : null,
+        safetyBoundary: {
+          automatedLiveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false
+        }
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase3c/orders/:id/cancel', requireAuth, async (req, res) => {
+    try {
+      const row = await dbGet('SELECT * FROM tiny_live_order_tests WHERE id = ? AND user_id = ?', [req.params.id, req.session.userId]);
+
+      if (!row) {
+        return res.status(404).json({ error: 'Tiny live order test not found.' });
+      }
+
+      const test = parseTinyLiveOrderTest(row);
+      const order = normalizeTinyLiveOrderDraft({
+        exchangeName: test.exchange_name,
+        symbol: test.symbol,
+        side: test.side,
+        orderType: test.order_type,
+        quantity: test.quantity,
+        limitPrice: test.limit_price,
+        notionalUsd: test.notional_usd,
+        maxTestOrderUsd: test.max_test_order_usd,
+        clientOrderId: test.client_order_id
+      });
+      const connector = test.connector_id
+        ? parseExchangeConnector(await getExchangeConnectorRow(test.connector_id))
+        : await findOrCreateTinyLiveConnector({ exchangeName: test.exchange_name });
+      const [credentials, adapter] = await Promise.all([
+        connector ? loadConnectorTinyLiveCredentialsForUser(connector, req.session.userId) : Promise.resolve(null),
+        Promise.resolve(getTinyLiveAdapter(test.exchange_name))
+      ]);
+      const canceled = await cancelTinyLiveOrder({
+        order,
+        credentials,
+        adapter,
+        exchangeOrderId: test.exchange_order_id
+      });
+
+      await dbRun(
+        `UPDATE tiny_live_order_tests
+         SET status = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        [
+          canceled.status,
+          JSON.stringify(canceled),
+          test.id,
+          req.session.userId
+        ]
+      );
+      await recordTinyLiveOrderEvent({
+        testId: test.id,
+        userId: req.session.userId,
+        status: canceled.status,
+        summary: `Cancel request finished with status ${canceled.status}.`,
+        payload: canceled
+      });
+
+      res.json({
+        test: parseTinyLiveOrderTest(await dbGet('SELECT * FROM tiny_live_order_tests WHERE id = ? AND user_id = ?', [test.id, req.session.userId])),
+        resultScreen: canceled.resultScreen,
+        cancellation: canceled,
+        safetyBoundary: canceled.safetyBoundary
+      });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        error: createPlainEnglishTinyLiveError
+          ? createPlainEnglishTinyLiveError('tiny live cancel', error)
+          : error.message,
+        safetyBoundary: {
+          automatedLiveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false
+        }
+      });
+    }
+  });
+
+  app.get('/api/v1/live-trading-launch/phase3c/orders/:id/status', requireAuth, async (req, res) => {
+    try {
+      const row = await dbGet('SELECT * FROM tiny_live_order_tests WHERE id = ? AND user_id = ?', [req.params.id, req.session.userId]);
+
+      if (!row) {
+        return res.status(404).json({ error: 'Tiny live order test not found.' });
+      }
+
+      const test = parseTinyLiveOrderTest(row);
+
+      if (!test.exchange_order_id) {
+        return res.json({
+          test,
+          resultScreen: test.result?.resultScreen || test.preview,
+          status: test.status,
+          safetyBoundary: {
+            automatedLiveTradingEnabled: false,
+            walletSigningEnabled: false,
+            withdrawalsEnabled: false
+          }
+        });
+      }
+
+      const order = normalizeTinyLiveOrderDraft({
+        exchangeName: test.exchange_name,
+        symbol: test.symbol,
+        side: test.side,
+        orderType: test.order_type,
+        quantity: test.quantity,
+        limitPrice: test.limit_price,
+        notionalUsd: test.notional_usd,
+        maxTestOrderUsd: test.max_test_order_usd,
+        clientOrderId: test.client_order_id
+      });
+      const connector = test.connector_id
+        ? parseExchangeConnector(await getExchangeConnectorRow(test.connector_id))
+        : await findOrCreateTinyLiveConnector({ exchangeName: test.exchange_name });
+      const [credentials, adapter] = await Promise.all([
+        connector ? loadConnectorTinyLiveCredentialsForUser(connector, req.session.userId) : Promise.resolve(null),
+        Promise.resolve(getTinyLiveAdapter(test.exchange_name))
+      ]);
+      const status = await getTinyLiveOrderStatus({
+        order,
+        credentials,
+        adapter,
+        exchangeOrderId: test.exchange_order_id
+      });
+
+      await dbRun(
+        `UPDATE tiny_live_order_tests
+         SET status = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        [
+          status.status,
+          JSON.stringify(status),
+          test.id,
+          req.session.userId
+        ]
+      );
+      await recordTinyLiveOrderEvent({
+        testId: test.id,
+        userId: req.session.userId,
+        status: status.status,
+        summary: `Tiny live order status refreshed: ${status.status}.`,
+        payload: status
+      });
+
+      res.json({
+        test: parseTinyLiveOrderTest(await dbGet('SELECT * FROM tiny_live_order_tests WHERE id = ? AND user_id = ?', [test.id, req.session.userId])),
+        resultScreen: status.resultScreen,
+        status,
+        safetyBoundary: status.safetyBoundary
+      });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        error: createPlainEnglishTinyLiveError
+          ? createPlainEnglishTinyLiveError('tiny live status', error)
+          : error.message,
+        safetyBoundary: {
+          automatedLiveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false
+        }
+      });
+    }
+  });
+
   app.post('/api/v1/live-trading-launch/phase3c/emergency-stop', requireAuth, async (req, res) => {
     try {
       const rows = await dbAll(
@@ -1154,6 +2134,19 @@ function registerExchangeMetadataRoutes(app, {
             liveTradingEnabled: false,
             walletSigningEnabled: false,
             withdrawalsEnabled: false
+          },
+          tinyLiveConnection: {
+            ...(connector.settings?.tinyLiveConnection || {}),
+            liveTradingLocked: true,
+            manualTinyLiveOnly: true,
+            automatedLiveTradingEnabled: false,
+            unrestrictedLiveTradingEnabled: false,
+            walletSigningEnabled: false,
+            withdrawalsEnabled: false,
+            marginEnabled: false,
+            futuresEnabled: false,
+            leverageEnabled: false,
+            disabledByEmergencyStopAt: new Date().toISOString()
           }
         };
         const nextMode = String(connector.mode || '').includes('live') ? 'read_only' : connector.mode;
@@ -1180,9 +2173,13 @@ function registerExchangeMetadataRoutes(app, {
           JSON.stringify({
             disabledCount,
             liveTradingEnabled: false,
+            tinyLiveManualTestEnabled: false,
+            automatedLiveTradingEnabled: false,
             walletSigningEnabled: false,
             withdrawalsEnabled: false,
-            productionOrderEndpointEnabled: false
+            productionOrderEndpointEnabled: false,
+            marginEnabled: false,
+            futuresEnabled: false
           })
         ]
       );
@@ -1193,9 +2190,13 @@ function registerExchangeMetadataRoutes(app, {
         summary: 'Emergency stop complete. Any live connector flags are disabled. This action did not enable trading.',
         safetyBoundary: {
           liveTradingEnabled: false,
+          tinyLiveManualTestEnabled: false,
+          automatedLiveTradingEnabled: false,
           walletSigningEnabled: false,
           withdrawalsEnabled: false,
-          productionOrderEndpointEnabled: false
+          productionOrderEndpointEnabled: false,
+          marginEnabled: false,
+          futuresEnabled: false
         }
       });
     } catch (error) {

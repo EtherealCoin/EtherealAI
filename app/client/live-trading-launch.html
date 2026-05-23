@@ -261,6 +261,126 @@
             <div id="phase3c-prep" class="phase3-results">Phase 3C preparation checklist will appear here.</div>
         </section>
 
+        <section class="model-panel" id="tiny-live-test-center">
+            <h2>Phase 3C: Tiny Live Test Mode</h2>
+            <p class="inline-status">This is the smallest real-money path: one exchange, one spot symbol, one tiny order, no leverage, no margin, no futures, no withdrawals, no wallet signing, and no automation. Default state is locked.</p>
+            <div class="live-tiny-safety-grid">
+                <article class="status-warning">
+                    <span>Default State</span>
+                    <strong>Locked</strong>
+                    <small>Every gate must pass before one manual test.</small>
+                </article>
+                <article class="status-success">
+                    <span>Scope</span>
+                    <strong>Spot Only</strong>
+                    <small>No leverage, margin, futures, or wallet signing.</small>
+                </article>
+                <article class="status-success">
+                    <span>Withdrawals</span>
+                    <strong>Disabled</strong>
+                    <small>Required before the order endpoint can be called.</small>
+                </article>
+                <article class="status-warning">
+                    <span>Automation</span>
+                    <strong>Off</strong>
+                    <small>Only one manually confirmed order.</small>
+                </article>
+            </div>
+            <div class="live-tiny-controls">
+                <label for="phase3c-exchange">
+                    Exchange
+                    <select id="phase3c-exchange">
+                        <option value="binance">Binance Spot - first supported</option>
+                        <option value="coinbase">Coinbase - prepared locked</option>
+                        <option value="kraken">Kraken - prepared locked</option>
+                        <option value="okx">OKX - prepared locked</option>
+                        <option value="bybit">Bybit - prepared locked</option>
+                    </select>
+                </label>
+                <label for="phase3c-symbol">
+                    Symbol
+                    <input id="phase3c-symbol" type="text" value="BTC/USDT">
+                </label>
+                <label for="phase3c-side">
+                    Side
+                    <select id="phase3c-side">
+                        <option value="buy">Buy</option>
+                        <option value="sell">Sell</option>
+                    </select>
+                </label>
+                <label for="phase3c-order-type">
+                    Order type
+                    <select id="phase3c-order-type">
+                        <option value="limit">Limit</option>
+                        <option value="post_only">Post-only</option>
+                        <option value="ioc">IOC</option>
+                        <option value="market">Market</option>
+                    </select>
+                </label>
+                <label for="phase3c-quantity">
+                    Tiny quantity
+                    <input id="phase3c-quantity" type="number" value="0.0001" min="0" step="0.00000001">
+                </label>
+                <label for="phase3c-limit-price">
+                    Limit price
+                    <input id="phase3c-limit-price" type="number" value="100" min="0" step="0.01">
+                </label>
+                <label for="phase3c-max-amount">
+                    Max test amount USD
+                    <input id="phase3c-max-amount" type="number" value="10" min="1" max="10" step="1">
+                </label>
+            </div>
+            <div class="button-row">
+                <button id="refresh-phase3c-status" type="button">Refresh Tiny Live Readiness</button>
+                <button id="preview-tiny-live-order" type="button">Preview Tiny Live Order</button>
+                <button id="place-tiny-live-order" type="button" class="danger-button">Place One Tiny Live Order</button>
+                <button id="track-tiny-live-order" type="button">Track Latest Tiny Live Order</button>
+                <button id="cancel-tiny-live-order" type="button" class="secondary-button">Cancel Latest Tiny Live Order</button>
+            </div>
+            <details class="compact-details live-tiny-vault">
+                <summary>Save Tiny Live API Key</summary>
+                <p class="inline-status">Use only a production exchange key intentionally created for one tiny spot test. Disable withdrawals, margin, futures, leverage, transfers, and any permission you do not need. Secret values are encrypted locally and never displayed again.</p>
+                <div class="live-tiny-controls">
+                    <label for="phase3c-api-key">
+                        Tiny live API key
+                        <input id="phase3c-api-key" type="password" autocomplete="off">
+                    </label>
+                    <label for="phase3c-api-secret">
+                        Tiny live API secret
+                        <input id="phase3c-api-secret" type="password" autocomplete="off">
+                    </label>
+                    <label for="phase3c-passphrase">
+                        Passphrase if exchange requires it
+                        <input id="phase3c-passphrase" type="password" autocomplete="off">
+                    </label>
+                </div>
+                <div class="phase3a-checklist">
+                    <label class="checkbox-line"><input id="phase3c-check-production-key" type="checkbox"> I intentionally created this production/live key for one tiny spot test.</label>
+                    <label class="checkbox-line"><input id="phase3c-check-spot" type="checkbox"> Spot trading is enabled.</label>
+                    <label class="checkbox-line"><input id="phase3c-check-margin" type="checkbox"> Margin trading is disabled.</label>
+                    <label class="checkbox-line"><input id="phase3c-check-futures" type="checkbox"> Futures trading is disabled.</label>
+                    <label class="checkbox-line"><input id="phase3c-check-leverage" type="checkbox"> Leverage is disabled.</label>
+                    <label class="checkbox-line"><input id="phase3c-check-withdrawals" type="checkbox"> Withdrawals are disabled.</label>
+                    <label class="checkbox-line"><input id="phase3c-check-transfer" type="checkbox"> Transfers are disabled if the exchange offers that permission.</label>
+                    <label class="checkbox-line"><input id="phase3c-check-ip" type="checkbox"> IP restriction was reviewed for this connection.</label>
+                    <label class="checkbox-line"><input id="phase3c-check-real-money" type="checkbox"> I understand this can use real money only after all gates pass.</label>
+                    <label class="checkbox-line"><input id="phase3c-check-one-order" type="checkbox"> I understand this is one manually approved tiny order only.</label>
+                </div>
+                <button id="save-tiny-live-key" type="button">Save Tiny Live API Key To Local Vault</button>
+                <div id="phase3c-vault-result" class="phase3-results">No tiny live key saved from this page yet.</div>
+            </details>
+            <div class="tiny-confirmation-box">
+                <label for="phase3c-confirmation">
+                    Manual owner confirmation
+                    <input id="phase3c-confirmation" type="text" autocomplete="off" placeholder="Type the exact approval phrase after preview passes">
+                </label>
+                <small id="phase3c-confirmation-help">The required phrase appears after readiness loads. Do not type it unless you intend to place one tiny live spot order.</small>
+            </div>
+            <div id="phase3c-approval-center" class="phase3-results">Loading Tiny Live Test Approval Center...</div>
+            <div id="phase3c-preview-result" class="phase3-results">No tiny live preview has run yet.</div>
+            <div id="phase3c-order-result" class="phase3-results">No tiny live order has been placed. This is the correct safe default.</div>
+        </section>
+
         <section class="model-panel">
             <h2>Launch Roadmap</h2>
             <div id="live-roadmap-phases" class="live-roadmap-phases">Loading phases...</div>
@@ -288,6 +408,8 @@
         let latestPhase3A = null;
         let latestPhase3B = null;
         let latestPhase3C = null;
+        let latestTinyLivePreview = null;
+        let latestTinyLiveOrderId = null;
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -561,6 +683,138 @@
                             </article>
                         `).join('')}
                     </div>
+                </article>
+            `;
+        }
+
+        function tinyLiveStatusClass(item) {
+            if (item?.ready || item?.status === 'Safe to test' || item?.passed) return 'status-success';
+            if (item?.status === 'blocked' || item?.status === 'Not safe to test') return 'status-warning';
+            if (item?.status === 'danger' || item?.status === 'unsafe') return 'status-danger';
+            return 'status-info';
+        }
+
+        function renderTinyLiveApprovalCenter(center) {
+            latestPhase3C = center;
+            const exchanges = center?.exchanges || [];
+            document.getElementById('phase3c-confirmation-help').textContent = center?.approvalPhrase
+                ? `Required phrase after preview passes: ${center.approvalPhrase}`
+                : 'The required phrase appears after readiness loads.';
+            document.getElementById('phase3c-approval-center').innerHTML = `
+                <article class="phase3-account-card ${center?.safeToTest ? 'status-success' : 'status-warning'}">
+                    <div>
+                        <span>${escapeHtml(center?.status || 'locked')}</span>
+                        <strong>Tiny Live Test Approval Center</strong>
+                    </div>
+                    <p>${escapeHtml(center?.safeToTest ? 'Safe to test one manually approved tiny spot order.' : 'Not safe to test yet. Live trading remains locked.')}</p>
+                    <p class="workflow-helper-text"><b>Next:</b> ${escapeHtml(center?.nextRecommendedAction || 'Review missing gates.')}</p>
+                    <div class="phase3a-exchange-grid">
+                        ${exchanges.map(exchange => `
+                            <article class="phase3-account-card ${tinyLiveStatusClass(exchange)}">
+                                <div>
+                                    <span>${escapeHtml(exchange.status)}</span>
+                                    <strong>${escapeHtml(exchange.displayName)}</strong>
+                                </div>
+                                <p>${escapeHtml(exchange.why || '')}</p>
+                                <div class="live-candidate-metrics">
+                                    <span>Connector: ${exchange.connectorExists ? 'ready' : 'missing'}</span>
+                                    <span>Key: ${exchange.tinyLiveCredentialsSaved ? 'saved' : 'missing'}</span>
+                                    <span>Sandbox: ${exchange.sandboxComplete ? 'complete' : 'missing'}</span>
+                                    <span>Spot trading: ${exchange.canTrade ? 'detected' : 'not verified'}</span>
+                                    <span>Withdrawals: ${exchange.withdrawalsDisabled ? 'disabled' : 'not verified'}</span>
+                                    <span>Live mode: locked</span>
+                                </div>
+                                <small>${escapeHtml(exchange.nextButton || 'Review')}</small>
+                            </article>
+                        `).join('')}
+                    </div>
+                </article>
+            `;
+        }
+
+        function renderTinyLivePreview(data, responseOk = false) {
+            const preview = data?.preview || data?.test?.preview || {};
+            const safety = data?.safety || data?.test?.readiness || {};
+            const checks = safety.checks || [];
+            latestTinyLivePreview = data;
+            latestTinyLiveOrderId = data?.previewId || data?.test?.id || latestTinyLiveOrderId;
+            document.getElementById('phase3c-preview-result').innerHTML = `
+                <article class="phase3-account-card ${responseOk || data?.test?.status === 'preview_ready' ? 'status-success' : 'status-warning'}">
+                    <div>
+                        <span>${escapeHtml(preview.status || data?.test?.status || 'preview')}</span>
+                        <strong>Tiny Live Order Preview</strong>
+                    </div>
+                    <div class="read-only-spread-summary">
+                        <article>
+                            <span>Exchange</span>
+                            <strong>${escapeHtml(preview.exchange || 'N/A')}</strong>
+                            <small>${escapeHtml(preview.symbol || '')}</small>
+                        </article>
+                        <article>
+                            <span>Order</span>
+                            <strong>${escapeHtml(preview.side || '')} ${escapeHtml(preview.orderType || '')}</strong>
+                            <small>Spot only</small>
+                        </article>
+                        <article>
+                            <span>Max Amount</span>
+                            <strong>${formatUsd(preview.maxTestOrderUsd)}</strong>
+                            <small>Hard-capped tiny test</small>
+                        </article>
+                        <article>
+                            <span>Safe To Test</span>
+                            <strong>${safety.safeToTest ? 'Yes' : 'No'}</strong>
+                            <small>${escapeHtml(safety.nextClick || data?.nextClick || '')}</small>
+                        </article>
+                    </div>
+                    ${checks.length ? `
+                        <div class="phase3a-checklist">
+                            ${checks.map(check => `
+                                <article class="${check.passed ? 'status-success' : 'status-warning'}">
+                                    <strong>${check.passed ? 'Complete' : 'Fix'} · ${escapeHtml(check.label)}</strong>
+                                    <span>${escapeHtml(check.note || check.nextAction || '')}</span>
+                                </article>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    <p class="workflow-helper-text">No order is placed by preview. Automated live trading, wallet signing, withdrawals, margin, and futures remain disabled.</p>
+                </article>
+            `;
+        }
+
+        function renderTinyLiveOrderResult(data, fallback = '') {
+            const result = data?.resultScreen || data?.test?.result?.resultScreen || data?.cancellation?.resultScreen || {};
+            const status = result.fillStatus || data?.test?.status || data?.status?.status || fallback || 'review';
+            latestTinyLiveOrderId = data?.test?.id || latestTinyLiveOrderId;
+            document.getElementById('phase3c-order-result').innerHTML = `
+                <article class="phase3-account-card ${status === 'rejected' ? 'status-warning' : 'status-success'}">
+                    <div>
+                        <span>${escapeHtml(status)}</span>
+                        <strong>Tiny Live Order Result</strong>
+                    </div>
+                    <div class="read-only-spread-summary">
+                        <article>
+                            <span>Exchange</span>
+                            <strong>${escapeHtml(result.exchange || data?.test?.exchange_name || 'N/A')}</strong>
+                            <small>${escapeHtml(result.symbol || data?.test?.symbol || '')}</small>
+                        </article>
+                        <article>
+                            <span>Order Type</span>
+                            <strong>${escapeHtml(result.orderType || data?.test?.order_type || 'N/A')}</strong>
+                            <small>${escapeHtml(data?.test?.side || '')}</small>
+                        </article>
+                        <article>
+                            <span>Amount</span>
+                            <strong>${formatUsd(result.notionalUsd ?? data?.test?.notional_usd)}</strong>
+                            <small>One manual tiny spot test</small>
+                        </article>
+                        <article>
+                            <span>Order ID</span>
+                            <strong>${escapeHtml(result.exchangeOrderId || data?.test?.exchange_order_id || 'N/A')}</strong>
+                            <small>Track or cancel if open</small>
+                        </article>
+                    </div>
+                    ${result.rejectionReason ? `<p><b>Why it stopped:</b> ${escapeHtml(result.rejectionReason)}</p>` : '<p>Review status and balances after any accepted/fill response.</p>'}
+                    <p class="workflow-helper-text">Automation is still off. Wallet signing, withdrawals, margin, and futures remain disabled.</p>
                 </article>
             `;
         }
@@ -894,6 +1148,214 @@
                 </article>
             `;
             await loadPhase3BStatus();
+            await loadPhase3CStatus();
+        }
+
+        async function loadPhase3CStatus() {
+            const response = await fetch('/api/v1/live-trading-launch/phase3c/status');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase3c-approval-center').textContent = data.error || 'Unable to load Tiny Live Test Approval Center.';
+                return null;
+            }
+
+            renderTinyLiveApprovalCenter(data.center);
+            if (data.latestOrders?.length && !latestTinyLiveOrderId) {
+                latestTinyLiveOrderId = data.latestOrders[0].id;
+            }
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                roadmap: latestLiveRoadmap,
+                latestLiveScan,
+                latestPhase3Status,
+                latestAccountScan,
+                latestAccountAware,
+                phase3C: data.center,
+                latestTinyLiveOrders: data.latestOrders
+            }, null, 2);
+            return data.center;
+        }
+
+        async function ensureTinyLiveConnector(exchangeName) {
+            const current = (latestPhase3C?.exchanges || []).find(exchange => exchange.exchangeName === exchangeName);
+
+            if (current?.connectorId) {
+                return current.connectorId;
+            }
+
+            await fetch('/api/v1/exchange-connectors/placeholders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    scope: 'single',
+                    exchangeId: exchangeName,
+                    mode: 'read_only'
+                })
+            });
+            const center = await loadPhase3CStatus();
+            const refreshed = (center?.exchanges || []).find(exchange => exchange.exchangeName === exchangeName);
+            return refreshed?.connectorId || null;
+        }
+
+        function tinyLiveOrderPayload() {
+            return {
+                exchangeName: document.getElementById('phase3c-exchange').value,
+                symbol: document.getElementById('phase3c-symbol').value || 'BTC/USDT',
+                side: document.getElementById('phase3c-side').value,
+                orderType: document.getElementById('phase3c-order-type').value,
+                quantity: Number(document.getElementById('phase3c-quantity').value || 0),
+                limitPrice: Number(document.getElementById('phase3c-limit-price').value || 0),
+                maxTestOrderUsd: Number(document.getElementById('phase3c-max-amount').value || 10)
+            };
+        }
+
+        async function saveTinyLiveKey() {
+            const exchangeName = document.getElementById('phase3c-exchange').value;
+            const connectorId = await ensureTinyLiveConnector(exchangeName);
+            const output = document.getElementById('phase3c-vault-result');
+
+            if (!connectorId) {
+                output.textContent = 'Create the exchange connector placeholder first, then retry.';
+                return;
+            }
+
+            output.textContent = 'Saving tiny live key to the local encrypted vault. Secret values will not be displayed again.';
+            const response = await fetch(`/api/v1/exchange-connectors/${connectorId}/tiny-live-credentials`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    credentials: {
+                        apiKey: document.getElementById('phase3c-api-key').value,
+                        apiSecret: document.getElementById('phase3c-api-secret').value,
+                        passphrase: document.getElementById('phase3c-passphrase').value
+                    },
+                    permissionsChecklist: {
+                        productionKeyReviewed: document.getElementById('phase3c-check-production-key').checked,
+                        spotTradingEnabled: document.getElementById('phase3c-check-spot').checked,
+                        marginDisabled: document.getElementById('phase3c-check-margin').checked,
+                        futuresDisabled: document.getElementById('phase3c-check-futures').checked,
+                        leverageDisabled: document.getElementById('phase3c-check-leverage').checked,
+                        withdrawalsDisabled: document.getElementById('phase3c-check-withdrawals').checked,
+                        transferDisabled: document.getElementById('phase3c-check-transfer').checked,
+                        ipRestrictionReviewed: document.getElementById('phase3c-check-ip').checked,
+                        ownerUnderstandsRealMoney: document.getElementById('phase3c-check-real-money').checked,
+                        ownerUnderstandsOneManualOrderOnly: document.getElementById('phase3c-check-one-order').checked
+                    }
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Tiny live key was not saved.';
+                return;
+            }
+
+            document.getElementById('phase3c-api-key').value = '';
+            document.getElementById('phase3c-api-secret').value = '';
+            document.getElementById('phase3c-passphrase').value = '';
+            output.innerHTML = `
+                <article class="phase3-account-card status-success">
+                    <strong>Tiny live key saved</strong>
+                    <span>Fingerprint ${escapeHtml(data.vault?.apiKeyFingerprint || 'saved')} · secret values were not returned to the UI.</span>
+                    <small>Next: Refresh Tiny Live Readiness, then Preview Tiny Live Order. Automation remains off.</small>
+                </article>
+            `;
+            await loadPhase3CStatus();
+        }
+
+        async function previewTinyLiveOrder() {
+            const output = document.getElementById('phase3c-preview-result');
+            output.textContent = 'Running tiny live safety checks. Preview cannot place an order.';
+            const response = await fetch('/api/v1/live-trading-launch/phase3c/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order: tinyLiveOrderPayload(),
+                    marketContext: {
+                        liquidityUsd: 1000000,
+                        slippagePercent: 0.05,
+                        priceTimestamp: new Date().toISOString()
+                    },
+                    ownerConfirmation: document.getElementById('phase3c-confirmation').value
+                })
+            });
+            const data = await response.json();
+
+            renderTinyLivePreview(data, response.ok);
+            await loadPhase3CStatus();
+        }
+
+        async function placeTinyLiveOrder() {
+            const output = document.getElementById('phase3c-order-result');
+            const previewId = latestTinyLivePreview?.previewId || latestTinyLivePreview?.test?.id || latestTinyLiveOrderId;
+
+            if (!previewId) {
+                output.textContent = 'Click Preview Tiny Live Order first. No order was placed.';
+                return;
+            }
+
+            output.textContent = 'Final safety check running. If anything fails, no exchange order endpoint will be called.';
+            const response = await fetch('/api/v1/live-trading-launch/phase3c/place', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    previewId,
+                    ownerConfirmation: document.getElementById('phase3c-confirmation').value,
+                    marketContext: {
+                        liquidityUsd: 1000000,
+                        slippagePercent: 0.05,
+                        priceTimestamp: new Date().toISOString()
+                    }
+                })
+            });
+            const data = await response.json();
+
+            renderTinyLiveOrderResult(data, response.ok ? 'submitted' : 'rejected');
+            await loadPhase3CStatus();
+        }
+
+        async function trackLatestTinyLiveOrder() {
+            const output = document.getElementById('phase3c-order-result');
+
+            if (!latestTinyLiveOrderId) {
+                output.textContent = 'No tiny live order exists to track yet.';
+                return;
+            }
+
+            const response = await fetch(`/api/v1/live-trading-launch/phase3c/orders/${latestTinyLiveOrderId}/status`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Tiny live status check failed.';
+                return;
+            }
+
+            renderTinyLiveOrderResult(data, data?.test?.status || 'review');
+            await loadPhase3CStatus();
+        }
+
+        async function cancelLatestTinyLiveOrder() {
+            const output = document.getElementById('phase3c-order-result');
+
+            if (!latestTinyLiveOrderId) {
+                output.textContent = 'No tiny live order exists to cancel yet.';
+                return;
+            }
+
+            const response = await fetch(`/api/v1/live-trading-launch/phase3c/orders/${latestTinyLiveOrderId}/cancel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Tiny live cancel failed.';
+                return;
+            }
+
+            renderTinyLiveOrderResult(data, data?.test?.status || 'canceled');
+            await loadPhase3CStatus();
         }
 
         async function runReadOnlyScan() {
@@ -1082,10 +1544,17 @@
         document.getElementById('save-sandbox-key').addEventListener('click', saveSandboxKey);
         document.getElementById('run-sandbox-test-trade').addEventListener('click', runSandboxTestTrade);
         document.getElementById('phase3c-emergency-stop').addEventListener('click', emergencyStopLiveConnectors);
+        document.getElementById('refresh-phase3c-status').addEventListener('click', loadPhase3CStatus);
+        document.getElementById('save-tiny-live-key').addEventListener('click', saveTinyLiveKey);
+        document.getElementById('preview-tiny-live-order').addEventListener('click', previewTinyLiveOrder);
+        document.getElementById('place-tiny-live-order').addEventListener('click', placeTinyLiveOrder);
+        document.getElementById('track-tiny-live-order').addEventListener('click', trackLatestTinyLiveOrder);
+        document.getElementById('cancel-tiny-live-order').addEventListener('click', cancelLatestTinyLiveOrder);
 
         loadRoadmap();
         loadPhase3Status();
         loadPhase3BStatus();
+        loadPhase3CStatus();
         scanPhase3AReadiness();
     </script>
     <script src="/js/operator-training.js"></script>
