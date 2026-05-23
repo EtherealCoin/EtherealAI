@@ -318,16 +318,31 @@ function registerBotAutomationRoutes(app, {
       buyChain: trade.buyChain,
       sellChain: trade.sellChain,
       grossSpreadPercent: trade.grossSpreadPercent,
+      totalEstimatedCostPercent: trade.totalEstimatedCostPercent,
+      projectedSpreadAfterLatencyPercent: trade.projectedSpreadAfterLatencyPercent,
+      projectedNetEdgeAfterLatencyPercent: trade.projectedNetEdgeAfterLatencyPercent,
       latencyMs: trade.latencyMs,
-      liquidityFloor: trade.liquidityFloor
+      liquidityFloor: trade.liquidityFloor,
+      liquidityUtilizationPercent: trade.liquidityUtilizationPercent,
+      feeModel: trade.feeModel,
+      topVolumeFilter: trade.topVolumeFilter,
+      decisionReason: trade.decisionReason
     }));
     const feePercent = Number(settings.estimatedFeePercent ?? settings.feePercent ?? 0);
+    const makerFeePercent = Number(settings.makerFeePercent ?? feePercent);
+    const takerFeePercent = Number(settings.takerFeePercent ?? feePercent);
     const slippagePercent = Number(settings.slippageTolerancePercent ?? settings.slippagePercent ?? 0);
-    const estimatedRoundTripCostPercent = Number(((feePercent + slippagePercent) * 2).toFixed(4));
+    const estimatedRoundTripCostPercent = Number(((takerFeePercent + takerFeePercent + (slippagePercent * 2))).toFixed(4));
+    const routeModel = paperResult.routeModel || {};
+    const routeComparisons = routeModel.routeComparisons || routeModel.latestRouteComparisons || [];
+    const rejectedReasons = routeModel.rejectedReasons || {};
+    const exchangeSelection = routeModel.exchangeSelection || run.result?.decision?.exchangeSelection || null;
+    const topVolumeFilter = routeModel.topVolumeFilter || run.result?.decision?.topVolumeFilter || null;
     const warnings = [
       ...(paperResult.parsedRules?.warnings || []),
       ...(usedLocalSampleData ? ['This run used local sample candles because no matching market data was available. Use imported or refreshed market data before relying on results.'] : []),
       ...(metrics.tradeCount <= 0 ? ['No simulated trades were produced. Review entry rules or market data.'] : []),
+      ...(isArbitrageReplay && Object.keys(rejectedReasons).length ? [`Rejected route reasons observed: ${Object.entries(rejectedReasons).map(([key, value]) => `${key} (${value})`).join(', ')}.`] : []),
       ...(Number(metrics.totalReturnPercent || 0) < 0 ? ['Paper replay is negative. Review the rules before scaling paper testing.'] : []),
       ...(paperResult.riskGate?.status !== 'passed' ? [`Paper risk gate status: ${paperResult.riskGate?.status || 'unknown'}.`] : []),
       'Live trading remains locked. Wallet signing remains disabled.'
@@ -380,26 +395,48 @@ function registerBotAutomationRoutes(app, {
         minimumSpreadPercent: settings.minimumSpreadPercent ?? null,
         buyVenues: paperResult.routeModel?.buyVenues || [],
         sellVenues: paperResult.routeModel?.sellVenues || [],
+        comparedExchanges: routeModel.comparedExchanges || exchangeSelection?.comparedExchanges || [],
+        comparedExchangeCount: routeModel.comparedExchangeCount || routeModel.comparedExchanges?.length || 0,
+        routeComparisons,
+        exchangeSelection,
+        topVolumeFilter,
+        rejectedReasons,
         latestRoute: latestTrades.length ? latestTrades[latestTrades.length - 1] : null,
         feePercentPerSide: feePercent,
+        makerFeePercent,
+        takerFeePercent,
         slippagePercentPerSide: slippagePercent,
         estimatedRoundTripCostPercent,
+        routesCompared: metrics.routesCompared || null,
+        acceptedRouteCount: metrics.acceptedRouteCount || metrics.tradeCount || 0,
+        averageGrossSpreadPercent: metrics.averageGrossSpreadPercent ?? null,
+        averageProjectedNetEdgePercent: metrics.averageProjectedNetEdgePercent ?? null,
+        averageEstimatedNetProfit: metrics.averageEstimatedNetProfit ?? null,
+        averageLatencyMs: metrics.averageLatencyMs ?? null,
         latestDecisionPrice: run.result?.decision?.price || null
       },
       feesAndSlippage: {
         feePercentPerSide: feePercent,
+        makerFeePercent,
+        takerFeePercent,
         slippagePercentPerSide: slippagePercent,
         estimatedRoundTripCostPercent,
-        summary: `fee ${feePercent}% + slippage ${slippagePercent}% per side; estimated round trip ${estimatedRoundTripCostPercent}%`
+        summary: isArbitrageReplay
+          ? `maker ${makerFeePercent}% / taker ${takerFeePercent}% + slippage ${slippagePercent}% per side; estimated taker/taker round trip ${estimatedRoundTripCostPercent}%`
+          : `fee ${feePercent}% + slippage ${slippagePercent}% per side; estimated round trip ${estimatedRoundTripCostPercent}%`
       },
       entryExitReasons: {
         latestDecision: run.result?.decision || null,
         decisionCounts: paperResult.decisionSummary?.counts || {},
+        routeRejectionCounts: rejectedReasons,
+        acceptedWhen: 'Entry only when projected net spread remains above total estimated costs after fees, slippage, liquidity, latency, and top-volume checks.',
+        rejectedWhen: 'No trade when spread collapses before execution, costs exceed spread, liquidity is too thin, latency is too high, or the pair fails the top-volume filter.',
         recentTradeExitReasons: latestTrades.slice(-10).map(trade => ({
           exitAt: trade.exitAt,
           exitReason: trade.exitReason,
           pnl: trade.pnl,
-          netReturnPercent: trade.netReturnPercent
+          netReturnPercent: trade.netReturnPercent,
+          decisionReason: trade.decisionReason
         }))
       },
       strategyHealth: {

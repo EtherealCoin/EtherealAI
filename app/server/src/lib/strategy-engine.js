@@ -290,6 +290,7 @@ function createPaperReplayPayload(strategy, marketImport, backtestResult, riskGa
     data: backtestResult.data,
     settings: backtestResult.settings,
     parsedRules: backtestResult.parsedRules,
+    routeModel: backtestResult.routeModel || null,
     regime: backtestResult.regime,
     metrics: backtestResult.metrics,
     riskGate: evaluatePaperRiskGate(backtestResult, riskGateOptions),

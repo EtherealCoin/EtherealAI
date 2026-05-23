@@ -133,6 +133,14 @@
                             Estimated fee % per side
                             <input type="number" id="arb-fee-percent" value="0.10" min="0" step="0.01">
                         </label>
+                        <label for="arb-maker-fee-percent">
+                            Maker fee % per side
+                            <input type="number" id="arb-maker-fee-percent" value="0.08" min="0" step="0.01">
+                        </label>
+                        <label for="arb-taker-fee-percent">
+                            Taker fee % per side
+                            <input type="number" id="arb-taker-fee-percent" value="0.12" min="0" step="0.01">
+                        </label>
                         <label for="arb-slippage-percent">
                             Slippage tolerance % per side
                             <input type="number" id="arb-slippage-percent" value="0.05" min="0" step="0.01">
@@ -149,6 +157,18 @@
                             Stablecoin pair
                             <input type="text" id="arb-stablecoin-pair" value="USDT">
                         </label>
+                        <label for="arb-top-volume-rank">
+                            Top-volume rank limit
+                            <input type="number" id="arb-top-volume-rank" value="200" min="1" step="1">
+                        </label>
+                        <label for="arb-min-volume-usd">
+                            Minimum volume USD
+                            <input type="number" id="arb-min-volume-usd" value="75000" min="0" step="1000">
+                        </label>
+                        <label for="arb-volume-percentile">
+                            Volume percentile floor
+                            <input type="number" id="arb-volume-percentile" value="60" min="0" max="100" step="1">
+                        </label>
                     </div>
 
                     <label for="arb-token-whitelist">Token whitelist</label>
@@ -157,6 +177,11 @@
                     <label class="checkbox-line">
                         <input type="checkbox" id="arb-simultaneous" checked>
                         Simultaneous execution required
+                    </label>
+
+                    <label class="checkbox-line">
+                        <input type="checkbox" id="arb-top-volume-filter" checked>
+                        Require top-volume pair filter
                     </label>
 
                     <pre id="arbitrage-rule-preview" class="model-output">Structured arbitrage rules will appear here.</pre>
@@ -1364,18 +1389,27 @@
                 sellVenues: splitList(document.getElementById('arb-sell-venues').value),
                 minimumSpreadPercent: Number(document.getElementById('arb-min-spread').value),
                 estimatedFeePercent: Number(document.getElementById('arb-fee-percent').value),
+                makerFeePercent: Number(document.getElementById('arb-maker-fee-percent').value),
+                takerFeePercent: Number(document.getElementById('arb-taker-fee-percent').value),
                 slippageTolerancePercent: Number(document.getElementById('arb-slippage-percent').value),
                 minimumLiquidity: Number(document.getElementById('arb-min-liquidity').value),
                 maxExecutionLatencyMs: Number(document.getElementById('arb-max-latency').value),
                 simultaneousExecutionRequired: document.getElementById('arb-simultaneous').checked,
                 stablecoinPair: document.getElementById('arb-stablecoin-pair').value.trim(),
                 tokenWhitelist: splitList(document.getElementById('arb-token-whitelist').value).map(item => item.toUpperCase()),
+                topVolumeFilterEnabled: document.getElementById('arb-top-volume-filter').checked,
+                topVolumeMaxRank: Number(document.getElementById('arb-top-volume-rank').value),
+                minimumVolumeUsd: Number(document.getElementById('arb-min-volume-usd').value),
+                volumePercentileFloor: Number(document.getElementById('arb-volume-percentile').value),
                 venueRouting: {
                     compareOrderBooks: true,
                     feeAware: true,
                     slippageAware: true,
                     liquidityAware: true,
                     latencyAware: true,
+                    makerTakerFeeModel: true,
+                    collapseBeforeExecutionCheck: true,
+                    topVolumePairFilter: true,
                     routeSelection: 'best_net_edge_after_costs'
                 }
             };
@@ -2205,6 +2239,22 @@
             })}`;
         }
 
+        function formatPercentValue(value) {
+            const number = Number(value);
+
+            if (!Number.isFinite(number)) {
+                return '-';
+            }
+
+            return `${number.toFixed(4).replace(/0+$/, '').replace(/\.$/, '')}%`;
+        }
+
+        function formatPlainReason(value) {
+            return String(value || '-')
+                .replace(/^rejected_/, '')
+                .replaceAll('_', ' ');
+        }
+
         function renderSafePaperResults(data = {}) {
             const output = document.getElementById('safe-paper-results');
             const results = data.results || {};
@@ -2216,6 +2266,10 @@
             const reasons = results.entryExitReasons || {};
             const trades = results.simulatedTrades || [];
             const warnings = results.warnings || [];
+            const routeComparisons = spread.routeComparisons || [];
+            const comparedExchanges = spread.comparedExchanges || [];
+            const selectedRoute = spread.exchangeSelection?.selectedRoute || routeComparisons.find(route => route.status === 'accepted') || null;
+            const topVolume = spread.topVolumeFilter || {};
 
             setSafePaperProgress('Complete', (data.verification?.checks || []).map(check => ({
                 label: check,
@@ -2241,8 +2295,8 @@
                 </article>
                 <article class="safe-paper-result-card">
                     <span>Spread / Costs</span>
-                    <strong>${escapeHtml(spread.estimatedRoundTripCostPercent ?? '-')}%</strong>
-                    <small>Fees/slippage: ${escapeHtml(feesAndSlippage.summary || `fee ${spread.feePercentPerSide ?? '-'}% + slippage ${spread.slippagePercentPerSide ?? '-'}% per side`)}</small>
+                    <strong>${escapeHtml(formatPercentValue(selectedRoute?.projectedNetEdgeAfterLatencyPercent ?? spread.averageProjectedNetEdgePercent ?? spread.estimatedRoundTripCostPercent))}</strong>
+                    <small>Net after fees/slippage/latency. ${escapeHtml(feesAndSlippage.summary || `fee ${spread.feePercentPerSide ?? '-'}% + slippage ${spread.slippagePercentPerSide ?? '-'}% per side`)}</small>
                 </article>
                 <article class="safe-paper-result-card">
                     <span>Latest Decision</span>
@@ -2254,6 +2308,71 @@
                     <strong>${escapeHtml(health.status || 'review')}</strong>
                     <small>${escapeHtml(health.summary || 'Review the paper results before changing strategy size or rules.')}</small>
                 </article>
+                <article class="safe-paper-result-card">
+                    <span>Exchanges Compared</span>
+                    <strong>${escapeHtml(spread.comparedExchangeCount || comparedExchanges.length || '-')}</strong>
+                    <small>${escapeHtml(comparedExchanges.join(', ') || 'No compared venue list returned.')}</small>
+                </article>
+                <article class="safe-paper-result-card">
+                    <span>Accepted Route</span>
+                    <strong>${escapeHtml(selectedRoute ? `${selectedRoute.buyVenue} → ${selectedRoute.sellVenue}` : 'No accepted route')}</strong>
+                    <small>${escapeHtml(selectedRoute ? `${formatPercentValue(selectedRoute.grossSpreadPercent)} gross · ${formatMoney(selectedRoute.estimatedNetProfit)} estimated net profit` : 'No trade unless spread exceeds total estimated costs.')}</small>
+                </article>
+                <article class="safe-paper-result-card">
+                    <span>Timing Assumption</span>
+                    <strong>${escapeHtml(selectedRoute?.latencyMs ?? spread.averageLatencyMs ?? '-')} ms</strong>
+                    <small>${escapeHtml(selectedRoute ? `${formatPercentValue(selectedRoute.projectedSpreadAfterLatencyPercent)} projected spread after latency` : 'No trade if spread collapses before simulated execution.')}</small>
+                </article>
+                <article class="safe-paper-result-card">
+                    <span>Top-Volume Filter</span>
+                    <strong>${escapeHtml(topVolume.latest?.passed === false ? 'review' : 'working')}</strong>
+                    <small>${escapeHtml(topVolume.latest ? `Rank ${topVolume.latest.pairRank ?? '-'} / top ${topVolume.latest.maxPairRank ?? '-'} · volume ${formatMoney(topVolume.latest.currentVolumeUsd || topVolume.latest.venueVolumeUsd)}` : 'Top-volume pair filter uses local volume assumptions only.')}</small>
+                </article>
+                <section class="safe-paper-table-card">
+                    <h3>Exchange Spread Comparison</h3>
+                    <div class="comparison-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Buy</th>
+                                    <th>Sell</th>
+                                    <th>Gross spread</th>
+                                    <th>Costs</th>
+                                    <th>Projected net</th>
+                                    <th>Net profit</th>
+                                    <th>Why</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${routeComparisons.length ? routeComparisons.slice(0, 12).map(route => `
+                                    <tr>
+                                        <td>${escapeHtml(route.status)}</td>
+                                        <td>${escapeHtml(route.buyVenue)} (${escapeHtml(route.buyVenueType || '-')})</td>
+                                        <td>${escapeHtml(route.sellVenue)} (${escapeHtml(route.sellVenueType || '-')})</td>
+                                        <td>${escapeHtml(formatPercentValue(route.grossSpreadPercent))}</td>
+                                        <td>${escapeHtml(formatPercentValue(route.totalEstimatedCostPercent))}</td>
+                                        <td>${escapeHtml(formatPercentValue(route.projectedNetEdgeAfterLatencyPercent))}</td>
+                                        <td>${formatMoney(route.estimatedNetProfit)}</td>
+                                        <td>${escapeHtml(formatPlainReason(route.decisionReason || route.rejectionReasons?.[0]))}</td>
+                                    </tr>
+                                `).join('') : '<tr><td colspan="8">No route comparison rows returned yet.</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                    <small>Entry only when spread exceeds total estimated costs after maker/taker fees, slippage, liquidity, latency, and top-volume checks. No trade if the spread collapses before simulated execution.</small>
+                </section>
+                <section class="safe-paper-table-card">
+                    <h3>Execution Timing And Cost Assumptions</h3>
+                    <ul>
+                        <li>Compared venues: ${escapeHtml(comparedExchanges.join(', ') || 'local simulated venue set')}</li>
+                        <li>Maker/taker fee model: maker ${escapeHtml(feesAndSlippage.makerFeePercent ?? '-')}% / taker ${escapeHtml(feesAndSlippage.takerFeePercent ?? '-')}%.</li>
+                        <li>Slippage estimate: ${escapeHtml(feesAndSlippage.slippagePercentPerSide ?? '-')}% per side.</li>
+                        <li>Minimum spread trigger: ${escapeHtml(spread.minimumSpreadPercent ?? '-')}% projected net after costs.</li>
+                        <li>Selection logic: ${escapeHtml(spread.exchangeSelection?.selectionLogic || 'best local route after costs and safety filters.')}</li>
+                        <li>Rejected route counts: ${escapeHtml(Object.entries(reasons.routeRejectionCounts || {}).map(([key, value]) => `${formatPlainReason(key)} (${value})`).join(', ') || 'none')}</li>
+                    </ul>
+                </section>
                 <section class="safe-paper-table-card">
                     <h3>Simulated Trades</h3>
                     <div class="comparison-table">
@@ -2265,6 +2384,8 @@
                                     <th>Exit</th>
                                     <th>P/L</th>
                                     <th>Return</th>
+                                    <th>Venues</th>
+                                    <th>Latency</th>
                                     <th>Exit reason</th>
                                 </tr>
                             </thead>
@@ -2276,9 +2397,11 @@
                                         <td>${escapeHtml(trade.exitPrice ?? '-')}</td>
                                         <td>${formatMoney(trade.pnl)}</td>
                                         <td>${escapeHtml(trade.netReturnPercent ?? '-')}%</td>
+                                        <td>${escapeHtml([trade.buyVenue, trade.sellVenue].filter(Boolean).join(' → ') || '-')}</td>
+                                        <td>${escapeHtml(trade.latencyMs ?? '-')} ms</td>
                                         <td>${escapeHtml(trade.exitReason || '-')}</td>
                                     </tr>
-                                `).join('') : '<tr><td colspan="6">No simulated trades were produced yet. Review entry rules or market data.</td></tr>'}
+                                `).join('') : '<tr><td colspan="8">No simulated trades were produced yet. Review entry rules or market data.</td></tr>'}
                             </tbody>
                         </table>
                     </div>
@@ -7663,12 +7786,18 @@
             'arb-sell-venues',
             'arb-min-spread',
             'arb-fee-percent',
+            'arb-maker-fee-percent',
+            'arb-taker-fee-percent',
             'arb-slippage-percent',
             'arb-min-liquidity',
             'arb-max-latency',
             'arb-stablecoin-pair',
             'arb-token-whitelist',
-            'arb-simultaneous'
+            'arb-simultaneous',
+            'arb-top-volume-filter',
+            'arb-top-volume-rank',
+            'arb-min-volume-usd',
+            'arb-volume-percentile'
         ].forEach(id => {
             const input = document.getElementById(id);
 
