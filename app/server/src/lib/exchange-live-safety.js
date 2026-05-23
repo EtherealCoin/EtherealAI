@@ -2,6 +2,14 @@ const crypto = require('crypto');
 
 const PHASE3_RECOMMENDED_EXCHANGES = ['binance', 'coinbase', 'kraken', 'okx', 'bybit'];
 const UNIVERSAL_ORDER_TYPES = ['market', 'limit', 'post_only', 'ioc', 'reduce_only', 'take_profit_stop_loss', 'bracket'];
+const PHASE3A_ACCOUNT_STATUSES = {
+  NOT_CONNECTED: 'Not Connected',
+  PUBLIC_MARKET_DATA_ONLY: 'Public Market Data Only',
+  AUTHENTICATED_READ_ONLY: 'Authenticated Read-Only',
+  TRADING_PERMISSION_PRESENT_BUT_LOCKED: 'Trading Permission Present But Locked',
+  UNSAFE_PERMISSIONS_DETECTED: 'Unsafe Permissions Detected',
+  ERROR: 'Error'
+};
 const DEFAULT_LIVE_SAFETY_POLICY = {
   globalKillSwitchEnabled: true,
   dryRunOnly: true,
@@ -298,14 +306,24 @@ function buildUnavailableAccountProfile(exchangeName, reason) {
     exchangeName,
     displayName: matrix.displayName || exchangeName,
     status: 'not_connected',
+    phase3AStatus: PHASE3A_ACCOUNT_STATUSES.NOT_CONNECTED,
     plainEnglishStatus: reason || `${matrix.displayName || exchangeName} needs a saved read-only API key before account balances, fees, limits, and positions can be checked.`,
     balances: { assetCount: 0, nonZeroAssetCount: 0, visibleBalances: [] },
     feeTier: { status: 'not_checked', makerFeePercent: null, takerFeePercent: null },
     accountLimits: { status: 'not_checked' },
+    symbolTradingRules: { status: 'not_checked' },
     positions: { status: 'not_checked', count: 0, visiblePositions: [] },
     subaccounts: { status: 'not_checked' },
     marginFuturesMetadata: { status: 'not_checked' },
     withdrawalPermission: 'not_verified',
+    permissionReview: {
+      status: 'not_verified',
+      readOnlyAttested: false,
+      tradingDisabledAttested: false,
+      withdrawalsDisabledAttested: false,
+      tradingPermissionDetected: false,
+      unsafeWithdrawalPermissionDetected: false
+    },
     endpoints: [],
     safetyBoundary: {
       readOnlyAccountData: true,
@@ -317,6 +335,266 @@ function buildUnavailableAccountProfile(exchangeName, reason) {
       ordersPlaced: false
     }
   };
+}
+
+function getFilter(filters = [], filterType) {
+  return (Array.isArray(filters) ? filters : []).find(filter => filter.filterType === filterType) || {};
+}
+
+function createSymbolTradingRulesUnavailable(exchangeName, symbol, error = null) {
+  const matrix = EXCHANGE_CAPABILITY_MATRIX[exchangeName] || { exchangeName, displayName: exchangeName };
+  return {
+    status: 'unavailable',
+    exchangeName,
+    displayName: matrix.displayName || exchangeName,
+    symbol: normalizeSymbol(symbol).canonical,
+    endpoint: null,
+    minOrderQuantity: null,
+    minOrderNotional: null,
+    tickSize: null,
+    stepSize: null,
+    rateLimits: matrix.rateLimits || [],
+    marginAvailable: Boolean(matrix.margin),
+    futuresAvailable: Boolean(matrix.futures),
+    plainEnglishStatus: error
+      ? `${matrix.displayName || exchangeName} symbol trading rules could not be loaded from the public exchange endpoint: ${String(error.message || error).slice(0, 240)}`
+      : `${matrix.displayName || exchangeName} symbol trading rules have not been loaded yet.`
+  };
+}
+
+async function fetchBinanceSymbolTradingRules(symbol = 'BTC/USDT') {
+  const normalized = normalizeSymbol(symbol);
+  const data = await fetchJsonWithTimeout(`https://api.binance.com/api/v3/exchangeInfo?symbol=${normalized.compact}`);
+  const item = data.symbols?.[0] || {};
+  const lotSize = getFilter(item.filters, 'LOT_SIZE');
+  const marketLotSize = getFilter(item.filters, 'MARKET_LOT_SIZE');
+  const minNotional = getFilter(item.filters, 'MIN_NOTIONAL');
+  const notional = getFilter(item.filters, 'NOTIONAL');
+  const priceFilter = getFilter(item.filters, 'PRICE_FILTER');
+  const permissions = item.permissions || item.permissionSets || [];
+
+  return {
+    status: item.symbol ? 'loaded' : 'unavailable',
+    exchangeName: 'binance',
+    displayName: 'Binance',
+    symbol: normalized.canonical,
+    exchangeSymbol: item.symbol || normalized.compact,
+    endpoint: 'GET /api/v3/exchangeInfo',
+    tradingStatus: item.status || 'unknown',
+    minOrderQuantity: lotSize.minQty || null,
+    maxOrderQuantity: lotSize.maxQty || null,
+    minMarketOrderQuantity: marketLotSize.minQty || null,
+    minOrderNotional: minNotional.minNotional || notional.minNotional || null,
+    tickSize: priceFilter.tickSize || null,
+    stepSize: lotSize.stepSize || null,
+    allowedOrderTypes: item.orderTypes || [],
+    rateLimits: (data.rateLimits || []).map(limit => `${limit.rateLimitType} ${limit.limit}/${limit.intervalNum || 1} ${limit.interval}`),
+    marginAvailable: JSON.stringify(permissions).includes('MARGIN'),
+    futuresAvailable: true,
+    plainEnglishStatus: 'Binance public symbol rules loaded for minimum size, notional, tick size, step size, and rate-limit review.'
+  };
+}
+
+async function fetchCoinbaseSymbolTradingRules(symbol = 'BTC/USDT') {
+  const normalized = normalizeSymbol(symbol);
+  const productId = normalized.quote === 'USDT' ? normalized.dash : normalized.dash.replace('USDT', 'USD');
+  const data = await fetchJsonWithTimeout(`https://api.exchange.coinbase.com/products/${productId}`);
+
+  return {
+    status: data.id ? 'loaded' : 'unavailable',
+    exchangeName: 'coinbase',
+    displayName: 'Coinbase',
+    symbol: normalized.canonical,
+    exchangeSymbol: data.id || productId,
+    endpoint: 'GET /products/:product_id',
+    tradingStatus: data.status || (data.trading_disabled ? 'disabled' : 'online'),
+    minOrderQuantity: data.base_min_size || null,
+    maxOrderQuantity: data.base_max_size || null,
+    minOrderNotional: data.min_market_funds || data.quote_min_size || null,
+    tickSize: data.quote_increment || null,
+    stepSize: data.base_increment || null,
+    allowedOrderTypes: ['market', 'limit', 'stop-limit'],
+    rateLimits: EXCHANGE_CAPABILITY_MATRIX.coinbase.rateLimits,
+    marginAvailable: false,
+    futuresAvailable: true,
+    plainEnglishStatus: 'Coinbase product rules loaded for minimum size, increments, and product trading status.'
+  };
+}
+
+async function fetchKrakenSymbolTradingRules(symbol = 'BTC/USDT') {
+  const normalized = normalizeSymbol(symbol);
+  const data = await fetchJsonWithTimeout(`https://api.kraken.com/0/public/AssetPairs?pair=${normalized.kraken}`);
+  if (Array.isArray(data.error) && data.error.length) {
+    throw new Error(data.error.join(', '));
+  }
+  const result = data.result || {};
+  const pairKey = Object.keys(result)[0];
+  const item = result[pairKey] || {};
+
+  return {
+    status: pairKey ? 'loaded' : 'unavailable',
+    exchangeName: 'kraken',
+    displayName: 'Kraken',
+    symbol: normalized.canonical,
+    exchangeSymbol: pairKey || normalized.kraken,
+    endpoint: 'GET /0/public/AssetPairs',
+    tradingStatus: item.status || 'online',
+    minOrderQuantity: item.ordermin || null,
+    maxOrderQuantity: null,
+    minOrderNotional: item.costmin || null,
+    tickSize: item.tick_size || null,
+    stepSize: item.lot_decimals !== undefined ? `1e-${item.lot_decimals}` : null,
+    allowedOrderTypes: ['market', 'limit', 'post-only flags', 'IOC flags'],
+    rateLimits: EXCHANGE_CAPABILITY_MATRIX.kraken.rateLimits,
+    marginAvailable: Boolean(item.leverage_buy?.length || item.leverage_sell?.length),
+    futuresAvailable: true,
+    plainEnglishStatus: 'Kraken tradable pair rules loaded for order minimums, cost minimums, decimals, and margin availability.'
+  };
+}
+
+async function fetchOkxSymbolTradingRules(symbol = 'BTC/USDT') {
+  const normalized = normalizeSymbol(symbol);
+  const data = await fetchJsonWithTimeout(`https://www.okx.com/api/v5/public/instruments?instType=SPOT&instId=${normalized.dash}`);
+  const item = data.data?.[0] || {};
+
+  return {
+    status: item.instId ? 'loaded' : 'unavailable',
+    exchangeName: 'okx',
+    displayName: 'OKX',
+    symbol: normalized.canonical,
+    exchangeSymbol: item.instId || normalized.dash,
+    endpoint: 'GET /api/v5/public/instruments',
+    tradingStatus: item.state || 'unknown',
+    minOrderQuantity: item.minSz || null,
+    maxOrderQuantity: null,
+    minOrderNotional: item.minNotional || null,
+    tickSize: item.tickSz || null,
+    stepSize: item.lotSz || null,
+    allowedOrderTypes: ['market', 'limit', 'post-only', 'IOC', 'TP/SL algos'],
+    rateLimits: EXCHANGE_CAPABILITY_MATRIX.okx.rateLimits,
+    marginAvailable: true,
+    futuresAvailable: true,
+    plainEnglishStatus: 'OKX instrument rules loaded for minimum size, lot size, tick size, and instrument state.'
+  };
+}
+
+async function fetchBybitSymbolTradingRules(symbol = 'BTC/USDT') {
+  const normalized = normalizeSymbol(symbol);
+  const data = await fetchJsonWithTimeout(`https://api.bybit.com/v5/market/instruments-info?category=spot&symbol=${normalized.compact}`);
+  const item = data.result?.list?.[0] || {};
+  const lot = item.lotSizeFilter || {};
+  const price = item.priceFilter || {};
+
+  return {
+    status: item.symbol ? 'loaded' : 'unavailable',
+    exchangeName: 'bybit',
+    displayName: 'Bybit',
+    symbol: normalized.canonical,
+    exchangeSymbol: item.symbol || normalized.compact,
+    endpoint: 'GET /v5/market/instruments-info',
+    tradingStatus: item.status || 'unknown',
+    minOrderQuantity: lot.minOrderQty || null,
+    maxOrderQuantity: lot.maxOrderQty || lot.maxLimitOrderQty || null,
+    minOrderNotional: lot.minOrderAmt || lot.minNotionalValue || null,
+    tickSize: price.tickSize || null,
+    stepSize: lot.qtyStep || lot.basePrecision || null,
+    allowedOrderTypes: ['market', 'limit', 'post-only', 'IOC', 'TP/SL'],
+    rateLimits: EXCHANGE_CAPABILITY_MATRIX.bybit.rateLimits,
+    marginAvailable: Boolean(item.marginTrading && item.marginTrading !== 'none'),
+    futuresAvailable: true,
+    plainEnglishStatus: 'Bybit instrument rules loaded for minimum order quantity, minimum amount, tick size, and spot margin flag.'
+  };
+}
+
+const SYMBOL_TRADING_RULE_FETCHERS = {
+  binance: fetchBinanceSymbolTradingRules,
+  coinbase: fetchCoinbaseSymbolTradingRules,
+  kraken: fetchKrakenSymbolTradingRules,
+  okx: fetchOkxSymbolTradingRules,
+  bybit: fetchBybitSymbolTradingRules
+};
+
+async function fetchSymbolTradingRules(exchangeName, symbol = 'BTC/USDT') {
+  const normalizedExchange = normalizeExchangeName(exchangeName);
+  const fetcher = SYMBOL_TRADING_RULE_FETCHERS[normalizedExchange];
+
+  if (!fetcher) {
+    return createSymbolTradingRulesUnavailable(normalizedExchange, symbol, new Error('No symbol-rule adapter exists yet.'));
+  }
+
+  try {
+    return await fetcher(symbol);
+  } catch (error) {
+    return createSymbolTradingRulesUnavailable(normalizedExchange, symbol, error);
+  }
+}
+
+function buildCredentialPermissionReview(credentials = {}, profile = {}) {
+  const checklist = credentials?.permissionsChecklist || {};
+  const readOnlyAttested = checklist.readOnlyEnabled === true;
+  const tradingDisabledAttested = checklist.tradingDisabled === true;
+  const withdrawalsDisabledAttested = checklist.withdrawalsDisabled === true || checklist.transferDisabled === true;
+  const unsafeWithdrawalPermissionDetected = profile.withdrawalPermission === 'enabled_on_exchange_key_review_required';
+  const accountCanTradeSignal = profile.accountLimits?.canTrade === true
+    || profile.marginFuturesMetadata?.canTrade === true
+    || profile.accountLimits?.keyInfo?.permissions?.Trade?.length > 0
+    || profile.accountLimits?.keyInfo?.permissions?.Derivatives?.length > 0;
+  const tradingPermissionDetected = Boolean(accountCanTradeSignal || checklist.tradingDisabled === false);
+
+  return {
+    status: unsafeWithdrawalPermissionDetected
+      ? 'unsafe_permissions_detected'
+      : readOnlyAttested
+        ? 'owner_attested_read_only'
+        : 'not_attested',
+    readOnlyAttested,
+    tradingDisabledAttested,
+    withdrawalsDisabledAttested,
+    tradingPermissionDetected,
+    unsafeWithdrawalPermissionDetected,
+    withdrawalSignal: profile.withdrawalPermission || 'not_verified',
+    plainEnglishStatus: unsafeWithdrawalPermissionDetected
+      ? 'This key or account reports withdrawal capability. Delete it and recreate a read-only key before continuing.'
+      : readOnlyAttested
+        ? 'Owner checklist confirms read-only setup. EtherealAI still keeps live trading and signing locked.'
+        : 'Read-only owner checklist is missing or incomplete.'
+  };
+}
+
+function derivePhase3AStatus(profile = {}) {
+  if (profile.status === 'error') {
+    return PHASE3A_ACCOUNT_STATUSES.ERROR;
+  }
+
+  if (profile.permissionReview?.unsafeWithdrawalPermissionDetected) {
+    return PHASE3A_ACCOUNT_STATUSES.UNSAFE_PERMISSIONS_DETECTED;
+  }
+
+  if (profile.status === 'read_only_account_connected') {
+    return profile.permissionReview?.tradingPermissionDetected
+      ? PHASE3A_ACCOUNT_STATUSES.TRADING_PERMISSION_PRESENT_BUT_LOCKED
+      : PHASE3A_ACCOUNT_STATUSES.AUTHENTICATED_READ_ONLY;
+  }
+
+  if (profile.symbolTradingRules?.status === 'loaded') {
+    return PHASE3A_ACCOUNT_STATUSES.PUBLIC_MARKET_DATA_ONLY;
+  }
+
+  return PHASE3A_ACCOUNT_STATUSES.NOT_CONNECTED;
+}
+
+function enrichPhase3AProfile(profile, {
+  credentials = null,
+  symbolTradingRules = null
+} = {}) {
+  const enriched = {
+    ...profile,
+    symbolTradingRules: symbolTradingRules || profile.symbolTradingRules || { status: 'not_checked' }
+  };
+  enriched.permissionReview = buildCredentialPermissionReview(credentials, enriched);
+  enriched.phase3AStatus = derivePhase3AStatus(enriched);
+  enriched.plainEnglishReadiness = `${enriched.displayName} status: ${enriched.phase3AStatus}. ${enriched.plainEnglishStatus || ''}`.trim();
+  return enriched;
 }
 
 async function fetchBinanceAccountProfile(credentials, symbol = 'BTC/USDT') {
@@ -359,6 +637,8 @@ async function fetchBinanceAccountProfile(credentials, symbol = 'BTC/USDT') {
     },
     accountLimits: {
       status: 'metadata_available',
+      canTrade: Boolean(account.data?.canTrade),
+      canWithdraw: Boolean(account.data?.canWithdraw),
       accountType: account.data?.accountType || null,
       permissions: account.data?.permissions || []
     },
@@ -629,7 +909,8 @@ function createPhase3SafetyBoundary() {
 async function scanAuthenticatedReadOnlyAccounts({
   connectors = [],
   credentialLoader,
-  symbol = 'BTC/USDT'
+  symbol = 'BTC/USDT',
+  includePublicSymbolRules = true
 } = {}) {
   const profiles = [];
   const uniqueConnectors = new Map();
@@ -657,47 +938,67 @@ async function scanAuthenticatedReadOnlyAccounts({
     }
   }
 
-  for (const connector of uniqueConnectors.values()) {
-    const exchangeName = normalizeExchangeName(connector.settings?.registryId || connector.exchange_name || connector.exchangeName);
-
-    if (!PHASE3_RECOMMENDED_EXCHANGES.includes(exchangeName)) {
-      continue;
-    }
-
+  for (const exchangeName of PHASE3_RECOMMENDED_EXCHANGES) {
+    const connector = uniqueConnectors.get(exchangeName) || null;
+    const symbolTradingRules = includePublicSymbolRules
+      ? await fetchSymbolTradingRules(exchangeName, symbol)
+      : createSymbolTradingRulesUnavailable(exchangeName, symbol);
     const fetcher = AUTHENTICATED_READONLY_FETCHERS[exchangeName];
     if (!fetcher) {
-      profiles.push(buildUnavailableAccountProfile(exchangeName, 'This exchange does not have a Phase 3 authenticated read-only adapter yet.'));
+      profiles.push(enrichPhase3AProfile(
+        buildUnavailableAccountProfile(exchangeName, 'This exchange does not have a Phase 3 authenticated read-only adapter yet.'),
+        { symbolTradingRules }
+      ));
       continue;
     }
 
-    const credentials = credentialLoader ? await credentialLoader(connector) : null;
+    const credentials = connector && credentialLoader ? await credentialLoader(connector) : null;
     if (!credentials?.apiKey || !credentials?.apiSecret) {
-      profiles.push(buildUnavailableAccountProfile(exchangeName));
+      profiles.push(enrichPhase3AProfile(buildUnavailableAccountProfile(exchangeName), {
+        symbolTradingRules
+      }));
       continue;
     }
 
     try {
-      profiles.push(await fetcher(credentials, symbol));
+      profiles.push(enrichPhase3AProfile(await fetcher(credentials, symbol), {
+        credentials,
+        symbolTradingRules
+      }));
     } catch (error) {
-      profiles.push({
+      profiles.push(enrichPhase3AProfile({
         ...buildUnavailableAccountProfile(exchangeName),
         status: 'error',
         plainEnglishStatus: `${EXCHANGE_CAPABILITY_MATRIX[exchangeName]?.displayName || exchangeName} authenticated read-only account scan failed: ${String(error.message || error).slice(0, 400)}`
-      });
+      }, {
+        credentials,
+        symbolTradingRules
+      }));
     }
   }
 
   const connected = profiles.filter(profile => profile.status === 'read_only_account_connected');
+  const unsafe = profiles.filter(profile => profile.phase3AStatus === PHASE3A_ACCOUNT_STATUSES.UNSAFE_PERMISSIONS_DETECTED);
 
   return {
-    status: connected.length ? 'partial_account_visibility' : 'waiting_for_read_only_keys',
-    plainEnglishSummary: connected.length
-      ? `${connected.length} authenticated read-only account connection(s) returned account data. Live trading remains locked.`
+    status: unsafe.length
+      ? 'unsafe_permissions_detected'
+      : connected.length
+        ? 'partial_account_visibility'
+        : 'waiting_for_read_only_keys',
+    plainEnglishSummary: unsafe.length
+      ? `${unsafe.length} exchange key(s) need immediate review because unsafe permissions were detected. Live trading is still locked.`
+      : connected.length
+        ? `${connected.length} authenticated read-only account connection(s) returned account data. Live trading remains locked.`
       : 'No authenticated read-only account data is connected yet. Add read-only keys in Exchange Connectors when ready.',
     profiles,
     totals: {
       scanned: profiles.length,
       connected: connected.length,
+      publicMarketDataOnly: profiles.filter(profile => profile.phase3AStatus === PHASE3A_ACCOUNT_STATUSES.PUBLIC_MARKET_DATA_ONLY).length,
+      tradingPermissionPresentButLocked: profiles.filter(profile => profile.phase3AStatus === PHASE3A_ACCOUNT_STATUSES.TRADING_PERMISSION_PRESENT_BUT_LOCKED).length,
+      unsafePermissions: unsafe.length,
+      symbolRulesLoaded: profiles.filter(profile => profile.symbolTradingRules?.status === 'loaded').length,
       errors: profiles.filter(profile => profile.status === 'error' || profile.status === 'partial_or_error').length
     },
     safetyBoundary: createPhase3SafetyBoundary(),
@@ -914,10 +1215,224 @@ function buildOutcomeBenchmark({ candidate = null, accountAwareCandidate = null 
   };
 }
 
+function checklistItem(id, label, passed, {
+  status = null,
+  note = '',
+  nextAction = ''
+} = {}) {
+  return {
+    id,
+    label,
+    passed: Boolean(passed),
+    status: status || (passed ? 'complete' : 'missing'),
+    note,
+    nextAction
+  };
+}
+
+function buildPhase3AExchangeChecklist(profile = {}, riskProfile = null) {
+  const authenticated = profile.status === 'read_only_account_connected';
+  const permissionReview = profile.permissionReview || {};
+  const symbolRulesLoaded = profile.symbolTradingRules?.status === 'loaded';
+  const feesLoaded = profile.feeTier?.status === 'ok'
+    || profile.feeTier?.makerFeePercent !== null
+    || profile.feeTier?.takerFeePercent !== null;
+  const balancesVisible = authenticated && profile.balances?.assetCount !== undefined;
+  const tradingPermissionDetected = Boolean(permissionReview.tradingPermissionDetected);
+  const locked = profile.safetyBoundary?.liveTradingEnabled === false
+    && profile.safetyBoundary?.orderEndpointEnabled === false
+    && profile.safetyBoundary?.walletSigningEnabled === false;
+
+  return [
+    checklistItem('api_connected', 'API connected', authenticated, {
+      note: authenticated ? 'Authenticated account endpoint returned data.' : 'Add a read-only key in Exchange Connectors, then scan again.',
+      nextAction: 'Open Exchange Connectors'
+    }),
+    checklistItem('read_only_account_verified', 'Read-only account verified', authenticated && permissionReview.readOnlyAttested && locked, {
+      note: permissionReview.plainEnglishStatus || 'Read-only checklist not confirmed yet.',
+      nextAction: 'Complete the secure-vault read-only checklist'
+    }),
+    checklistItem('withdrawals_disabled', 'Withdrawals disabled', permissionReview.withdrawalsDisabledAttested && !permissionReview.unsafeWithdrawalPermissionDetected, {
+      status: permissionReview.unsafeWithdrawalPermissionDetected ? 'unsafe' : null,
+      note: permissionReview.unsafeWithdrawalPermissionDetected
+        ? 'Unsafe withdrawal permission was detected. Delete this key and recreate it as read-only.'
+        : authenticated
+          ? 'Owner checklist confirms withdrawals are disabled; exchange direct verification is used where available.'
+          : 'No read-only key is connected yet. Confirm withdrawals are disabled when you add the key.',
+      nextAction: permissionReview.unsafeWithdrawalPermissionDetected
+        ? 'Delete unsafe key and recreate read-only key'
+        : 'Add read-only key and confirm withdrawals disabled'
+    }),
+    checklistItem('balances_visible', 'Balances visible', balancesVisible, {
+      note: balancesVisible ? `${profile.balances.nonZeroAssetCount || 0} non-zero asset(s) visible.` : 'Balances require authenticated read-only account access.',
+      nextAction: 'Scan authenticated account readiness'
+    }),
+    checklistItem('fees_loaded', 'Fees loaded', feesLoaded, {
+      note: feesLoaded ? 'Maker/taker fee data loaded where the exchange exposes it.' : 'Fee endpoint was unavailable or needs account-specific permission support.',
+      nextAction: 'Review exchange-specific fee endpoint support'
+    }),
+    checklistItem('symbol_limits_loaded', 'Symbol limits loaded', symbolRulesLoaded, {
+      note: symbolRulesLoaded
+        ? `Minimum order ${profile.symbolTradingRules.minOrderQuantity || 'n/a'}, minimum notional ${profile.symbolTradingRules.minOrderNotional || 'n/a'}.`
+        : profile.symbolTradingRules?.plainEnglishStatus || 'Public symbol rules were not loaded.',
+      nextAction: 'Retry public symbol rule scan'
+    }),
+    checklistItem('sandbox_supported', 'Sandbox supported', Boolean(EXCHANGE_CAPABILITY_MATRIX[profile.exchangeName]?.sandboxSupport), {
+      note: EXCHANGE_CAPABILITY_MATRIX[profile.exchangeName]?.sandboxNotes || 'Sandbox support not confirmed for this venue.',
+      nextAction: 'Use only venues with sandbox support for Phase 3B'
+    }),
+    checklistItem('trading_permission_detected_but_locked', 'Trading permission detected but locked', tradingPermissionDetected ? locked : true, {
+      status: tradingPermissionDetected ? 'locked' : 'not_detected',
+      note: tradingPermissionDetected
+        ? 'The exchange/account reports trading capability, but EtherealAI order routes are still disabled.'
+        : 'No trading permission signal was detected from the available read-only metadata.',
+      nextAction: 'Keep live execution locked'
+    }),
+    checklistItem('risk_profile_active', 'Risk profile active', Boolean(riskProfile), {
+      note: riskProfile
+        ? `${riskProfile.name} is active with kill switch off for controlled testing.`
+        : 'Create or activate a risk profile before any sandbox/live test phase.',
+      nextAction: 'Open Strategy / Paper / Bots risk settings'
+    }),
+    checklistItem('owner_approval_required', 'Owner approval required', true, {
+      status: 'locked',
+      note: 'Owner approval remains mandatory before sandbox order tests or tiny live tests.',
+      nextAction: 'Future Phase 3B approval center'
+    })
+  ];
+}
+
+function buildPhase3AReadiness({ connectors = [], accountScan = null, riskProfile = null } = {}) {
+  const profiles = accountScan?.profiles || [];
+  const profileByExchange = new Map(profiles.map(profile => [profile.exchangeName, profile]));
+  const exchanges = PHASE3_RECOMMENDED_EXCHANGES.map(exchangeName => {
+    const profile = profileByExchange.get(exchangeName) || enrichPhase3AProfile(buildUnavailableAccountProfile(exchangeName));
+    const checklist = buildPhase3AExchangeChecklist(profile, riskProfile);
+    const failedRequired = checklist.filter(item => (
+      ['api_connected', 'read_only_account_verified', 'withdrawals_disabled', 'balances_visible', 'fees_loaded', 'symbol_limits_loaded', 'risk_profile_active'].includes(item.id)
+      && !item.passed
+    ));
+
+    return {
+      exchangeName,
+      displayName: profile.displayName,
+      status: profile.phase3AStatus || derivePhase3AStatus(profile),
+      plainEnglishStatus: profile.plainEnglishReadiness || profile.plainEnglishStatus,
+      connector: connectors.find(connector => normalizeExchangeName(connector.settings?.registryId || connector.exchange_name || connector.exchangeName) === exchangeName) || null,
+      balances: profile.balances,
+      feeTier: profile.feeTier,
+      accountLimits: profile.accountLimits,
+      symbolTradingRules: profile.symbolTradingRules,
+      marginFuturesMetadata: profile.marginFuturesMetadata,
+      permissionReview: profile.permissionReview,
+      checklist,
+      readyForPhase3BPrereview: failedRequired.length === 0 && profile.phase3AStatus !== PHASE3A_ACCOUNT_STATUSES.UNSAFE_PERMISSIONS_DETECTED,
+      blockers: failedRequired.map(item => item.label)
+    };
+  });
+  const globalChecklist = [
+    checklistItem('api_connected', 'API connected', exchanges.some(exchange => exchange.checklist.find(item => item.id === 'api_connected')?.passed), {
+      note: `${exchanges.filter(exchange => exchange.checklist.find(item => item.id === 'api_connected')?.passed).length} of ${exchanges.length} recommended exchanges authenticated.`
+    }),
+    checklistItem('read_only_account_verified', 'Read-only account verified', exchanges.some(exchange => exchange.checklist.find(item => item.id === 'read_only_account_verified')?.passed)),
+    checklistItem('withdrawals_disabled', 'Withdrawals disabled', (
+      exchanges.some(exchange => exchange.checklist.find(item => item.id === 'api_connected')?.passed)
+      && exchanges.every(exchange => exchange.status !== PHASE3A_ACCOUNT_STATUSES.UNSAFE_PERMISSIONS_DETECTED)
+    ), {
+      note: 'This becomes complete after at least one read-only key is connected and no unsafe withdrawal permission is detected.'
+    }),
+    checklistItem('balances_visible', 'Balances visible', exchanges.some(exchange => exchange.checklist.find(item => item.id === 'balances_visible')?.passed)),
+    checklistItem('fees_loaded', 'Fees loaded', exchanges.some(exchange => exchange.checklist.find(item => item.id === 'fees_loaded')?.passed)),
+    checklistItem('symbol_limits_loaded', 'Symbol limits loaded', exchanges.some(exchange => exchange.checklist.find(item => item.id === 'symbol_limits_loaded')?.passed)),
+    checklistItem('sandbox_supported', 'Sandbox supported', exchanges.some(exchange => exchange.checklist.find(item => item.id === 'sandbox_supported')?.passed)),
+    checklistItem('trading_permission_detected_but_locked', 'Trading permission detected but locked', true, {
+      status: 'locked',
+      note: 'Any detected trading capability remains locked because order endpoints do not exist yet.'
+    }),
+    checklistItem('risk_profile_active', 'Risk profile active', Boolean(riskProfile)),
+    checklistItem('owner_approval_required', 'Owner approval required', true, {
+      status: 'locked',
+      note: 'Owner approval remains required for Phase 3B and later.'
+    })
+  ];
+  const unsafeCount = exchanges.filter(exchange => exchange.status === PHASE3A_ACCOUNT_STATUSES.UNSAFE_PERMISSIONS_DETECTED).length;
+  const authenticatedCount = exchanges.filter(exchange => (
+    exchange.status === PHASE3A_ACCOUNT_STATUSES.AUTHENTICATED_READ_ONLY
+    || exchange.status === PHASE3A_ACCOUNT_STATUSES.TRADING_PERMISSION_PRESENT_BUT_LOCKED
+  )).length;
+
+  return {
+    title: 'Phase 3A: Authenticated Account Readiness',
+    status: unsafeCount
+      ? 'unsafe_permissions_review_required'
+      : authenticatedCount
+        ? 'authenticated_readiness_in_progress'
+        : 'waiting_for_secure_vault_keys',
+    plainEnglishStatus: unsafeCount
+      ? 'One or more exchange keys report unsafe permissions. Delete and recreate those keys as read-only before moving forward.'
+      : authenticatedCount
+        ? 'Authenticated account readiness is underway. Live trading, wallet signing, withdrawals, and order endpoints remain disabled.'
+        : 'Public market rules can be checked now. Add read-only API keys through the secure vault when ready.',
+    statuses: PHASE3A_ACCOUNT_STATUSES,
+    exchanges,
+    checklist: globalChecklist,
+    totals: {
+      exchanges: exchanges.length,
+      authenticatedReadOnly: exchanges.filter(exchange => exchange.status === PHASE3A_ACCOUNT_STATUSES.AUTHENTICATED_READ_ONLY).length,
+      tradingPermissionPresentButLocked: exchanges.filter(exchange => exchange.status === PHASE3A_ACCOUNT_STATUSES.TRADING_PERMISSION_PRESENT_BUT_LOCKED).length,
+      publicMarketDataOnly: exchanges.filter(exchange => exchange.status === PHASE3A_ACCOUNT_STATUSES.PUBLIC_MARKET_DATA_ONLY).length,
+      unsafePermissions: unsafeCount,
+      errors: exchanges.filter(exchange => exchange.status === PHASE3A_ACCOUNT_STATUSES.ERROR).length,
+      symbolLimitsLoaded: exchanges.filter(exchange => exchange.symbolTradingRules?.status === 'loaded').length
+    },
+    nextRecommendedAction: unsafeCount
+      ? 'Delete unsafe exchange keys and recreate read-only keys with withdrawals disabled.'
+      : authenticatedCount
+        ? 'Review the checklist, then prepare sandbox/testnet order tests in locked Phase 3B.'
+        : 'Open Exchange Connectors and add read-only API keys to the secure local vault.',
+    safetyBoundary: createPhase3SafetyBoundary(),
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function buildPhase3BPreparationPlan({ phase3A = null } = {}) {
+  const phase3AReadyVenues = (phase3A?.exchanges || []).filter(exchange => exchange.readyForPhase3BPrereview);
+
+  return {
+    title: 'Phase 3B: Sandbox/Testnet Execution Preparation',
+    status: 'prepared_locked',
+    plainEnglishStatus: 'Phase 3B is designed but not enabled. It will start with sandbox/testnet orders only after owner approval.',
+    readyVenueCount: phase3AReadyVenues.length,
+    steps: [
+      { id: 'sandbox_testnet_order_placement', label: 'Sandbox/testnet order placement', status: 'prepared_not_enabled' },
+      { id: 'tiny_live_test_order_approval', label: 'Tiny live test order approval', status: 'locked_future' },
+      { id: 'cancel_order', label: 'Cancel order', status: 'prepared_not_enabled' },
+      { id: 'order_status_tracking', label: 'Order status tracking', status: 'prepared_not_enabled' },
+      { id: 'partial_fill_handling', label: 'Partial fill handling', status: 'prepared_not_enabled' },
+      { id: 'position_reconciliation', label: 'Position reconciliation', status: 'prepared_not_enabled' },
+      { id: 'duplicate_order_prevention', label: 'Duplicate-order prevention', status: 'designed_in_safety_layer' },
+      { id: 'kill_switch_enforcement', label: 'Kill switch enforcement', status: 'designed_in_safety_layer' }
+    ],
+    blockedUntil: [
+      'Phase 3A readiness reviewed by owner.',
+      'Sandbox/testnet venue selected.',
+      'Risk profile approved for sandbox.',
+      'Manual owner approval recorded.',
+      'Order endpoint remains absent until a future implementation step.'
+    ],
+    safetyBoundary: createPhase3SafetyBoundary(),
+    orderEndpointImplemented: false,
+    sandboxOrdersEnabled: false,
+    tinyLiveOrdersEnabled: false,
+    generatedAt: new Date().toISOString()
+  };
+}
+
 function buildPhase3Status({ connectors = [], latestScan = null, accountScan = null } = {}) {
   const capabilityMatrix = PHASE3_RECOMMENDED_EXCHANGES.map(exchange => EXCHANGE_CAPABILITY_MATRIX[exchange]);
   const websocketPlan = buildWebSocketHealthPlan();
   const accountAware = buildAccountAwareArbitrageView({ scan: latestScan, accountScan });
+  const phase3A = buildPhase3AReadiness({ connectors, accountScan });
 
   return {
     title: 'Phase 3: Authenticated Safety Infrastructure',
@@ -927,8 +1442,13 @@ function buildPhase3Status({ connectors = [], latestScan = null, accountScan = n
     accountReadiness: {
       activeConnectors: connectors.filter(connector => connector.secret_reference_status === 'configured' || connector.settings?.readOnlyConnection?.connectionStatus === 'read_only_connected').length,
       readOnlyAccountProfiles: accountScan?.totals?.connected || 0,
-      withdrawalsVerifiedDisabled: (accountScan?.profiles || []).filter(profile => profile.withdrawalPermission === 'verified_disabled').length
+      withdrawalsVerifiedDisabled: (accountScan?.profiles || []).filter(profile => profile.withdrawalPermission === 'verified_disabled').length,
+      phase3AStatus: phase3A.status,
+      symbolLimitsLoaded: phase3A.totals.symbolLimitsLoaded,
+      unsafePermissions: phase3A.totals.unsafePermissions
     },
+    phase3A,
+    phase3B: buildPhase3BPreparationPlan({ phase3A }),
     capabilityMatrix,
     websocketPlan,
     universalOrderModel: {
@@ -972,10 +1492,12 @@ function buildPhase3Status({ connectors = [], latestScan = null, accountScan = n
 module.exports = {
   PHASE3_RECOMMENDED_EXCHANGES,
   UNIVERSAL_ORDER_TYPES,
+  PHASE3A_ACCOUNT_STATUSES,
   DEFAULT_LIVE_SAFETY_POLICY,
   EXCHANGE_CAPABILITY_MATRIX,
   WEBSOCKET_STREAM_SPECS,
   createPhase3SafetyBoundary,
+  fetchSymbolTradingRules,
   scanAuthenticatedReadOnlyAccounts,
   normalizeUniversalOrderDraft,
   evaluateLiveExecutionSafety,
@@ -983,5 +1505,7 @@ module.exports = {
   buildAccountAwareArbitrageView,
   replaySpreadHistory,
   buildOutcomeBenchmark,
+  buildPhase3AReadiness,
+  buildPhase3BPreparationPlan,
   buildPhase3Status
 };

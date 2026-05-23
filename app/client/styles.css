@@ -4871,6 +4871,39 @@ footer {
     margin-top: 8px;
 }
 
+.phase3a-checklist,
+.phase3a-exchange-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    margin-top: 12px;
+}
+
+.phase3a-checklist article,
+.phase3a-exchange-grid > article {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    padding: 12px;
+}
+
+.phase3a-checklist strong {
+    color: inherit;
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.phase3a-checklist span {
+    color: inherit;
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
 .phase3-mini-card small,
 .phase3-account-card small,
 .phase3-account-card p {
@@ -4911,11 +4944,15 @@ footer {
 :root[data-theme="night"] .phase3-results,
 :root[data-theme="night"] .phase3-mini-card,
 :root[data-theme="night"] .phase3-account-card,
+:root[data-theme="night"] .phase3a-checklist article,
+:root[data-theme="night"] .phase3a-exchange-grid > article,
 :root:not([data-theme="day"]) .phase3-dashboard-grid > article,
 :root:not([data-theme="day"]) .phase3-panel,
 :root:not([data-theme="day"]) .phase3-results,
 :root:not([data-theme="day"]) .phase3-mini-card,
-:root:not([data-theme="day"]) .phase3-account-card {
+:root:not([data-theme="day"]) .phase3-account-card,
+:root:not([data-theme="day"]) .phase3a-checklist article,
+:root:not([data-theme="day"]) .phase3a-exchange-grid > article {
     background: var(--surface-muted) !important;
     border-color: var(--border) !important;
     color: var(--text-primary) !important;

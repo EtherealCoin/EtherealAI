@@ -147,6 +147,25 @@
         </section>
 
         <section class="model-panel">
+            <h2>Phase 3A: Authenticated Account Readiness</h2>
+            <p class="inline-status">Use this checklist to move from public market data into authenticated account visibility. Credentials must be saved through the secure local vault only. This still cannot place orders.</p>
+            <div class="button-row">
+                <button id="refresh-phase3a-readiness" type="button">Refresh Account Readiness</button>
+                <button id="scan-phase3a-readiness" type="button">Scan Authenticated Readiness</button>
+                <a class="cta-button" href="/strategy-lab#exchange-connector-manager">Open Secure Exchange Vault</a>
+            </div>
+            <div id="phase3a-status-summary" class="phase3-results">No Phase 3A readiness scan has run yet.</div>
+            <div id="phase3a-global-checklist" class="phase3a-checklist">Checklist will appear after scan.</div>
+            <div id="phase3a-exchange-readiness" class="phase3a-exchange-grid">Exchange readiness will appear after scan.</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Phase 3B: Prepared But Locked</h2>
+            <p class="inline-status">This is the next implementation stage: sandbox/testnet order placement, cancel, order status tracking, partial-fill handling, reconciliation, duplicate-order prevention, and kill switch enforcement. It is planned only; sandbox and live orders are not enabled.</p>
+            <div id="phase3b-plan" class="phase3-results">Phase 3B plan will appear after Phase 3A readiness is scanned.</div>
+        </section>
+
+        <section class="model-panel">
             <h2>Launch Roadmap</h2>
             <div id="live-roadmap-phases" class="live-roadmap-phases">Loading phases...</div>
         </section>
@@ -170,6 +189,8 @@
         let latestPhase3Status = null;
         let latestAccountScan = null;
         let latestAccountAware = null;
+        let latestPhase3A = null;
+        let latestPhase3B = null;
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -346,9 +367,9 @@
             document.getElementById('phase3-account-status').textContent = `${accountScan.totals?.connected || 0} connected`;
             document.getElementById('phase3-account-detail').textContent = accountScan.plainEnglishSummary || 'No authenticated account data yet.';
             document.getElementById('phase3-account-results').innerHTML = (accountScan.profiles || []).map(profile => `
-                <article class="phase3-account-card ${profile.status === 'read_only_account_connected' ? 'status-success' : 'status-warning'}">
+                <article class="phase3-account-card ${profile.phase3AStatus === 'Unsafe Permissions Detected' ? 'status-danger' : profile.status === 'read_only_account_connected' ? 'status-success' : 'status-warning'}">
                     <div>
-                        <span>${escapeHtml(profile.status)}</span>
+                        <span>${escapeHtml(profile.phase3AStatus || profile.status)}</span>
                         <strong>${escapeHtml(profile.displayName)}</strong>
                     </div>
                     <p>${escapeHtml(profile.plainEnglishStatus)}</p>
@@ -356,11 +377,111 @@
                         <span>Assets: ${escapeHtml(profile.balances?.nonZeroAssetCount || 0)}</span>
                         <span>Maker fee: ${formatPercent(Number(profile.feeTier?.makerFeePercent || 0) * 100)}</span>
                         <span>Taker fee: ${formatPercent(Number(profile.feeTier?.takerFeePercent || 0) * 100)}</span>
+                        <span>Min order: ${escapeHtml(profile.symbolTradingRules?.minOrderQuantity || 'not loaded')}</span>
+                        <span>Min notional: ${escapeHtml(profile.symbolTradingRules?.minOrderNotional || 'not loaded')}</span>
                         <span>Positions: ${escapeHtml(profile.positions?.count || 0)}</span>
                         <span>Withdrawals: ${escapeHtml(profile.withdrawalPermission || 'not verified')}</span>
                     </div>
                 </article>
             `).join('') || 'No recommended read-only account connectors found yet.';
+        }
+
+        function phase3AStatusClass(status) {
+            if (status === 'Authenticated Read-Only') return 'status-success';
+            if (status === 'Trading Permission Present But Locked') return 'status-warning';
+            if (status === 'Unsafe Permissions Detected' || status === 'Error') return 'status-danger';
+            if (status === 'Public Market Data Only') return 'status-info';
+            return 'status-warning';
+        }
+
+        function renderPhase3BPlan(phase3B) {
+            latestPhase3B = phase3B;
+            document.getElementById('phase3b-plan').innerHTML = `
+                <article class="phase3-account-card status-warning">
+                    <div>
+                        <span>${escapeHtml(phase3B?.status || 'prepared_locked')}</span>
+                        <strong>${escapeHtml(phase3B?.title || 'Phase 3B: Prepared But Locked')}</strong>
+                    </div>
+                    <p>${escapeHtml(phase3B?.plainEnglishStatus || 'Sandbox/testnet order support is planned but not enabled.')}</p>
+                    <div class="phase3a-checklist">
+                        ${(phase3B?.steps || []).map(step => `
+                            <article>
+                                <strong>${escapeHtml(step.label)}</strong>
+                                <span>${escapeHtml(step.status)}</span>
+                            </article>
+                        `).join('')}
+                    </div>
+                    <p><b>Blocked until:</b> ${escapeHtml((phase3B?.blockedUntil || []).join(' '))}</p>
+                    <p>Order endpoint implemented: ${phase3B?.orderEndpointImplemented ? 'yes' : 'no'} · Sandbox orders enabled: ${phase3B?.sandboxOrdersEnabled ? 'yes' : 'no'} · Tiny live orders enabled: ${phase3B?.tinyLiveOrdersEnabled ? 'yes' : 'no'}</p>
+                </article>
+            `;
+        }
+
+        function renderPhase3AReadiness(phase3A, phase3B = null) {
+            latestPhase3A = phase3A;
+            const totals = phase3A?.totals || {};
+            document.getElementById('phase3a-status-summary').innerHTML = `
+                <div class="read-only-spread-summary">
+                    <article>
+                        <span>Phase 3A Status</span>
+                        <strong>${escapeHtml(phase3A?.status || 'waiting')}</strong>
+                        <small>${escapeHtml(phase3A?.plainEnglishStatus || '')}</small>
+                    </article>
+                    <article>
+                        <span>Authenticated</span>
+                        <strong>${escapeHtml(String((totals.authenticatedReadOnly || 0) + (totals.tradingPermissionPresentButLocked || 0)))}</strong>
+                        <small>Read-only account visibility.</small>
+                    </article>
+                    <article>
+                        <span>Symbol Limits</span>
+                        <strong>${escapeHtml(String(totals.symbolLimitsLoaded || 0))}</strong>
+                        <small>Minimums and trading rules loaded.</small>
+                    </article>
+                    <article>
+                        <span>Unsafe Keys</span>
+                        <strong>${escapeHtml(String(totals.unsafePermissions || 0))}</strong>
+                        <small>Must be zero before moving forward.</small>
+                    </article>
+                </div>
+                <p class="workflow-helper-text"><b>Next:</b> ${escapeHtml(phase3A?.nextRecommendedAction || 'Open Exchange Connectors and add read-only keys through the secure vault.')}</p>
+            `;
+
+            document.getElementById('phase3a-global-checklist').innerHTML = (phase3A?.checklist || []).map(item => `
+                <article class="${item.passed ? 'status-success' : item.status === 'unsafe' ? 'status-danger' : item.status === 'locked' ? 'status-warning' : 'status-info'}">
+                    <strong>${item.passed ? 'Complete' : 'Review'} · ${escapeHtml(item.label)}</strong>
+                    <span>${escapeHtml(item.note || item.nextAction || '')}</span>
+                </article>
+            `).join('');
+
+            document.getElementById('phase3a-exchange-readiness').innerHTML = (phase3A?.exchanges || []).map(exchange => `
+                <article class="phase3-account-card ${phase3AStatusClass(exchange.status)}">
+                    <div>
+                        <span>${escapeHtml(exchange.status)}</span>
+                        <strong>${escapeHtml(exchange.displayName)}</strong>
+                    </div>
+                    <p>${escapeHtml(exchange.plainEnglishStatus || '')}</p>
+                    <div class="live-candidate-metrics">
+                        <span>Balances: ${escapeHtml(exchange.balances?.nonZeroAssetCount || 0)} non-zero</span>
+                        <span>Maker: ${formatPercent(Number(exchange.feeTier?.makerFeePercent || 0) * 100)}</span>
+                        <span>Taker: ${formatPercent(Number(exchange.feeTier?.takerFeePercent || 0) * 100)}</span>
+                        <span>Min order: ${escapeHtml(exchange.symbolTradingRules?.minOrderQuantity || 'not loaded')}</span>
+                        <span>Min notional: ${escapeHtml(exchange.symbolTradingRules?.minOrderNotional || 'not loaded')}</span>
+                        <span>Sandbox: ${exchange.checklist?.find(item => item.id === 'sandbox_supported')?.passed ? 'supported' : 'not confirmed'}</span>
+                    </div>
+                    <div class="phase3a-checklist">
+                        ${(exchange.checklist || []).map(item => `
+                            <article class="${item.passed ? 'status-success' : item.status === 'unsafe' ? 'status-danger' : item.status === 'locked' ? 'status-warning' : 'status-info'}">
+                                <strong>${escapeHtml(item.label)}</strong>
+                                <span>${item.passed ? 'Complete' : escapeHtml(item.nextAction || 'Review')}</span>
+                            </article>
+                        `).join('')}
+                    </div>
+                </article>
+            `).join('');
+
+            if (phase3B) {
+                renderPhase3BPlan(phase3B);
+            }
         }
 
         function renderSafetyReview(review) {
@@ -405,6 +526,28 @@
                 return;
             }
 
+            renderPhase3Status(data.phase3);
+        }
+
+        async function scanPhase3AReadiness() {
+            document.getElementById('phase3a-status-summary').textContent = 'Scanning Phase 3A authenticated readiness. This uses saved read-only vault keys only and cannot place orders.';
+            const response = await fetch('/api/v1/live-trading-launch/phase3a/readiness', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: document.getElementById('live-scan-symbol').value || 'BTC/USDT'
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase3a-status-summary').textContent = data.error || 'Phase 3A readiness scan failed.';
+                return;
+            }
+
+            latestAccountScan = data.accountScan;
+            renderPhase3AReadiness(data.phase3A, data.phase3B);
+            renderAccountScan(data.accountScan);
             renderPhase3Status(data.phase3);
         }
 
@@ -457,6 +600,9 @@
             }
 
             renderAccountScan(data.accountScan);
+            if (data.phase3A) {
+                renderPhase3AReadiness(data.phase3A, data.phase3B);
+            }
             renderPhase3Status(data.phase3);
         }
 
@@ -581,6 +727,8 @@
         document.getElementById('refresh-live-roadmap').addEventListener('click', loadRoadmap);
         document.getElementById('run-readonly-scan').addEventListener('click', runReadOnlyScan);
         document.getElementById('refresh-phase3-status').addEventListener('click', loadPhase3Status);
+        document.getElementById('refresh-phase3a-readiness').addEventListener('click', scanPhase3AReadiness);
+        document.getElementById('scan-phase3a-readiness').addEventListener('click', scanPhase3AReadiness);
         document.getElementById('scan-authenticated-accounts').addEventListener('click', scanAuthenticatedAccounts);
         document.getElementById('run-dryrun-safety').addEventListener('click', runDryRunSafetyReview);
         document.getElementById('run-account-aware-arb').addEventListener('click', updateAccountAwareArbitrage);
@@ -588,6 +736,7 @@
 
         loadRoadmap();
         loadPhase3Status();
+        scanPhase3AReadiness();
     </script>
     <script src="/js/operator-training.js"></script>
     <script src="/js/operator-mode.js"></script>

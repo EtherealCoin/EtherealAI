@@ -3265,9 +3265,11 @@ async function checkExchangeLiveSafetyModule() {
   const {
     PHASE3_RECOMMENDED_EXCHANGES,
     UNIVERSAL_ORDER_TYPES,
+    PHASE3A_ACCOUNT_STATUSES,
     DEFAULT_LIVE_SAFETY_POLICY,
     EXCHANGE_CAPABILITY_MATRIX,
     WEBSOCKET_STREAM_SPECS,
+    fetchSymbolTradingRules,
     scanAuthenticatedReadOnlyAccounts,
     normalizeUniversalOrderDraft,
     evaluateLiveExecutionSafety,
@@ -3275,6 +3277,8 @@ async function checkExchangeLiveSafetyModule() {
     buildAccountAwareArbitrageView,
     replaySpreadHistory,
     buildOutcomeBenchmark,
+    buildPhase3AReadiness,
+    buildPhase3BPreparationPlan,
     buildPhase3Status
   } = require(path.join(projectRoot, 'app/server/src/lib/exchange-live-safety'));
   const connectors = [
@@ -3294,7 +3298,8 @@ async function checkExchangeLiveSafetyModule() {
   ];
   const accountScan = await scanAuthenticatedReadOnlyAccounts({
     connectors,
-    credentialLoader: async () => null
+    credentialLoader: async () => null,
+    includePublicSymbolRules: false
   });
   const order = normalizeUniversalOrderDraft({
     type: 'post-only',
@@ -3349,6 +3354,33 @@ async function checkExchangeLiveSafetyModule() {
   });
   const replay = replaySpreadHistory({ candidates: accountAware.candidates });
   const benchmark = buildOutcomeBenchmark({ accountAwareCandidate: accountAware.candidates[0] });
+  const phase3A = buildPhase3AReadiness({
+    connectors,
+    accountScan: {
+      profiles: [{
+        exchangeName: 'binance',
+        displayName: 'Binance',
+        status: 'read_only_account_connected',
+        phase3AStatus: PHASE3A_ACCOUNT_STATUSES.AUTHENTICATED_READ_ONLY,
+        plainEnglishStatus: 'fixture connected',
+        balances: { assetCount: 1, nonZeroAssetCount: 1, visibleBalances: [] },
+        feeTier: { status: 'ok', makerFeePercent: 0.001, takerFeePercent: 0.001 },
+        accountLimits: { status: 'ok' },
+        symbolTradingRules: { status: 'loaded', minOrderQuantity: '0.001', minOrderNotional: '5' },
+        marginFuturesMetadata: { status: 'ok' },
+        permissionReview: {
+          readOnlyAttested: true,
+          tradingDisabledAttested: true,
+          withdrawalsDisabledAttested: true,
+          tradingPermissionDetected: false,
+          unsafeWithdrawalPermissionDetected: false
+        },
+        safetyBoundary: { liveTradingEnabled: false, orderEndpointEnabled: false, walletSigningEnabled: false }
+      }]
+    },
+    riskProfile: { id: 7, name: 'Fixture Risk', kill_switch_enabled: false, status: 'active' }
+  });
+  const phase3B = buildPhase3BPreparationPlan({ phase3A });
   const phase3 = buildPhase3Status({ connectors, accountScan });
 
   if (
@@ -3357,6 +3389,8 @@ async function checkExchangeLiveSafetyModule() {
     || !PHASE3_RECOMMENDED_EXCHANGES.includes('kraken')
     || !PHASE3_RECOMMENDED_EXCHANGES.includes('okx')
     || !PHASE3_RECOMMENDED_EXCHANGES.includes('bybit')
+    || PHASE3A_ACCOUNT_STATUSES.AUTHENTICATED_READ_ONLY !== 'Authenticated Read-Only'
+    || typeof fetchSymbolTradingRules !== 'function'
     || !UNIVERSAL_ORDER_TYPES.includes('bracket')
     || DEFAULT_LIVE_SAFETY_POLICY.liveExecutionLocked !== true
     || DEFAULT_LIVE_SAFETY_POLICY.dryRunOnly !== true
@@ -3364,6 +3398,7 @@ async function checkExchangeLiveSafetyModule() {
     || !EXCHANGE_CAPABILITY_MATRIX.bybit?.websocketSupport
     || WEBSOCKET_STREAM_SPECS.coinbase?.orderEntryEnabled !== false
     || accountScan.status !== 'waiting_for_read_only_keys'
+    || accountScan.profiles.length !== 5
     || accountScan.safetyBoundary.liveTradingEnabled !== false
     || order.type !== 'post_only'
     || order.dryRun !== true
@@ -3377,7 +3412,14 @@ async function checkExchangeLiveSafetyModule() {
     || accountAware.spreadHeatmap[0].confidenceScore <= 0
     || replay.summary.samples !== 1
     || benchmark.comparison.realWorldFeeAdjustedOutcomePercent >= benchmark.comparison.estimatedLiveOutcomePercent
+    || phase3A.title !== 'Phase 3A: Authenticated Account Readiness'
+    || phase3A.checklist.length !== 10
+    || !phase3A.exchanges.some(exchange => exchange.exchangeName === 'binance' && exchange.checklist.some(item => item.id === 'symbol_limits_loaded' && item.passed))
+    || phase3B.status !== 'prepared_locked'
+    || phase3B.orderEndpointImplemented !== false
+    || phase3B.sandboxOrdersEnabled !== false
     || phase3.status !== 'locked_building'
+    || phase3.phase3B.orderEndpointImplemented !== false
     || phase3.safetyBoundary.liveTradingEnabled !== false
     || phase3.universalOrderModel.liveOrderEndpointImplemented !== false
   ) {
@@ -6867,6 +6909,11 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('Local paper simulation only')
     || !html.includes('Live trading, withdrawals, wallet signing, and order endpoints remain locked')
     || !html.includes('Phase 3 Operator Dashboard')
+    || !html.includes('Phase 3A: Authenticated Account Readiness')
+    || !html.includes('Refresh Account Readiness')
+    || !html.includes('Scan Authenticated Readiness')
+    || !html.includes('Phase 3B: Prepared But Locked')
+    || !html.includes('sandbox/testnet order placement')
     || !html.includes('Scan Read-Only Accounts')
     || !html.includes('Run Dry-Run Safety Review')
     || !html.includes('Replay Latest Spread Scan')
@@ -6875,6 +6922,7 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('/api/v1/live-trading-launch/read-only-scan')
     || !html.includes('/api/v1/live-trading-launch/paper-simulate-opportunity')
     || !html.includes('/api/v1/live-trading-launch/phase3/status')
+    || !html.includes('/api/v1/live-trading-launch/phase3a/readiness')
     || !html.includes('/api/v1/live-trading-launch/authenticated-read-only-scan')
     || !html.includes('/api/v1/live-trading-launch/dry-run-order-safety')
     || !html.includes('/api/v1/live-trading-launch/account-aware-arbitrage')
@@ -6887,10 +6935,13 @@ function checkLiveTradingLaunchCenterUi() {
     || !styles.includes('.live-approval-center')
     || !styles.includes('.phase3-dashboard-grid')
     || !styles.includes('.phase3-account-card')
+    || !styles.includes('.phase3a-checklist')
+    || !styles.includes('.phase3a-exchange-grid')
     || !routes.includes("app.get('/api/v1/live-trading-launch/roadmap'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/read-only-scan'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/paper-simulate-opportunity'")
     || !routes.includes("app.get('/api/v1/live-trading-launch/phase3/status'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/phase3a/readiness'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/authenticated-read-only-scan'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/dry-run-order-safety'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/account-aware-arbitrage'")
@@ -6900,10 +6951,14 @@ function checkLiveTradingLaunchCenterUi() {
     || !server.includes('scanReadOnlyArbitrageOpportunities')
     || !server.includes('buildLiveTradingLaunchRoadmap')
     || !server.includes('buildPhase3Status')
+    || !server.includes('buildPhase3AReadiness')
+    || !server.includes('buildPhase3BPreparationPlan')
     || !routeRegistration.includes('scanReadOnlyArbitrageOpportunities')
     || !routeRegistration.includes('createPaperSimulationForOpportunity')
     || !routeRegistration.includes('scanAuthenticatedReadOnlyAccounts')
     || !routeRegistration.includes('evaluateLiveExecutionSafety')
+    || !routeRegistration.includes('buildPhase3AReadiness')
+    || !routeRegistration.includes('buildPhase3BPreparationPlan')
     || !readOnlyConnections.includes('EXPANDED_READONLY_MARKET_VENUES')
     || !readOnlyConnections.includes('fetchKucoinMarketSnapshot')
     || !readOnlyConnections.includes('fetchGateMarketSnapshot')
@@ -6923,6 +6978,10 @@ function checkLiveTradingLaunchCenterUi() {
     || !liveSafety.includes('dryRunOnly: true')
     || !liveSafety.includes('orderEndpointEnabled: false')
     || !liveSafety.includes('ordersPlaced: false')
+    || !liveSafety.includes('PHASE3A_ACCOUNT_STATUSES')
+    || !liveSafety.includes('fetchSymbolTradingRules')
+    || !liveSafety.includes('buildPhase3AReadiness')
+    || !liveSafety.includes('buildPhase3BPreparationPlan')
     || !liveSafety.includes('scanAuthenticatedReadOnlyAccounts')
     || !liveSafety.includes('evaluateLiveExecutionSafety')
     || !liveSafety.includes('buildOutcomeBenchmark')

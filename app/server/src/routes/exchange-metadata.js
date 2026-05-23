@@ -40,9 +40,11 @@ function registerExchangeMetadataRoutes(app, {
   createPlainEnglishExchangeError,
   phase3RecommendedExchanges,
   universalOrderTypes,
+  phase3AAccountStatuses,
   defaultLiveSafetyPolicy,
   exchangeCapabilityMatrix,
   websocketStreamSpecs,
+  fetchSymbolTradingRules,
   scanAuthenticatedReadOnlyAccounts,
   normalizeUniversalOrderDraft,
   evaluateLiveExecutionSafety,
@@ -50,6 +52,8 @@ function registerExchangeMetadataRoutes(app, {
   buildAccountAwareArbitrageView,
   replaySpreadHistory,
   buildOutcomeBenchmark,
+  buildPhase3AReadiness,
+  buildPhase3BPreparationPlan,
   buildPhase3Status,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
@@ -173,6 +177,17 @@ function registerExchangeMetadataRoutes(app, {
     }
 
     return loadReadOnlyVaultCredentials(referenceName);
+  }
+
+  async function getActiveLiveReadinessRiskProfile() {
+    return dbGet(
+      `SELECT *
+       FROM risk_profiles
+       WHERE status = 'active'
+         AND kill_switch_enabled = 0
+       ORDER BY updated_at DESC, id DESC
+       LIMIT 1`
+    );
   }
 
   app.get('/api/v1/local-secret-provider-capabilities', requireAuth, (req, res) => {
@@ -469,6 +484,7 @@ function registerExchangeMetadataRoutes(app, {
         },
         defaultSafetyPolicy: defaultLiveSafetyPolicy,
         recommendedExchanges: phase3RecommendedExchanges || [],
+        phase3AAccountStatuses: phase3AAccountStatuses || {},
         websocketStreamSpecs: Object.values(websocketStreamSpecs || {}),
         safetyBoundary: {
           readOnlyAccountData: true,
@@ -485,22 +501,69 @@ function registerExchangeMetadataRoutes(app, {
     }
   });
 
-  app.post('/api/v1/live-trading-launch/authenticated-read-only-scan', requireAuth, async (req, res) => {
+  app.post('/api/v1/live-trading-launch/phase3a/readiness', requireAuth, async (req, res) => {
     try {
+      const symbol = req.body?.symbol || 'BTC/USDT';
       const rows = await dbAll(
         `${exchangeConnectorSelect}
          ORDER BY exchange_connectors.created_at DESC
          LIMIT 500`
       );
       const connectors = rows.map(parseExchangeConnector);
-      const accountScan = await scanAuthenticatedReadOnlyAccounts({
-        connectors,
-        symbol: req.body?.symbol || 'BTC/USDT',
-        credentialLoader: connector => loadConnectorReadOnlyCredentialsForUser(connector, req.session.userId)
+      const [accountScan, riskProfile] = await Promise.all([
+        scanAuthenticatedReadOnlyAccounts({
+          connectors,
+          symbol,
+          credentialLoader: connector => loadConnectorReadOnlyCredentialsForUser(connector, req.session.userId)
+        }),
+        getActiveLiveReadinessRiskProfile()
+      ]);
+      const phase3A = buildPhase3AReadiness({ connectors, accountScan, riskProfile });
+      const phase3B = buildPhase3BPreparationPlan({ phase3A });
+
+      res.json({
+        phase3A,
+        phase3B,
+        accountScan,
+        phase3: buildPhase3Status({ connectors, accountScan }),
+        symbolTradingRuleAdapters: (phase3RecommendedExchanges || []).reduce((acc, exchangeName) => {
+          acc[exchangeName] = Boolean(fetchSymbolTradingRules);
+          return acc;
+        }, {}),
+        safetyBoundary: phase3A.safetyBoundary
       });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishExchangeError
+          ? createPlainEnglishExchangeError('Phase 3A authenticated account readiness', error)
+          : error.message
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/authenticated-read-only-scan', requireAuth, async (req, res) => {
+    try {
+      const symbol = req.body?.symbol || 'BTC/USDT';
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const [accountScan, riskProfile] = await Promise.all([
+        scanAuthenticatedReadOnlyAccounts({
+          connectors,
+          symbol,
+          credentialLoader: connector => loadConnectorReadOnlyCredentialsForUser(connector, req.session.userId)
+        }),
+        getActiveLiveReadinessRiskProfile()
+      ]);
+      const phase3A = buildPhase3AReadiness({ connectors, accountScan, riskProfile });
 
       res.json({
         accountScan,
+        phase3A,
+        phase3B: buildPhase3BPreparationPlan({ phase3A }),
         phase3: buildPhase3Status({ connectors, accountScan }),
         safetyBoundary: accountScan.safetyBoundary
       });

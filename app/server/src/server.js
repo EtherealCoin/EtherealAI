@@ -179,9 +179,11 @@ const {
 const {
   PHASE3_RECOMMENDED_EXCHANGES,
   UNIVERSAL_ORDER_TYPES,
+  PHASE3A_ACCOUNT_STATUSES,
   DEFAULT_LIVE_SAFETY_POLICY,
   EXCHANGE_CAPABILITY_MATRIX,
   WEBSOCKET_STREAM_SPECS,
+  fetchSymbolTradingRules,
   scanAuthenticatedReadOnlyAccounts,
   normalizeUniversalOrderDraft,
   evaluateLiveExecutionSafety,
@@ -189,6 +191,8 @@ const {
   buildAccountAwareArbitrageView,
   replaySpreadHistory,
   buildOutcomeBenchmark,
+  buildPhase3AReadiness,
+  buildPhase3BPreparationPlan,
   buildPhase3Status
 } = require('./lib/exchange-live-safety');
 const {
@@ -800,9 +804,11 @@ registerEtherealRoutes(app, {
   createPlainEnglishExchangeError,
   phase3RecommendedExchanges: PHASE3_RECOMMENDED_EXCHANGES,
   universalOrderTypes: UNIVERSAL_ORDER_TYPES,
+  phase3AAccountStatuses: PHASE3A_ACCOUNT_STATUSES,
   defaultLiveSafetyPolicy: DEFAULT_LIVE_SAFETY_POLICY,
   exchangeCapabilityMatrix: EXCHANGE_CAPABILITY_MATRIX,
   websocketStreamSpecs: WEBSOCKET_STREAM_SPECS,
+  fetchSymbolTradingRules,
   scanAuthenticatedReadOnlyAccounts,
   normalizeUniversalOrderDraft,
   evaluateLiveExecutionSafety,
@@ -810,6 +816,8 @@ registerEtherealRoutes(app, {
   buildAccountAwareArbitrageView,
   replaySpreadHistory,
   buildOutcomeBenchmark,
+  buildPhase3AReadiness,
+  buildPhase3BPreparationPlan,
   buildPhase3Status,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,

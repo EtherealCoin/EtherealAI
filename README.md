@@ -136,6 +136,9 @@ Phase 3 adds authenticated safety infrastructure while preserving the lock:
 
 - Authenticated read-only account scans for Binance, Coinbase, Kraken, OKX, and Bybit where read-only credentials are configured.
 - Normalized account views for balances, fee tiers, account limits, positions, subaccount metadata, margin/futures metadata, and withdrawal-permission review status.
+- Phase 3A adds authenticated account readiness for Binance, Coinbase, Kraken, OKX, and Bybit. It reads vault-backed credentials only, checks account access, permission/withdrawal signals, balances, maker/taker fees where available, account limits, public symbol trading rules, minimum order sizes/notional, public rate-limit notes, and futures/margin availability where available.
+- Phase 3A exchange statuses are `Not Connected`, `Public Market Data Only`, `Authenticated Read-Only`, `Trading Permission Present But Locked`, `Unsafe Permissions Detected`, and `Error`.
+- Phase 3B is prepared but locked: sandbox/testnet order placement, tiny live test approval, cancel, order status tracking, partial fill handling, position reconciliation, duplicate-order prevention, and kill-switch enforcement are listed as the next staged implementation without enabling them.
 - Exchange capability matrix for spot, futures, margin, sandbox/testnet support, WebSocket support, rate-limit notes, order types, and hedge mode support.
 - Universal dry-run order model for market, limit, post-only, IOC, reduce-only, TP/SL, and bracket order drafts.
 - Live execution safety review with global kill switch, max order size, max daily loss, stale-price rejection, liquidity minimums, latency/slippage guards, duplicate-order prevention, dry-run mode, and manual confirmation gates.
