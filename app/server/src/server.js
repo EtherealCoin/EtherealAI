@@ -240,6 +240,13 @@ const {
   createPlainEnglishTinyLiveError
 } = require('./lib/exchange-tiny-live-execution');
 const {
+  PHASE4_STATUS,
+  DEFAULT_PHASE4_RISK_POLICY,
+  PHASE4_SUPPORTED_VENUES,
+  NETWORK_COST_BASELINES,
+  buildLiveArbitrageCommandCenter
+} = require('./lib/exchange-live-arbitrage-command');
+const {
   parseSocialPost,
   reviewSocialContent
 } = require('./lib/social-ops');
@@ -903,6 +910,11 @@ registerEtherealRoutes(app, {
   getTinyLiveOrderStatus,
   buildTinyLiveApprovalCenter,
   createPlainEnglishTinyLiveError,
+  phase4Status: PHASE4_STATUS,
+  defaultPhase4RiskPolicy: DEFAULT_PHASE4_RISK_POLICY,
+  phase4SupportedVenues: PHASE4_SUPPORTED_VENUES,
+  phase4NetworkCostBaselines: NETWORK_COST_BASELINES,
+  buildLiveArbitrageCommandCenter,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,

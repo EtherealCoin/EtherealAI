@@ -161,6 +161,18 @@ Phase 3 adds authenticated safety infrastructure while preserving the lock:
 
 Phase 3C adds only one tightly gated production spot order path for a manually approved tiny test. It does **not** add autonomous live trading, unrestricted production order routing, withdrawals, wallet signing, margin, futures, leverage, or scaling.
 
+Phase 4 adds controlled multi-exchange arbitrage expansion infrastructure while preserving the lock:
+
+- `/live-trading-launch` now includes `Phase 4: Live Arbitrage Command Center`.
+- The command center builds a multi-exchange routing view, exchange priority list, venue scoring, spread heatmap, ranked opportunity queue, exchange health dashboard, capital allocation dashboard, risk dashboard, and recovery/emergency controls.
+- Venue scoring accounts for latency, fees, visible liquidity, slippage assumptions, and fill-reliability baselines.
+- Opportunity ranking estimates gross spread, total fees/costs, slippage, latency risk, visible liquidity, net profit percent/USD, confidence, and route score.
+- Cross-exchange inventory planning shows authenticated read-only balance visibility where available, stablecoin inventory status, imbalance warnings, and manual rebalancing suggestions.
+- Transfer/network and cross-chain cost baselines are modeled for planning only. EtherealAI does not enable withdrawals or move funds.
+- Simultaneous execution orchestration, partial-fill recovery, failed-leg recovery, retry handling, exchange outage handling, rate-limit handling, and websocket reconnection handling are modeled as runbooks and safety dashboards only.
+- Simple Operator Mode now has a dedicated Live Trading Launch Center wrapper so Phase 4 is visible to a non-coder owner without switching into Advanced Developer Mode.
+- Multi-leg live execution, unrestricted autonomous scaling, leverage, margin, futures, withdrawals, wallet signing, and new Phase 4 order endpoints remain disabled.
+
 ## Multi-Agent Coordination
 
 The local multi-agent layer includes:

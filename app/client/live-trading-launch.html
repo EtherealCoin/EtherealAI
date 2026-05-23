@@ -381,6 +381,91 @@
             <div id="phase3c-order-result" class="phase3-results">No tiny live order has been placed. This is the correct safe default.</div>
         </section>
 
+        <section class="model-panel" id="live-arbitrage-command-center">
+            <h2>Phase 4: Live Arbitrage Command Center</h2>
+            <p class="inline-status">Multi-exchange arbitrage intelligence, routing, venue scoring, inventory planning, and recovery controls. Multi-leg live execution remains locked. No leverage, margin, futures, withdrawals, wallet signing, or unrestricted autonomous scaling.</p>
+            <div class="phase4-controls">
+                <label for="phase4-symbol">
+                    Market
+                    <input id="phase4-symbol" type="text" value="BTC/USDT">
+                </label>
+                <label for="phase4-order-size">
+                    Planning size USD
+                    <input id="phase4-order-size" type="number" value="100" min="1" step="10">
+                </label>
+                <label for="phase4-min-spread">
+                    Minimum net spread %
+                    <input id="phase4-min-spread" type="number" value="0.08" min="0" step="0.01">
+                </label>
+                <label for="phase4-min-liquidity">
+                    Minimum liquidity USD
+                    <input id="phase4-min-liquidity" type="number" value="1000" min="0" step="100">
+                </label>
+                <label for="phase4-max-latency">
+                    Max latency ms
+                    <input id="phase4-max-latency" type="number" value="1500" min="100" step="100">
+                </label>
+                <label for="phase4-max-slippage">
+                    Max slippage %
+                    <input id="phase4-max-slippage" type="number" value="0.15" min="0" step="0.01">
+                </label>
+            </div>
+            <div class="button-row">
+                <button id="refresh-phase4-status" type="button">Refresh Command Center</button>
+                <button id="run-phase4-command-center" type="button">Run Multi-Exchange Scan</button>
+                <button id="phase4-emergency-stop" type="button" class="secondary-button">Emergency Stop / Keep Live Locked</button>
+            </div>
+            <div class="phase4-dashboard-grid">
+                <article>
+                    <span>Status</span>
+                    <strong id="phase4-main-status">Loading</strong>
+                    <small id="phase4-main-detail">Phase 4 command center is loading.</small>
+                </article>
+                <article>
+                    <span>Top Opportunity</span>
+                    <strong id="phase4-top-opportunity">Waiting</strong>
+                    <small id="phase4-top-detail">Run a scan to rank routes.</small>
+                </article>
+                <article>
+                    <span>Inventory</span>
+                    <strong id="phase4-inventory-status">Review</strong>
+                    <small id="phase4-inventory-detail">Authenticated read-only balances are optional but recommended.</small>
+                </article>
+                <article>
+                    <span>Execution</span>
+                    <strong>Locked</strong>
+                    <small>Multi-leg live execution is not enabled.</small>
+                </article>
+            </div>
+            <div class="phase4-dashboard-grid">
+                <div class="phase4-panel">
+                    <h3>Spread Heatmap</h3>
+                    <div id="phase4-spread-heatmap">Run a multi-exchange scan to populate the heatmap.</div>
+                </div>
+                <div class="phase4-panel">
+                    <h3>Opportunity Queue</h3>
+                    <div id="phase4-opportunity-queue">No ranked opportunities yet.</div>
+                </div>
+                <div class="phase4-panel">
+                    <h3>Exchange Health Dashboard</h3>
+                    <div id="phase4-exchange-health">Loading exchange health.</div>
+                </div>
+                <div class="phase4-panel">
+                    <h3>Capital Allocation Dashboard</h3>
+                    <div id="phase4-capital-allocation">No capital plan yet.</div>
+                </div>
+                <div class="phase4-panel">
+                    <h3>Risk Dashboard</h3>
+                    <div id="phase4-risk-dashboard">Loading risk dashboard.</div>
+                </div>
+                <div class="phase4-panel">
+                    <h3>Recovery And Emergency Controls</h3>
+                    <div id="phase4-recovery-controls">Recovery plan will appear after scan.</div>
+                </div>
+            </div>
+            <div id="phase4-result" class="phase3-results">Phase 4 is planning/monitoring only. Multi-exchange live orders are not enabled.</div>
+        </section>
+
         <section class="model-panel">
             <h2>Launch Roadmap</h2>
             <div id="live-roadmap-phases" class="live-roadmap-phases">Loading phases...</div>
@@ -410,6 +495,7 @@
         let latestPhase3C = null;
         let latestTinyLivePreview = null;
         let latestTinyLiveOrderId = null;
+        let latestPhase4CommandCenter = null;
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -815,6 +901,114 @@
                     </div>
                     ${result.rejectionReason ? `<p><b>Why it stopped:</b> ${escapeHtml(result.rejectionReason)}</p>` : '<p>Review status and balances after any accepted/fill response.</p>'}
                     <p class="workflow-helper-text">Automation is still off. Wallet signing, withdrawals, margin, and futures remain disabled.</p>
+                </article>
+            `;
+        }
+
+        function phase4CardClass(status) {
+            if (status === 'Safe') return 'status-success';
+            if (status === 'Unsafe') return 'status-danger';
+            if (status === 'Exchange degraded' || status === 'Opportunity expired' || status === 'Spread collapsed' || status === 'Liquidity insufficient') return 'status-warning';
+            return 'status-info';
+        }
+
+        function renderPhase4CommandCenter(commandCenter) {
+            latestPhase4CommandCenter = commandCenter;
+            const topOpportunity = commandCenter?.opportunityQueue?.[0] || null;
+            const inventoryWarnings = commandCenter?.stablecoinInventory?.warnings || [];
+
+            document.getElementById('phase4-main-status').textContent = commandCenter?.status || 'planning_only';
+            document.getElementById('phase4-main-detail').textContent = commandCenter?.plainEnglishStatus || 'Multi-exchange live execution remains locked.';
+            document.getElementById('phase4-top-opportunity').textContent = topOpportunity ? `${topOpportunity.buyVenue || topOpportunity.buyExchangeName} → ${topOpportunity.sellVenue || topOpportunity.sellExchangeName}` : 'None';
+            document.getElementById('phase4-top-detail').textContent = topOpportunity
+                ? `Score ${topOpportunity.routeScore || 0} · net ${formatPercent(topOpportunity.estimatedNetProfitPercent)}`
+                : 'Run a scan to rank routes.';
+            document.getElementById('phase4-inventory-status').textContent = commandCenter?.stablecoinInventory?.status || 'Review';
+            document.getElementById('phase4-inventory-detail').textContent = inventoryWarnings[0] || `Visible stablecoins ${formatUsd(commandCenter?.stablecoinInventory?.totalVisibleStablecoinUsd || 0)}.`;
+
+            document.getElementById('phase4-spread-heatmap').innerHTML = (commandCenter?.spreadHeatmap || []).length ? commandCenter.spreadHeatmap.map(item => `
+                <article class="phase4-mini-card ${phase4CardClass(item.status)}">
+                    <strong>${escapeHtml(item.route)}</strong>
+                    <span>${escapeHtml(item.status)} · net ${formatPercent(item.estimatedNetProfitPercent)} · gross ${formatPercent(item.grossSpreadPercent)}</span>
+                    <small>Liquidity ${formatUsd(item.liquidityUsd)} · latency ${escapeHtml(item.latencyMs)} ms · cost ${formatPercent(item.totalEstimatedCostPercent)}</small>
+                </article>
+            `).join('') : '<p class="workflow-helper-text">No heatmap yet. Run Multi-Exchange Scan.</p>';
+
+            document.getElementById('phase4-opportunity-queue').innerHTML = (commandCenter?.opportunityQueue || []).length ? commandCenter.opportunityQueue.slice(0, 8).map(item => `
+                <article class="phase4-mini-card ${phase4CardClass(item.safetyStatus)}">
+                    <strong>${escapeHtml(item.buyVenue || item.buyExchangeName)} → ${escapeHtml(item.sellVenue || item.sellExchangeName)}</strong>
+                    <span>${escapeHtml(item.safetyStatus)} · confidence ${escapeHtml(item.confidenceScore || 0)} · route score ${escapeHtml(item.routeScore || 0)}</span>
+                    <small>${escapeHtml(item.operatorSummary || '')}</small>
+                    ${item.failures?.length ? `<small>Review: ${escapeHtml(item.failures.join(', '))}</small>` : ''}
+                </article>
+            `).join('') : '<p class="workflow-helper-text">No ranked opportunities yet.</p>';
+
+            document.getElementById('phase4-exchange-health').innerHTML = (commandCenter?.exchangeHealth || []).slice(0, 12).map(item => `
+                <article class="phase4-mini-card ${phase4CardClass(item.status)}">
+                    <strong>${escapeHtml(item.displayName)}</strong>
+                    <span>${escapeHtml(item.status)} · score ${escapeHtml(item.score)}</span>
+                    <small>Latency ${escapeHtml(item.latencyMs)} ms · fee ${formatPercent(item.feePercent)} · rate limit ${escapeHtml(item.rateLimitStatus)}</small>
+                </article>
+            `).join('');
+
+            document.getElementById('phase4-capital-allocation').innerHTML = `
+                <p class="workflow-helper-text">Max exchange capital: ${formatUsd(commandCenter?.capitalAllocation?.maxCapitalPerExchangeUsd)} · max strategy capital: ${formatUsd(commandCenter?.capitalAllocation?.maxCapitalPerStrategyUsd)}</p>
+                ${(commandCenter?.capitalAllocation?.allocations || []).map(item => `
+                    <article class="phase4-mini-card status-info">
+                        <strong>${escapeHtml(item.displayName)}</strong>
+                        <span>Suggested planning allocation ${formatUsd(item.suggestedCapitalUsd)}</span>
+                        <small>${escapeHtml(item.reason)} Live deployment: locked.</small>
+                    </article>
+                `).join('') || '<p class="workflow-helper-text">No allocation plan yet.</p>'}
+                ${(commandCenter?.stablecoinInventory?.rebalancingSuggestions || []).map(item => `
+                    <article class="phase4-mini-card status-warning">
+                        <strong>${escapeHtml(item.displayName)}</strong>
+                        <span>Rebalancing suggestion</span>
+                        <small>${escapeHtml(item.suggestion)}</small>
+                    </article>
+                `).join('')}
+            `;
+
+            document.getElementById('phase4-risk-dashboard').innerHTML = `
+                <div class="live-candidate-metrics">
+                    <span>Global kill switch: ${escapeHtml(commandCenter?.riskDashboard?.globalKillSwitch || 'on')}</span>
+                    <span>Safe opportunities: ${escapeHtml(commandCenter?.riskDashboard?.counts?.safeOpportunities || 0)}</span>
+                    <span>Warning/unsafe: ${escapeHtml(commandCenter?.riskDashboard?.counts?.warningOrUnsafeOpportunities || 0)}</span>
+                    <span>Degraded venues: ${escapeHtml(commandCenter?.riskDashboard?.counts?.degradedVenues || 0)}</span>
+                    <span>Min spread: ${formatPercent(commandCenter?.riskDashboard?.limits?.minNetSpreadPercent)}</span>
+                    <span>Max slippage: ${formatPercent(commandCenter?.riskDashboard?.limits?.maxSlippagePercent)}</span>
+                </div>
+                ${(commandCenter?.riskDashboard?.perExchangeKillSwitches || []).slice(0, 8).map(item => `
+                    <article class="phase4-mini-card ${item.killSwitchRecommended ? 'status-warning' : 'status-success'}">
+                        <strong>${escapeHtml(item.displayName)}</strong>
+                        <span>${item.killSwitchRecommended ? 'Per-exchange kill switch recommended' : 'Monitoring allowed'}</span>
+                        <small>${escapeHtml(item.reason)}</small>
+                    </article>
+                `).join('')}
+            `;
+
+            document.getElementById('phase4-recovery-controls').innerHTML = `
+                <article class="phase4-mini-card status-warning">
+                    <strong>${escapeHtml(commandCenter?.executionOrchestration?.status || 'locked')}</strong>
+                    <span>Simultaneous execution: ${commandCenter?.executionOrchestration?.simultaneousExecution?.enabled ? 'enabled' : 'locked'}</span>
+                    <small>${escapeHtml(commandCenter?.executionOrchestration?.simultaneousExecution?.note || '')}</small>
+                </article>
+                <article class="phase4-mini-card status-info">
+                    <strong>Partial-fill recovery</strong>
+                    <span>${escapeHtml((commandCenter?.executionOrchestration?.partialFillRecovery?.actions || []).join(' '))}</span>
+                </article>
+                <article class="phase4-mini-card status-info">
+                    <strong>Outage / rate-limit handling</strong>
+                    <span>${escapeHtml(commandCenter?.executionOrchestration?.outageHandling?.rateLimit || '')}</span>
+                    <small>${escapeHtml(commandCenter?.executionOrchestration?.outageHandling?.websocketReconnect || '')}</small>
+                </article>
+            `;
+
+            document.getElementById('phase4-result').innerHTML = `
+                <article class="phase3-account-card status-warning">
+                    <strong>${escapeHtml(commandCenter?.title || 'Live Arbitrage Command Center')}</strong>
+                    <span>${escapeHtml(commandCenter?.nextRecommendedAction || 'Run a scan.')}</span>
+                    <small>Multi-leg live execution enabled: ${commandCenter?.safetyBoundary?.multiExchangeLiveExecutionEnabled ? 'yes' : 'no'} · withdrawals: ${commandCenter?.safetyBoundary?.withdrawalsEnabled ? 'enabled' : 'disabled'} · wallet signing: ${commandCenter?.safetyBoundary?.walletSigningEnabled ? 'enabled' : 'disabled'}</small>
                 </article>
             `;
         }
@@ -1358,6 +1552,70 @@
             await loadPhase3CStatus();
         }
 
+        async function loadPhase4Status() {
+            const response = await fetch('/api/v1/live-trading-launch/phase4/status');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase4-result').textContent = data.error || 'Unable to load Phase 4 Command Center.';
+                return null;
+            }
+
+            renderPhase4CommandCenter(data.commandCenter);
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                roadmap: latestLiveRoadmap,
+                latestLiveScan,
+                latestPhase3Status,
+                latestAccountScan,
+                latestAccountAware,
+                phase3C: latestPhase3C,
+                phase4: data.commandCenter
+            }, null, 2);
+            return data.commandCenter;
+        }
+
+        async function runPhase4CommandCenter() {
+            const output = document.getElementById('phase4-result');
+            output.textContent = 'Running multi-exchange scan and refreshing command center. This is planning/monitoring only and cannot place multi-leg live orders.';
+            const response = await fetch('/api/v1/live-trading-launch/phase4/command-center', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: document.getElementById('phase4-symbol').value || 'BTC/USDT',
+                    orderSizeUsd: Number(document.getElementById('phase4-order-size').value || 100),
+                    minNetSpreadPercent: Number(document.getElementById('phase4-min-spread').value || 0.08),
+                    minLiquidityUsd: Number(document.getElementById('phase4-min-liquidity').value || 1000),
+                    maxLatencyMs: Number(document.getElementById('phase4-max-latency').value || 1500),
+                    maxSlippagePercent: Number(document.getElementById('phase4-max-slippage').value || 0.15),
+                    includeExpanded: true,
+                    maxVenues: 16,
+                    maxCandidates: 24
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Phase 4 command center scan failed.';
+                return;
+            }
+
+            latestLiveScan = data.scan;
+            latestAccountScan = data.accountScan;
+            renderPhase4CommandCenter(data.commandCenter);
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                phase4: data.commandCenter,
+                scan: data.scan,
+                accountScan: data.accountScan
+            }, null, 2);
+        }
+
+        async function phase4EmergencyStop() {
+            const output = document.getElementById('phase4-result');
+            output.textContent = 'Running emergency stop. This keeps live connector flags disabled and does not enable trading.';
+            await emergencyStopLiveConnectors();
+            await loadPhase4Status();
+        }
+
         async function runReadOnlyScan() {
             const output = document.getElementById('live-scan-summary');
             output.textContent = 'Running read-only market scan. No orders, wallet signing, or withdrawals are possible from this scan.';
@@ -1550,13 +1808,18 @@
         document.getElementById('place-tiny-live-order').addEventListener('click', placeTinyLiveOrder);
         document.getElementById('track-tiny-live-order').addEventListener('click', trackLatestTinyLiveOrder);
         document.getElementById('cancel-tiny-live-order').addEventListener('click', cancelLatestTinyLiveOrder);
+        document.getElementById('refresh-phase4-status').addEventListener('click', loadPhase4Status);
+        document.getElementById('run-phase4-command-center').addEventListener('click', runPhase4CommandCenter);
+        document.getElementById('phase4-emergency-stop').addEventListener('click', phase4EmergencyStop);
 
         loadRoadmap();
         loadPhase3Status();
         loadPhase3BStatus();
         loadPhase3CStatus();
+        loadPhase4Status();
         scanPhase3AReadiness();
     </script>
+    <script src="/js/operator-next-action.js"></script>
     <script src="/js/operator-training.js"></script>
     <script src="/js/operator-mode.js"></script>
 </body>

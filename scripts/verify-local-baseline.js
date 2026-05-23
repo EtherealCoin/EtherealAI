@@ -79,6 +79,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/exchange-live-safety.js',
     'app/server/src/lib/exchange-sandbox-execution.js',
     'app/server/src/lib/exchange-tiny-live-execution.js',
+    'app/server/src/lib/exchange-live-arbitrage-command.js',
     'app/server/src/lib/local-model-routing.js',
     'app/server/src/lib/local-model-runtime.js',
     'app/server/src/lib/live-execution-handoff.js',
@@ -3693,6 +3694,106 @@ function checkExchangeTinyLiveExecutionModule() {
   pass('exchange tiny live execution module');
 }
 
+function checkExchangeLiveArbitrageCommandModule() {
+  const {
+    PHASE4_STATUS,
+    DEFAULT_PHASE4_RISK_POLICY,
+    PHASE4_SUPPORTED_VENUES,
+    NETWORK_COST_BASELINES,
+    createPhase4SafetyBoundary,
+    buildVenueScores,
+    buildSpreadHeatmap,
+    rankArbitrageOpportunities,
+    buildCrossExchangeInventory,
+    buildCapitalAllocation,
+    estimateTransferAndNetworkCosts,
+    buildRecoveryAndOrchestration,
+    buildRiskDashboard,
+    buildLiveArbitrageCommandCenter
+  } = require(path.join(projectRoot, 'app/server/src/lib/exchange-live-arbitrage-command'));
+  const connectors = [
+    { id: 1, exchange_name: 'binance', label: 'Binance', status: 'configured', settings: { registryId: 'binance', displayName: 'Binance' } },
+    { id: 2, exchange_name: 'coinbase', label: 'Coinbase', status: 'configured', settings: { registryId: 'coinbase', displayName: 'Coinbase' } }
+  ];
+  const scan = {
+    symbol: 'BTC/USDT',
+    snapshots: [
+      { status: 'ok', snapshot: { exchangeName: 'binance', displayName: 'Binance', bid: 100, ask: 99, latencyMs: 120, topAskLiquidityUsd: 50000, topBidLiquidityUsd: 50000, takerFeePercent: 0.1 } },
+      { status: 'ok', snapshot: { exchangeName: 'coinbase', displayName: 'Coinbase', bid: 101, ask: 100.5, latencyMs: 180, topAskLiquidityUsd: 50000, topBidLiquidityUsd: 50000, takerFeePercent: 0.12 } }
+    ],
+    candidates: [{
+      id: 'fixture',
+      symbol: 'BTC/USDT',
+      buyVenue: 'Binance',
+      buyExchangeName: 'binance',
+      sellVenue: 'Coinbase',
+      sellExchangeName: 'coinbase',
+      grossSpreadPercent: 2.02,
+      totalEstimatedCostPercent: 0.35,
+      estimatedNetProfitPercent: 1.67,
+      limitingLiquidityUsd: 50000,
+      latencyMs: 180,
+      accepted: true
+    }]
+  };
+  const accountScan = {
+    profiles: [{
+      exchangeName: 'binance',
+      displayName: 'Binance',
+      status: 'read_only_account_connected',
+      feeTier: { takerFeePercent: 0.1 },
+      balances: { assets: [{ asset: 'USDT', free: 250, usdValue: 250 }] }
+    }, {
+      exchangeName: 'coinbase',
+      displayName: 'Coinbase',
+      status: 'read_only_account_connected',
+      feeTier: { takerFeePercent: 0.12 },
+      balances: { assets: [{ asset: 'USDC', free: 250, usdValue: 250 }] }
+    }]
+  };
+  const venueScores = buildVenueScores({ connectors, scan, accountScan });
+  const heatmap = buildSpreadHeatmap({ scan, venueScores });
+  const opportunities = rankArbitrageOpportunities({ scan, venueScores });
+  const inventory = buildCrossExchangeInventory({ accountScan, venueScores, options: { orderSizeUsd: 100 } });
+  const allocation = buildCapitalAllocation({ venueScores, inventory });
+  const costs = estimateTransferAndNetworkCosts({ opportunities, options: { orderSizeUsd: 100 } });
+  const orchestration = buildRecoveryAndOrchestration({ opportunities });
+  const risk = buildRiskDashboard({ venueScores, opportunities });
+  const commandCenter = buildLiveArbitrageCommandCenter({ connectors, scan, accountScan, options: { orderSizeUsd: 100 } });
+  const boundary = createPhase4SafetyBoundary();
+
+  if (
+    PHASE4_STATUS.SAFE !== 'Safe'
+    || DEFAULT_PHASE4_RISK_POLICY.globalKillSwitchEnabled !== true
+    || DEFAULT_PHASE4_RISK_POLICY.multiExchangeLiveExecutionEnabled !== false
+    || DEFAULT_PHASE4_RISK_POLICY.withdrawalsEnabled !== false
+    || DEFAULT_PHASE4_RISK_POLICY.walletSigningEnabled !== false
+    || !PHASE4_SUPPORTED_VENUES.includes('binance')
+    || !NETWORK_COST_BASELINES.polygon
+    || boundary.multiExchangeLiveExecutionEnabled !== false
+    || boundary.unrestrictedAutonomousScalingEnabled !== false
+    || boundary.withdrawalsEnabled !== false
+    || boundary.walletSigningEnabled !== false
+    || !venueScores.some(score => score.venue === 'binance' && score.scores.total > 0)
+    || heatmap[0]?.status !== 'Safe'
+    || opportunities[0]?.safetyStatus !== 'Safe'
+    || opportunities[0]?.executionAllowed !== false
+    || inventory.visibleStableUsd <= 0
+    || allocation.allocations.length < 2
+    || costs.crossChainCostModel.length < 5
+    || orchestration.simultaneousExecution.enabled !== false
+    || !orchestration.partialFillRecovery.actions.some(action => /Cancel/.test(action))
+    || risk.safetyBoundary.multiExchangeLiveExecutionEnabled !== false
+    || commandCenter.title !== 'Live Arbitrage Command Center'
+    || commandCenter.safetyBoundary.orderEndpointEnabledForPhase4 !== false
+    || commandCenter.executionOrchestration.orderRetryLogic.maxAttempts !== 1
+  ) {
+    fail('exchange live arbitrage command module did not preserve Phase 4 planning-only multi-exchange safety boundaries');
+  }
+
+  pass('exchange live arbitrage command module');
+}
+
 function checkStrategyResearchModule() {
   const {
     parseStrategy,
@@ -7153,6 +7254,7 @@ function checkExchangeConnectorManagerUi() {
 
 function checkLiveTradingLaunchCenterUi() {
   const html = fs.readFileSync(path.join(projectRoot, 'app/client/live-trading-launch.html'), 'utf8');
+  const operatorMode = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-mode.js'), 'utf8');
   const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
   const routes = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/exchange-metadata.js'), 'utf8');
   const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
@@ -7162,6 +7264,7 @@ function checkLiveTradingLaunchCenterUi() {
   const liveSafety = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-live-safety.js'), 'utf8');
   const sandboxExecution = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-sandbox-execution.js'), 'utf8');
   const tinyLiveExecution = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-tiny-live-execution.js'), 'utf8');
+  const phase4Command = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-live-arbitrage-command.js'), 'utf8');
   const schema = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/database-schema.js'), 'utf8');
   const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
   const strategyLab = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
@@ -7189,6 +7292,15 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('Place One Tiny Live Order')
     || !html.includes('Save Tiny Live API Key')
     || !html.includes('Manual owner confirmation')
+    || !html.includes('Phase 4: Live Arbitrage Command Center')
+    || !html.includes('Run Multi-Exchange Scan')
+    || !html.includes('Spread Heatmap')
+    || !html.includes('Opportunity Queue')
+    || !html.includes('Exchange Health Dashboard')
+    || !html.includes('Capital Allocation Dashboard')
+    || !html.includes('Risk Dashboard')
+    || !html.includes('Recovery And Emergency Controls')
+    || !html.includes('/js/operator-next-action.js')
     || !html.includes('Scan Read-Only Accounts')
     || !html.includes('Run Dry-Run Safety Review')
     || !html.includes('Replay Latest Spread Scan')
@@ -7204,6 +7316,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('/api/v1/live-trading-launch/phase3c/preview')
     || !html.includes('/api/v1/live-trading-launch/phase3c/place')
     || !html.includes('/api/v1/live-trading-launch/phase3c/emergency-stop')
+    || !html.includes('/api/v1/live-trading-launch/phase4/status')
+    || !html.includes('/api/v1/live-trading-launch/phase4/command-center')
     || !html.includes('/sandbox-credentials')
     || !html.includes('/tiny-live-credentials')
     || !html.includes('/api/v1/live-trading-launch/phase3c/orders/')
@@ -7226,6 +7340,9 @@ function checkLiveTradingLaunchCenterUi() {
     || !styles.includes('.live-tiny-safety-grid')
     || !styles.includes('.live-tiny-controls')
     || !styles.includes('.tiny-confirmation-box')
+    || !styles.includes('.phase4-controls')
+    || !styles.includes('.phase4-dashboard-grid')
+    || !styles.includes('.phase4-mini-card')
     || !routes.includes("app.get('/api/v1/live-trading-launch/roadmap'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/read-only-scan'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/paper-simulate-opportunity'")
@@ -7237,6 +7354,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase3c/preview'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase3c/place'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase3c/emergency-stop'")
+    || !routes.includes("app.get('/api/v1/live-trading-launch/phase4/status'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/phase4/command-center'")
     || !routes.includes("app.post('/api/v1/exchange-connectors/:id/tiny-live-credentials'")
     || !routes.includes("app.delete('/api/v1/exchange-connectors/:id/tiny-live-credentials'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase3c/orders/:id/cancel'")
@@ -7258,6 +7377,7 @@ function checkLiveTradingLaunchCenterUi() {
     || !server.includes('runSandboxOrderLifecycle')
     || !server.includes('TINY_LIVE_EXCHANGE_ADAPTERS')
     || !server.includes('runTinyLiveOrderLifecycle')
+    || !server.includes('buildLiveArbitrageCommandCenter')
     || !routeRegistration.includes('scanReadOnlyArbitrageOpportunities')
     || !routeRegistration.includes('createPaperSimulationForOpportunity')
     || !routeRegistration.includes('scanAuthenticatedReadOnlyAccounts')
@@ -7268,6 +7388,7 @@ function checkLiveTradingLaunchCenterUi() {
     || !routeRegistration.includes('runSandboxOrderLifecycle')
     || !routeRegistration.includes('buildTinyLiveApprovalCenter')
     || !routeRegistration.includes('runTinyLiveOrderLifecycle')
+    || !routeRegistration.includes('buildLiveArbitrageCommandCenter')
     || !readOnlyConnections.includes('EXPANDED_READONLY_MARKET_VENUES')
     || !readOnlyConnections.includes('fetchKucoinMarketSnapshot')
     || !readOnlyConnections.includes('fetchGateMarketSnapshot')
@@ -7304,10 +7425,27 @@ function checkLiveTradingLaunchCenterUi() {
     || !tinyLiveExecution.includes('automatedLiveTradingEnabled: false')
     || !tinyLiveExecution.includes('walletSigningEnabled: false')
     || !tinyLiveExecution.includes('withdrawalsEnabled: false')
+    || !phase4Command.includes('Live Arbitrage Command Center')
+    || !phase4Command.includes('buildVenueScores')
+    || !phase4Command.includes('buildSpreadHeatmap')
+    || !phase4Command.includes('rankArbitrageOpportunities')
+    || !phase4Command.includes('buildCrossExchangeInventory')
+    || !phase4Command.includes('buildCapitalAllocation')
+    || !phase4Command.includes('estimateTransferAndNetworkCosts')
+    || !phase4Command.includes('buildRecoveryAndOrchestration')
+    || !phase4Command.includes('multiExchangeLiveExecutionEnabled: false')
+    || !phase4Command.includes('withdrawalsEnabled: false')
+    || !operatorMode.includes("'/live-trading-launch'")
+    || !operatorMode.includes('Monitor Multi-Exchange Arbitrage Without Unlocking Live Trading')
+    || !operatorMode.includes("keepIds: ['live-arbitrage-command-center']")
+    || !operatorMode.includes('Run Multi-Exchange Scan')
+    || !operatorMode.includes('No leverage, margin, futures, withdrawals, wallet signing, multi-leg live orders, or autonomous scaling.')
     || !schema.includes('CREATE TABLE IF NOT EXISTS sandbox_order_tests')
     || !schema.includes('CREATE TABLE IF NOT EXISTS sandbox_order_events')
     || !schema.includes('CREATE TABLE IF NOT EXISTS tiny_live_order_tests')
     || !schema.includes('CREATE TABLE IF NOT EXISTS tiny_live_order_events')
+    || !schema.includes('CREATE TABLE IF NOT EXISTS live_arbitrage_command_runs')
+    || !schema.includes('CREATE TABLE IF NOT EXISTS live_arbitrage_command_events')
     || !schema.includes('CREATE TABLE IF NOT EXISTS live_trading_safety_events')
     || !dashboard.includes('/live-trading-launch')
     || !strategyLab.includes('/live-trading-launch')
@@ -7891,6 +8029,7 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     'app/client/solidity-lab.html',
     'app/client/social-ops.html',
     'app/client/creator.html',
+    'app/client/live-trading-launch.html',
     'app/client/operator-manual.html',
     'app/client/operator-training.html'
   ];
@@ -11293,6 +11432,7 @@ async function main() {
   await checkExchangeLiveSafetyModule();
   checkExchangeSandboxExecutionModule();
   checkExchangeTinyLiveExecutionModule();
+  checkExchangeLiveArbitrageCommandModule();
   checkStrategyResearchModule();
   await checkStrategyDecisionLogRuntimeModule();
   checkStrategyMathModule();

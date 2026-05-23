@@ -97,6 +97,11 @@ function registerExchangeMetadataRoutes(app, {
   getTinyLiveOrderStatus,
   buildTinyLiveApprovalCenter,
   createPlainEnglishTinyLiveError,
+  phase4Status,
+  defaultPhase4RiskPolicy,
+  phase4SupportedVenues,
+  phase4NetworkCostBaselines,
+  buildLiveArbitrageCommandCenter,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,
@@ -265,6 +270,29 @@ function registerExchangeMetadataRoutes(app, {
     };
   }
 
+  function parseLiveArbitrageCommandRun(row) {
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      user_id: row.user_id,
+      symbol: row.symbol,
+      status: row.status,
+      options: JSON.parse(row.options_json || '{}'),
+      commandCenter: JSON.parse(row.command_center_json || '{}'),
+      safetyBoundary: JSON.parse(row.safety_boundary_json || '{}'),
+      live_execution_enabled: Boolean(row.live_execution_enabled),
+      withdrawals_enabled: Boolean(row.withdrawals_enabled),
+      wallet_signing_enabled: Boolean(row.wallet_signing_enabled),
+      margin_enabled: Boolean(row.margin_enabled),
+      futures_enabled: Boolean(row.futures_enabled),
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    };
+  }
+
   async function upsertReadOnlyLocalReference({ userId, existingReferenceId, label, referenceName, notes }) {
     let referenceRow = existingReferenceId
       ? await dbGet(
@@ -415,6 +443,19 @@ function registerExchangeMetadataRoutes(app, {
     return rows.map(parseTinyLiveOrderTest);
   }
 
+  async function getLatestLiveArbitrageCommandRuns(userId, limit = 5) {
+    const rows = await dbAll(
+      `SELECT *
+       FROM live_arbitrage_command_runs
+       WHERE user_id = ?
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`,
+      [userId, limit]
+    );
+
+    return rows.map(parseLiveArbitrageCommandRun);
+  }
+
   async function findOrCreateSandboxConnector({ exchangeName }) {
     const exchangeId = normalizeExchangeId(exchangeName);
     const rows = await dbAll(
@@ -538,6 +579,15 @@ function registerExchangeMetadataRoutes(app, {
        (tiny_live_order_test_id, user_id, status, summary, payload_json)
        VALUES (?, ?, ?, ?, ?)`,
       [testId || null, userId, status, summary, JSON.stringify(payload || {})]
+    );
+  }
+
+  async function recordLiveArbitrageCommandEvent({ runId, userId, eventType, status, summary, payload = {} }) {
+    await dbRun(
+      `INSERT INTO live_arbitrage_command_events
+       (command_run_id, user_id, event_type, status, summary, payload_json)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [runId || null, userId, eventType, status, summary, JSON.stringify(payload || {})]
     );
   }
 
@@ -1038,6 +1088,167 @@ function registerExchangeMetadataRoutes(app, {
         error: createPlainEnglishTinyLiveError
           ? createPlainEnglishTinyLiveError('tiny live approval center', error)
           : error.message
+      });
+    }
+  });
+
+  app.get('/api/v1/live-trading-launch/phase4/status', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const latestRuns = await getLatestLiveArbitrageCommandRuns(req.session.userId, 5);
+      const commandCenter = latestRuns[0]?.commandCenter || buildLiveArbitrageCommandCenter({
+        connectors,
+        scan: null,
+        accountScan: null,
+        websocketPlan: buildWebSocketHealthPlan(),
+        options: {
+          symbol: req.query?.symbol || 'BTC/USDT'
+        },
+        policy: defaultPhase4RiskPolicy
+      });
+
+      res.json({
+        commandCenter,
+        latestRuns,
+        supportedVenues: phase4SupportedVenues || [],
+        statuses: phase4Status || {},
+        networkCostBaselines: phase4NetworkCostBaselines || {},
+        safetyBoundary: commandCenter.safetyBoundary
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase4/command-center', requireAuth, async (req, res) => {
+    try {
+      const options = {
+        symbol: req.body?.symbol || 'BTC/USDT',
+        orderSizeUsd: req.body?.orderSizeUsd,
+        minNetSpreadPercent: req.body?.minNetSpreadPercent,
+        minLiquidityUsd: req.body?.minLiquidityUsd,
+        maxLatencyMs: req.body?.maxLatencyMs,
+        maxSlippagePercent: req.body?.maxSlippagePercent,
+        maxCapitalPerExchangeUsd: req.body?.maxCapitalPerExchangeUsd,
+        maxCapitalPerStrategyUsd: req.body?.maxCapitalPerStrategyUsd,
+        quoteAsset: req.body?.quoteAsset || 'USDT'
+      };
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const [scan, accountScan, sandboxVaultStatus, latestSandboxTests, latestTinyLiveOrders, tinyVaultStatus] = await Promise.all([
+        scanReadOnlyArbitrageOpportunities({
+          connectors,
+          symbol: options.symbol,
+          connectedOnly: req.body?.connectedOnly === true,
+          includeExpanded: req.body?.includeExpanded !== false,
+          minNetProfitPercent: options.minNetSpreadPercent,
+          minLiquidityUsd: options.minLiquidityUsd,
+          maxLatencyMs: options.maxLatencyMs,
+          orderSizeUsd: options.orderSizeUsd,
+          slippagePercent: options.maxSlippagePercent,
+          maxVenues: req.body?.maxVenues || 16,
+          maxCandidates: req.body?.maxCandidates || 24
+        }),
+        scanAuthenticatedReadOnlyAccounts({
+          connectors,
+          symbol: options.symbol,
+          credentialLoader: connector => loadConnectorReadOnlyCredentialsForUser(connector, req.session.userId)
+        }),
+        getSandboxVaultStatus(),
+        getLatestSandboxOrderTests(req.session.userId, 25),
+        getLatestTinyLiveOrderTests(req.session.userId, 25),
+        getTinyLiveVaultStatus()
+      ]);
+      const phase3B = buildPhase3BSandboxStatus({
+        connectors,
+        vaultStatus: sandboxVaultStatus,
+        latestTests: latestSandboxTests
+      });
+      const riskProfile = await getActiveLiveReadinessRiskProfile();
+      const exchangeReadiness = await getTinyLiveExchangeReadiness({ connectors, userId: req.session.userId });
+      const phase3C = buildTinyLiveApprovalCenter({
+        connectors,
+        vaultStatus: tinyVaultStatus,
+        latestSandboxTests,
+        latestTinyLiveOrders,
+        riskProfile,
+        exchangeReadiness
+      });
+      const websocketPlan = buildWebSocketHealthPlan();
+      const commandCenter = buildLiveArbitrageCommandCenter({
+        connectors,
+        scan,
+        accountScan,
+        phase3B,
+        phase3C,
+        websocketPlan,
+        options,
+        policy: {
+          ...(defaultPhase4RiskPolicy || {}),
+          globalKillSwitchEnabled: true,
+          multiExchangeLiveExecutionEnabled: false,
+          unrestrictedAutonomousScalingEnabled: false,
+          withdrawalsEnabled: false,
+          walletSigningEnabled: false,
+          marginEnabled: false,
+          futuresEnabled: false,
+          leverageEnabled: false
+        }
+      });
+      const insert = await dbRun(
+        `INSERT INTO live_arbitrage_command_runs
+         (user_id, symbol, status, options_json, command_center_json, safety_boundary_json,
+          live_execution_enabled, withdrawals_enabled, wallet_signing_enabled, margin_enabled, futures_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          commandCenter.options.symbol,
+          commandCenter.status,
+          JSON.stringify(commandCenter.options),
+          JSON.stringify(commandCenter),
+          JSON.stringify(commandCenter.safetyBoundary),
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      );
+
+      await recordLiveArbitrageCommandEvent({
+        runId: insert.lastID,
+        userId: req.session.userId,
+        eventType: 'phase4_command_center_refresh',
+        status: commandCenter.status,
+        summary: 'Phase 4 Live Arbitrage Command Center refreshed in planning/monitoring mode. Multi-leg live execution remains locked.',
+        payload: {
+          topOpportunity: commandCenter.opportunityQueue?.[0] || null,
+          safetyBoundary: commandCenter.safetyBoundary
+        }
+      });
+
+      res.status(201).json({
+        run: parseLiveArbitrageCommandRun(await dbGet('SELECT * FROM live_arbitrage_command_runs WHERE id = ? AND user_id = ?', [insert.lastID, req.session.userId])),
+        commandCenter,
+        scan,
+        accountScan,
+        safetyBoundary: commandCenter.safetyBoundary
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishExchangeError
+          ? createPlainEnglishExchangeError('Phase 4 Live Arbitrage Command Center', error)
+          : error.message,
+        safetyBoundary: buildLiveArbitrageCommandCenter({}).safetyBoundary
       });
     }
   });

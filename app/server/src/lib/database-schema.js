@@ -668,6 +668,41 @@ function initializeDatabase(db) {
     `);
 
     db.run(`
+      CREATE TABLE IF NOT EXISTS live_arbitrage_command_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        symbol TEXT NOT NULL DEFAULT 'BTC/USDT',
+        status TEXT NOT NULL DEFAULT 'planning_and_monitoring_only',
+        options_json TEXT NOT NULL DEFAULT '{}',
+        command_center_json TEXT NOT NULL DEFAULT '{}',
+        safety_boundary_json TEXT NOT NULL DEFAULT '{}',
+        live_execution_enabled INTEGER NOT NULL DEFAULT 0,
+        withdrawals_enabled INTEGER NOT NULL DEFAULT 0,
+        wallet_signing_enabled INTEGER NOT NULL DEFAULT 0,
+        margin_enabled INTEGER NOT NULL DEFAULT 0,
+        futures_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS live_arbitrage_command_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        command_run_id INTEGER,
+        user_id INTEGER NOT NULL,
+        event_type TEXT NOT NULL,
+        status TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        payload_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(command_run_id) REFERENCES live_arbitrage_command_runs(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+
+    db.run(`
       CREATE TABLE IF NOT EXISTS arbitrage_simulation_runs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
