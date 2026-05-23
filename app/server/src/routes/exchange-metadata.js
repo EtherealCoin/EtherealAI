@@ -19,6 +19,21 @@ function registerExchangeMetadataRoutes(app, {
   findExistingRegistryConnector,
   buildExchangeConnectorManagerSummary,
   evaluateExchangeConnectorReadOnlyTest,
+  exchangeReadOnlySetupGuides,
+  dexQuoteOnlySetupGuides,
+  recommendedReadOnlyExchanges,
+  quoteOnlyConnectors,
+  sanitizeCredentialInput,
+  sanitizePermissionsChecklist,
+  getReadOnlyReferenceName,
+  saveReadOnlyVaultCredentials,
+  loadReadOnlyVaultCredentials,
+  deleteReadOnlyVaultCredentials,
+  getReadOnlyVaultStatus,
+  testReadOnlyExchangeConnection,
+  compareReadOnlyPrices,
+  buildReadOnlyConnectionSummary,
+  createPlainEnglishExchangeError,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,
@@ -32,6 +47,100 @@ function registerExchangeMetadataRoutes(app, {
     exchangeConnectorReadinessEvent: exchangeConnectorReadinessEventSelect,
     exchangeAdapterContractEvent: exchangeAdapterContractEventSelect
   } = selects;
+  const normalizeExchangeId = value => String(value || '').trim().toLowerCase().replace(/_/g, '-');
+
+  function getConnectorRegistryEntryForConnector(connector) {
+    return getExchangeConnectorRegistryEntry(connector?.settings?.registryId || connector?.exchange_name);
+  }
+
+  function getReadOnlyGuideForConnector(connector, registryEntry = null) {
+    const exchangeId = normalizeExchangeId(registryEntry?.id || connector?.settings?.registryId || connector?.exchange_name);
+
+    return exchangeReadOnlySetupGuides?.[exchangeId] || null;
+  }
+
+  function mergeReadOnlyConnectionSettings(connector, updates = {}) {
+    const currentSettings = connector?.settings && typeof connector.settings === 'object'
+      ? connector.settings
+      : {};
+    const currentConnection = currentSettings.readOnlyConnection && typeof currentSettings.readOnlyConnection === 'object'
+      ? currentSettings.readOnlyConnection
+      : {};
+
+    return {
+      ...currentSettings,
+      readOnlyConnection: {
+        ...currentConnection,
+        marketDataOnly: true,
+        liveTradingEnabled: false,
+        withdrawalsEnabled: false,
+        walletSigningEnabled: false,
+        orderEndpointEnabled: false,
+        valuesDisplayed: false,
+        browserLocalStorageUsed: false,
+        ...updates
+      }
+    };
+  }
+
+  async function upsertReadOnlyLocalReference({ userId, existingReferenceId, label, referenceName, notes }) {
+    let referenceRow = existingReferenceId
+      ? await dbGet(
+        'SELECT * FROM local_secret_references WHERE id = ? AND user_id = ?',
+        [existingReferenceId, userId]
+      )
+      : null;
+
+    if (!referenceRow) {
+      referenceRow = await dbGet(
+        'SELECT * FROM local_secret_references WHERE user_id = ? AND reference_name = ?',
+        [userId, referenceName]
+      );
+    }
+
+    if (referenceRow) {
+      await dbRun(
+        `UPDATE local_secret_references
+         SET label = ?, provider_type = ?, reference_name = ?, scope = ?, status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        [
+          label,
+          'local_vault_path',
+          referenceName,
+          'exchange_connector',
+          'configured',
+          notes,
+          referenceRow.id,
+          userId
+        ]
+      );
+
+      return parseLocalSecretReference(await dbGet(
+        'SELECT * FROM local_secret_references WHERE id = ? AND user_id = ?',
+        [referenceRow.id, userId]
+      ));
+    }
+
+    const result = await dbRun(
+      `INSERT INTO local_secret_references
+       (user_id, label, provider_type, reference_name, scope, status, notes)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        label,
+        'local_vault_path',
+        referenceName,
+        'exchange_connector',
+        'configured',
+        notes
+      ]
+    );
+
+    return parseLocalSecretReference(await dbGet(
+      'SELECT * FROM local_secret_references WHERE id = ? AND user_id = ?',
+      [result.lastID, userId]
+    ));
+  }
 
   app.get('/api/v1/local-secret-provider-capabilities', requireAuth, (req, res) => {
     try {
@@ -211,6 +320,81 @@ function registerExchangeMetadataRoutes(app, {
       res.json({ manager: buildExchangeConnectorManagerSummary(connectors) });
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/exchange-connectors/read-only/setup-guides', requireAuth, (req, res) => {
+    try {
+      res.json({
+        recommendedFirst: recommendedReadOnlyExchanges || [],
+        quoteOnlyConnectors: quoteOnlyConnectors || [],
+        cexGuides: Object.values(exchangeReadOnlySetupGuides || {}),
+        quoteOnlyGuides: Object.values(dexQuoteOnlySetupGuides || {}),
+        safetyModel: {
+          browserLocalStorageUsed: false,
+          uiStoresCredentialValues: false,
+          encryptedLocalVault: true,
+          liveTradingEnabled: false,
+          withdrawalsEnabled: false,
+          walletSigningEnabled: false,
+          orderEndpointEnabled: false,
+          privateValuesReturnedToUi: false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/exchange-connectors/read-only/status', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const vaultStatus = await getReadOnlyVaultStatus();
+
+      res.json({
+        summary: buildReadOnlyConnectionSummary(connectors),
+        vaultStatus,
+        statuses: ['Not Connected', 'Read-Only Connected', 'Error'],
+        safetyModel: {
+          marketDataOnly: true,
+          liveTradingEnabled: false,
+          withdrawalsEnabled: false,
+          walletSigningEnabled: false,
+          orderEndpointEnabled: false,
+          privateValuesReturnedToUi: false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/exchange-connectors/read-only/price-compare', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const comparison = await compareReadOnlyPrices({
+        connectors,
+        symbol: req.body?.symbol || 'BTC/USDT',
+        connectedOnly: req.body?.connectedOnly === true
+      });
+
+      res.json({ comparison });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishExchangeError
+          ? createPlainEnglishExchangeError('Exchange price comparison', error)
+          : error.message
+      });
     }
   });
 
@@ -459,6 +643,264 @@ function registerExchangeMetadataRoutes(app, {
       res.json({ test });
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/exchange-connectors/:id/read-only-credentials', requireAuth, async (req, res) => {
+    try {
+      const connector = parseExchangeConnector(await getExchangeConnectorRow(req.params.id));
+
+      if (!connector) {
+        return res.status(404).json({ error: 'Exchange connector not found' });
+      }
+
+      const registryEntry = getConnectorRegistryEntryForConnector(connector);
+      const guide = getReadOnlyGuideForConnector(connector, registryEntry);
+
+      if (!guide) {
+        return res.status(400).json({
+          error: 'This connector is quote-only or not supported for private API keys in Phase 2. Use public quote/read-only mode instead.',
+          liveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false
+        });
+      }
+
+      const permissions = sanitizePermissionsChecklist(req.body?.permissionsChecklist || {});
+
+      if (permissions.missing.length) {
+        return res.status(400).json({
+          error: 'Complete the read-only safety checklist before saving this API key.',
+          missing: permissions.missing,
+          nextClick: 'Check every safety box, then click Save to Secure Vault.',
+          liveTradingEnabled: false,
+          withdrawalsEnabled: false,
+          walletSigningEnabled: false
+        });
+      }
+
+      const credentials = sanitizeCredentialInput(req.body?.credentials || req.body || {}, guide);
+      const exchangeId = normalizeExchangeId(registryEntry?.id || connector.settings?.registryId || connector.exchange_name);
+      const displayName = registryEntry?.name || guide.displayName || connector.label || exchangeId;
+      const referenceName = getReadOnlyReferenceName({
+        userId: req.session.userId,
+        connectorId: connector.id,
+        exchangeName: exchangeId
+      });
+      const reference = await upsertReadOnlyLocalReference({
+        userId: req.session.userId,
+        existingReferenceId: connector.secret_reference_id,
+        label: `${displayName} Read-Only API Vault`,
+        referenceName,
+        notes: 'Encrypted local vault reference only. No credential values are stored in SQLite or displayed in the UI.'
+      });
+      const saved = await saveReadOnlyVaultCredentials({
+        referenceName,
+        connector,
+        exchangeName: exchangeId,
+        credentials,
+        permissionsChecklist: permissions.checklist
+      });
+      const previousConnection = connector.settings?.readOnlyConnection || {};
+      const settings = mergeReadOnlyConnectionSettings(connector, {
+        referenceName,
+        connectionStatus: 'not_connected',
+        plainEnglishStatus: 'Read-only API key saved locally. Click Test Read-Only Connection to verify market-data/account-read access.',
+        lastCredentialRotationAt: saved.rotatedAt,
+        rotationNumber: Number(previousConnection.rotationNumber || 0) + 1,
+        permissionsChecklist: permissions.checklist,
+        apiKeyFingerprint: saved.apiKeyFingerprint,
+        requiresExtraPhrase: Boolean(guide.passphraseRequired),
+        guideDisplayName: guide.displayName
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET secret_reference_id = ?, mode = ?, status = ?, settings_json = ?, secret_storage_note = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          reference.id,
+          'read_only',
+          'configured',
+          JSON.stringify(settings),
+          'Credential values are encrypted in the local owner vault. SQLite stores only a local reference.',
+          connector.id
+        ]
+      );
+      const updatedConnector = parseExchangeConnector(await getExchangeConnectorRow(connector.id));
+
+      res.status(201).json({
+        connector: updatedConnector,
+        reference,
+        vault: {
+          stored: true,
+          referenceName: saved.referenceName,
+          apiKeyFingerprint: saved.apiKeyFingerprint,
+          hasExtraPhrase: saved.hasExtraPhrase,
+          rotatedAt: saved.rotatedAt,
+          secretValuesReturned: false
+        },
+        nextClick: 'Click Test Read-Only Connection.',
+        safetyBoundary: {
+          marketDataOnly: true,
+          liveTradingEnabled: false,
+          withdrawalsEnabled: false,
+          walletSigningEnabled: false,
+          orderEndpointEnabled: false,
+          privateValuesReturnedToUi: false
+        }
+      });
+    } catch (error) {
+      res.status(error.statusCode || 500).json({
+        error: createPlainEnglishExchangeError
+          ? createPlainEnglishExchangeError('Read-only API setup', error)
+          : error.message
+      });
+    }
+  });
+
+  app.delete('/api/v1/exchange-connectors/:id/read-only-credentials', requireAuth, async (req, res) => {
+    try {
+      const connector = parseExchangeConnector(await getExchangeConnectorRow(req.params.id));
+
+      if (!connector) {
+        return res.status(404).json({ error: 'Exchange connector not found' });
+      }
+
+      const localReference = connector.secret_reference_id
+        ? parseLocalSecretReference(await dbGet(
+          'SELECT * FROM local_secret_references WHERE id = ? AND user_id = ?',
+          [connector.secret_reference_id, req.session.userId]
+        ))
+        : null;
+      const referenceName = connector.settings?.readOnlyConnection?.referenceName || localReference?.reference_name || null;
+      const deletion = referenceName
+        ? await deleteReadOnlyVaultCredentials(referenceName)
+        : { deleted: false, referenceName: null };
+
+      if (localReference) {
+        await dbRun(
+          `UPDATE local_secret_references
+           SET status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND user_id = ?`,
+          [
+            'disabled',
+            'Read-only exchange API vault entry was deleted by owner action.',
+            localReference.id,
+            req.session.userId
+          ]
+        );
+      }
+
+      const settings = mergeReadOnlyConnectionSettings(connector, {
+        referenceName: null,
+        connectionStatus: 'not_connected',
+        plainEnglishStatus: 'Read-only API key deleted. Public market data can still be used without account credentials.',
+        lastDeletedAt: new Date().toISOString(),
+        apiKeyFingerprint: null,
+        permissionsChecklist: null
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET secret_reference_id = NULL, status = ?, settings_json = ?, secret_storage_note = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          'disabled',
+          JSON.stringify(settings),
+          'No credential values stored in SQLite.',
+          connector.id
+        ]
+      );
+
+      res.json({
+        deleted: deletion.deleted,
+        connector: parseExchangeConnector(await getExchangeConnectorRow(connector.id)),
+        nextClick: 'Add a new read-only API key later if needed.',
+        safetyBoundary: {
+          liveTradingEnabled: false,
+          withdrawalsEnabled: false,
+          walletSigningEnabled: false,
+          orderEndpointEnabled: false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/exchange-connectors/:id/read-only-connection-test', requireAuth, async (req, res) => {
+    try {
+      const connector = parseExchangeConnector(await getExchangeConnectorRow(req.params.id));
+
+      if (!connector) {
+        return res.status(404).json({ error: 'Exchange connector not found' });
+      }
+
+      const registryEntry = getConnectorRegistryEntryForConnector(connector);
+      const localReference = connector.secret_reference_id
+        ? parseLocalSecretReference(await dbGet(
+          'SELECT * FROM local_secret_references WHERE id = ? AND user_id = ?',
+          [connector.secret_reference_id, req.session.userId]
+        ))
+        : null;
+      const referenceName = connector.settings?.readOnlyConnection?.referenceName || localReference?.reference_name || null;
+      const credentials = referenceName ? await loadReadOnlyVaultCredentials(referenceName) : null;
+      const test = await testReadOnlyExchangeConnection({
+        connector,
+        registryEntry,
+        credentials,
+        symbol: req.body?.symbol || 'BTC/USDT'
+      });
+      const nextStatus = test.status === 'read_only_connected' || test.status === 'quote_only_connected'
+        ? 'configured'
+        : connector.secret_reference_id
+          ? 'configured'
+          : 'disabled';
+      const settings = mergeReadOnlyConnectionSettings(connector, {
+        referenceName,
+        connectionStatus: test.status,
+        plainEnglishStatus: test.plainEnglishStatus,
+        lastTestAt: test.generatedAt,
+        lastTestExchange: test.exchangeName,
+        lastTestSymbol: test.ticker?.symbol || req.body?.symbol || 'BTC/USDT',
+        lastPublicSource: test.ticker?.source || null,
+        lastFailureIds: test.failures || []
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET mode = ?, status = ?, settings_json = ?, secret_storage_note = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          'read_only',
+          nextStatus,
+          JSON.stringify(settings),
+          connector.secret_reference_id
+            ? 'Credential values remain encrypted in the local owner vault. SQLite stores only a local reference.'
+            : 'No account credential values stored. Public market-data test only.',
+          connector.id
+        ]
+      );
+
+      res.json({
+        test,
+        connector: parseExchangeConnector(await getExchangeConnectorRow(connector.id)),
+        safetyBoundary: {
+          marketDataOnly: true,
+          liveTradingEnabled: false,
+          withdrawalsEnabled: false,
+          walletSigningEnabled: false,
+          orderEndpointEnabled: false,
+          privateValuesReturnedToUi: false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishExchangeError
+          ? createPlainEnglishExchangeError('Read-only connection test', error)
+          : error.message
+      });
     }
   });
 

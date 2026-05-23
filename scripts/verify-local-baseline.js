@@ -75,6 +75,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/db-selects.js',
     'app/server/src/lib/db-row-lookups.js',
     'app/server/src/lib/exchange-metadata.js',
+    'app/server/src/lib/exchange-readonly-connections.js',
     'app/server/src/lib/local-model-routing.js',
     'app/server/src/lib/local-model-runtime.js',
     'app/server/src/lib/live-execution-handoff.js',
@@ -3132,6 +3133,95 @@ function checkExchangeMetadataModule() {
   }
 
   pass('exchange metadata module');
+}
+
+function checkExchangeReadOnlyConnectionsModule() {
+  const {
+    OWNER_SECRETS_DIR,
+    EXCHANGE_READONLY_VAULT_PATH,
+    EXCHANGE_READONLY_VAULT_KEY_PATH,
+    RECOMMENDED_READONLY_EXCHANGES,
+    QUOTE_ONLY_CONNECTORS,
+    EXCHANGE_READONLY_SETUP_GUIDES,
+    DEX_QUOTE_ONLY_SETUP_GUIDES,
+    sanitizeCredentialInput,
+    sanitizePermissionsChecklist,
+    buildReadOnlyConnectionSummary,
+    createPlainEnglishPublicMarketDataError,
+    createPlainEnglishExchangeError
+  } = require(path.join(projectRoot, 'app/server/src/lib/exchange-readonly-connections'));
+  const requiredCex = ['binance', 'coinbase', 'kraken', 'okx', 'bybit'];
+  const requiredQuoteOnly = ['uniswap', 'jupiter', 'one-inch', 'gmx', 'hyperliquid'];
+  const permissions = sanitizePermissionsChecklist({
+    readOnlyEnabled: true,
+    tradingDisabled: true,
+    withdrawalsDisabled: true,
+    transferDisabled: true,
+    ipRestrictionReviewed: true,
+    twoFactorEnabled: true,
+    ownerUnderstandsReadOnlyOnly: true
+  });
+  const missingPermissions = sanitizePermissionsChecklist({});
+  const coinbaseCredential = sanitizeCredentialInput({
+    apiKey: 'fixture-key',
+    apiSecret: 'fixture-secret',
+    passphrase: 'fixture-passphrase'
+  }, EXCHANGE_READONLY_SETUP_GUIDES.coinbase);
+  const summary = buildReadOnlyConnectionSummary([
+    {
+      id: 91,
+      exchange_name: 'binance',
+      label: 'Binance Fixture',
+      mode: 'read_only',
+      status: 'configured',
+      secret_reference_status: 'configured',
+      settings: {
+        registryId: 'binance',
+        readOnlyConnection: {
+          connectionStatus: 'read_only_connected',
+          liveTradingEnabled: false,
+          withdrawalsEnabled: false,
+          walletSigningEnabled: false
+        }
+      }
+    },
+    {
+      id: 92,
+      exchange_name: 'uniswap',
+      label: 'Uniswap Fixture',
+      mode: 'read_only',
+      status: 'disabled',
+      secret_reference_status: null,
+      settings: {
+        registryId: 'uniswap'
+      }
+    }
+  ]);
+
+  if (
+    !OWNER_SECRETS_DIR.endsWith('EtherealAI_Secrets')
+    || !EXCHANGE_READONLY_VAULT_PATH.endsWith('exchange-readonly-vault.json')
+    || !EXCHANGE_READONLY_VAULT_KEY_PATH.endsWith('exchange-readonly-vault.key')
+    || requiredCex.some(exchange => !RECOMMENDED_READONLY_EXCHANGES.includes(exchange))
+    || requiredQuoteOnly.some(exchange => !QUOTE_ONLY_CONNECTORS.includes(exchange))
+    || requiredCex.some(exchange => !EXCHANGE_READONLY_SETUP_GUIDES[exchange]?.permissionsChecklist?.some(item => /withdraw/i.test(item)))
+    || requiredQuoteOnly.some(exchange => !DEX_QUOTE_ONLY_SETUP_GUIDES[exchange]?.warning)
+    || permissions.missing.length !== 0
+    || missingPermissions.missing.length < 4
+    || coinbaseCredential.passphrase !== 'fixture-passphrase'
+    || summary.categories.connected.length !== 1
+    || summary.categories.optionalLater.length !== 1
+    || summary.safetyBoundary.liveTradingEnabled !== false
+    || summary.safetyBoundary.withdrawalsEnabled !== false
+    || summary.safetyBoundary.walletSigningEnabled !== false
+    || !/read-only/.test(createPlainEnglishExchangeError('Binance', new Error('401 unauthorized')).toLowerCase())
+    || !/public market-data/.test(createPlainEnglishPublicMarketDataError('Bybit', new Error('403 forbidden')).toLowerCase())
+    || /private key|credential check/.test(createPlainEnglishPublicMarketDataError('Bybit', new Error('403 forbidden')).toLowerCase())
+  ) {
+    fail('exchange read-only connection module did not preserve encrypted-vault setup guides and locked safety boundaries');
+  }
+
+  pass('exchange read-only connection module');
 }
 
 function checkStrategyResearchModule() {
@@ -6506,6 +6596,7 @@ function checkExchangeConnectorManagerUi() {
   const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
   const routes = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/exchange-metadata.js'), 'utf8');
   const metadata = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-metadata.js'), 'utf8');
+  const readOnlyConnections = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-readonly-connections.js'), 'utf8');
   const routeRegistration = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/route-registration.js'), 'utf8');
 
   if (
@@ -6518,26 +6609,48 @@ function checkExchangeConnectorManagerUi() {
     || !html.includes('id="exchange-manager-choice"')
     || !html.includes('id="exchange-manager-add"')
     || !html.includes('id="exchange-manager-readonly"')
+    || !html.includes('id="exchange-manager-connect-api"')
     || !html.includes('id="exchange-manager-paper"')
     || !html.includes('id="exchange-manager-test"')
+    || !html.includes('id="read-only-api-wizard"')
+    || !html.includes('Save to Secure Vault')
+    || !html.includes('Test Read-Only Connection')
+    || !html.includes('Delete Saved Key')
+    || !html.includes('Read-Only Price / Spread Compare')
+    || !html.includes('async function saveReadOnlyApiCredentials')
+    || !html.includes('async function compareReadOnlyPricesFromUi')
     || !html.includes('async function loadExchangeConnectorManager()')
     || !html.includes('async function createExchangeManagerPlaceholders')
     || !html.includes('async function testExchangeManagerConnector')
     || !html.includes('/api/v1/exchange-connectors/manager')
     || !html.includes('/api/v1/exchange-connectors/placeholders')
-    || !html.includes('/test-read-only')
+    || !html.includes('/api/v1/exchange-connectors/read-only/setup-guides')
+    || !html.includes('/read-only-credentials')
+    || !html.includes('/read-only-connection-test')
+    || html.includes('localStorage')
+    || html.includes('sessionStorage')
     || !html.includes('Live trading, withdrawals, and wallet signing remain locked.')
     || !styles.includes('.exchange-manager-safety-grid')
     || !styles.includes('.exchange-manager-status-cards')
     || !styles.includes('.exchange-manager-card-grid')
     || !styles.includes('.exchange-manager-category')
+    || !styles.includes('.read-only-api-wizard')
+    || !styles.includes('.read-only-price-compare')
     || !routes.includes("app.get('/api/v1/exchange-connectors/registry'")
     || !routes.includes("app.get('/api/v1/exchange-connectors/manager'")
+    || !routes.includes("app.get('/api/v1/exchange-connectors/read-only/setup-guides'")
+    || !routes.includes("app.get('/api/v1/exchange-connectors/read-only/status'")
+    || !routes.includes("app.post('/api/v1/exchange-connectors/read-only/price-compare'")
+    || !routes.includes("app.post('/api/v1/exchange-connectors/:id/read-only-credentials'")
+    || !routes.includes("app.delete('/api/v1/exchange-connectors/:id/read-only-credentials'")
+    || !routes.includes("app.post('/api/v1/exchange-connectors/:id/read-only-connection-test'")
     || !routes.includes("app.post('/api/v1/exchange-connectors/placeholders'")
     || !routes.includes("app.post('/api/v1/exchange-connectors/:id/test-read-only'")
     || !routes.includes('defaultEveryConnectorOff: true')
     || !routes.includes('walletSigningEnabled: false')
     || !routes.includes('withdrawalsEnabled: false')
+    || !routes.includes('saveReadOnlyVaultCredentials')
+    || !routes.includes('privateValuesReturnedToUi: false')
     || !metadata.includes('Centralized Exchanges')
     || !metadata.includes('US-Compliant Exchanges')
     || !metadata.includes('Futures/Derivatives')
@@ -6552,8 +6665,16 @@ function checkExchangeConnectorManagerUi() {
     || !metadata.includes('EXCHANGE_CONNECTOR_RECOMMENDED_ORDER')
     || !metadata.includes('buildExchangeConnectorManagerSummary')
     || !metadata.includes('evaluateExchangeConnectorReadOnlyTest')
+    || !readOnlyConnections.includes('aes-256-gcm')
+    || !readOnlyConnections.includes('EXCHANGE_READONLY_SETUP_GUIDES')
+    || !readOnlyConnections.includes('DEX_QUOTE_ONLY_SETUP_GUIDES')
+    || !readOnlyConnections.includes('PRIVATE_READONLY_TESTERS')
+    || !readOnlyConnections.includes('compareReadOnlyPrices')
+    || !readOnlyConnections.includes('orderEndpointCalled: false')
     || !routeRegistration.includes('buildExchangeConnectorManagerSummary')
     || !routeRegistration.includes('evaluateExchangeConnectorReadOnlyTest')
+    || !routeRegistration.includes('saveReadOnlyVaultCredentials')
+    || !routeRegistration.includes('compareReadOnlyPrices')
   ) {
     fail('Exchange Connector Manager UI, routes, registry, or safety checks are missing');
   }
@@ -10531,6 +10652,7 @@ async function main() {
   checkSystemConfigRuntimeModule();
   await checkCompanyIdentityModule();
   checkExchangeMetadataModule();
+  checkExchangeReadOnlyConnectionsModule();
   checkStrategyResearchModule();
   await checkStrategyDecisionLogRuntimeModule();
   checkStrategyMathModule();

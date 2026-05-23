@@ -156,6 +156,23 @@ const {
   createExchangeAdapterContractSpec
 } = require('./lib/exchange-metadata');
 const {
+  EXCHANGE_READONLY_SETUP_GUIDES,
+  DEX_QUOTE_ONLY_SETUP_GUIDES,
+  RECOMMENDED_READONLY_EXCHANGES,
+  QUOTE_ONLY_CONNECTORS,
+  sanitizeCredentialInput,
+  sanitizePermissionsChecklist,
+  getReadOnlyReferenceName,
+  saveReadOnlyVaultCredentials,
+  loadReadOnlyVaultCredentials,
+  deleteReadOnlyVaultCredentials,
+  getReadOnlyVaultStatus,
+  testReadOnlyExchangeConnection,
+  compareReadOnlyPrices,
+  buildReadOnlyConnectionSummary,
+  createPlainEnglishExchangeError
+} = require('./lib/exchange-readonly-connections');
+const {
   parseSocialPost,
   reviewSocialContent
 } = require('./lib/social-ops');
@@ -743,6 +760,21 @@ registerEtherealRoutes(app, {
   findExistingRegistryConnector,
   buildExchangeConnectorManagerSummary,
   evaluateExchangeConnectorReadOnlyTest,
+  exchangeReadOnlySetupGuides: EXCHANGE_READONLY_SETUP_GUIDES,
+  dexQuoteOnlySetupGuides: DEX_QUOTE_ONLY_SETUP_GUIDES,
+  recommendedReadOnlyExchanges: RECOMMENDED_READONLY_EXCHANGES,
+  quoteOnlyConnectors: QUOTE_ONLY_CONNECTORS,
+  sanitizeCredentialInput,
+  sanitizePermissionsChecklist,
+  getReadOnlyReferenceName,
+  saveReadOnlyVaultCredentials,
+  loadReadOnlyVaultCredentials,
+  deleteReadOnlyVaultCredentials,
+  getReadOnlyVaultStatus,
+  testReadOnlyExchangeConnection,
+  compareReadOnlyPrices,
+  buildReadOnlyConnectionSummary,
+  createPlainEnglishExchangeError,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,

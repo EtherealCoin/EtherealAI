@@ -237,7 +237,7 @@
 
         <section class="model-panel operator-simple-keep" id="exchange-connector-manager">
             <h2>Exchange Connector Manager</h2>
-            <p class="inline-status">What is this? A safe exchange directory and setup manager. What to do next: create placeholders for the recommended first exchanges, then connect read-only APIs later only when you are ready. No keys go into this screen. Live trading, withdrawals, and wallet signing stay locked.</p>
+            <p class="inline-status">What is this? A safe exchange directory and read-only setup manager. What to do next: create placeholders for the recommended exchanges, then use the read-only wizard when you are ready. API values are saved only to the local encrypted owner vault, never browser storage or SQLite. Live trading, withdrawals, and wallet signing stay locked.</p>
             <div id="exchange-manager-safety" class="exchange-manager-safety-grid">
                 <article>
                     <strong>Default State</strong>
@@ -266,6 +266,7 @@
                 </div>
                 <button type="button" id="exchange-manager-add">Add Exchange</button>
                 <button type="button" id="exchange-manager-readonly">Read-only market data</button>
+                <button type="button" id="exchange-manager-connect-api">Connect Read-Only API</button>
                 <button type="button" id="exchange-manager-paper">Paper trading only</button>
                 <button type="button" id="exchange-manager-test">Test connection</button>
             </div>
@@ -276,6 +277,82 @@
                 <button type="button" id="exchange-manager-hide-unsupported">Hide unsupported exchanges</button>
                 <button type="button" id="exchange-manager-show-recommended">Show recommended first 5</button>
             </div>
+
+            <div id="exchange-readonly-categories" class="exchange-readonly-categories">
+                <article>
+                    <span>Recommended First</span>
+                    <strong>Binance, Coinbase, Kraken, OKX, Bybit</strong>
+                </article>
+                <article>
+                    <span>Connected</span>
+                    <strong>Loading...</strong>
+                </article>
+                <article>
+                    <span>Not Connected</span>
+                    <strong>Loading...</strong>
+                </article>
+                <article>
+                    <span>Optional Later</span>
+                    <strong>DEX and aggregator quotes</strong>
+                </article>
+                <article>
+                    <span>Unsupported / Placeholder</span>
+                    <strong>Manual only</strong>
+                </article>
+            </div>
+
+            <section id="read-only-api-wizard" class="read-only-api-wizard" hidden>
+                <div class="read-only-wizard-heading">
+                    <div>
+                        <span>Phase 2</span>
+                        <h3 id="read-only-wizard-title">Connect Read-Only API</h3>
+                        <p id="read-only-wizard-subtitle">Market-data and account-read verification only. No orders. No withdrawals. No wallet signing.</p>
+                    </div>
+                    <button type="button" id="read-only-wizard-close">Close</button>
+                </div>
+                <div id="read-only-wizard-guide" class="read-only-wizard-guide">Choose a recommended exchange to see setup instructions.</div>
+                <form id="read-only-api-form" class="read-only-api-form">
+                    <input type="hidden" id="read-only-connector-id">
+                    <div class="read-only-checklist">
+                        <label><input type="checkbox" id="readonly-check-read"> Read/view access is enabled.</label>
+                        <label><input type="checkbox" id="readonly-check-trading"> Trading and order placement are disabled.</label>
+                        <label><input type="checkbox" id="readonly-check-withdrawals"> Withdrawals are disabled.</label>
+                        <label><input type="checkbox" id="readonly-check-transfer"> Transfers are disabled.</label>
+                        <label><input type="checkbox" id="readonly-check-ip"> IP restriction was enabled or reviewed.</label>
+                        <label><input type="checkbox" id="readonly-check-2fa"> Two-factor authentication is enabled on the exchange account.</label>
+                        <label><input type="checkbox" id="readonly-check-owner"> I understand this is read-only only.</label>
+                    </div>
+                    <label for="readonly-api-key">API Key</label>
+                    <input type="password" id="readonly-api-key" autocomplete="off" spellcheck="false">
+                    <label for="readonly-api-secret">API Secret</label>
+                    <input type="password" id="readonly-api-secret" autocomplete="off" spellcheck="false">
+                    <div id="readonly-passphrase-row">
+                        <label for="readonly-passphrase">Passphrase</label>
+                        <input type="password" id="readonly-passphrase" autocomplete="off" spellcheck="false">
+                    </div>
+                    <div class="button-row">
+                        <button type="submit" id="readonly-save-vault">Save to Secure Vault</button>
+                        <button type="button" id="readonly-test-connection">Test Read-Only Connection</button>
+                        <button type="button" id="readonly-delete-credentials">Delete Saved Key</button>
+                    </div>
+                    <p class="workflow-helper-text">After saving, these fields are cleared. EtherealAI stores encrypted values only in the local owner vault and returns only status.</p>
+                </form>
+                <div id="read-only-connection-status" class="read-only-connection-status">No read-only API action has run yet.</div>
+            </section>
+
+            <section class="read-only-price-compare" id="read-only-price-compare">
+                <h3>Read-Only Price / Spread Compare</h3>
+                <p class="workflow-helper-text">Compare public market prices across connected and supported read-only exchanges. This is market data only; EtherealAI cannot place orders from here.</p>
+                <div class="compact-form">
+                    <input type="text" id="read-only-compare-symbol" value="BTC/USDT" aria-label="Symbol to compare">
+                    <label class="checkbox-line">
+                        <input type="checkbox" id="read-only-connected-only">
+                        Connected only
+                    </label>
+                    <button type="button" id="read-only-compare-prices">Compare Read-Only Prices</button>
+                </div>
+                <div id="read-only-price-results" class="comparison-table">No price comparison has run yet.</div>
+            </section>
 
             <div id="exchange-manager-status-cards" class="exchange-manager-status-cards">
                 <article>
@@ -1285,6 +1362,9 @@
         let availableSecretProviderCapabilities = [];
         let selectedConnectorId = null;
         let latestExchangeConnectorManager = null;
+        let latestReadOnlySetupGuides = { cexGuides: [], quoteOnlyGuides: [] };
+        let latestReadOnlyConnectionStatus = null;
+        let selectedReadOnlyConnectorId = null;
         let exchangeManagerShowUnsupported = true;
         let exchangeManagerRecommendedOnly = false;
         let availableMarketProviders = [];
@@ -3552,6 +3632,188 @@
             return (latestExchangeConnectorManager?.registry || []).find(entry => entry.id === selectedId) || null;
         }
 
+        function getReadOnlyGuideForEntry(entry) {
+            if (!entry) {
+                return null;
+            }
+
+            return (latestReadOnlySetupGuides.cexGuides || []).find(guide => guide.exchangeName === entry.id)
+                || (latestReadOnlySetupGuides.quoteOnlyGuides || []).find(guide => guide.exchangeName === entry.id)
+                || null;
+        }
+
+        function getReadOnlyConnectorForEntry(entry) {
+            if (!entry) {
+                return null;
+            }
+
+            return (latestExchangeConnectorManager?.connectors || []).find(connector => (
+                connector.id === entry.existingConnectorId
+                || connector.settings?.registryId === entry.id
+                || connector.exchange_name === entry.exchangeName
+            )) || null;
+        }
+
+        function clearReadOnlyCredentialFields() {
+            ['readonly-api-key', 'readonly-api-secret', 'readonly-passphrase'].forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    input.value = '';
+                }
+            });
+        }
+
+        function getReadOnlyPermissionsPayload() {
+            return {
+                readOnlyEnabled: document.getElementById('readonly-check-read')?.checked === true,
+                tradingDisabled: document.getElementById('readonly-check-trading')?.checked === true,
+                withdrawalsDisabled: document.getElementById('readonly-check-withdrawals')?.checked === true,
+                transferDisabled: document.getElementById('readonly-check-transfer')?.checked === true,
+                ipRestrictionReviewed: document.getElementById('readonly-check-ip')?.checked === true,
+                twoFactorEnabled: document.getElementById('readonly-check-2fa')?.checked === true,
+                ownerUnderstandsReadOnlyOnly: document.getElementById('readonly-check-owner')?.checked === true
+            };
+        }
+
+        function renderReadOnlyGuide(entry, connector) {
+            const guide = getReadOnlyGuideForEntry(entry);
+            const guideOutput = document.getElementById('read-only-wizard-guide');
+            const title = document.getElementById('read-only-wizard-title');
+            const subtitle = document.getElementById('read-only-wizard-subtitle');
+            const form = document.getElementById('read-only-api-form');
+            const passphraseRow = document.getElementById('readonly-passphrase-row');
+            const connectorInput = document.getElementById('read-only-connector-id');
+            const privateApiSupported = Boolean((latestReadOnlySetupGuides.cexGuides || []).some(item => item.exchangeName === entry?.id));
+
+            selectedReadOnlyConnectorId = connector?.id || null;
+
+            if (connectorInput) {
+                connectorInput.value = connector?.id || '';
+            }
+
+            if (title) {
+                title.textContent = guide
+                    ? `${guide.displayName} Read-Only Connection`
+                    : `${entry?.name || 'Exchange'} Read-Only Connection`;
+            }
+
+            if (subtitle) {
+                subtitle.textContent = privateApiSupported
+                    ? 'Use a read/view-only API key. Trading, withdrawals, wallet signing, and real orders remain disabled.'
+                    : 'This venue is quote/read-only for now. No wallet connection or signing is allowed in Phase 2.';
+            }
+
+            if (passphraseRow) {
+                passphraseRow.hidden = !guide?.passphraseRequired;
+            }
+
+            if (form) {
+                form.hidden = !privateApiSupported;
+            }
+
+            if (!guideOutput) {
+                return;
+            }
+
+            if (!guide) {
+                guideOutput.innerHTML = '<p class="workflow-helper-text">No guided setup is available for this exchange yet. Use it as a placeholder only.</p>';
+                return;
+            }
+
+            const steps = guide.exactSteps || guide.instructions || [];
+            const checklist = guide.permissionsChecklist || [
+                'Quote/read-only only.',
+                'No wallet connection.',
+                'No signing.',
+                'No swap/order execution.'
+            ];
+
+            guideOutput.innerHTML = `
+                <div class="read-only-guide-grid">
+                    <article>
+                        <span>Setup Page</span>
+                        <a href="${escapeHtml(guide.setupUrl || '#')}" target="_blank" rel="noreferrer">Open ${escapeHtml(guide.displayName)} setup</a>
+                    </article>
+                    <article>
+                        <span>Connection Type</span>
+                        <strong>${privateApiSupported ? 'Read-only API' : 'Quote-only connector'}</strong>
+                    </article>
+                    <article>
+                        <span>Safety State</span>
+                        <strong>Live trading locked</strong>
+                    </article>
+                </div>
+                <h4>Exact setup instructions</h4>
+                <ol>${steps.map(step => `<li>${escapeHtml(step)}</li>`).join('')}</ol>
+                <h4>Permissions checklist</h4>
+                <ul>${checklist.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+                <p class="read-only-warning">${escapeHtml(guide.warning || 'Keep this connector read-only.')}</p>
+            `;
+        }
+
+        function renderReadOnlyConnectionCategories(status = latestReadOnlyConnectionStatus) {
+            const output = document.getElementById('exchange-readonly-categories');
+            const summary = status?.summary || {};
+            const categories = summary.categories || {};
+
+            if (!output) {
+                return;
+            }
+
+            output.innerHTML = `
+                <article>
+                    <span>Recommended First</span>
+                    <strong>${(categories.recommendedFirst || []).length || 5}</strong>
+                    <small>Binance, Coinbase, Kraken, OKX, Bybit</small>
+                </article>
+                <article>
+                    <span>Connected</span>
+                    <strong>${(categories.connected || []).length}</strong>
+                    <small>Read-only or quote-only verified</small>
+                </article>
+                <article>
+                    <span>Not Connected</span>
+                    <strong>${(categories.notConnected || []).length}</strong>
+                    <small>Safe placeholders waiting for keys</small>
+                </article>
+                <article>
+                    <span>Optional Later</span>
+                    <strong>${(categories.optionalLater || []).length}</strong>
+                    <small>DEX / aggregator quote connectors</small>
+                </article>
+                <article>
+                    <span>Unsupported / Placeholder</span>
+                    <strong>${(categories.unsupportedPlaceholder || []).length}</strong>
+                    <small>Manual or future connectors</small>
+                </article>
+            `;
+        }
+
+        async function loadReadOnlySetupGuides() {
+            const response = await fetch('/api/v1/exchange-connectors/read-only/setup-guides');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('exchange-manager-status').textContent = data.error || 'Unable to load read-only setup guides.';
+                return;
+            }
+
+            latestReadOnlySetupGuides = data;
+        }
+
+        async function loadReadOnlyConnectionStatus() {
+            const response = await fetch('/api/v1/exchange-connectors/read-only/status');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('exchange-manager-status').textContent = data.error || 'Unable to load read-only connection status.';
+                return;
+            }
+
+            latestReadOnlyConnectionStatus = data;
+            renderReadOnlyConnectionCategories(data);
+        }
+
         function renderExchangeManagerChoice(entries = []) {
             const select = document.getElementById('exchange-manager-choice');
             const legacySelect = document.getElementById('connector-exchange');
@@ -3691,9 +3953,11 @@
                                     <small>${escapeHtml(connector.mode)} · ${escapeHtml(connector.status)}</small>
                                     <div class="exchange-manager-pill-row">
                                         <em>${escapeHtml(connector.managerStatus)}</em>
+                                        <em>${escapeHtml(connector.settings?.readOnlyConnection?.connectionStatus || 'not connected')}</em>
                                         <em>Live locked</em>
                                         <em>No withdrawals</em>
                                     </div>
+                                    <button type="button" data-exchange-manager-connect-readonly="${connector.id}">Connect Read-Only API</button>
                                     <button type="button" data-exchange-manager-test-connector="${connector.id}">Test connection</button>
                                 </article>
                             `).join('')}
@@ -3703,6 +3967,9 @@
 
                 connectorsOutput.querySelectorAll('button[data-exchange-manager-test-connector]').forEach(button => {
                     button.addEventListener('click', () => testExchangeManagerConnector(button.dataset.exchangeManagerTestConnector));
+                });
+                connectorsOutput.querySelectorAll('button[data-exchange-manager-connect-readonly]').forEach(button => {
+                    button.addEventListener('click', () => openReadOnlyApiWizard({ connectorId: Number(button.dataset.exchangeManagerConnectReadonly) }));
                 });
             }
 
@@ -3761,6 +4028,7 @@
 
             renderExchangeConnectorManager(data.manager);
             await loadConnectors();
+            await loadReadOnlyConnectionStatus();
 
             output.textContent = [
                 `${data.created?.length || 0} connector placeholder(s) created.`,
@@ -3791,9 +4059,15 @@
                 return;
             }
 
-            output.textContent = 'Running safe local connection test...';
-            const response = await fetch(`/api/v1/exchange-connectors/${resolvedConnectorId}/test-read-only`, {
-                method: 'POST'
+            output.textContent = 'Testing read-only market-data connection...';
+            const response = await fetch(`/api/v1/exchange-connectors/${resolvedConnectorId}/read-only-connection-test`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    symbol: document.getElementById('read-only-compare-symbol')?.value || 'BTC/USDT'
+                })
             });
             const data = await response.json();
 
@@ -3805,15 +4079,233 @@
             const test = data.test || {};
             output.textContent = [
                 `Status: ${test.connectionStatus || test.status}`,
-                `Next: ${test.nextStep || 'No next step.'}`,
-                'Network call made: no',
+                test.plainEnglishStatus || 'Read-only test finished.',
+                'Network call made: market-data/account-read only',
                 'Live trading: locked',
+                'Withdrawals: disabled',
                 'Wallet signing: disabled',
                 '',
                 ...((test.checks || []).map(check => `${check.passed ? 'OK' : 'REVIEW'} ${check.label}: ${check.metric || ''}`))
             ].join('\n');
 
             await loadExchangeConnectorManager();
+            await loadReadOnlyConnectionStatus();
+        }
+
+        async function openReadOnlyApiWizard({ connectorId = null } = {}) {
+            const output = document.getElementById('exchange-manager-status');
+            let entry = getSelectedExchangeManagerEntry();
+            let connector = null;
+
+            if (connectorId) {
+                connector = (latestExchangeConnectorManager?.connectors || []).find(item => Number(item.id) === Number(connectorId)) || null;
+                entry = (latestExchangeConnectorManager?.registry || []).find(item => (
+                    item.existingConnectorId === connector?.id
+                    || item.id === connector?.settings?.registryId
+                    || item.exchangeName === connector?.exchange_name
+                )) || entry;
+            } else if (entry) {
+                connector = getReadOnlyConnectorForEntry(entry);
+            }
+
+            if (!entry) {
+                output.textContent = 'Choose an exchange first.';
+                return;
+            }
+
+            if (!connector && entry.connectorSupported) {
+                const created = await createExchangeManagerPlaceholders({
+                    scope: 'single',
+                    mode: 'read_only',
+                    exchangeId: entry.id
+                });
+                entry = (created?.manager?.registry || []).find(item => item.id === entry.id) || entry;
+                connector = (created?.manager?.connectors || []).find(item => item.settings?.registryId === entry.id || item.exchange_name === entry.exchangeName) || null;
+            }
+
+            if (!connector) {
+                output.textContent = `${entry.name} is informational/manual only right now. No API wizard is available for it yet.`;
+                return;
+            }
+
+            document.getElementById('read-only-api-wizard').hidden = false;
+            document.getElementById('read-only-connection-status').textContent = 'Wizard ready. Follow the setup instructions, complete the checklist, then save to the secure vault.';
+            clearReadOnlyCredentialFields();
+            renderReadOnlyGuide(entry, connector);
+            document.getElementById('read-only-api-wizard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function saveReadOnlyApiCredentials() {
+            const connectorId = selectedReadOnlyConnectorId || document.getElementById('read-only-connector-id')?.value;
+            const output = document.getElementById('read-only-connection-status');
+
+            if (!connectorId) {
+                output.textContent = 'Choose an exchange and open the read-only wizard first.';
+                return;
+            }
+
+            output.textContent = 'Saving to the local encrypted owner vault...';
+            const response = await fetch(`/api/v1/exchange-connectors/${connectorId}/read-only-credentials`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    credentials: {
+                        apiKey: document.getElementById('readonly-api-key')?.value || '',
+                        apiSecret: document.getElementById('readonly-api-secret')?.value || '',
+                        passphrase: document.getElementById('readonly-passphrase')?.value || ''
+                    },
+                    permissionsChecklist: getReadOnlyPermissionsPayload()
+                })
+            });
+            const data = await response.json();
+            clearReadOnlyCredentialFields();
+
+            if (!response.ok) {
+                output.textContent = [
+                    data.error || 'Read-only API save failed.',
+                    data.nextClick ? `Next: ${data.nextClick}` : '',
+                    ...(data.missing || []).map(item => `Fix: ${item}`)
+                ].filter(Boolean).join('\n');
+                return;
+            }
+
+            output.textContent = [
+                'Read-only API key saved to secure local vault.',
+                `Saved key fingerprint: ${data.vault?.apiKeyFingerprint || 'stored'}`,
+                data.nextClick || 'Click Test Read-Only Connection.',
+                'Live trading: locked',
+                'Withdrawals: disabled',
+                'Wallet signing: disabled'
+            ].join('\n');
+
+            await loadExchangeConnectorManager();
+            await loadReadOnlyConnectionStatus();
+            await loadConnectors();
+        }
+
+        async function testReadOnlyApiConnection() {
+            const connectorId = selectedReadOnlyConnectorId || document.getElementById('read-only-connector-id')?.value;
+            const output = document.getElementById('read-only-connection-status');
+
+            if (!connectorId) {
+                output.textContent = 'Choose an exchange and open the read-only wizard first.';
+                return;
+            }
+
+            output.textContent = 'Testing read-only connection. No live trading or orders are available from this check.';
+            await testExchangeManagerConnector(connectorId);
+            output.textContent = document.getElementById('exchange-manager-status').textContent;
+        }
+
+        async function deleteReadOnlyApiCredentials() {
+            const connectorId = selectedReadOnlyConnectorId || document.getElementById('read-only-connector-id')?.value;
+            const output = document.getElementById('read-only-connection-status');
+
+            if (!connectorId) {
+                output.textContent = 'Choose an exchange and open the read-only wizard first.';
+                return;
+            }
+
+            if (!window.confirm('Delete the saved read-only API key for this connector? This will not affect paper trading.')) {
+                return;
+            }
+
+            output.textContent = 'Deleting saved read-only API key from the local owner vault...';
+            const response = await fetch(`/api/v1/exchange-connectors/${connectorId}/read-only-credentials`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Unable to delete saved read-only API key.';
+                return;
+            }
+
+            clearReadOnlyCredentialFields();
+            output.textContent = [
+                data.deleted ? 'Saved read-only API key deleted.' : 'No saved read-only API key was found.',
+                data.nextClick || 'You can add a new read-only key later.',
+                'Live trading remains locked.'
+            ].join('\n');
+
+            await loadExchangeConnectorManager();
+            await loadReadOnlyConnectionStatus();
+            await loadConnectors();
+        }
+
+        async function compareReadOnlyPricesFromUi() {
+            const output = document.getElementById('read-only-price-results');
+            const symbol = document.getElementById('read-only-compare-symbol')?.value || 'BTC/USDT';
+
+            output.textContent = 'Comparing read-only market prices...';
+            const response = await fetch('/api/v1/exchange-connectors/read-only/price-compare', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    symbol,
+                    connectedOnly: document.getElementById('read-only-connected-only')?.checked === true
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Read-only price comparison failed.';
+                return;
+            }
+
+            const comparison = data.comparison || {};
+            const results = comparison.results || [];
+
+            output.innerHTML = `
+                <div class="read-only-spread-summary">
+                    <article>
+                        <span>Compared</span>
+                        <strong>${escapeHtml(String(comparison.comparedCount || 0))}</strong>
+                    </article>
+                    <article>
+                        <span>Best Buy</span>
+                        <strong>${escapeHtml(comparison.spread?.bestBuyExchange || 'N/A')}</strong>
+                        <small>${comparison.spread?.bestBuyAsk ? `$${Number(comparison.spread.bestBuyAsk).toLocaleString()}` : '-'}</small>
+                    </article>
+                    <article>
+                        <span>Best Sell</span>
+                        <strong>${escapeHtml(comparison.spread?.bestSellExchange || 'N/A')}</strong>
+                        <small>${comparison.spread?.bestSellBid ? `$${Number(comparison.spread.bestSellBid).toLocaleString()}` : '-'}</small>
+                    </article>
+                    <article>
+                        <span>Gross Spread</span>
+                        <strong>${Number.isFinite(comparison.spread?.grossSpreadPercent) ? `${comparison.spread.grossSpreadPercent.toFixed(4)}%` : 'N/A'}</strong>
+                        <small>Before fees/slippage</small>
+                    </article>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Exchange</th>
+                            <th>Status</th>
+                            <th>Bid</th>
+                            <th>Ask</th>
+                            <th>Source / Error</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${results.map(result => `
+                            <tr>
+                                <td>${escapeHtml(result.displayName || result.exchangeName)}</td>
+                                <td>${escapeHtml(result.connectionStatus || result.status)}</td>
+                                <td>${result.ticker?.bid ? Number(result.ticker.bid).toLocaleString() : '-'}</td>
+                                <td>${result.ticker?.ask ? Number(result.ticker.ask).toLocaleString() : '-'}</td>
+                                <td>${escapeHtml(result.ticker?.source || result.error || '-')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <p class="workflow-helper-text">Market data only. No orders were placed, and live trading remains locked.</p>
+            `;
         }
 
         async function patchConnectorStatus(connectorId, status) {
@@ -8537,6 +9029,10 @@
             });
         });
 
+        document.getElementById('exchange-manager-connect-api').addEventListener('click', async () => {
+            await openReadOnlyApiWizard();
+        });
+
         document.getElementById('exchange-manager-paper').addEventListener('click', async () => {
             const entry = getSelectedExchangeManagerEntry();
 
@@ -8578,6 +9074,23 @@
         document.getElementById('exchange-manager-show-recommended').addEventListener('click', () => {
             exchangeManagerRecommendedOnly = !exchangeManagerRecommendedOnly;
             renderExchangeConnectorManager(latestExchangeConnectorManager);
+        });
+        document.getElementById('read-only-wizard-close').addEventListener('click', () => {
+            document.getElementById('read-only-api-wizard').hidden = true;
+            clearReadOnlyCredentialFields();
+        });
+        document.getElementById('read-only-api-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            await saveReadOnlyApiCredentials();
+        });
+        document.getElementById('readonly-test-connection').addEventListener('click', async () => {
+            await testReadOnlyApiConnection();
+        });
+        document.getElementById('readonly-delete-credentials').addEventListener('click', async () => {
+            await deleteReadOnlyApiCredentials();
+        });
+        document.getElementById('read-only-compare-prices').addEventListener('click', async () => {
+            await compareReadOnlyPricesFromUi();
         });
 
         document.getElementById('refresh-automation-safety').addEventListener('click', async () => {
@@ -9261,6 +9774,8 @@
                 loadExchangeAdapterScaffolds(),
                 loadConnectors(),
                 loadExchangeConnectorManager(),
+                loadReadOnlySetupGuides(),
+                loadReadOnlyConnectionStatus(),
                 loadMarketProviders(),
                 loadRefreshSchedules(),
                 loadRefreshRuns(),

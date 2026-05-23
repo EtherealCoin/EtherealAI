@@ -365,6 +365,45 @@ Verified locally:
 - Schedule history for Coinbase schedule `#3` reports 2 runs, 2 imports, 1 active import, and 1 archived import. Cleanup kept import `#17` active and archived older duplicate import `#16`; Strategy Lab `History` and `Cleanup` buttons were browser-verified.
 - Kraken public provider `#3` was created and health-checked against BTC/USD `1h` candles. It returned 3 candles with quality `100`, and Strategy Lab shows both the `Kraken Public` provider option and saved provider row.
 
+## 2026-05-23 - Phase 2 Read-Only Exchange API Connections
+
+- Added `app/server/src/lib/exchange-readonly-connections.js`.
+- Added encrypted local owner-vault support at `~/EtherealAI_Secrets/exchange-readonly-vault.json` with a permission-locked vault key file.
+- Added read-only setup guides for Binance, Coinbase, Kraken, OKX, and Bybit.
+- Added quote/read-only setup guides for Uniswap, Jupiter, 1inch, GMX, and Hyperliquid.
+- Added authenticated APIs:
+  - `GET /api/v1/exchange-connectors/read-only/setup-guides`
+  - `GET /api/v1/exchange-connectors/read-only/status`
+  - `POST /api/v1/exchange-connectors/:id/read-only-credentials`
+  - `DELETE /api/v1/exchange-connectors/:id/read-only-credentials`
+  - `POST /api/v1/exchange-connectors/:id/read-only-connection-test`
+  - `POST /api/v1/exchange-connectors/read-only/price-compare`
+- Added Strategy Lab UI:
+  - `Connect Read-Only API` wizard
+  - per-exchange instructions
+  - permissions checklist
+  - secure vault save
+  - read-only connection test
+  - delete saved key
+  - read-only price/spread comparison
+  - categories for Recommended First, Connected, Not Connected, Optional Later, and Unsupported / Placeholder
+- Safety state:
+  - No browser storage for API values.
+  - No API values in SQLite.
+  - No secret values displayed after entry.
+  - CEX keys are read-only by design.
+  - DEX/aggregator connectors stay quote-only.
+  - Live trading, withdrawals, wallet signing, and order endpoints remain locked.
+- Verification:
+  - `npm test` passed.
+  - Static tests now cover the read-only exchange connection module, encrypted vault metadata, UI workflow, routes, and safety boundaries.
+  - Browser-verified the Strategy Lab Exchange Connector Manager after server restart.
+  - Browser-verified the Binance `Connect Read-Only API` wizard opens with setup instructions, safety checklist, secure vault save, test, and delete controls.
+  - Browser-verified `Read-Only Price / Spread Compare` compares BTC/USDT public prices across supported exchanges while reporting market-data-only safety boundaries.
+  - Screenshots saved:
+    - `/Users/ethereal/Desktop/EtherealAI_ReadOnly_API_Wizard_Open.png`
+    - `/Users/ethereal/Desktop/EtherealAI_ReadOnly_Exchange_API_Wizard_Check.png`
+
 ## Slowdown Cause To Check
 
 `node_modules/` was not listed in `.gitignore`, so Git/VS Code/assistant tools may scan thousands of dependency files.

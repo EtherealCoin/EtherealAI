@@ -4433,13 +4433,15 @@ footer {
     align-items: end;
     display: grid;
     gap: 10px;
-    grid-template-columns: minmax(260px, 1fr) repeat(4, auto);
+    grid-template-columns: minmax(260px, 1fr) repeat(5, auto);
     margin: 16px 0;
 }
 
 .exchange-manager-actions button,
 .exchange-manager-bulk button,
-.exchange-manager-card button {
+.exchange-manager-card button,
+.read-only-api-form button,
+.read-only-price-compare button {
     min-height: 42px;
 }
 
@@ -4449,6 +4451,117 @@ footer {
 
 .exchange-manager-card-grid {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.exchange-readonly-categories,
+.read-only-guide-grid,
+.read-only-spread-summary {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    margin: 16px 0;
+}
+
+.exchange-readonly-categories article,
+.read-only-guide-grid article,
+.read-only-spread-summary article,
+.read-only-api-wizard,
+.read-only-price-compare,
+.read-only-connection-status {
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    padding: 14px;
+}
+
+.exchange-readonly-categories span,
+.read-only-guide-grid span,
+.read-only-spread-summary span {
+    color: var(--text-secondary);
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.exchange-readonly-categories strong,
+.read-only-guide-grid strong,
+.read-only-spread-summary strong {
+    color: var(--text-primary);
+    display: block;
+    font-size: 1rem;
+    margin-top: 5px;
+}
+
+.exchange-readonly-categories small,
+.read-only-spread-summary small {
+    color: var(--text-secondary);
+    display: block;
+    line-height: 1.45;
+    margin-top: 4px;
+}
+
+.read-only-wizard-heading {
+    align-items: start;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+}
+
+.read-only-wizard-heading span {
+    color: var(--brand-blue);
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.read-only-wizard-heading h3,
+.read-only-price-compare h3 {
+    color: var(--text-primary);
+    margin: 4px 0 6px;
+}
+
+.read-only-wizard-heading p,
+.read-only-wizard-guide li,
+.read-only-wizard-guide p,
+.read-only-connection-status {
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.read-only-api-form {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.read-only-checklist {
+    background: color-mix(in srgb, var(--brand-blue) 7%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 25%, var(--border));
+    border-radius: 8px;
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+}
+
+.read-only-checklist label {
+    align-items: start;
+    color: var(--text-primary);
+    display: flex;
+    gap: 8px;
+    line-height: 1.35;
+}
+
+.read-only-warning {
+    background: var(--status-warning-bg);
+    border: 1px solid color-mix(in srgb, var(--status-warning) 45%, var(--border));
+    border-radius: 8px;
+    color: var(--status-warning-text) !important;
+    font-weight: 700;
+    padding: 10px;
 }
 
 .exchange-manager-card em {
@@ -4506,10 +4619,22 @@ footer {
 :root[data-theme="night"] .exchange-manager-status-cards article,
 :root[data-theme="night"] .exchange-manager-card,
 :root[data-theme="night"] .exchange-manager-category,
+:root[data-theme="night"] .exchange-readonly-categories article,
+:root[data-theme="night"] .read-only-api-wizard,
+:root[data-theme="night"] .read-only-price-compare,
+:root[data-theme="night"] .read-only-guide-grid article,
+:root[data-theme="night"] .read-only-spread-summary article,
+:root[data-theme="night"] .read-only-connection-status,
 :root:not([data-theme="day"]) .exchange-manager-safety-grid article,
 :root:not([data-theme="day"]) .exchange-manager-status-cards article,
 :root:not([data-theme="day"]) .exchange-manager-card,
-:root:not([data-theme="day"]) .exchange-manager-category {
+:root:not([data-theme="day"]) .exchange-manager-category,
+:root:not([data-theme="day"]) .exchange-readonly-categories article,
+:root:not([data-theme="day"]) .read-only-api-wizard,
+:root:not([data-theme="day"]) .read-only-price-compare,
+:root:not([data-theme="day"]) .read-only-guide-grid article,
+:root:not([data-theme="day"]) .read-only-spread-summary article,
+:root:not([data-theme="day"]) .read-only-connection-status {
     background: var(--surface-muted) !important;
     border-color: var(--border) !important;
     color: var(--text-primary) !important;
@@ -4519,16 +4644,42 @@ footer {
 :root[data-theme="night"] .exchange-manager-status-cards *,
 :root[data-theme="night"] .exchange-manager-card *,
 :root[data-theme="night"] .exchange-manager-category *,
+:root[data-theme="night"] .exchange-readonly-categories *,
+:root[data-theme="night"] .read-only-api-wizard *,
+:root[data-theme="night"] .read-only-price-compare *,
+:root[data-theme="night"] .read-only-guide-grid *,
+:root[data-theme="night"] .read-only-spread-summary *,
+:root[data-theme="night"] .read-only-connection-status *,
 :root:not([data-theme="day"]) .exchange-manager-safety-grid *,
 :root:not([data-theme="day"]) .exchange-manager-status-cards *,
 :root:not([data-theme="day"]) .exchange-manager-card *,
-:root:not([data-theme="day"]) .exchange-manager-category * {
+:root:not([data-theme="day"]) .exchange-manager-category *,
+:root:not([data-theme="day"]) .exchange-readonly-categories *,
+:root:not([data-theme="day"]) .read-only-api-wizard *,
+:root:not([data-theme="day"]) .read-only-price-compare *,
+:root:not([data-theme="day"]) .read-only-guide-grid *,
+:root:not([data-theme="day"]) .read-only-spread-summary *,
+:root:not([data-theme="day"]) .read-only-connection-status * {
     color: var(--text-primary);
 }
 
 :root[data-theme="night"] .exchange-manager-card span,
 :root[data-theme="night"] .exchange-manager-card small,
+:root[data-theme="night"] .exchange-readonly-categories span,
+:root[data-theme="night"] .exchange-readonly-categories small,
+:root[data-theme="night"] .read-only-wizard-heading p,
+:root[data-theme="night"] .read-only-wizard-guide li,
+:root[data-theme="night"] .read-only-wizard-guide p,
+:root[data-theme="night"] .read-only-spread-summary span,
+:root[data-theme="night"] .read-only-spread-summary small,
 :root:not([data-theme="day"]) .exchange-manager-card span,
-:root:not([data-theme="day"]) .exchange-manager-card small {
+:root:not([data-theme="day"]) .exchange-manager-card small,
+:root:not([data-theme="day"]) .exchange-readonly-categories span,
+:root:not([data-theme="day"]) .exchange-readonly-categories small,
+:root:not([data-theme="day"]) .read-only-wizard-heading p,
+:root:not([data-theme="day"]) .read-only-wizard-guide li,
+:root:not([data-theme="day"]) .read-only-wizard-guide p,
+:root:not([data-theme="day"]) .read-only-spread-summary span,
+:root:not([data-theme="day"]) .read-only-spread-summary small {
     color: var(--text-secondary) !important;
 }

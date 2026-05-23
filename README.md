@@ -99,7 +99,7 @@ The following are blocked by design:
 
 - Live trading
 - Live exchange order execution
-- Exchange credential loading
+- Live exchange credential loading and order adapters
 - Wallet/private-key handling
 - External social posting
 - Domain or external account purchases
@@ -107,6 +107,19 @@ The following are blocked by design:
 - Blockchain deployment
 - CoinMarketCap/CoinGecko external submission automation; local evidence packets, official-form checklists, and owner-reviewed application drafts are supported
 - Hermes Agent bypass of EtherealAI gates
+
+## Read-Only Exchange Connections
+
+Strategy Lab now includes Phase 2 read-only exchange setup under `Exchange Connector Manager`.
+
+- Recommended first CEX workflows: Binance, Coinbase, Kraken, OKX, and Bybit.
+- Quote-only future connectors: Uniswap, Jupiter, 1inch, GMX, and Hyperliquid.
+- API values are written only to `~/EtherealAI_Secrets/exchange-readonly-vault.json` with a permission-locked AES-256-GCM local vault key.
+- SQLite stores only connector metadata and a local vault reference.
+- The browser never stores or redisplays API values.
+- Test connection verifies market-data/account-read access only.
+- Live trading, withdrawals, wallet signing, and order endpoints remain locked.
+- The read-only price compare can compare supported public market prices and gross spreads without placing orders.
 
 ## Multi-Agent Coordination
 
