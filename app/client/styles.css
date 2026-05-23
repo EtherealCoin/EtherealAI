@@ -4387,3 +4387,148 @@ footer {
     border-color: var(--border) !important;
     color: var(--input-text) !important;
 }
+
+.exchange-manager-safety-grid,
+.exchange-manager-status-cards,
+.exchange-manager-card-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.exchange-manager-safety-grid,
+.exchange-manager-status-cards {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    margin: 16px 0;
+}
+
+.exchange-manager-safety-grid article,
+.exchange-manager-status-cards article,
+.exchange-manager-card {
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    color: var(--text-primary);
+}
+
+.exchange-manager-safety-grid article strong,
+.exchange-manager-status-cards article strong,
+.exchange-manager-card strong {
+    display: block;
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin-bottom: 5px;
+}
+
+.exchange-manager-safety-grid article span,
+.exchange-manager-status-cards article span,
+.exchange-manager-card span,
+.exchange-manager-card small {
+    display: block;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+.exchange-manager-actions {
+    align-items: end;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(260px, 1fr) repeat(4, auto);
+    margin: 16px 0;
+}
+
+.exchange-manager-actions button,
+.exchange-manager-bulk button,
+.exchange-manager-card button {
+    min-height: 42px;
+}
+
+.exchange-manager-feature-list h3 {
+    margin: 18px 0 10px;
+}
+
+.exchange-manager-card-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.exchange-manager-card em {
+    background: color-mix(in srgb, var(--brand-blue) 12%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 28%, var(--border));
+    border-radius: 999px;
+    color: var(--text-primary);
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 1;
+    padding: 6px 8px;
+}
+
+.exchange-manager-card-muted {
+    opacity: 0.72;
+}
+
+.exchange-manager-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.exchange-manager-category {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 12px 0;
+    padding: 10px;
+}
+
+.exchange-manager-category summary {
+    color: var(--text-primary);
+    cursor: pointer;
+    font-weight: 800;
+    list-style-position: inside;
+}
+
+.exchange-manager-category summary span {
+    color: var(--text-secondary);
+    font-weight: 700;
+    margin-left: 6px;
+}
+
+@media (max-width: 920px) {
+    .exchange-manager-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+:root[data-theme="night"] .exchange-manager-safety-grid article,
+:root[data-theme="night"] .exchange-manager-status-cards article,
+:root[data-theme="night"] .exchange-manager-card,
+:root[data-theme="night"] .exchange-manager-category,
+:root:not([data-theme="day"]) .exchange-manager-safety-grid article,
+:root:not([data-theme="day"]) .exchange-manager-status-cards article,
+:root:not([data-theme="day"]) .exchange-manager-card,
+:root:not([data-theme="day"]) .exchange-manager-category {
+    background: var(--surface-muted) !important;
+    border-color: var(--border) !important;
+    color: var(--text-primary) !important;
+}
+
+:root[data-theme="night"] .exchange-manager-safety-grid *,
+:root[data-theme="night"] .exchange-manager-status-cards *,
+:root[data-theme="night"] .exchange-manager-card *,
+:root[data-theme="night"] .exchange-manager-category *,
+:root:not([data-theme="day"]) .exchange-manager-safety-grid *,
+:root:not([data-theme="day"]) .exchange-manager-status-cards *,
+:root:not([data-theme="day"]) .exchange-manager-card *,
+:root:not([data-theme="day"]) .exchange-manager-category * {
+    color: var(--text-primary);
+}
+
+:root[data-theme="night"] .exchange-manager-card span,
+:root[data-theme="night"] .exchange-manager-card small,
+:root:not([data-theme="day"]) .exchange-manager-card span,
+:root:not([data-theme="day"]) .exchange-manager-card small {
+    color: var(--text-secondary) !important;
+}

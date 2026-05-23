@@ -51,6 +51,10 @@
                     <strong>Bot Control Center</strong>
                     <span>Monitor active paper schedules and review results. Live bot mode stays locked.</span>
                 </a>
+                <a class="ceo-workflow-card" href="#exchange-connector-manager">
+                    <strong>Exchange Connector Manager</strong>
+                    <span>Create safe placeholders for CEXs, DEXs, aggregators, perps, and P2P venues without adding keys.</span>
+                </a>
                 <a class="ceo-workflow-card" href="#advanced-strategy-tools">
                     <strong>Advanced / Developer Tools</strong>
                     <span>Raw imports, sweeps, walk-forward tests, connectors, logs, exports, and technical filters.</span>
@@ -65,6 +69,7 @@
                 <a href="#research-suite">Backtest</a>
                 <a href="#risk-profile-configuration">Risk</a>
                 <a href="#bot-automation">Paper/Bots</a>
+                <a href="#exchange-connector-manager">Exchanges</a>
                 <a href="#rebalance-batch">Rebalance</a>
                 <a href="#advanced-strategy-tools">Advanced</a>
             </div>
@@ -228,6 +233,73 @@
                     <small>The simulation summary will appear here after the safe paper run.</small>
                 </article>
             </div>
+        </section>
+
+        <section class="model-panel operator-simple-keep" id="exchange-connector-manager">
+            <h2>Exchange Connector Manager</h2>
+            <p class="inline-status">What is this? A safe exchange directory and setup manager. What to do next: create placeholders for the recommended first exchanges, then connect read-only APIs later only when you are ready. No keys go into this screen. Live trading, withdrawals, and wallet signing stay locked.</p>
+            <div id="exchange-manager-safety" class="exchange-manager-safety-grid">
+                <article>
+                    <strong>Default State</strong>
+                    <span>Every connector starts OFF.</span>
+                </article>
+                <article>
+                    <strong>CEX APIs</strong>
+                    <span>Read-only first. Withdrawals disabled.</span>
+                </article>
+                <article>
+                    <strong>DEXs</strong>
+                    <span>Quote/read-only until future wallet approval.</span>
+                </article>
+                <article>
+                    <strong>Live Trading</strong>
+                    <span>Locked.</span>
+                </article>
+            </div>
+
+            <div class="exchange-manager-actions">
+                <div>
+                    <label for="exchange-manager-choice">Choose exchange</label>
+                    <select id="exchange-manager-choice">
+                        <option value="">Loading exchange registry...</option>
+                    </select>
+                </div>
+                <button type="button" id="exchange-manager-add">Add Exchange</button>
+                <button type="button" id="exchange-manager-readonly">Read-only market data</button>
+                <button type="button" id="exchange-manager-paper">Paper trading only</button>
+                <button type="button" id="exchange-manager-test">Test connection</button>
+            </div>
+
+            <div class="button-row exchange-manager-bulk">
+                <button type="button" id="exchange-manager-create-all">Create connector placeholders for all supported exchanges</button>
+                <button type="button" id="exchange-manager-connect-later">Connect read-only APIs later</button>
+                <button type="button" id="exchange-manager-hide-unsupported">Hide unsupported exchanges</button>
+                <button type="button" id="exchange-manager-show-recommended">Show recommended first 5</button>
+            </div>
+
+            <div id="exchange-manager-status-cards" class="exchange-manager-status-cards">
+                <article>
+                    <span>Connected / Not Connected</span>
+                    <strong>Loading...</strong>
+                </article>
+                <article>
+                    <span>Live trading locked</span>
+                    <strong>Locked</strong>
+                </article>
+                <article>
+                    <span>Secrets in UI</span>
+                    <strong>Never</strong>
+                </article>
+                <article>
+                    <span>Withdrawals</span>
+                    <strong>Disabled</strong>
+                </article>
+            </div>
+
+            <div id="exchange-manager-recommended" class="exchange-manager-feature-list">Loading recommended exchanges...</div>
+            <div id="exchange-manager-registry" class="exchange-manager-registry">Loading exchange categories...</div>
+            <div id="exchange-manager-connectors" class="exchange-manager-feature-list">Loading connector records...</div>
+            <pre id="exchange-manager-status" class="model-output">No exchange manager action has run yet.</pre>
         </section>
 
         <section class="model-panel" id="exchange-connectors">
@@ -1212,6 +1284,9 @@
         let availableSecretReferences = [];
         let availableSecretProviderCapabilities = [];
         let selectedConnectorId = null;
+        let latestExchangeConnectorManager = null;
+        let exchangeManagerShowUnsupported = true;
+        let exchangeManagerRecommendedOnly = false;
         let availableMarketProviders = [];
         let availableRiskProfiles = [];
         let availablePaperSessions = [];
@@ -3452,6 +3527,293 @@
             }
 
             renderConnectors(data.connectors || []);
+        }
+
+        function getExchangeManagerEntries() {
+            const manager = latestExchangeConnectorManager || {};
+            let entries = manager.registry || [];
+
+            if (!exchangeManagerShowUnsupported) {
+                entries = entries.filter(entry => entry.connectorSupported);
+            }
+
+            if (exchangeManagerRecommendedOnly) {
+                entries = entries
+                    .filter(entry => entry.recommendedFirstFive)
+                    .sort((a, b) => (a.recommendationRank || 999) - (b.recommendationRank || 999));
+            }
+
+            return entries;
+        }
+
+        function getSelectedExchangeManagerEntry() {
+            const selectedId = document.getElementById('exchange-manager-choice')?.value || '';
+
+            return (latestExchangeConnectorManager?.registry || []).find(entry => entry.id === selectedId) || null;
+        }
+
+        function renderExchangeManagerChoice(entries = []) {
+            const select = document.getElementById('exchange-manager-choice');
+            const legacySelect = document.getElementById('connector-exchange');
+
+            if (!select) {
+                return;
+            }
+
+            const previousValue = select.value;
+            const optionHtml = exchangeManagerRecommendedOnly
+                ? entries.map(entry => `
+                    <option value="${escapeHtml(entry.id)}">
+                        ${escapeHtml(entry.name)} · ${escapeHtml(entry.managerStatus || entry.status)}${entry.recommendedFirstFive ? ' · recommended' : ''}
+                    </option>
+                `).join('')
+                : Object.entries(entries.reduce((acc, entry) => {
+                    acc[entry.category] = acc[entry.category] || [];
+                    acc[entry.category].push(entry);
+                    return acc;
+                }, {})).map(([category, categoryEntries]) => `
+                    <optgroup label="${escapeHtml(category)}">
+                        ${categoryEntries.map(entry => `
+                        <option value="${escapeHtml(entry.id)}">
+                            ${escapeHtml(entry.name)} · ${escapeHtml(entry.managerStatus || entry.status)}${entry.recommendedFirstFive ? ' · recommended' : ''}
+                        </option>
+                        `).join('')}
+                    </optgroup>
+                `).join('');
+
+            select.innerHTML = optionHtml || '<option value="">No exchanges available</option>';
+            select.value = entries.some(entry => entry.id === previousValue)
+                ? previousValue
+                : (entries[0]?.id || '');
+
+            if (legacySelect && entries.length) {
+                const supportedEntries = (latestExchangeConnectorManager?.registry || []).filter(entry => entry.connectorSupported);
+                const currentLegacyValue = legacySelect.value;
+                legacySelect.innerHTML = supportedEntries.map(entry => (
+                    `<option value="${escapeHtml(entry.exchangeName)}">${escapeHtml(entry.name)}</option>`
+                )).join('');
+                legacySelect.value = supportedEntries.some(entry => entry.exchangeName === currentLegacyValue)
+                    ? currentLegacyValue
+                    : (supportedEntries[0]?.exchangeName || 'binance');
+            }
+        }
+
+        function renderExchangeConnectorManager(manager = null) {
+            latestExchangeConnectorManager = manager;
+
+            const statusCards = document.getElementById('exchange-manager-status-cards');
+            const recommended = document.getElementById('exchange-manager-recommended');
+            const registryOutput = document.getElementById('exchange-manager-registry');
+            const connectorsOutput = document.getElementById('exchange-manager-connectors');
+            const entries = getExchangeManagerEntries();
+            const recommendedFirstFive = manager?.recommendedFirstFive || [];
+            const connectors = manager?.connectors || [];
+            const counts = manager?.counts || {};
+
+            renderExchangeManagerChoice(entries);
+
+            if (statusCards) {
+                statusCards.innerHTML = `
+                    <article>
+                        <span>Connected / Not Connected</span>
+                        <strong>${escapeHtml(`${counts.paperReady || 0} paper-ready · ${counts.activeReadOnly || 0} read-only`)}</strong>
+                    </article>
+                    <article>
+                        <span>Live trading locked</span>
+                        <strong>Locked</strong>
+                    </article>
+                    <article>
+                        <span>Credentials in UI</span>
+                        <strong>Never</strong>
+                    </article>
+                    <article>
+                        <span>Exchange directory</span>
+                        <strong>${escapeHtml(`${counts.supportedRegistryTotal || 0} supported · ${counts.unsupportedRegistryTotal || 0} manual`)}</strong>
+                    </article>
+                `;
+            }
+
+            if (recommended) {
+                recommended.innerHTML = `
+                    <h3>Recommended First 5</h3>
+                    <div class="exchange-manager-card-grid">
+                        ${recommendedFirstFive.map(entry => `
+                            <article class="exchange-manager-card">
+                                <strong>${escapeHtml(entry.name)}</strong>
+                                <span>${escapeHtml(entry.category)}</span>
+                                <small>${escapeHtml(entry.supportedChains.slice(0, 5).join(', '))}</small>
+                                <em>${escapeHtml(entry.managerStatus || 'not connected')}</em>
+                            </article>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            if (registryOutput) {
+                const groups = entries.reduce((acc, entry) => {
+                    acc[entry.category] = acc[entry.category] || [];
+                    acc[entry.category].push(entry);
+                    return acc;
+                }, {});
+
+                registryOutput.innerHTML = Object.entries(groups).map(([category, categoryEntries]) => `
+                    <details class="exchange-manager-category" open>
+                        <summary>${escapeHtml(category)} <span>${categoryEntries.length}</span></summary>
+                        <div class="exchange-manager-card-grid">
+                            ${categoryEntries.map(entry => `
+                                <article class="exchange-manager-card ${entry.connectorSupported ? '' : 'exchange-manager-card-muted'}">
+                                    <strong>${escapeHtml(entry.name)}</strong>
+                                    <span>${escapeHtml(entry.supportedChains.join(', '))}</span>
+                                    <small>${escapeHtml(entry.apiTypes.join(', '))}</small>
+                                    <div class="exchange-manager-pill-row">
+                                        <em>${escapeHtml(entry.managerStatus || entry.status)}</em>
+                                        <em>${escapeHtml(entry.safetyRating)}</em>
+                                        ${entry.walletSigningRequired ? '<em>Wallet signing locked</em>' : '<em>Read-only first</em>'}
+                                    </div>
+                                </article>
+                            `).join('')}
+                        </div>
+                    </details>
+                `).join('');
+            }
+
+            if (connectorsOutput) {
+                const visibleConnectors = connectors.filter(connector => connector.status !== 'archived');
+
+                connectorsOutput.innerHTML = `
+                    <h3>Connector Records</h3>
+                    ${visibleConnectors.length ? `
+                        <div class="exchange-manager-card-grid">
+                            ${visibleConnectors.map(connector => `
+                                <article class="exchange-manager-card">
+                                    <strong>${escapeHtml(connector.registry?.name || connector.label)}</strong>
+                                    <span>${escapeHtml(connector.registry?.category || connector.exchange_name)}</span>
+                                    <small>${escapeHtml(connector.mode)} · ${escapeHtml(connector.status)}</small>
+                                    <div class="exchange-manager-pill-row">
+                                        <em>${escapeHtml(connector.managerStatus)}</em>
+                                        <em>Live locked</em>
+                                        <em>No withdrawals</em>
+                                    </div>
+                                    <button type="button" data-exchange-manager-test-connector="${connector.id}">Test connection</button>
+                                </article>
+                            `).join('')}
+                        </div>
+                    ` : '<p class="workflow-helper-text">No connector placeholders yet. Start with “Show recommended first 5” or create placeholders for all supported exchanges.</p>'}
+                `;
+
+                connectorsOutput.querySelectorAll('button[data-exchange-manager-test-connector]').forEach(button => {
+                    button.addEventListener('click', () => testExchangeManagerConnector(button.dataset.exchangeManagerTestConnector));
+                });
+            }
+
+            const hideUnsupportedButton = document.getElementById('exchange-manager-hide-unsupported');
+            const recommendedButton = document.getElementById('exchange-manager-show-recommended');
+
+            if (hideUnsupportedButton) {
+                hideUnsupportedButton.textContent = exchangeManagerShowUnsupported
+                    ? 'Hide unsupported exchanges'
+                    : 'Show unsupported/manual exchanges';
+            }
+
+            if (recommendedButton) {
+                recommendedButton.textContent = exchangeManagerRecommendedOnly
+                    ? 'Show all exchange categories'
+                    : 'Show recommended first 5';
+            }
+        }
+
+        async function loadExchangeConnectorManager() {
+            const response = await fetch('/api/v1/exchange-connectors/manager');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('exchange-manager-status').textContent = data.error || 'Unable to load exchange connector manager.';
+                return;
+            }
+
+            renderExchangeConnectorManager(data.manager);
+        }
+
+        async function createExchangeManagerPlaceholders({ scope = 'recommended_first_5', mode = 'read_only', exchangeId = null } = {}) {
+            const output = document.getElementById('exchange-manager-status');
+
+            output.textContent = scope === 'single'
+                ? 'Creating safe connector placeholder...'
+                : 'Creating safe connector placeholders...';
+
+            const response = await fetch('/api/v1/exchange-connectors/placeholders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    scope,
+                    mode,
+                    exchangeId
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Unable to create exchange connector placeholders.';
+                return null;
+            }
+
+            renderExchangeConnectorManager(data.manager);
+            await loadConnectors();
+
+            output.textContent = [
+                `${data.created?.length || 0} connector placeholder(s) created.`,
+                `${data.reused?.length || 0} existing connector placeholder(s) reused.`,
+                'Live trading, withdrawals, and wallet signing remain locked. No credentials were stored in the UI.'
+            ].join('\n');
+
+            return data;
+        }
+
+        async function testExchangeManagerConnector(connectorId = null) {
+            const output = document.getElementById('exchange-manager-status');
+            const entry = getSelectedExchangeManagerEntry();
+            let resolvedConnectorId = connectorId || entry?.existingConnectorId || null;
+
+            if (!resolvedConnectorId && entry) {
+                const created = await createExchangeManagerPlaceholders({
+                    scope: 'single',
+                    mode: 'read_only',
+                    exchangeId: entry.id
+                });
+                const refreshedEntry = (created?.manager?.registry || []).find(item => item.id === entry.id);
+                resolvedConnectorId = refreshedEntry?.existingConnectorId || null;
+            }
+
+            if (!resolvedConnectorId) {
+                output.textContent = 'Choose an exchange, then click Add Exchange before testing.';
+                return;
+            }
+
+            output.textContent = 'Running safe local connection test...';
+            const response = await fetch(`/api/v1/exchange-connectors/${resolvedConnectorId}/test-read-only`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Connection test failed.';
+                return;
+            }
+
+            const test = data.test || {};
+            output.textContent = [
+                `Status: ${test.connectionStatus || test.status}`,
+                `Next: ${test.nextStep || 'No next step.'}`,
+                'Network call made: no',
+                'Live trading: locked',
+                'Wallet signing: disabled',
+                '',
+                ...((test.checks || []).map(check => `${check.passed ? 'OK' : 'REVIEW'} ${check.label}: ${check.metric || ''}`))
+            ].join('\n');
+
+            await loadExchangeConnectorManager();
         }
 
         async function patchConnectorStatus(connectorId, status) {
@@ -6867,8 +7229,9 @@
                 return `${label}${escapeHtml(item.timeframe)} · ${item.candle_count} candles · ${escapeHtml(item.status)} · quality ${quality}`;
             }
 
-            const warningText = summary.warnings.length
-                ? ` · ${summary.warnings.length} warning${summary.warnings.length === 1 ? '' : 's'}`
+            const warnings = Array.isArray(summary.warnings) ? summary.warnings : [];
+            const warningText = warnings.length
+                ? ` · ${warnings.length} warning${warnings.length === 1 ? '' : 's'}`
                 : ' · clean';
 
             return [
@@ -8128,6 +8491,95 @@
             await loadConnectorAdapterContractEvents(selectedConnectorId);
         });
 
+        document.getElementById('exchange-manager-choice').addEventListener('change', () => {
+            const entry = getSelectedExchangeManagerEntry();
+            const output = document.getElementById('exchange-manager-status');
+
+            if (entry) {
+                output.textContent = [
+                    `${entry.name} selected.`,
+                    `Category: ${entry.category}`,
+                    `Status: ${entry.managerStatus || entry.status}`,
+                    entry.walletSigningRequired
+                        ? 'This venue stays quote/read-only until future owner-approved wallet signing exists.'
+                        : 'Use read-only market data first. Live trading remains locked.'
+                ].join('\n');
+            }
+        });
+
+        document.getElementById('exchange-manager-add').addEventListener('click', async () => {
+            const entry = getSelectedExchangeManagerEntry();
+
+            if (!entry) {
+                document.getElementById('exchange-manager-status').textContent = 'Choose an exchange first.';
+                return;
+            }
+
+            await createExchangeManagerPlaceholders({
+                scope: 'single',
+                mode: 'read_only',
+                exchangeId: entry.id
+            });
+        });
+
+        document.getElementById('exchange-manager-readonly').addEventListener('click', async () => {
+            const entry = getSelectedExchangeManagerEntry();
+
+            if (!entry) {
+                document.getElementById('exchange-manager-status').textContent = 'Choose an exchange first.';
+                return;
+            }
+
+            await createExchangeManagerPlaceholders({
+                scope: 'single',
+                mode: 'read_only',
+                exchangeId: entry.id
+            });
+        });
+
+        document.getElementById('exchange-manager-paper').addEventListener('click', async () => {
+            const entry = getSelectedExchangeManagerEntry();
+
+            if (!entry) {
+                document.getElementById('exchange-manager-status').textContent = 'Choose an exchange first.';
+                return;
+            }
+
+            if (!entry.supportsPaperMode) {
+                document.getElementById('exchange-manager-status').textContent = `${entry.name} is manual/informational only. It cannot be used for paper automation yet.`;
+                return;
+            }
+
+            await createExchangeManagerPlaceholders({
+                scope: 'single',
+                mode: 'paper',
+                exchangeId: entry.id
+            });
+        });
+
+        document.getElementById('exchange-manager-test').addEventListener('click', () => testExchangeManagerConnector());
+        document.getElementById('exchange-manager-create-all').addEventListener('click', async () => {
+            await createExchangeManagerPlaceholders({
+                scope: 'all',
+                mode: 'read_only'
+            });
+        });
+        document.getElementById('exchange-manager-connect-later').addEventListener('click', () => {
+            document.getElementById('exchange-manager-status').textContent = [
+                'Read-only API connection can wait.',
+                'When you are ready, create keys at each exchange with read-only permissions only, withdrawals disabled, and store references in the secure local secrets file or future encrypted vault.',
+                'Do not paste keys into this UI.'
+            ].join('\n');
+        });
+        document.getElementById('exchange-manager-hide-unsupported').addEventListener('click', () => {
+            exchangeManagerShowUnsupported = !exchangeManagerShowUnsupported;
+            renderExchangeConnectorManager(latestExchangeConnectorManager);
+        });
+        document.getElementById('exchange-manager-show-recommended').addEventListener('click', () => {
+            exchangeManagerRecommendedOnly = !exchangeManagerRecommendedOnly;
+            renderExchangeConnectorManager(latestExchangeConnectorManager);
+        });
+
         document.getElementById('refresh-automation-safety').addEventListener('click', async () => {
             await loadLocalVerificationStatus();
             await loadMvpReadinessChecklist();
@@ -8808,6 +9260,7 @@
                 loadSecretReferences(),
                 loadExchangeAdapterScaffolds(),
                 loadConnectors(),
+                loadExchangeConnectorManager(),
                 loadMarketProviders(),
                 loadRefreshSchedules(),
                 loadRefreshRuns(),

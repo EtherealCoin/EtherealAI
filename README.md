@@ -60,6 +60,8 @@ Strategy / Paper / Bots now exposes the Simple Mode action `Run This Strategy Sa
 
 Strategy Lab now has a dedicated structured arbitrage lane for `Cross-Exchange Arbitrage`, `Cross-DEX Arbitrage`, and `Hybrid DEX/CEX Arbitrage`. These strategies use structured fields for buy venues, sell venues, arbitrage type, spread, maker/taker fees, slippage, liquidity, latency, simultaneous execution, stablecoin pair, token whitelist, and top-volume pair filters. EtherealAI does not try to translate advanced arbitrage paragraphs through the indicator parser; the paper engine generates machine-readable arbitrage rules and simulates local fee/slippage/liquidity/latency-aware buy/sell routes without live venue calls, wallet signing, or order placement. Safe Paper results now show exchange spread comparisons, accepted/rejected route reasons, net profit after costs, timing assumptions, and top-volume filter status.
 
+Strategy Lab also includes an `Exchange Connector Manager` for safe exchange planning. It has a chain-neutral registry across centralized exchanges, US-compliant exchanges, futures/derivatives, Ethereum DEXs, Solana DEXs, BNB Chain DEXs, Arbitrum/Avalanche/Polygon DEXs, cross-chain aggregators, decentralized perpetuals, hybrid exchanges, and P2P exchanges. The manager can create disabled/read-only connector placeholders, show the recommended first five, hide unsupported/manual venues, and run a local read-only safety test without calling exchanges. API keys are not stored in the UI; live trading, withdrawals, wallet signing, and DEX execution remain locked.
+
 ## Run Locally
 
 ```bash

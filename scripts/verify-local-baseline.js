@@ -2911,15 +2911,24 @@ async function checkCompanyIdentityModule() {
 
 function checkExchangeMetadataModule() {
   const {
+    EXCHANGE_CONNECTOR_CATEGORIES,
+    EXCHANGE_CONNECTOR_REGISTRY,
+    EXCHANGE_CONNECTOR_RECOMMENDED_ORDER,
     EXCHANGE_ADAPTER_CONTRACT_EXCHANGES,
     parseExchangeConnector,
     parseLocalSecretReference,
     parseExchangeConnectorReadinessEvent,
     parseExchangeAdapterContractEvent,
+    getExchangeConnectorRegistry,
+    getExchangeConnectorRegistryEntry,
+    createExchangeConnectorPlaceholderInput,
+    buildExchangeConnectorManagerSummary,
+    evaluateExchangeConnectorReadOnlyTest,
     createExchangeAdapterContractSpec,
     evaluateExchangeConnectorReadiness,
     evaluateExchangeAdapterContract
   } = require(path.join(projectRoot, 'app/server/src/lib/exchange-metadata'));
+  const { sanitizeExchangeConnectorInput } = require(path.join(projectRoot, 'app/server/src/lib/secret-safety'));
   const parsedConnector = parseExchangeConnector({
     id: 7,
     secret_reference_id: 11,
@@ -3002,9 +3011,86 @@ function checkExchangeMetadataModule() {
   const spec = createExchangeAdapterContractSpec('binance');
   const customSpec = createExchangeAdapterContractSpec('unknown-exchange');
   const contract = evaluateExchangeAdapterContract({ connector });
+  const registry = getExchangeConnectorRegistry();
+  const firstFive = getExchangeConnectorRegistry({ firstFive: true }).map(entry => entry.id);
+  const allCategoriesCovered = EXCHANGE_CONNECTOR_CATEGORIES.every(category => (
+    registry.some(entry => entry.category === category)
+  ));
+  const requiredRecommended = ['binance', 'coinbase', 'kraken', 'okx', 'bybit', 'uniswap', 'jupiter', 'one-inch', 'hyperliquid', 'gmx'];
+  const recommendedCovered = requiredRecommended.every(exchangeId => (
+    getExchangeConnectorRegistryEntry(exchangeId)?.recommendedFirst === true
+  ));
+  const placeholder = createExchangeConnectorPlaceholderInput(getExchangeConnectorRegistryEntry('uniswap'));
+  const sanitizedPlaceholder = sanitizeExchangeConnectorInput(placeholder);
+  const managerSummary = buildExchangeConnectorManagerSummary([
+    {
+      id: 71,
+      secret_reference_id: null,
+      exchange_name: sanitizedPlaceholder.exchangeName,
+      label: sanitizedPlaceholder.label,
+      mode: sanitizedPlaceholder.mode,
+      status: sanitizedPlaceholder.status,
+      settings: sanitizedPlaceholder.settings,
+      created_at: '2026-05-14T00:00:00.000Z',
+      updated_at: '2026-05-14T00:00:00.000Z'
+    }
+  ]);
+  const readOnlyTest = evaluateExchangeConnectorReadOnlyTest({
+    connector: {
+      id: 72,
+      label: 'Binance Read Only Placeholder',
+      exchange_name: 'binance',
+      mode: 'read_only',
+      status: 'disabled',
+      settings: createExchangeConnectorPlaceholderInput(getExchangeConnectorRegistryEntry('binance')).settings,
+      secret_reference_id: null
+    },
+    registryEntry: getExchangeConnectorRegistryEntry('binance'),
+    secretReference: null
+  });
 
   if (!EXCHANGE_ADAPTER_CONTRACT_EXCHANGES.has('binance') || customSpec.exchangeName !== 'custom') {
     fail('exchange metadata module did not expose expected exchange contract registry');
+  }
+
+  if (
+    EXCHANGE_CONNECTOR_CATEGORIES.length !== 11
+    || !allCategoriesCovered
+    || EXCHANGE_CONNECTOR_REGISTRY.length < 40
+    || !recommendedCovered
+    || firstFive.join(',') !== 'binance,coinbase,kraken,okx,bybit'
+    || EXCHANGE_CONNECTOR_RECOMMENDED_ORDER[0] !== 'binance'
+  ) {
+    fail('exchange connector registry did not cover required categories and recommended exchanges');
+  }
+
+  if (
+    sanitizedPlaceholder.status !== 'disabled'
+    || sanitizedPlaceholder.mode !== 'read_only'
+    || sanitizedPlaceholder.settings.liveTradingEnabled !== false
+    || sanitizedPlaceholder.settings.withdrawalsEnabled !== false
+    || sanitizedPlaceholder.settings.walletSigningEnabled !== false
+    || sanitizedPlaceholder.settings.uiStoresCredentials !== false
+  ) {
+    fail('exchange connector placeholder did not preserve safe default-off boundaries');
+  }
+
+  if (
+    managerSummary.safetyModel.liveTradingEnabled !== false
+    || managerSummary.safetyModel.walletSigningEnabled !== false
+    || managerSummary.recommendedFirstFive.length !== 5
+    || managerSummary.recommendedFirstFive.map(entry => entry.id).join(',') !== 'binance,coinbase,kraken,okx,bybit'
+    || !managerSummary.registry.some(entry => entry.id === 'uniswap' && entry.managerStatus === 'not connected')
+  ) {
+    fail('exchange connector manager summary did not preserve safe locked status');
+  }
+
+  if (
+    readOnlyTest.safetyBoundary.networkCallMade !== false
+    || readOnlyTest.safetyBoundary.liveTradingEnabled !== false
+    || !readOnlyTest.reviewFailures.includes('read_only_reference_ready')
+  ) {
+    fail('exchange connector read-only test did not stay local and credential-free');
   }
 
   if (
@@ -6413,6 +6499,66 @@ function checkStrategyLabOneClickSafePaperUi() {
   }
 
   pass('Strategy Lab one-click safe paper simulation UI');
+}
+
+function checkExchangeConnectorManagerUi() {
+  const html = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
+  const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
+  const routes = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/exchange-metadata.js'), 'utf8');
+  const metadata = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-metadata.js'), 'utf8');
+  const routeRegistration = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/route-registration.js'), 'utf8');
+
+  if (
+    !html.includes('id="exchange-connector-manager"')
+    || !html.includes('Exchange Connector Manager')
+    || !html.includes('Create connector placeholders for all supported exchanges')
+    || !html.includes('Connect read-only APIs later')
+    || !html.includes('Hide unsupported exchanges')
+    || !html.includes('Show recommended first 5')
+    || !html.includes('id="exchange-manager-choice"')
+    || !html.includes('id="exchange-manager-add"')
+    || !html.includes('id="exchange-manager-readonly"')
+    || !html.includes('id="exchange-manager-paper"')
+    || !html.includes('id="exchange-manager-test"')
+    || !html.includes('async function loadExchangeConnectorManager()')
+    || !html.includes('async function createExchangeManagerPlaceholders')
+    || !html.includes('async function testExchangeManagerConnector')
+    || !html.includes('/api/v1/exchange-connectors/manager')
+    || !html.includes('/api/v1/exchange-connectors/placeholders')
+    || !html.includes('/test-read-only')
+    || !html.includes('Live trading, withdrawals, and wallet signing remain locked.')
+    || !styles.includes('.exchange-manager-safety-grid')
+    || !styles.includes('.exchange-manager-status-cards')
+    || !styles.includes('.exchange-manager-card-grid')
+    || !styles.includes('.exchange-manager-category')
+    || !routes.includes("app.get('/api/v1/exchange-connectors/registry'")
+    || !routes.includes("app.get('/api/v1/exchange-connectors/manager'")
+    || !routes.includes("app.post('/api/v1/exchange-connectors/placeholders'")
+    || !routes.includes("app.post('/api/v1/exchange-connectors/:id/test-read-only'")
+    || !routes.includes('defaultEveryConnectorOff: true')
+    || !routes.includes('walletSigningEnabled: false')
+    || !routes.includes('withdrawalsEnabled: false')
+    || !metadata.includes('Centralized Exchanges')
+    || !metadata.includes('US-Compliant Exchanges')
+    || !metadata.includes('Futures/Derivatives')
+    || !metadata.includes('Ethereum DEXs')
+    || !metadata.includes('Solana DEXs')
+    || !metadata.includes('BNB Chain DEXs')
+    || !metadata.includes('Arbitrum/Avalanche/Polygon DEXs')
+    || !metadata.includes('Cross-chain aggregators')
+    || !metadata.includes('Decentralized perpetuals')
+    || !metadata.includes('Hybrid exchanges')
+    || !metadata.includes('P2P exchanges')
+    || !metadata.includes('EXCHANGE_CONNECTOR_RECOMMENDED_ORDER')
+    || !metadata.includes('buildExchangeConnectorManagerSummary')
+    || !metadata.includes('evaluateExchangeConnectorReadOnlyTest')
+    || !routeRegistration.includes('buildExchangeConnectorManagerSummary')
+    || !routeRegistration.includes('evaluateExchangeConnectorReadOnlyTest')
+  ) {
+    fail('Exchange Connector Manager UI, routes, registry, or safety checks are missing');
+  }
+
+  pass('Exchange Connector Manager UI');
 }
 
 function checkMvpTestPassOwnerWorkflowUi() {
@@ -10426,6 +10572,7 @@ async function main() {
   checkStrategyLabRiskProfileSetupUi();
   checkStrategyLabBotOperatorWizardUi();
   checkStrategyLabOneClickSafePaperUi();
+  checkExchangeConnectorManagerUi();
   checkMvpTestPassOwnerWorkflowUi();
   checkDashboardMvpReadinessUi();
   checkOperatorControlCenterUi();

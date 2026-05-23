@@ -13,6 +13,12 @@ function registerExchangeMetadataRoutes(app, {
   getExchangeConnectorRow,
   getExchangeConnectorReadinessEventRow,
   getExchangeAdapterContractEventRow,
+  getExchangeConnectorRegistry,
+  getExchangeConnectorRegistryEntry,
+  createExchangeConnectorPlaceholderInput,
+  findExistingRegistryConnector,
+  buildExchangeConnectorManagerSummary,
+  evaluateExchangeConnectorReadOnlyTest,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,
@@ -159,6 +165,167 @@ function registerExchangeMetadataRoutes(app, {
     }
   });
 
+  app.get('/api/v1/exchange-connectors/registry', requireAuth, (req, res) => {
+    try {
+      const includeUnsupported = req.query.includeUnsupported !== 'false';
+      const recommendedOnly = req.query.recommendedOnly === 'true';
+      const firstFive = req.query.firstFive === 'true';
+      const registry = getExchangeConnectorRegistry({
+        includeUnsupported,
+        recommendedOnly,
+        firstFive
+      });
+
+      res.json({
+        registry,
+        filters: {
+          includeUnsupported,
+          recommendedOnly,
+          firstFive
+        },
+        safetyModel: {
+          defaultEveryConnectorOff: true,
+          cexApisReadOnlyByDefault: true,
+          withdrawalsEnabled: false,
+          liveTradingEnabled: false,
+          walletSigningEnabled: false,
+          uiStoresCredentials: false,
+          dexQuoteOnlyUntilFutureOwnerApproval: true,
+          p2pManualOnly: true
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/exchange-connectors/manager', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 300`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+
+      res.json({ manager: buildExchangeConnectorManagerSummary(connectors) });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/exchange-connectors/placeholders', requireAuth, async (req, res) => {
+    try {
+      const body = req.body || {};
+      const scope = String(body.scope || 'recommended_first_5').trim().toLowerCase();
+      const mode = body.mode ? String(body.mode).trim().toLowerCase() : null;
+      const includeUnsupported = body.includeUnsupported === true;
+      const supportedEntries = getExchangeConnectorRegistry({
+        includeUnsupported,
+        recommendedOnly: scope === 'recommended_10',
+        firstFive: scope === 'recommended_first_5'
+      });
+      let entries = supportedEntries;
+
+      if (scope === 'all') {
+        entries = getExchangeConnectorRegistry({ includeUnsupported: false });
+      } else if (scope === 'single') {
+        const entry = getExchangeConnectorRegistryEntry(body.exchangeId || body.exchangeName || body.id);
+
+        if (!entry) {
+          return res.status(404).json({ error: 'Exchange registry entry not found' });
+        }
+
+        if (!entry.connectorSupported) {
+          return res.status(400).json({
+            error: 'This exchange is informational/manual only. It does not support an automated connector placeholder yet.'
+          });
+        }
+
+        entries = [entry];
+      } else if (!['recommended_first_5', 'recommended_10'].includes(scope)) {
+        return res.status(400).json({
+          error: 'Placeholder scope must be single, recommended_first_5, recommended_10, or all'
+        });
+      }
+
+      const existingRows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const existingConnectors = existingRows.map(parseExchangeConnector);
+      const created = [];
+      const reused = [];
+
+      for (const entry of entries) {
+        const existing = findExistingRegistryConnector(existingConnectors.concat(created), entry);
+
+        if (existing) {
+          reused.push(existing);
+          continue;
+        }
+
+        const requestedMode = mode === 'paper' && entry.supportsPaperMode
+          ? 'paper'
+          : mode === 'live_disabled'
+            ? 'live_disabled'
+            : 'read_only';
+        const requestedStatus = requestedMode === 'paper' ? 'configured' : 'disabled';
+        const placeholder = createExchangeConnectorPlaceholderInput(entry, {
+          mode: requestedMode,
+          status: requestedStatus,
+          labelSuffix: requestedMode === 'paper' ? 'Paper Connector' : 'Read-Only Placeholder'
+        });
+        const input = sanitizeExchangeConnectorInput(placeholder);
+        const result = await dbRun(
+          `INSERT INTO exchange_connectors
+           (secret_reference_id, exchange_name, label, mode, status, settings_json, secret_storage_note)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            input.secretReferenceId,
+            input.exchangeName,
+            input.label,
+            input.mode,
+            input.status,
+            JSON.stringify(input.settings),
+            'No secret values stored. Connector manager placeholders store metadata only.'
+          ]
+        );
+        const row = await getExchangeConnectorRow(result.lastID);
+
+        created.push(parseExchangeConnector(row));
+      }
+
+      const refreshedRows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 300`
+      );
+      const connectors = refreshedRows.map(parseExchangeConnector);
+
+      res.status(created.length ? 201 : 200).json({
+        created,
+        reused,
+        manager: buildExchangeConnectorManagerSummary(connectors),
+        safetyModel: {
+          defaultEveryConnectorOff: true,
+          requestedMode: mode || 'read_only',
+          liveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          uiStoresCredentials: false
+        }
+      });
+    } catch (error) {
+      res.status(error.statusCode || 500).json({
+        error: error.message,
+        sensitiveFields: error.sensitiveFields,
+        likelySecretValues: error.likelySecretValues
+      });
+    }
+  });
+
   app.get('/api/v1/exchange-connectors/:id', requireAuth, async (req, res) => {
     try {
       const row = await getExchangeConnectorRow(req.params.id);
@@ -265,6 +432,33 @@ function registerExchangeMetadataRoutes(app, {
         sensitiveFields: error.sensitiveFields,
         likelySecretValues: error.likelySecretValues
       });
+    }
+  });
+
+  app.post('/api/v1/exchange-connectors/:id/test-read-only', requireAuth, async (req, res) => {
+    try {
+      const connector = parseExchangeConnector(await getExchangeConnectorRow(req.params.id));
+
+      if (!connector) {
+        return res.status(404).json({ error: 'Exchange connector not found' });
+      }
+
+      const secretReference = connector.secret_reference_id
+        ? parseLocalSecretReference(await dbGet(
+          'SELECT * FROM local_secret_references WHERE id = ? AND user_id = ?',
+          [connector.secret_reference_id, req.session.userId]
+        ))
+        : null;
+      const registryEntry = getExchangeConnectorRegistryEntry(connector.settings?.registryId || connector.exchange_name);
+      const test = evaluateExchangeConnectorReadOnlyTest({
+        connector,
+        registryEntry,
+        secretReference
+      });
+
+      res.json({ test });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   });
 
