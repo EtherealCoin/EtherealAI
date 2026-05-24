@@ -197,6 +197,111 @@ const PHASE6_PRODUCTION_ADAPTERS = {
   }
 };
 
+const PHASE6B_RECOMMENDED_FIRST_EXCHANGE = 'binance';
+
+const PHASE6B_ACTIVATION_EXCHANGE_GUIDES = {
+  binance: {
+    exchangeName: 'binance',
+    displayName: 'Binance',
+    recommendedFirst: true,
+    recommendedReason: 'Recommended first for the technical path because EtherealAI already has the most complete Binance sandbox/testnet adapter, spot order model, and permission detection. If Binance is not available in your region, use Kraken or Coinbase Advanced next.',
+    ownerPortalUrl: 'https://www.binance.com/en/my/settings/api-management',
+    officialDocsUrl: PHASE6_PRODUCTION_ADAPTERS.binance.docsUrl,
+    credentialFields: ['API Key', 'Secret Key'],
+    requiredPermissions: ['Enable spot trading only if you are preparing tiny live testing', 'Read account/balance information'],
+    forbiddenPermissions: ['Withdrawals', 'Internal transfers', 'Margin', 'Futures', 'Leverage', 'Universal transfer'],
+    plainEnglishSteps: [
+      'Log in to Binance and open API Management.',
+      'Create a new API key for EtherealAI on this Mac.',
+      'Allow only spot trading and account reads. Keep withdrawals, transfers, margin, futures, and leverage off.',
+      'Copy the API key and secret into the EtherealAI production vault. They will not be shown again.',
+      'Click Test This Exchange. EtherealAI will read account metadata only and will not place an order.'
+    ],
+    warning: 'If Binance shows any withdrawal or transfer permission, do not save the key. Delete it on Binance and recreate it with safer permissions.',
+    defaultOrder: { symbol: 'BTC/USDT', side: 'buy', orderType: 'limit', quantity: 0.001, limitPrice: 0, notionalUsd: 10 }
+  },
+  coinbase: {
+    exchangeName: 'coinbase',
+    displayName: 'Coinbase Advanced',
+    recommendedFirst: false,
+    recommendedReason: 'Good regulated venue, but CDP/JWT credential setup can be more technical than Kraken for a first owner test.',
+    ownerPortalUrl: 'https://portal.cdp.coinbase.com/access/api',
+    officialDocsUrl: PHASE6_PRODUCTION_ADAPTERS.coinbase.docsUrl,
+    credentialFields: ['CDP API key or owner-supplied bearer token', 'CDP API secret/private key material if required'],
+    requiredPermissions: ['View accounts', 'Trade spot only when preparing tiny live testing'],
+    forbiddenPermissions: ['Transfers', 'Withdrawals', 'Send crypto', 'Margin', 'Futures', 'Leverage'],
+    plainEnglishSteps: [
+      'Open Coinbase Developer Platform API access.',
+      'Create a key limited to Advanced Trade account reads and spot trading only when you intentionally prepare the tiny live path.',
+      'Do not grant transfer, send, withdrawal, margin, futures, or leverage permissions.',
+      'Paste the key material into the EtherealAI production vault and save.',
+      'Click Test This Exchange. EtherealAI will read accounts only and keep order placement locked.'
+    ],
+    warning: 'Coinbase credentials may require CDP key material. If the key format is confusing, use Kraken first.',
+    defaultOrder: { symbol: 'BTC/USD', side: 'buy', orderType: 'limit', quantity: 0.001, limitPrice: 0, notionalUsd: 10 }
+  },
+  kraken: {
+    exchangeName: 'kraken',
+    displayName: 'Kraken',
+    recommendedFirst: false,
+    recommendedReason: 'Good first alternative if Binance is not available. It is US-accessible and uses a simple API key/private-key pair, but its sandbox path needs manual exchange-docs review.',
+    ownerPortalUrl: 'https://pro.kraken.com/app/settings/api',
+    officialDocsUrl: 'https://support.kraken.com/hc/en-us/articles/360000919966-How-to-create-an-API-key',
+    credentialFields: ['API Key', 'Private Key'],
+    requiredPermissions: ['Query funds', 'Query open orders/trades', 'Create and modify orders only when preparing tiny live testing'],
+    forbiddenPermissions: ['Withdraw funds', 'Deposit funds', 'Margin', 'Futures', 'Leverage'],
+    plainEnglishSteps: [
+      'Log in to Kraken Pro and open Settings, then API.',
+      'Create a new API key named EtherealAI MacBook.',
+      'Enable account read permissions. Add order creation only when you are ready to prepare the controlled tiny live test.',
+      'Leave Withdraw funds disabled. Do not enable margin, futures, leverage, or funding movement.',
+      'Paste the API key and private key into the EtherealAI production vault, save, then click Test This Exchange.'
+    ],
+    warning: 'Never save a Kraken key that can withdraw funds. If Withdraw funds is enabled, delete the key and recreate it.',
+    defaultOrder: { symbol: 'BTC/USD', side: 'buy', orderType: 'limit', quantity: 0.001, limitPrice: 0, notionalUsd: 10 }
+  },
+  okx: {
+    exchangeName: 'okx',
+    displayName: 'OKX',
+    recommendedFirst: false,
+    recommendedReason: 'Strong API coverage with passphrase protection. Use after Kraken if you want a second venue.',
+    ownerPortalUrl: 'https://www.okx.com/account/my-api',
+    officialDocsUrl: PHASE6_PRODUCTION_ADAPTERS.okx.docsUrl,
+    credentialFields: ['API Key', 'Secret Key', 'Passphrase'],
+    requiredPermissions: ['Read account', 'Trade spot/cash only when preparing tiny live testing'],
+    forbiddenPermissions: ['Withdrawals', 'Transfers', 'Margin', 'Futures', 'Perpetuals', 'Leverage'],
+    plainEnglishSteps: [
+      'Open OKX API management.',
+      'Create an API key with read access and spot/cash trading only if preparing the controlled tiny live path.',
+      'Set and save the API passphrase safely.',
+      'Keep withdrawals, transfers, margin, futures, perpetuals, and leverage off.',
+      'Paste the key, secret, and passphrase into EtherealAI and click Test This Exchange.'
+    ],
+    warning: 'OKX does not expose every withdrawal flag in the same simple way through the tested account endpoint, so the owner checklist is mandatory.',
+    defaultOrder: { symbol: 'BTC/USDT', side: 'buy', orderType: 'limit', quantity: 0.001, limitPrice: 0, notionalUsd: 10 }
+  },
+  bybit: {
+    exchangeName: 'bybit',
+    displayName: 'Bybit',
+    recommendedFirst: false,
+    recommendedReason: 'Useful for later multi-venue coverage. Keep it spot-only; do not enable derivatives or leverage.',
+    ownerPortalUrl: 'https://www.bybit.com/app/user/api-management',
+    officialDocsUrl: PHASE6_PRODUCTION_ADAPTERS.bybit.docsUrl,
+    credentialFields: ['API Key', 'API Secret'],
+    requiredPermissions: ['Read account', 'Trade spot only when preparing tiny live testing'],
+    forbiddenPermissions: ['Withdrawals', 'Transfers', 'Derivatives', 'Margin', 'Futures', 'Leverage'],
+    plainEnglishSteps: [
+      'Open Bybit API Management.',
+      'Create an API key for EtherealAI with account read access.',
+      'Enable spot trading only if you are preparing the controlled tiny live path.',
+      'Leave withdrawals, transfers, derivatives, margin, futures, and leverage disabled.',
+      'Save the key to the EtherealAI local vault and click Test This Exchange.'
+    ],
+    warning: 'Do not use a Bybit key with derivatives, leverage, or withdrawal permissions for this workflow.',
+    defaultOrder: { symbol: 'BTC/USDT', side: 'buy', orderType: 'limit', quantity: 0.001, limitPrice: 0, notionalUsd: 10 }
+  }
+};
+
 function normalizePhase6ExchangeName(value = '') {
   return String(value || '').trim().toLowerCase().replace(/_/g, '-');
 }
@@ -1740,6 +1845,348 @@ function buildPhase6ApprovalCenter({
   };
 }
 
+function phase6BStatusLabel(passed, statusWhenFalse = 'Missing') {
+  return passed ? 'Safe' : statusWhenFalse;
+}
+
+function phase6BChecklistItem({ id, label, passed, statusWhenFalse = 'Missing', plainEnglish, nextClick, locked = false }) {
+  return {
+    id,
+    label,
+    passed: Boolean(passed),
+    status: locked ? 'Locked' : phase6BStatusLabel(passed, statusWhenFalse),
+    plainEnglish,
+    nextClick: passed ? 'No action needed.' : nextClick
+  };
+}
+
+function buildExchangeVerificationChecklist({
+  connectors = [],
+  vaultStatus = null,
+  approvals = [],
+  latestOrders = [],
+  riskProfile = null,
+  latestSandboxTests = [],
+  exchangeReadiness = {}
+} = {}) {
+  const connectorByExchange = connectors.reduce((acc, connector) => {
+    const exchangeName = normalizePhase6ExchangeName(connector.settings?.registryId || connector.exchange_name);
+    if (!acc[exchangeName]) acc[exchangeName] = connector;
+    return acc;
+  }, {});
+  const credentialReferences = new Set((vaultStatus?.entries || []).map(entry => normalizePhase6ExchangeName(entry.exchangeName)));
+  const activeApprovals = approvals.filter(approvalIsActive);
+  const latestDryRunByExchange = latestOrders.reduce((acc, order) => {
+    const exchangeName = normalizePhase6ExchangeName(order.exchange_name);
+    if (!exchangeName || acc[exchangeName]) return acc;
+    acc[exchangeName] = order;
+    return acc;
+  }, {});
+
+  const exchanges = Object.values(PHASE6_PRODUCTION_ADAPTERS).map(adapter => {
+    const connector = connectorByExchange[adapter.exchangeName] || null;
+    const productionConnection = connector?.settings?.productionConnection || {};
+    const readiness = exchangeReadiness[adapter.exchangeName] || null;
+    const permissionsChecklist = productionConnection.permissionsChecklist || {};
+    const productionCredentialsSaved = credentialReferences.has(adapter.exchangeName)
+      || Boolean(productionConnection.referenceName);
+    const connected = readiness?.status === 'production_account_verified'
+      || productionConnection.connectionStatus === 'production_account_verified';
+    const latestPermission = productionConnection.lastProductionPermissionStatus || {};
+    const canWithdraw = readiness?.canWithdraw ?? latestPermission.canWithdraw;
+    const withdrawalsDisabled = canWithdraw === false
+      || (connected && permissionsChecklist.withdrawalsDisabled === true);
+    const balancesReadable = Boolean(readiness?.balancesVisible)
+      || (Array.isArray(readiness?.balances) && readiness.balances.length >= 0);
+    const exactFeesLoaded = Boolean(
+      readiness?.feeTier
+        || readiness?.makerFeePercent
+        || readiness?.takerFeePercent
+        || readiness?.makerFeeRate
+        || readiness?.takerFeeRate
+    );
+    const feeModelLoaded = exactFeesLoaded || Boolean(adapter.precisionModel);
+    const symbolRulesLoaded = Boolean(adapter.precisionModel?.minNotionalUsd);
+    const orderEndpointModeled = Boolean(adapter.endpoints?.placeOrder);
+    const sandboxComplete = latestSandboxTests.some(test => (
+      normalizePhase6ExchangeName(test.exchange_name) === adapter.exchangeName
+        && ['accepted', 'filled', 'canceled', 'reconciled'].includes(String(test.status || '').toLowerCase())
+    ));
+    const sandboxAdapterComplete = ['binance', 'okx', 'bybit'].includes(adapter.exchangeName);
+    const latestDryRun = latestDryRunByExchange[adapter.exchangeName] || null;
+    const productionDryRunPassed = latestDryRun?.status === 'preview_ready';
+    const exchangeApproval = findApproval(activeApprovals, 'enable_exchange', adapter.exchangeName);
+    const globalApproval = findApproval(activeApprovals, 'enable_live_trading', 'global');
+    const symbolApproval = latestDryRun?.symbol
+      ? findApproval(activeApprovals, 'enable_symbol', `${adapter.exchangeName}:${latestDryRun.symbol}`)
+      : null;
+    const strategyApproval = findApproval(activeApprovals, 'enable_strategy', 'manual');
+    const capitalApproval = activeApprovals.some(approval => approval.scope_type === 'increase_capital_limits');
+    const riskProfileReady = Boolean(riskProfile?.id) && Number(riskProfile?.kill_switch_enabled || 0) === 0;
+    const tinyLiveEligible = connected
+      && productionCredentialsSaved
+      && withdrawalsDisabled
+      && sandboxComplete
+      && productionDryRunPassed
+      && riskProfileReady
+      && Boolean(globalApproval)
+      && Boolean(exchangeApproval)
+      && Boolean(strategyApproval)
+      && Boolean(symbolApproval)
+      && Boolean(capitalApproval);
+    const status = tinyLiveEligible
+      ? 'Tiny live test eligible'
+      : connected
+        ? 'Authenticated Read-Only'
+        : productionCredentialsSaved
+          ? 'Production Key Saved'
+          : 'Not Connected';
+
+    return {
+      exchangeName: adapter.exchangeName,
+      displayName: adapter.displayName,
+      status,
+      recommendedFirst: PHASE6B_ACTIVATION_EXCHANGE_GUIDES[adapter.exchangeName]?.recommendedFirst === true,
+      guide: PHASE6B_ACTIVATION_EXCHANGE_GUIDES[adapter.exchangeName] || null,
+      connectorId: connector?.id || null,
+      connectorExists: Boolean(connector),
+      productionCredentialsSaved,
+      connected,
+      orderEndpointLocked: true,
+      tinyLiveEligible,
+      checklist: [
+        phase6BChecklistItem({
+          id: 'api_connected',
+          label: 'API connected',
+          passed: connected,
+          plainEnglish: connected ? `${adapter.displayName} accepted the production API key for account reads.` : 'EtherealAI has not verified this production key yet.',
+          nextClick: productionCredentialsSaved ? 'Click Test This Exchange.' : 'Open the key panel, paste the key into the vault, then test it.'
+        }),
+        phase6BChecklistItem({
+          id: 'balances_readable',
+          label: 'Balances readable',
+          passed: balancesReadable,
+          plainEnglish: balancesReadable ? 'The account endpoint responded with balance visibility.' : 'Balances are not visible yet because the authenticated test has not passed.',
+          nextClick: 'Fix the API key permissions, then click Test This Exchange.'
+        }),
+        phase6BChecklistItem({
+          id: 'fees_loaded',
+          label: exactFeesLoaded ? 'Fees readable' : 'Fee model loaded',
+          passed: feeModelLoaded,
+          statusWhenFalse: 'Review Needed',
+          plainEnglish: exactFeesLoaded
+            ? 'Account-specific fee data was detected.'
+            : 'Exact account fee tier is not confirmed yet; dry-runs use conservative fee assumptions until exchange-specific fee reads are available.',
+          nextClick: 'Use conservative dry-run assumptions or connect account-specific fee access later.'
+        }),
+        phase6BChecklistItem({
+          id: 'symbol_rules_readable',
+          label: 'Symbol rules readable',
+          passed: symbolRulesLoaded,
+          plainEnglish: symbolRulesLoaded ? 'Minimum order and precision rules are loaded for safe dry-run validation.' : 'Symbol rules are missing for this adapter.',
+          nextClick: 'Choose a supported spot symbol or review the exchange adapter.'
+        }),
+        phase6BChecklistItem({
+          id: 'order_endpoint_reachable',
+          label: 'Order endpoint modeled and locked',
+          passed: orderEndpointModeled,
+          locked: true,
+          plainEnglish: orderEndpointModeled ? 'The production order route exists, but remains locked until every approval and dry-run gate passes.' : 'No production order route is implemented for this exchange.',
+          nextClick: 'Keep using dry-run until every owner approval gate passes.'
+        }),
+        phase6BChecklistItem({
+          id: 'withdrawals_disabled',
+          label: 'Withdrawals disabled',
+          passed: withdrawalsDisabled,
+          statusWhenFalse: connected ? 'Unsafe' : 'Missing',
+          plainEnglish: withdrawalsDisabled ? 'No withdrawal permission is detected or the owner checklist confirms withdrawals are disabled.' : 'Withdrawal safety has not been verified.',
+          nextClick: 'Recreate the exchange API key with withdrawals and transfers disabled.'
+        }),
+        phase6BChecklistItem({
+          id: 'sandbox_available',
+          label: 'Sandbox/testnet available',
+          passed: sandboxAdapterComplete || sandboxComplete,
+          statusWhenFalse: 'Review Needed',
+          plainEnglish: sandboxAdapterComplete
+            ? `${adapter.displayName} has a prepared sandbox/testnet adapter.`
+            : `${adapter.displayName} sandbox support needs manual exchange-docs review before it can be used as proof.`,
+          nextClick: 'Run sandbox/testnet validation where available, or use an exchange with a complete sandbox adapter first.'
+        }),
+        phase6BChecklistItem({
+          id: 'production_dry_run_passed',
+          label: 'Production dry-run passed',
+          passed: productionDryRunPassed,
+          plainEnglish: productionDryRunPassed ? 'The exact tiny order passed dry-run checks without calling the live order endpoint.' : 'No passing production dry-run exists for this exchange yet.',
+          nextClick: 'Click Run Guided Production Dry-Run.'
+        }),
+        phase6BChecklistItem({
+          id: 'tiny_live_test_eligible',
+          label: 'Tiny live test eligible',
+          passed: tinyLiveEligible,
+          locked: !tinyLiveEligible,
+          plainEnglish: tinyLiveEligible
+            ? 'All required gates are present for one manual tiny spot test. Automation remains disabled.'
+            : 'Tiny live testing stays locked until API verification, withdrawal safety, sandbox evidence, approvals, risk profile, and dry-run all pass.',
+          nextClick: 'Complete the missing checklist items above before typing any final order phrase.'
+        })
+      ],
+      approvals: {
+        globalApprovalActive: Boolean(globalApproval),
+        exchangeApprovalActive: Boolean(exchangeApproval),
+        strategyApprovalActive: Boolean(strategyApproval),
+        symbolApprovalActive: Boolean(symbolApproval),
+        capitalApprovalActive: Boolean(capitalApproval)
+      },
+      latestDryRun: latestDryRun
+        ? {
+            id: latestDryRun.id,
+            status: latestDryRun.status,
+            symbol: latestDryRun.symbol,
+            productionOrderEndpointCalled: Boolean(latestDryRun.production_order_endpoint_called)
+          }
+        : null
+    };
+  });
+
+  return {
+    title: 'Exchange Verification Checklist',
+    exchanges,
+    safetyBoundary: createProductionSafetyBoundary(false),
+    statusLegend: ['Safe', 'Missing', 'Review Needed', 'Unsafe', 'Locked']
+  };
+}
+
+function buildProductionActivationWizard({
+  connectors = [],
+  vaultStatus = null,
+  approvals = [],
+  latestOrders = [],
+  riskProfile = null,
+  latestSandboxTests = [],
+  exchangeReadiness = {},
+  selectedExchangeName = ''
+} = {}) {
+  const checklist = buildExchangeVerificationChecklist({
+    connectors,
+    vaultStatus,
+    approvals,
+    latestOrders,
+    riskProfile,
+    latestSandboxTests,
+    exchangeReadiness
+  });
+  const selected = normalizePhase6ExchangeName(selectedExchangeName || PHASE6B_RECOMMENDED_FIRST_EXCHANGE);
+  const selectedExchange = checklist.exchanges.find(exchange => exchange.exchangeName === selected)
+    || checklist.exchanges.find(exchange => exchange.exchangeName === PHASE6B_RECOMMENDED_FIRST_EXCHANGE)
+    || checklist.exchanges[0];
+  const guide = PHASE6B_ACTIVATION_EXCHANGE_GUIDES[selectedExchange?.exchangeName] || selectedExchange?.guide || null;
+  const firstMissing = (selectedExchange?.checklist || []).find(item => !item.passed && item.id !== 'tiny_live_test_eligible');
+  const missingItems = (selectedExchange?.checklist || []).filter(item => !item.passed);
+  const safeItems = (selectedExchange?.checklist || []).filter(item => item.passed);
+  const lockedItems = (selectedExchange?.checklist || []).filter(item => item.status === 'Locked');
+
+  let nextButton = 'Open Key Instructions';
+  if (!selectedExchange?.productionCredentialsSaved) nextButton = 'Open Key Panel';
+  else if (!selectedExchange?.connected) nextButton = 'Test This Exchange';
+  else if (!selectedExchange?.latestDryRun || selectedExchange.latestDryRun.status !== 'preview_ready') nextButton = 'Run Guided Production Dry-Run';
+  else if (!selectedExchange?.tinyLiveEligible) nextButton = 'Review Locked Tiny Live Requirements';
+  else nextButton = 'Prepare Tiny Live Test';
+
+  return {
+    title: 'Live Trading Activation Wizard',
+    phase: 'Phase 6B',
+    selectedExchangeName: selectedExchange?.exchangeName || PHASE6B_RECOMMENDED_FIRST_EXCHANGE,
+    selectedExchangeDisplayName: selectedExchange?.displayName || 'Binance',
+    recommendedExchangeName: PHASE6B_RECOMMENDED_FIRST_EXCHANGE,
+    recommendedExchangeDisplayName: PHASE6_PRODUCTION_ADAPTERS[PHASE6B_RECOMMENDED_FIRST_EXCHANGE]?.displayName || 'Binance',
+    status: selectedExchange?.tinyLiveEligible ? 'Ready for one manual tiny live test' : 'Locked guided setup',
+    whatToDoNow: firstMissing
+      ? `${firstMissing.nextClick} ${firstMissing.plainEnglish}`
+      : 'All setup checks are present for one manually approved tiny spot test. Review the order preview before doing anything live.',
+    whatIsMissing: missingItems.map(item => `${item.label}: ${item.plainEnglish}`),
+    whatIsSafe: [
+      'The wizard cannot enable withdrawals.',
+      'The wizard cannot enable wallet signing.',
+      'The wizard cannot enable margin, futures, leverage, or autonomous scaling.',
+      'Dry-run preview does not call a production order endpoint.',
+      ...safeItems.slice(0, 4).map(item => `${item.label}: ${item.plainEnglish}`)
+    ],
+    whatIsLocked: [
+      'Unrestricted live trading remains locked.',
+      'Automated live trading remains locked.',
+      'Withdrawals and transfers remain disabled.',
+      'Wallet signing remains disabled.',
+      ...lockedItems.map(item => `${item.label}: ${item.plainEnglish}`)
+    ],
+    nextButton,
+    guide,
+    steps: [
+      {
+        id: 'choose_exchange',
+        title: 'Choose one exchange first',
+        status: selectedExchange ? 'Safe' : 'Missing',
+        action: 'Use the exchange dropdown. The recommended first exchange is selected automatically.',
+        button: 'Start Live Setup Safely'
+      },
+      {
+        id: 'create_api_key',
+        title: 'Create a restricted API key on the exchange',
+        status: selectedExchange?.productionCredentialsSaved ? 'Safe' : 'Missing',
+        action: 'Open the official exchange API page and create a key with no withdrawal or transfer permission.',
+        button: 'Open Official Key Page'
+      },
+      {
+        id: 'save_to_vault',
+        title: 'Save keys to encrypted production vault',
+        status: selectedExchange?.productionCredentialsSaved ? 'Safe' : 'Missing',
+        action: 'Paste the key once. EtherealAI encrypts it locally and does not show it again.',
+        button: 'Open Key Panel'
+      },
+      {
+        id: 'test_exchange',
+        title: 'Test authenticated connection',
+        status: selectedExchange?.connected ? 'Safe' : 'Missing',
+        action: 'EtherealAI reads account metadata only. It cannot place orders from this test.',
+        button: 'Test This Exchange'
+      },
+      {
+        id: 'verify_permissions',
+        title: 'Verify withdrawals are disabled',
+        status: selectedExchange?.checklist?.find(item => item.id === 'withdrawals_disabled')?.status || 'Missing',
+        action: 'If withdrawals are detected, delete the API key immediately and recreate it safer.',
+        button: 'Review Permissions'
+      },
+      {
+        id: 'run_dry_run',
+        title: 'Run production dry-run',
+        status: selectedExchange?.latestDryRun?.status === 'preview_ready' ? 'Safe' : 'Missing',
+        action: 'Simulate the exact tiny order and verify limits, balance, fees, slippage, spread, stale price, and kill switch.',
+        button: 'Run Guided Production Dry-Run'
+      },
+      {
+        id: 'prepare_tiny_live',
+        title: 'Prepare one tiny live test',
+        status: selectedExchange?.tinyLiveEligible ? 'Safe' : 'Locked',
+        action: 'This remains locked until every gate passes and the owner types final confirmation.',
+        button: 'Prepare Tiny Live Test'
+      }
+    ],
+    defaultOrder: guide?.defaultOrder || { symbol: 'BTC/USDT', side: 'buy', orderType: 'limit', quantity: 0.001, limitPrice: 0, notionalUsd: 10 },
+    selectedExchange,
+    exchangeOptions: checklist.exchanges.map(exchange => ({
+      exchangeName: exchange.exchangeName,
+      displayName: exchange.displayName,
+      recommendedFirst: exchange.recommendedFirst,
+      status: exchange.status,
+      tinyLiveEligible: exchange.tinyLiveEligible
+    })),
+    checklist,
+    approvalPhrase: PHASE6_ENABLE_LIVE_CONFIRMATION_PHRASE,
+    orderPhrase: PHASE6_ORDER_CONFIRMATION_PHRASE,
+    safetyBoundary: createProductionSafetyBoundary(false)
+  };
+}
+
 function createPlainEnglishProductionError(exchangeName, error) {
   const rawMessage = String(error?.message || error || '').slice(0, 500);
   const lower = rawMessage.toLowerCase();
@@ -1776,6 +2223,8 @@ module.exports = {
   PHASE6_ORDER_STATUSES,
   DEFAULT_PHASE6_POLICY,
   PHASE6_PRODUCTION_ADAPTERS,
+  PHASE6B_RECOMMENDED_FIRST_EXCHANGE,
+  PHASE6B_ACTIVATION_EXCHANGE_GUIDES,
   getProductionAdapter,
   getProductionReferenceName,
   sanitizeProductionCredentialInput,
@@ -1793,6 +2242,8 @@ module.exports = {
   queryProductionOrderStatus,
   cancelProductionOrder,
   buildPhase6ApprovalCenter,
+  buildExchangeVerificationChecklist,
+  buildProductionActivationWizard,
   createProductionSafetyBoundary,
   createPlainEnglishProductionError
 };

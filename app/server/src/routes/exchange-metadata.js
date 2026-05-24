@@ -112,6 +112,8 @@ function registerExchangeMetadataRoutes(app, {
   phase6OrderStatuses,
   defaultPhase6Policy,
   phase6ProductionAdapters,
+  phase6BRecommendedFirstExchange,
+  phase6BActivationExchangeGuides,
   getProductionAdapter,
   getProductionReferenceName,
   sanitizeProductionCredentialInput,
@@ -129,6 +131,8 @@ function registerExchangeMetadataRoutes(app, {
   queryProductionOrderStatus,
   cancelProductionOrder,
   buildPhase6ApprovalCenter,
+  buildExchangeVerificationChecklist,
+  buildProductionActivationWizard,
   createProductionSafetyBoundary,
   createPlainEnglishProductionError,
   evaluateExchangeConnectorReadiness,
@@ -1948,6 +1952,73 @@ function registerExchangeMetadataRoutes(app, {
           ? createPlainEnglishProductionError('Phase 6 Production Trading Command Center', error)
           : error.message,
         safetyBoundary: createProductionSafetyBoundary ? createProductionSafetyBoundary(false) : {}
+      });
+    }
+  });
+
+  app.get('/api/v1/live-trading-launch/phase6b/wizard', requireAuth, async (req, res) => {
+    try {
+      const selectedExchangeName = normalizeExchangeId(req.query?.exchange || phase6BRecommendedFirstExchange || 'binance');
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const [vaultStatus, approvals, latestOrders, latestSandboxTests, riskProfile] = await Promise.all([
+        getProductionVaultStatus(),
+        getLatestProductionApprovals(req.session.userId, 100),
+        getLatestProductionOrders(req.session.userId, 25),
+        getLatestSandboxOrderTests(req.session.userId, 25),
+        getActiveLiveReadinessRiskProfile()
+      ]);
+      const exchangeReadiness = await getProductionExchangeReadiness({
+        connectors,
+        userId: req.session.userId
+      });
+      const center = buildPhase6ApprovalCenter({
+        connectors,
+        vaultStatus,
+        approvals,
+        latestOrders,
+        riskProfile,
+        latestSandboxTests
+      });
+      const checklist = buildExchangeVerificationChecklist({
+        connectors,
+        vaultStatus,
+        approvals,
+        latestOrders,
+        riskProfile,
+        latestSandboxTests,
+        exchangeReadiness
+      });
+      const wizard = buildProductionActivationWizard({
+        connectors,
+        vaultStatus,
+        approvals,
+        latestOrders,
+        riskProfile,
+        latestSandboxTests,
+        exchangeReadiness,
+        selectedExchangeName
+      });
+
+      res.json({
+        wizard,
+        checklist,
+        center,
+        exchangeReadiness,
+        guides: phase6BActivationExchangeGuides || {},
+        selectedExchangeName: wizard.selectedExchangeName,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('Phase 6B activation wizard', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
       });
     }
   });

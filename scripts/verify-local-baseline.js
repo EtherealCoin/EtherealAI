@@ -3922,11 +3922,15 @@ function checkExchangeProductionExecutionModule() {
     PHASE6_ORDER_STATUSES,
     DEFAULT_PHASE6_POLICY,
     PHASE6_PRODUCTION_ADAPTERS,
+    PHASE6B_RECOMMENDED_FIRST_EXCHANGE,
+    PHASE6B_ACTIVATION_EXCHANGE_GUIDES,
     normalizeProductionOrderDraft,
     createProductionOrderFingerprint,
     evaluateProductionOrderSafety,
     createProductionOrderPreview,
     buildPhase6ApprovalCenter,
+    buildExchangeVerificationChecklist,
+    buildProductionActivationWizard,
     createProductionSafetyBoundary
   } = require(path.join(projectRoot, 'app/server/src/lib/exchange-production-execution'));
   const order = normalizeProductionOrderDraft({
@@ -4026,6 +4030,45 @@ function checkExchangeProductionExecutionModule() {
     riskProfile: { id: 1, status: 'active', kill_switch_enabled: 0 },
     latestSandboxTests: [{ exchange_name: 'binance', status: 'filled' }]
   });
+  const phase6BChecklist = buildExchangeVerificationChecklist({
+    connectors: [{ id: 1, exchange_name: 'binance', settings: { registryId: 'binance', productionConnection: { referenceName: 'fixture', connectionStatus: 'production_account_verified' } } }],
+    vaultStatus: { entries: [{ exchangeName: 'binance' }] },
+    approvals,
+    latestOrders: [{ id: 99, exchange_name: 'binance', symbol: 'BTC/USDT', status: 'preview_ready', production_order_endpoint_called: false }],
+    riskProfile: { id: 1, status: 'active', kill_switch_enabled: 0 },
+    latestSandboxTests: [{ exchange_name: 'binance', status: 'filled' }],
+    exchangeReadiness: {
+      binance: {
+        status: 'production_account_verified',
+        canTrade: true,
+        canWithdraw: false,
+        spotAllowed: true,
+        marginDetected: false,
+        futuresDetected: false,
+        balancesVisible: true
+      }
+    }
+  });
+  const phase6BWizard = buildProductionActivationWizard({
+    connectors: [{ id: 1, exchange_name: 'binance', settings: { registryId: 'binance', productionConnection: { referenceName: 'fixture', connectionStatus: 'production_account_verified' } } }],
+    vaultStatus: { entries: [{ exchangeName: 'binance' }] },
+    approvals,
+    latestOrders: [{ id: 99, exchange_name: 'binance', symbol: 'BTC/USDT', status: 'preview_ready', production_order_endpoint_called: false }],
+    riskProfile: { id: 1, status: 'active', kill_switch_enabled: 0 },
+    latestSandboxTests: [{ exchange_name: 'binance', status: 'filled' }],
+    exchangeReadiness: {
+      binance: {
+        status: 'production_account_verified',
+        canTrade: true,
+        canWithdraw: false,
+        spotAllowed: true,
+        marginDetected: false,
+        futuresDetected: false,
+        balancesVisible: true
+      }
+    },
+    selectedExchangeName: 'binance'
+  });
   const boundary = createProductionSafetyBoundary(false);
 
   if (
@@ -4037,6 +4080,8 @@ function checkExchangeProductionExecutionModule() {
     || DEFAULT_PHASE6_POLICY.automatedLiveTradingEnabled !== false
     || DEFAULT_PHASE6_POLICY.withdrawalsEnabled !== false
     || DEFAULT_PHASE6_POLICY.walletSigningEnabled !== false
+    || PHASE6B_RECOMMENDED_FIRST_EXCHANGE !== 'binance'
+    || PHASE6B_ACTIVATION_EXCHANGE_GUIDES.binance.recommendedFirst !== true
     || PHASE6_PRODUCTION_ADAPTERS.binance.adapterStatus !== 'production_route_ready_locked'
     || !PHASE6_PRODUCTION_ADAPTERS.coinbase
     || !PHASE6_PRODUCTION_ADAPTERS.kraken
@@ -4053,6 +4098,11 @@ function checkExchangeProductionExecutionModule() {
     || blockedSafety.passed !== false
     || blockedSafety.safetyBoundary.productionOrderEndpointEnabled !== false
     || center.title !== 'Phase 6: Production Trading Command Center'
+    || phase6BChecklist.title !== 'Exchange Verification Checklist'
+    || phase6BChecklist.exchanges.find(item => item.exchangeName === 'binance')?.tinyLiveEligible !== true
+    || phase6BWizard.title !== 'Live Trading Activation Wizard'
+    || phase6BWizard.nextButton !== 'Prepare Tiny Live Test'
+    || phase6BWizard.safetyBoundary.productionOrderEndpointEnabled !== false
     || center.safetyBoundary.productionOrderEndpointEnabled !== false
     || center.exchanges.length < 5
     || boundary.productionOrderEndpointEnabled !== false
@@ -7583,6 +7633,13 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('Risk & Exposure Dashboard')
     || !html.includes('AI Decision Audit')
     || !html.includes('Emergency Capital Freeze / Keep Locked')
+    || !html.includes('Live Trading Activation Wizard')
+    || !html.includes('Start Live Setup Safely')
+    || !html.includes('Choose one exchange first')
+    || !html.includes('Where To Get API Keys')
+    || !html.includes('Run Guided Production Dry-Run')
+    || !html.includes('Exchange Verification Checklist')
+    || !html.includes('Tiny Live Test Preparation')
     || !html.includes('Phase 6: Production Trading Command Center')
     || !html.includes('Record Controlled Approval')
     || !html.includes('Save Production API Key To Local Vault')
@@ -7620,6 +7677,7 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('/api/v1/live-trading-launch/phase4/command-center')
     || !html.includes('/api/v1/live-trading-launch/phase5/status')
     || !html.includes('/api/v1/live-trading-launch/phase5/treasury-command-center')
+    || !html.includes('/api/v1/live-trading-launch/phase6b/wizard')
     || !html.includes('/api/v1/live-trading-launch/phase6/status')
     || !html.includes('/api/v1/live-trading-launch/phase6/approval')
     || !html.includes('/api/v1/live-trading-launch/phase6/preview')
@@ -7656,6 +7714,10 @@ function checkLiveTradingLaunchCenterUi() {
     || !styles.includes('.phase5-controls')
     || !styles.includes('.phase5-dashboard-grid')
     || !styles.includes('.phase5-mini-card')
+    || !styles.includes('.phase6b-wizard')
+    || !styles.includes('.phase6b-status-grid')
+    || !styles.includes('.phase6b-checklist')
+    || !styles.includes('.phase6b-tiny-live-panel')
     || !styles.includes('.phase6-controls')
     || !styles.includes('.phase6-vault')
     || !styles.includes('.phase6-dashboard-grid')
@@ -7676,6 +7738,7 @@ function checkLiveTradingLaunchCenterUi() {
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase4/command-center'")
     || !routes.includes("app.get('/api/v1/live-trading-launch/phase5/status'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase5/treasury-command-center'")
+    || !routes.includes("app.get('/api/v1/live-trading-launch/phase6b/wizard'")
     || !routes.includes("app.get('/api/v1/live-trading-launch/phase6/status'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase6/approval'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase6/preview'")
@@ -7710,6 +7773,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !server.includes('buildLiveArbitrageCommandCenter')
     || !server.includes('buildTreasuryLiquidityCommandCenter')
     || !server.includes('PHASE6_PRODUCTION_ADAPTERS')
+    || !server.includes('PHASE6B_ACTIVATION_EXCHANGE_GUIDES')
+    || !server.includes('buildProductionActivationWizard')
     || !server.includes('runProductionOrderLifecycle')
     || !server.includes('queryProductionOrderStatus')
     || !server.includes('cancelProductionOrder')
@@ -7726,6 +7791,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !routeRegistration.includes('buildLiveArbitrageCommandCenter')
     || !routeRegistration.includes('buildTreasuryLiquidityCommandCenter')
     || !routeRegistration.includes('buildPhase6ApprovalCenter')
+    || !routeRegistration.includes('buildProductionActivationWizard')
+    || !routeRegistration.includes('buildExchangeVerificationChecklist')
     || !routeRegistration.includes('runProductionOrderLifecycle')
     || !routeRegistration.includes('queryProductionOrderStatus')
     || !routeRegistration.includes('cancelProductionOrder')
@@ -7787,6 +7854,9 @@ function checkLiveTradingLaunchCenterUi() {
     || !phase5Treasury.includes('unrestrictedWithdrawalsEnabled: false')
     || !phase5Treasury.includes('unrestrictedWalletSigningEnabled: false')
     || !phase6Production.includes('Phase 6: Production Trading Command Center')
+    || !phase6Production.includes('PHASE6B_ACTIVATION_EXCHANGE_GUIDES')
+    || !phase6Production.includes('buildProductionActivationWizard')
+    || !phase6Production.includes('buildExchangeVerificationChecklist')
     || !phase6Production.includes('PHASE6_PRODUCTION_ADAPTERS')
     || !phase6Production.includes('submitBinanceProductionOrder')
     || !phase6Production.includes('submitCoinbaseProductionOrder')
@@ -7802,9 +7872,9 @@ function checkLiveTradingLaunchCenterUi() {
     || !phase6Production.includes('withdrawalsEnabled: false')
     || !phase6Production.includes('walletSigningEnabled: false')
     || !operatorMode.includes("'/live-trading-launch'")
-    || !operatorMode.includes('Control Production Trading Infrastructure Without Unlocking Autonomy')
-    || !operatorMode.includes("keepIds: ['live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center']")
-    || !operatorMode.includes('Refresh Production Status')
+    || !operatorMode.includes('Start Live Setup Safely Without Unlocking Autonomy')
+    || !operatorMode.includes("keepIds: ['live-trading-activation-wizard', 'live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center']")
+    || !operatorMode.includes('Start Live Setup Safely')
     || !operatorMode.includes('No leverage, margin, futures, withdrawals, wallet signing, unrestricted live orders, or autonomous scaling.')
     || !schema.includes('CREATE TABLE IF NOT EXISTS sandbox_order_tests')
     || !schema.includes('CREATE TABLE IF NOT EXISTS sandbox_order_events')

@@ -564,6 +564,111 @@
             <div id="phase5-result" class="phase3-results">Phase 5 is intelligence-only. Autonomous treasury movement is not enabled.</div>
         </section>
 
+        <section class="model-panel phase6b-wizard" id="live-trading-activation-wizard">
+            <div class="phase6b-hero">
+                <div>
+                    <span class="mode-pill">Phase 6B · Owner Guided</span>
+                    <h2>Live Trading Activation Wizard</h2>
+                    <p class="inline-status">Connect one exchange safely, verify permissions, run a production dry-run, and prepare one tiny live test. This wizard does not enable unrestricted live trading.</p>
+                </div>
+                <button id="start-live-setup-safely" type="button" class="primary-action-button">Start Live Setup Safely</button>
+            </div>
+
+            <div class="phase6b-status-grid">
+                <article>
+                    <span>Current Step</span>
+                    <strong id="phase6b-current-step">Start safely</strong>
+                    <small id="phase6b-current-detail">Choose one exchange and follow the guided checklist.</small>
+                </article>
+                <article>
+                    <span>Recommended First</span>
+                    <strong id="phase6b-recommended-exchange">Loading</strong>
+                    <small>Use another exchange if this one is not available to you.</small>
+                </article>
+                <article>
+                    <span>Live Orders</span>
+                    <strong>Locked</strong>
+                    <small>No order endpoint is called by setup or dry-run.</small>
+                </article>
+                <article>
+                    <span>Withdrawals</span>
+                    <strong>Disabled Required</strong>
+                    <small>Never save a key with withdrawal permission.</small>
+                </article>
+            </div>
+
+            <div class="phase6b-controls">
+                <label for="phase6b-exchange">
+                    Choose one exchange first
+                    <select id="phase6b-exchange">
+                        <option value="binance">Binance</option>
+                        <option value="coinbase">Coinbase Advanced</option>
+                        <option value="kraken">Kraken</option>
+                        <option value="okx">OKX</option>
+                        <option value="bybit">Bybit</option>
+                    </select>
+                </label>
+                <button id="phase6b-open-key-panel" type="button">Open Key Panel</button>
+                <button id="phase6b-test-exchange" type="button">Test This Exchange</button>
+                <button id="phase6b-run-dry-run" type="button">Run Guided Production Dry-Run</button>
+                <button id="phase6b-prepare-tiny-live" type="button" class="secondary-button">Prepare Tiny Live Test</button>
+            </div>
+
+            <div class="phase6b-summary-grid">
+                <article>
+                    <h3>What To Do Now</h3>
+                    <p id="phase6b-what-now">Click Start Live Setup Safely.</p>
+                </article>
+                <article>
+                    <h3>What Is Missing</h3>
+                    <ul id="phase6b-missing-list">
+                        <li>Load the wizard status.</li>
+                    </ul>
+                </article>
+                <article>
+                    <h3>What Is Safe</h3>
+                    <ul id="phase6b-safe-list">
+                        <li>Live trading, withdrawals, wallet signing, margin, futures, leverage, and autonomy remain locked.</li>
+                    </ul>
+                </article>
+                <article>
+                    <h3>What Is Locked</h3>
+                    <ul id="phase6b-locked-list">
+                        <li>Unrestricted live trading and autonomous scaling stay locked.</li>
+                    </ul>
+                </article>
+            </div>
+
+            <div class="phase6b-guide-grid">
+                <article class="phase6b-instructions">
+                    <h3>Where To Get API Keys</h3>
+                    <div id="phase6b-key-guide">Select an exchange to see exact setup instructions.</div>
+                </article>
+                <article class="phase6b-instructions">
+                    <h3>Production Dry-Run</h3>
+                    <p id="phase6b-dry-run-guide">The dry-run simulates the exact order, checks balance, minimum order size, fee model, slippage, spread, risk limits, kill switch, and confirms the production endpoint remains locked.</p>
+                    <div class="phase6b-order-preview">
+                        <span id="phase6b-order-summary">No dry-run selected yet.</span>
+                    </div>
+                </article>
+            </div>
+
+            <div class="phase6b-checklist-panel">
+                <h3>Exchange Verification Checklist</h3>
+                <div id="phase6b-verification-checklist" class="phase6b-checklist">Click Start Live Setup Safely to load the checklist.</div>
+            </div>
+
+            <div class="phase6b-tiny-live-panel">
+                <h3>Tiny Live Test Preparation</h3>
+                <p id="phase6b-tiny-live-status">Locked until API verification, withdrawal-disabled proof, sandbox/testnet evidence, owner approvals, risk profile, and production dry-run all pass.</p>
+                <div class="button-row">
+                    <button id="phase6b-emergency-stop" type="button" class="secondary-button">Emergency Stop Everything Live</button>
+                </div>
+            </div>
+
+            <div id="phase6b-result" class="phase3-results">Phase 6B is ready to guide the first safe exchange connection. No live order path is enabled.</div>
+        </section>
+
         <section class="model-panel" id="production-trading-command-center">
             <h2>Phase 6: Production Trading Command Center</h2>
             <p class="inline-status">Controlled production execution infrastructure is installed here. Real orders stay locked until production keys, exchange connectivity, sandbox evidence, owner approvals, dry-run checks, capital limits, and final typed confirmation all pass.</p>
@@ -782,6 +887,8 @@
         let latestTinyLiveOrderId = null;
         let latestPhase4CommandCenter = null;
         let latestPhase5TreasuryCommand = null;
+        let latestPhase6BWizard = null;
+        let latestPhase6BChecklist = null;
         let latestPhase6Center = null;
         let latestPhase6PreviewId = null;
         let latestPhase6OrderId = null;
@@ -1431,6 +1538,166 @@
                     <small>Autonomous treasury actions: ${command?.safetyBoundary?.autonomousTreasuryActionsEnabled ? 'enabled' : 'disabled'} · withdrawals: ${command?.safetyBoundary?.unrestrictedWithdrawalsEnabled ? 'enabled' : 'disabled'} · wallet signing: ${command?.safetyBoundary?.unrestrictedWalletSigningEnabled ? 'enabled' : 'disabled'}</small>
                 </article>
             `;
+        }
+
+        function phase6BCardClass(status) {
+            const text = String(status || '').toLowerCase();
+            if (text.includes('safe') || text.includes('eligible') || text.includes('connected') || text.includes('verified')) return 'status-success';
+            if (text.includes('unsafe') || text.includes('error')) return 'status-danger';
+            if (text.includes('locked') || text.includes('missing') || text.includes('review')) return 'status-warning';
+            return 'status-info';
+        }
+
+        function renderListItems(items, fallback) {
+            return (items || []).length
+                ? items.map(item => `<li>${escapeHtml(item)}</li>`).join('')
+                : `<li>${escapeHtml(fallback)}</li>`;
+        }
+
+        function renderPhase6BWizard(data) {
+            const wizard = data?.wizard || {};
+            const selected = wizard.selectedExchange || {};
+            const guide = wizard.guide || selected.guide || {};
+            const defaultOrder = wizard.defaultOrder || {};
+            latestPhase6BWizard = wizard;
+            latestPhase6BChecklist = data?.checklist || wizard.checklist || null;
+
+            document.getElementById('phase6b-exchange').value = wizard.selectedExchangeName || document.getElementById('phase6b-exchange').value || 'binance';
+            document.getElementById('phase6-exchange').value = wizard.selectedExchangeName || 'binance';
+            document.getElementById('phase6b-current-step').textContent = wizard.nextButton || 'Review guided setup';
+            document.getElementById('phase6b-current-detail').textContent = wizard.whatToDoNow || 'Follow the next safe action.';
+            document.getElementById('phase6b-recommended-exchange').textContent = wizard.recommendedExchangeDisplayName || 'Binance';
+            document.getElementById('phase6b-what-now').textContent = wizard.whatToDoNow || 'Follow the guided checklist.';
+            document.getElementById('phase6b-missing-list').innerHTML = renderListItems(wizard.whatIsMissing, 'Nothing missing for the selected step.');
+            document.getElementById('phase6b-safe-list').innerHTML = renderListItems(wizard.whatIsSafe, 'Core safety locks are active.');
+            document.getElementById('phase6b-locked-list').innerHTML = renderListItems(wizard.whatIsLocked, 'Live automation stays locked.');
+
+            if (defaultOrder.symbol) document.getElementById('phase6-symbol').value = defaultOrder.symbol;
+            if (defaultOrder.side) document.getElementById('phase6-side').value = defaultOrder.side;
+            if (defaultOrder.orderType) document.getElementById('phase6-order-type').value = defaultOrder.orderType;
+            if (defaultOrder.quantity) document.getElementById('phase6-quantity').value = defaultOrder.quantity;
+            if (defaultOrder.limitPrice !== undefined) document.getElementById('phase6-limit-price').value = defaultOrder.limitPrice;
+            if (defaultOrder.notionalUsd) document.getElementById('phase6-notional').value = defaultOrder.notionalUsd;
+
+            document.getElementById('phase6b-order-summary').textContent = `${escapeHtml(selected.displayName || wizard.selectedExchangeDisplayName || 'Selected exchange')} · ${escapeHtml(defaultOrder.symbol || 'BTC/USDT')} · max ${formatUsd(defaultOrder.notionalUsd || 10)} · spot only · dry-run first`;
+
+            document.getElementById('phase6b-key-guide').innerHTML = `
+                <div class="phase6b-key-header">
+                    <strong>${escapeHtml(guide.displayName || selected.displayName || 'Selected exchange')}</strong>
+                    <span>${escapeHtml(guide.recommendedReason || 'Use this exchange only if it is available and you can create a restricted API key.')}</span>
+                </div>
+                <div class="button-row">
+                    <a class="button-link" href="${escapeHtml(guide.ownerPortalUrl || '#')}" target="_blank" rel="noreferrer">Open Official Key Page</a>
+                    <a class="button-link secondary-button" href="${escapeHtml(guide.officialDocsUrl || selected.docsUrl || '#')}" target="_blank" rel="noreferrer">Open Official Docs</a>
+                </div>
+                <h4>Enter These Fields</h4>
+                <ul>${renderListItems(guide.credentialFields || [], 'The exchange-specific credential fields load here.')}</ul>
+                <h4>Required Permissions</h4>
+                <ul>${renderListItems(guide.requiredPermissions || [], 'Account read access and tightly controlled spot trading only when preparing tiny live testing.')}</ul>
+                <h4>Do Not Enable</h4>
+                <ul>${renderListItems(guide.forbiddenPermissions || [], 'Withdrawals, transfers, margin, futures, leverage, or autonomous trading.')}</ul>
+                <h4>Exact Steps</h4>
+                <ol>${(guide.plainEnglishSteps || []).map(step => `<li>${escapeHtml(step)}</li>`).join('') || '<li>Open the exchange API page, create a restricted key, then save it to the EtherealAI vault.</li>'}</ol>
+                <p class="workflow-helper-text">${escapeHtml(guide.warning || 'Never save a key with withdrawal permission.')}</p>
+            `;
+
+            const checklist = selected.checklist || [];
+            document.getElementById('phase6b-verification-checklist').innerHTML = checklist.map(item => `
+                <article class="phase6b-check-item ${phase6BCardClass(item.status)}">
+                    <div>
+                        <span>${escapeHtml(item.status)}</span>
+                        <strong>${escapeHtml(item.label)}</strong>
+                    </div>
+                    <p>${escapeHtml(item.plainEnglish || '')}</p>
+                    <small>${escapeHtml(item.nextClick || 'No action needed.')}</small>
+                </article>
+            `).join('') || '<p class="workflow-helper-text">No checklist loaded yet.</p>';
+
+            document.getElementById('phase6b-tiny-live-status').textContent = selected.tinyLiveEligible
+                ? 'Eligible for one manually approved tiny spot test. Automation remains disabled and final typed confirmation is still required.'
+                : 'Locked until API verification, withdrawal-disabled proof, sandbox/testnet evidence, owner approvals, risk profile, and production dry-run all pass.';
+
+            document.getElementById('phase6b-result').innerHTML = `
+                <article class="phase3-account-card ${phase6BCardClass(wizard.status)}">
+                    <strong>${escapeHtml(wizard.status || 'Guided setup locked')}</strong>
+                    <span>${escapeHtml(wizard.whatToDoNow || 'Follow the next safe action.')}</span>
+                    <small>Order endpoint enabled: no · withdrawals disabled required · wallet signing disabled · autonomous live trading disabled.</small>
+                </article>
+            `;
+        }
+
+        async function loadPhase6BWizard(exchangeName = '') {
+            const selected = exchangeName || document.getElementById('phase6b-exchange').value || document.getElementById('phase6-exchange').value || 'binance';
+            const response = await fetch(`/api/v1/live-trading-launch/phase6b/wizard?exchange=${encodeURIComponent(selected)}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase6b-result').textContent = data.error || 'Unable to load the Live Trading Activation Wizard.';
+                return null;
+            }
+
+            renderPhase6BWizard(data);
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                roadmap: latestLiveRoadmap,
+                phase6b: data.wizard,
+                phase6: data.center
+            }, null, 2);
+            return data.wizard;
+        }
+
+        async function startLiveSetupSafely() {
+            const exchangeName = document.getElementById('phase6b-exchange').value || 'binance';
+            document.getElementById('phase6b-result').textContent = 'Creating or finding the locked connector, then loading the guided setup. No live order path is enabled.';
+            await ensureProductionConnector(exchangeName);
+            await loadPhase6Status();
+            await loadPhase6BWizard(exchangeName);
+        }
+
+        function openPhase6VaultPanel() {
+            document.getElementById('phase6-exchange').value = document.getElementById('phase6b-exchange').value || 'binance';
+            const panel = document.querySelector('.phase6-vault');
+            if (panel) {
+                panel.open = true;
+                panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                setTimeout(() => document.getElementById('phase6-api-key')?.focus(), 350);
+            }
+        }
+
+        async function phase6BTestExchange() {
+            document.getElementById('phase6-exchange').value = document.getElementById('phase6b-exchange').value || 'binance';
+            await testPhase6ProductionConnection();
+            await loadPhase6BWizard(document.getElementById('phase6b-exchange').value);
+        }
+
+        async function phase6BRunDryRun() {
+            const wizard = latestPhase6BWizard || await loadPhase6BWizard();
+            const order = wizard?.defaultOrder || {};
+            document.getElementById('phase6-exchange').value = wizard?.selectedExchangeName || document.getElementById('phase6b-exchange').value || 'binance';
+            document.getElementById('phase6-symbol').value = order.symbol || document.getElementById('phase6-symbol').value || 'BTC/USDT';
+            document.getElementById('phase6-side').value = order.side || 'buy';
+            document.getElementById('phase6-order-type').value = order.orderType || 'limit';
+            document.getElementById('phase6-quantity').value = order.quantity || 0.001;
+            document.getElementById('phase6-limit-price').value = order.limitPrice ?? 0;
+            document.getElementById('phase6-notional').value = order.notionalUsd || 10;
+            await previewPhase6Order();
+            await loadPhase6BWizard(document.getElementById('phase6b-exchange').value);
+        }
+
+        async function phase6BPrepareTinyLive() {
+            const wizard = latestPhase6BWizard || await loadPhase6BWizard();
+            const selected = wizard?.selectedExchange || {};
+            document.getElementById('phase6b-result').innerHTML = `
+                <article class="phase3-account-card ${selected.tinyLiveEligible ? 'status-success' : 'status-warning'}">
+                    <strong>${selected.tinyLiveEligible ? 'Tiny live test can be prepared' : 'Tiny live test remains locked'}</strong>
+                    <span>${selected.tinyLiveEligible ? 'Review the production dry-run, typed confirmation, cancel path, emergency stop, audit log, and balance reconciliation before placing one tiny spot order.' : 'Finish the visible checklist first. The app will not route you to unrestricted live trading.'}</span>
+                    <small>One exchange · one symbol · one tiny order · spot only · no withdrawals · no wallet signing · no automation.</small>
+                </article>
+            `;
+        }
+
+        async function phase6BEmergencyStop() {
+            await phase6EmergencyStop();
+            await loadPhase6BWizard(document.getElementById('phase6b-exchange').value);
         }
 
         function phase6CardClass(status) {
@@ -2330,6 +2597,7 @@
                 </article>
             `;
             await loadPhase6Status();
+            await loadPhase6BWizard(exchangeName);
         }
 
         async function testPhase6ProductionConnection() {
@@ -2354,6 +2622,7 @@
                 </article>
             `;
             await loadPhase6Status();
+            await loadPhase6BWizard(exchangeName);
         }
 
         async function deletePhase6ProductionKey() {
@@ -2378,6 +2647,7 @@
                 </article>
             `;
             await loadPhase6Status();
+            await loadPhase6BWizard(exchangeName);
         }
 
         async function loadPhase6Status() {
@@ -2434,6 +2704,7 @@
                 </article>
             `;
             await loadPhase6Status();
+            await loadPhase6BWizard(document.getElementById('phase6-exchange').value);
         }
 
         async function previewPhase6Order() {
@@ -2466,10 +2737,12 @@
             renderPhase6Preview(data);
 
             if (!response.ok) {
+                await loadPhase6BWizard(document.getElementById('phase6-exchange').value);
                 return;
             }
 
             await loadPhase6Status();
+            await loadPhase6BWizard(document.getElementById('phase6-exchange').value);
         }
 
         async function placePhase6Order() {
@@ -2505,6 +2778,7 @@
             const data = await response.json();
             renderPhase6Preview(data);
             await loadPhase6Status();
+            await loadPhase6BWizard(document.getElementById('phase6-exchange').value);
         }
 
         async function phase6EmergencyStop() {
@@ -2521,6 +2795,7 @@
                 </article>
             `;
             await loadPhase6Status();
+            await loadPhase6BWizard(document.getElementById('phase6-exchange').value);
         }
 
         async function trackLatestPhase6Order() {
@@ -2765,6 +3040,13 @@
         document.getElementById('refresh-phase5-status').addEventListener('click', loadPhase5Status);
         document.getElementById('run-phase5-treasury').addEventListener('click', runPhase5TreasuryCommandCenter);
         document.getElementById('phase5-freeze-capital').addEventListener('click', phase5EmergencyFreeze);
+        document.getElementById('start-live-setup-safely').addEventListener('click', startLiveSetupSafely);
+        document.getElementById('phase6b-exchange').addEventListener('change', () => loadPhase6BWizard(document.getElementById('phase6b-exchange').value));
+        document.getElementById('phase6b-open-key-panel').addEventListener('click', openPhase6VaultPanel);
+        document.getElementById('phase6b-test-exchange').addEventListener('click', phase6BTestExchange);
+        document.getElementById('phase6b-run-dry-run').addEventListener('click', phase6BRunDryRun);
+        document.getElementById('phase6b-prepare-tiny-live').addEventListener('click', phase6BPrepareTinyLive);
+        document.getElementById('phase6b-emergency-stop').addEventListener('click', phase6BEmergencyStop);
         document.getElementById('refresh-phase6-status').addEventListener('click', loadPhase6Status);
         document.getElementById('save-phase6-production-key').addEventListener('click', savePhase6ProductionKey);
         document.getElementById('test-phase6-production-connection').addEventListener('click', testPhase6ProductionConnection);
@@ -2782,6 +3064,7 @@
         loadPhase3CStatus();
         loadPhase4Status();
         loadPhase5Status();
+        loadPhase6BWizard();
         loadPhase6Status();
         scanPhase3AReadiness();
     </script>

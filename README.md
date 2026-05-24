@@ -189,6 +189,10 @@ Phase 5 adds autonomous treasury and liquidity intelligence while preserving own
 
 Phase 6 adds controlled production live execution infrastructure while preserving strict owner gates:
 
+- `/live-trading-launch` now starts with `Live Trading Activation Wizard` / Phase 6B so a non-coder owner can connect one exchange safely before touching the raw production command center.
+- The wizard recommends one first exchange, shows official key-page/docs links, required permissions, forbidden permissions, exact plain-English setup steps, what is missing, what is safe, what is locked, and one next button.
+- `GET /api/v1/live-trading-launch/phase6b/wizard` returns the guided activation state plus an exchange verification checklist for Binance, Coinbase Advanced, Kraken, OKX, and Bybit: API connected, balances readable, fee model/fees loaded, symbol rules loaded, order endpoint modeled but locked, withdrawals disabled, sandbox/testnet available, production dry-run passed, and tiny-live eligibility.
+- The wizard can create/find a locked connector, open the encrypted production key panel, test one exchange, run the existing production dry-run preview, prepare one tiny live test, and emergency-stop live flags. It still cannot enable unrestricted live trading.
 - `/live-trading-launch` now includes `Phase 6: Production Trading Command Center`.
 - Production spot adapters are implemented for Binance, Coinbase Advanced, Kraken, OKX, and Bybit using each exchange's production trading/order APIs.
 - Production keys are stored only in `~/EtherealAI_Secrets/exchange-production-vault.json` with AES-256-GCM encryption and a permission-locked local key. SQLite stores only vault references, fingerprints, readiness snapshots, approvals, order ledger rows, and audit events.

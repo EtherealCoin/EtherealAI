@@ -4703,6 +4703,11 @@ footer {
 .live-sandbox-controls,
 .live-tiny-safety-grid,
 .live-tiny-controls,
+.phase6b-status-grid,
+.phase6b-controls,
+.phase6b-summary-grid,
+.phase6b-guide-grid,
+.phase6b-checklist,
 .phase5-controls,
 .phase6-controls,
 .phase6-vault,
@@ -4719,6 +4724,173 @@ footer {
 .live-launch-status-grid {
     grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
     margin: 18px 0;
+}
+
+.phase6b-wizard {
+    border-color: color-mix(in srgb, var(--brand-blue) 32%, var(--border));
+}
+
+.phase6b-hero {
+    align-items: center;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+}
+
+.phase6b-hero h2 {
+    margin-bottom: 8px;
+}
+
+.mode-pill {
+    background: color-mix(in srgb, var(--brand-purple) 12%, var(--surface-muted));
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 25%, var(--border));
+    border-radius: 999px;
+    color: var(--brand-purple);
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    text-transform: uppercase;
+}
+
+.primary-action-button,
+.button-link {
+    align-items: center;
+    background: var(--brand-blue);
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 70%, black);
+    border-radius: 8px;
+    color: #fff;
+    display: inline-flex;
+    font-weight: 900;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 14px;
+    text-decoration: none;
+}
+
+.button-link.secondary-button {
+    background: var(--surface-muted);
+    border-color: var(--border);
+    color: var(--text-primary);
+}
+
+.phase6b-status-grid {
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    margin: 18px 0;
+}
+
+.phase6b-controls {
+    align-items: end;
+    grid-template-columns: minmax(220px, 1.2fr) repeat(auto-fit, minmax(170px, 1fr));
+    margin: 16px 0;
+}
+
+.phase6b-controls label {
+    color: var(--text-primary);
+    font-weight: 800;
+}
+
+.phase6b-summary-grid,
+.phase6b-guide-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    margin-top: 14px;
+}
+
+.phase6b-guide-grid {
+    align-items: stretch;
+}
+
+.phase6b-status-grid article,
+.phase6b-summary-grid article,
+.phase6b-instructions,
+.phase6b-checklist-panel,
+.phase6b-tiny-live-panel,
+.phase6b-check-item {
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    padding: 14px;
+}
+
+.phase6b-status-grid article span,
+.phase6b-check-item span {
+    color: inherit;
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.phase6b-status-grid article strong,
+.phase6b-summary-grid h3,
+.phase6b-instructions h3,
+.phase6b-checklist-panel h3,
+.phase6b-tiny-live-panel h3,
+.phase6b-check-item strong {
+    color: inherit;
+}
+
+.phase6b-summary-grid h3,
+.phase6b-instructions h3,
+.phase6b-checklist-panel h3,
+.phase6b-tiny-live-panel h3 {
+    margin-top: 0;
+}
+
+.phase6b-summary-grid ul,
+.phase6b-instructions ul,
+.phase6b-instructions ol {
+    color: var(--text-primary);
+    line-height: 1.55;
+    margin: 8px 0 0;
+    padding-left: 20px;
+}
+
+.phase6b-key-header {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.phase6b-instructions h4 {
+    color: var(--text-primary);
+    margin: 14px 0 4px;
+}
+
+.phase6b-order-preview {
+    background: color-mix(in srgb, var(--brand-blue) 8%, var(--surface));
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 25%, var(--border));
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-weight: 800;
+    margin-top: 12px;
+    padding: 12px;
+}
+
+.phase6b-checklist-panel,
+.phase6b-tiny-live-panel {
+    margin-top: 14px;
+}
+
+.phase6b-checklist {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.phase6b-check-item {
+    display: grid;
+    gap: 8px;
+}
+
+.phase6b-check-item p,
+.phase6b-check-item small,
+.phase6b-status-grid article small {
+    color: inherit;
+    line-height: 1.45;
 }
 
 .live-launch-status-grid article,
@@ -5076,6 +5248,13 @@ footer {
 :root[data-theme="night"] .live-sandbox-safety-grid article,
 :root[data-theme="night"] .live-tiny-safety-grid article,
 :root[data-theme="night"] .tiny-confirmation-box,
+:root[data-theme="night"] .phase6b-status-grid article,
+:root[data-theme="night"] .phase6b-summary-grid article,
+:root[data-theme="night"] .phase6b-instructions,
+:root[data-theme="night"] .phase6b-checklist-panel,
+:root[data-theme="night"] .phase6b-tiny-live-panel,
+:root[data-theme="night"] .phase6b-check-item,
+:root[data-theme="night"] .phase6b-order-preview,
 :root[data-theme="night"] .phase6-vault,
 :root[data-theme="night"] .phase6-acknowledgments,
 :root[data-theme="night"] .phase6-training,
@@ -5087,12 +5266,33 @@ footer {
 :root:not([data-theme="day"]) .live-sandbox-safety-grid article,
 :root:not([data-theme="day"]) .live-tiny-safety-grid article,
 :root:not([data-theme="day"]) .tiny-confirmation-box,
+:root:not([data-theme="day"]) .phase6b-status-grid article,
+:root:not([data-theme="day"]) .phase6b-summary-grid article,
+:root:not([data-theme="day"]) .phase6b-instructions,
+:root:not([data-theme="day"]) .phase6b-checklist-panel,
+:root:not([data-theme="day"]) .phase6b-tiny-live-panel,
+:root:not([data-theme="day"]) .phase6b-check-item,
+:root:not([data-theme="day"]) .phase6b-order-preview,
 :root:not([data-theme="day"]) .phase6-vault,
 :root:not([data-theme="day"]) .phase6-acknowledgments,
 :root:not([data-theme="day"]) .phase6-training {
     background: var(--surface-muted) !important;
     border-color: var(--border) !important;
     color: var(--text-primary) !important;
+}
+
+:root[data-theme="night"] .mode-pill,
+:root:not([data-theme="day"]) .mode-pill {
+    background: color-mix(in srgb, var(--brand-blue) 16%, var(--surface-muted));
+    border-color: color-mix(in srgb, var(--brand-blue) 35%, var(--border));
+    color: var(--text-primary);
+}
+
+:root[data-theme="night"] .button-link.secondary-button,
+:root:not([data-theme="day"]) .button-link.secondary-button {
+    background: var(--surface-muted);
+    border-color: var(--border);
+    color: var(--text-primary);
 }
 
 :root[data-theme="night"] .phase3-dashboard-grid > article,

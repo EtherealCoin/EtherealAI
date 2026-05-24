@@ -87,14 +87,15 @@
         },
         '/live-trading-launch': {
             area: 'Live Trading Launch Center',
-            title: 'Control Production Trading Infrastructure Without Unlocking Autonomy',
-            summary: 'Use read-only market data, venue scoring, spread ranking, treasury intelligence, production approval gates, dry-run previews, and emergency controls. Withdrawals, wallet signing, margin, futures, leverage, and autonomous scaling stay locked.',
-            primaryAction: { label: 'Refresh Production Status', selector: '#refresh-phase6-status' },
-            keepIds: ['live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center'],
-            keepHeadings: ['What Should I Do Next?', 'Read-Only Arbitrage Scanner', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center', 'Phase 6: Production Trading Command Center'],
+            title: 'Start Live Setup Safely Without Unlocking Autonomy',
+            summary: 'Use the guided wizard to connect one exchange, verify permissions, run a production dry-run, and prepare one tiny live test. Withdrawals, wallet signing, margin, futures, leverage, and autonomous scaling stay locked.',
+            primaryAction: { label: 'Start Live Setup Safely', selector: '#start-live-setup-safely' },
+            keepIds: ['live-trading-activation-wizard', 'live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center'],
+            keepHeadings: ['What Should I Do Next?', 'Live Trading Activation Wizard', 'Exchange Verification Checklist', 'Read-Only Arbitrage Scanner', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center', 'Phase 6: Production Trading Command Center'],
             readyLabel: 'Live Trading Launch Locked Safely',
-            nextText: 'Review Phase 6 status. Production order routing exists, but it stays locked until production keys, exchange connectivity, sandbox evidence, explicit approvals, dry-run checks, capital limits, and final typed confirmation pass.',
+            nextText: 'Click Start Live Setup Safely. The wizard walks through one exchange connection, production vault storage, permission verification, dry-run review, and tiny live preparation while keeping live orders locked.',
             cards: [
+                ['Guided activation', 'One exchange first, one visible next step, no raw developer workflow.'],
                 ['Read-only expansion', 'Fetch public and authenticated read-only data without placing orders.'],
                 ['Arbitrage intelligence', 'Rank best buy and sell venues after fees, slippage, latency, liquidity, and exchange health.'],
                 ['Treasury intelligence', 'Track capital, stablecoin inventory, chain metadata, opportunity confidence, and allocation reasoning.'],
@@ -102,11 +103,11 @@
                 ['Safety boundary', 'No leverage, margin, futures, withdrawals, wallet signing, unrestricted live orders, or autonomous scaling.']
             ],
             workflow: [
-                ['1. Refresh launch status', 'Confirm live trading is still locked and read-only systems are available.', { label: 'Refresh Launch Status', selector: '#refresh-live-roadmap' }],
-                ['2. Run read-only scan', 'Compare market prices across connected and public venues without live orders.', { label: 'Run Read-Only Scan', selector: '#run-readonly-scan' }],
-                ['3. Run Phase 4 command center', 'Build the spread heatmap, opportunity queue, exchange health, capital allocation, risk, and recovery dashboards.', { label: 'Run Multi-Exchange Scan', selector: '#run-phase4-command-center' }],
-                ['4. Run Phase 5 treasury intelligence', 'Build treasury, liquidity, cross-chain, allocation, risk, and AI decision audit dashboards.', { label: 'Run Treasury Intelligence Refresh', selector: '#run-phase5-treasury' }],
-                ['5. Review Phase 6 production gates', 'See production adapters, approvals, dry-run preview, real-order ledger, and emergency controls.', { label: 'Refresh Production Status', selector: '#refresh-phase6-status' }],
+                ['1. Start live setup safely', 'Choose one exchange and load the guided activation checklist.', { label: 'Start Live Setup Safely', selector: '#start-live-setup-safely' }],
+                ['2. Save restricted API key', 'Open the official exchange key page, disable withdrawals/transfers, then save to the encrypted local vault.', { label: 'Open Key Panel', selector: '#phase6b-open-key-panel' }],
+                ['3. Test this exchange', 'Read account metadata only and verify withdrawals are disabled.', { label: 'Test This Exchange', selector: '#phase6b-test-exchange' }],
+                ['4. Run production dry-run', 'Simulate the exact tiny order without calling the production order endpoint.', { label: 'Run Guided Production Dry-Run', selector: '#phase6b-run-dry-run' }],
+                ['5. Prepare tiny live test', 'Review what is still locked before any manual final confirmation.', { label: 'Prepare Tiny Live Test', selector: '#phase6b-prepare-tiny-live' }],
                 ['6. Emergency stop', 'Disable production approvals and live connector flags if anything looks unsafe.', { label: 'Emergency Stop Production', selector: '#phase6-emergency-stop' }]
             ]
         },
