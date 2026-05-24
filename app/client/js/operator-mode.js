@@ -89,11 +89,11 @@
             area: 'Live Trading Launch Center',
             title: 'Start Live Setup Safely Without Unlocking Autonomy',
             summary: 'Use the guided wizard to connect Kraken first, verify permissions, run a production dry-run, prepare one tiny live framework, and keep withdrawals, wallet signing, margin, futures, leverage, and autonomous scaling locked.',
-            primaryAction: { label: 'Start Phase 6D Safely', selector: '#phase6d-start-safe' },
-            keepIds: ['live-trading-activation-wizard', 'real-credential-dry-run-proof', 'kraken-tiny-live-framework', 'live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center'],
-            keepHeadings: ['What Should I Do Next?', 'Live Trading Activation Wizard', 'Exchange Verification Checklist', 'Phase 6D: Kraken Authenticated Readiness And Tiny Live Test Framework', 'Read-Only Arbitrage Scanner', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center', 'Phase 6: Production Trading Command Center'],
+            primaryAction: { label: 'Start Kraken Key Walkthrough', selector: '#phase6e-start' },
+            keepIds: ['live-trading-activation-wizard', 'real-credential-dry-run-proof', 'kraken-tiny-live-framework', 'kraken-api-key-walkthrough', 'live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center'],
+            keepHeadings: ['What Should I Do Next?', 'Live Trading Activation Wizard', 'Exchange Verification Checklist', 'Phase 6D: Kraken Authenticated Readiness And Tiny Live Test Framework', 'Phase 6E: Real Kraken API Key Connection Walkthrough', 'Read-Only Arbitrage Scanner', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center', 'Phase 6: Production Trading Command Center'],
             readyLabel: 'Live Trading Launch Locked Safely',
-            nextText: 'Click Start Phase 6D Safely. The wizard walks through one Kraken-first exchange connection, authenticated readiness, production preflight, simulation preview, and a one-order framework while keeping live orders locked.',
+            nextText: 'Click Start Kraken Key Walkthrough. The wizard shows exactly how to create a restricted Kraken key, save it to the encrypted vault, verify it, and run dry-run proof while keeping live orders locked.',
             cards: [
                 ['Guided activation', 'One exchange first, one visible next step, no raw developer workflow.'],
                 ['Read-only expansion', 'Fetch public and authenticated read-only data without placing orders.'],
@@ -104,12 +104,13 @@
             ],
             workflow: [
                 ['1. Start live setup safely', 'Choose one exchange and load the guided activation checklist.', { label: 'Start Live Setup Safely', selector: '#start-live-setup-safely' }],
-                ['2. Save restricted API key', 'Open the official exchange key page, disable withdrawals/transfers, then save to the encrypted local vault.', { label: 'Open Key Panel', selector: '#phase6b-open-key-panel' }],
-                ['3. Test this exchange', 'Read account metadata only and verify withdrawals are disabled.', { label: 'Test This Exchange', selector: '#phase6b-test-exchange' }],
-                ['4. Run production dry-run', 'Simulate the exact tiny order without calling the production order endpoint.', { label: 'Run Guided Production Dry-Run', selector: '#phase6b-run-dry-run' }],
-                ['5. Prepare tiny live test', 'Create the one-order framework with no loops, no retry automation, and no scaling.', { label: 'Prepare Tiny Live Test', selector: '#phase6d-prepare' }],
-                ['6. Validate preflight', 'Check balances, minimum order size, fees, slippage, kill switch, emergency stop, and endpoint lock.', { label: 'Validate Tiny Live Test', selector: '#phase6d-validate' }],
-                ['7. Emergency stop', 'Disable production approvals and live connector flags if anything looks unsafe.', { label: 'Emergency Stop Production', selector: '#phase6d-emergency-stop' }]
+                ['2. Start Kraken walkthrough', 'Follow the Kraken Pro API page instructions and permission checklist.', { label: 'Start Kraken Key Walkthrough', selector: '#phase6e-start' }],
+                ['3. Save restricted Kraken key', 'Paste the Kraken API key and private key into encrypted local vault fields only.', { label: 'Save Kraken Key To Vault', selector: '#phase6e-save-key' }],
+                ['4. Verify Kraken key', 'Read balances, account status, fees, symbol rules, and unsafe permission signals.', { label: 'Verify Kraken Key', selector: '#phase6e-verify-key' }],
+                ['5. Run Kraken dry-run proof', 'Simulate the exact tiny order without calling the production order endpoint.', { label: 'Run Kraken Dry-Run Proof', selector: '#phase6e-dry-run' }],
+                ['6. Prepare tiny live test', 'Create the one-order framework with no loops, no retry automation, and no scaling.', { label: 'Prepare Tiny Live Test', selector: '#phase6d-prepare' }],
+                ['7. Validate preflight', 'Check balances, minimum order size, fees, slippage, kill switch, emergency stop, and endpoint lock.', { label: 'Validate Tiny Live Test', selector: '#phase6d-validate' }],
+                ['8. Emergency stop', 'Disable production approvals and live connector flags if anything looks unsafe.', { label: 'Emergency Stop Production', selector: '#phase6d-emergency-stop' }]
             ]
         },
         '/operator-control': {

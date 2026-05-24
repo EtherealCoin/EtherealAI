@@ -115,8 +115,10 @@ function registerExchangeMetadataRoutes(app, {
   phase6BRecommendedFirstExchange,
   phase6CRecommendedFirstExchange,
   phase6DRecommendedFirstExchange,
+  phase6ERecommendedFirstExchange,
   phase6DArmConfirmationPhrase,
   defaultPhase6DTinyLivePolicy,
+  krakenPhase6EWalkthrough,
   phase6BActivationExchangeGuides,
   getProductionAdapter,
   getProductionReferenceName,
@@ -146,6 +148,8 @@ function registerExchangeMetadataRoutes(app, {
   buildPhase6DProductionPreflight,
   buildPhase6DTinyLiveFramework,
   buildPhase6DWizard,
+  buildPhase6EFinalStatus,
+  buildPhase6EWalkthrough,
   createProductionSafetyBoundary,
   createPlainEnglishProductionError,
   evaluateExchangeConnectorReadiness,
@@ -1249,6 +1253,46 @@ function registerExchangeMetadataRoutes(app, {
 
     return {
       connectors,
+      vaultStatus,
+      latestOrders,
+      riskProfile,
+      wizard,
+      safetyBoundary: createProductionSafetyBoundary(false)
+    };
+  }
+
+  async function loadPhase6EState({
+    userId,
+    krakenReadiness = null,
+    dryRunProof = null,
+    preflight = null,
+    simulationPreview = null,
+    policy = {},
+    frameworkState = {}
+  } = {}) {
+    const connector = await findOrCreateProductionConnector({
+      exchangeName: phase6ERecommendedFirstExchange || 'kraken'
+    });
+    const [vaultStatus, latestOrders, riskProfile] = await Promise.all([
+      getProductionVaultStatus(),
+      getLatestProductionOrders(userId, 25),
+      getActiveLiveReadinessRiskProfile()
+    ]);
+    const wizard = buildPhase6EWalkthrough({
+      connector,
+      vaultStatus,
+      krakenReadiness,
+      dryRunProof,
+      preflight,
+      simulationPreview,
+      riskProfile,
+      latestOrders,
+      policy,
+      frameworkState
+    });
+
+    return {
+      connector,
       vaultStatus,
       latestOrders,
       riskProfile,
@@ -3194,6 +3238,708 @@ function registerExchangeMetadataRoutes(app, {
         error: createPlainEnglishProductionError
           ? createPlainEnglishProductionError('Phase 6D emergency stop', error)
           : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.get('/api/v1/live-trading-launch/phase6e/walkthrough', requireAuth, async (req, res) => {
+    try {
+      const state = await loadPhase6EState({ userId: req.session.userId });
+
+      res.json({
+        wizard: state.wizard,
+        walkthrough: krakenPhase6EWalkthrough,
+        safetyBoundary: state.safetyBoundary
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('Phase 6E Kraken walkthrough', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase6e/save-kraken-key', requireAuth, async (req, res) => {
+    try {
+      const connector = await findOrCreateProductionConnector({ exchangeName: 'kraken' });
+      const adapter = getProductionAdapter('kraken');
+
+      if (!connector || !adapter) {
+        return res.status(400).json({
+          error: 'Kraken production connector is not available.',
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      const phase6EChecklist = req.body?.permissionsChecklist || {};
+      const missing = [];
+      const requireCheck = (key, label) => {
+        if (phase6EChecklist[key] !== true) missing.push(label);
+      };
+
+      requireCheck('walkthroughReviewed', 'review the Kraken API key walkthrough');
+      requireCheck('queryFundsEnabled', 'enable Query Funds');
+      requireCheck('withdrawFundsDisabled', 'confirm Withdraw Funds is disabled');
+      requireCheck('transfersDisabled', 'confirm transfers/funding movement are disabled');
+      requireCheck('spotKeyOnly', 'confirm this is a Kraken spot API key, not a Kraken Futures key');
+      requireCheck('marginDisabled', 'confirm margin is disabled/not used');
+      requireCheck('futuresDisabled', 'confirm futures are disabled/not used');
+      requireCheck('leverageDisabled', 'confirm leverage is disabled/not used');
+      requireCheck('noMasterKey', 'confirm this is not a master, admin, root, or full-access key');
+      requireCheck('privateKeyWillNotBeSharedElsewhere', 'confirm the private key will not be stored in unsafe places');
+      requireCheck('ownerUnderstandsTinyLiveUsesRealMoneyLater', 'acknowledge a later tiny live test uses real money only after separate approval');
+      requireCheck('ownerUnderstandsNoOrderYet', 'acknowledge no real order will be placed in Phase 6E');
+
+      if (missing.length) {
+        const state = await loadPhase6EState({ userId: req.session.userId });
+
+        return res.status(400).json({
+          error: 'Complete the visible Kraken safety checklist before saving this key.',
+          missing,
+          wizard: state.wizard,
+          nextClick: 'Check the missing boxes, then click Save Kraken Key To Vault.',
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      const permissionsChecklist = {
+        productionKeyReviewed: true,
+        spotTradingEnabled: Boolean(phase6EChecklist.modifyOrdersEnabled),
+        withdrawalsDisabled: phase6EChecklist.withdrawFundsDisabled === true,
+        transfersDisabled: phase6EChecklist.transfersDisabled === true,
+        marginDisabled: phase6EChecklist.marginDisabled === true,
+        futuresDisabled: phase6EChecklist.futuresDisabled === true,
+        leverageDisabled: phase6EChecklist.leverageDisabled === true,
+        ipRestrictionReviewed: Boolean(phase6EChecklist.ipRestrictionReviewed),
+        twoFactorEnabled: Boolean(phase6EChecklist.twoFactorEnabled),
+        ownerUnderstandsRealMoney: Boolean(phase6EChecklist.ownerUnderstandsTinyLiveUsesRealMoneyLater),
+        ownerUnderstandsProductionRisk: true,
+        ownerUnderstandsNoAutonomousScaling: true,
+        phase6E: {
+          walkthroughReviewed: true,
+          queryFundsEnabled: true,
+          queryOpenOrdersTradesEnabled: Boolean(phase6EChecklist.queryOpenOrdersTradesEnabled),
+          queryClosedOrdersTradesReviewed: Boolean(phase6EChecklist.queryClosedOrdersTradesReviewed),
+          modifyOrdersEnabled: Boolean(phase6EChecklist.modifyOrdersEnabled),
+          cancelCloseOrdersEnabled: Boolean(phase6EChecklist.cancelCloseOrdersEnabled),
+          withdrawFundsDisabled: true,
+          depositFundsDisabled: Boolean(phase6EChecklist.depositFundsDisabled),
+          spotKeyOnly: true,
+          noFuturesKey: true,
+          noMasterKey: Boolean(phase6EChecklist.noMasterKey),
+          passphraseRequired: false,
+          ownerUnderstandsNoOrderYet: true
+        }
+      };
+      const credentials = sanitizeProductionCredentialInput({
+        apiKey: req.body?.apiKey || req.body?.credentials?.apiKey,
+        apiSecret: req.body?.apiSecret || req.body?.privateKey || req.body?.credentials?.apiSecret,
+        passphrase: req.body?.passphrase || req.body?.credentials?.passphrase || ''
+      }, adapter);
+      const referenceName = getProductionReferenceName({
+        userId: req.session.userId,
+        connectorId: connector.id,
+        exchangeName: 'kraken'
+      });
+      const reference = await upsertReadOnlyLocalReference({
+        userId: req.session.userId,
+        existingReferenceId: null,
+        label: 'Kraken Phase 6E Restricted Production Vault',
+        referenceName,
+        notes: 'Encrypted local Phase 6E Kraken vault reference. No secret values are stored in SQLite or returned to the browser.'
+      });
+      const saved = await saveProductionVaultCredentials({
+        referenceName,
+        connector,
+        exchangeName: 'kraken',
+        credentials,
+        permissionsChecklist
+      });
+      const previousConnection = connector.settings?.productionConnection || {};
+      const settings = mergeProductionConnectionSettings(connector, {
+        referenceName,
+        localReferenceId: reference.id,
+        connectionStatus: 'phase6e_key_saved_locked',
+        plainEnglishStatus: 'Kraken key saved to the encrypted local vault. Verify it before any dry-run proof. Live trading remains locked.',
+        phase6EChecklist: permissionsChecklist.phase6E,
+        phase6EKeySavedAt: saved.rotatedAt,
+        phase6EStatus: 'key_saved',
+        lastCredentialRotationAt: saved.rotatedAt,
+        rotationNumber: Number(previousConnection.rotationNumber || 0) + 1,
+        permissionsChecklist,
+        apiKeyFingerprint: saved.apiKeyFingerprint,
+        adapterStatus: adapter.adapterStatus,
+        productionOrderEndpointCalled: false,
+        productionOrderEndpointEnabled: false
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET status = ?, settings_json = ?, secret_storage_note = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          'configured',
+          JSON.stringify(settings),
+          'Phase 6E Kraken credential values are encrypted in the local owner vault. SQLite stores only a reference.',
+          connector.id
+        ]
+      );
+      await dbRun(
+        `INSERT INTO live_trading_safety_events
+         (user_id, event_type, status, summary, payload_json)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          'phase6e_kraken_key_saved',
+          'key_saved_locked',
+          'Phase 6E Kraken key saved to encrypted vault. Secret values were not returned. No order endpoint was called.',
+          JSON.stringify({
+            exchangeName: 'kraken',
+            apiKeyFingerprint: saved.apiKeyFingerprint,
+            secretValuesReturnedToUi: false,
+            productionOrderEndpointCalled: false,
+            productionOrderEndpointEnabled: false,
+            withdrawalsEnabled: false,
+            walletSigningEnabled: false,
+            automatedLiveTradingEnabled: false
+          })
+        ]
+      );
+
+      const state = await loadPhase6EState({ userId: req.session.userId });
+
+      res.status(201).json({
+        saved: {
+          stored: true,
+          referenceName: saved.referenceName,
+          apiKeyFingerprint: saved.apiKeyFingerprint,
+          hasPassphrase: saved.hasExtraPhrase,
+          secretValuesReturned: false
+        },
+        wizard: state.wizard,
+        nextClick: 'Verify Kraken Key',
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(error.statusCode || error.status || 500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('Phase 6E Kraken key save', error)
+          : error.message,
+        nextClick: 'Check the API key/private key fields and the safety checklist, then save again.',
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.delete('/api/v1/live-trading-launch/phase6e/kraken-key', requireAuth, async (req, res) => {
+    try {
+      const connector = await findOrCreateProductionConnector({ exchangeName: 'kraken' });
+      const referenceName = connector?.settings?.productionConnection?.referenceName || null;
+      const deletion = referenceName
+        ? await deleteProductionVaultCredentials(referenceName)
+        : { deleted: false, referenceName: null };
+
+      if (referenceName) {
+        await dbRun(
+          `UPDATE local_secret_references
+           SET status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = ? AND reference_name = ?`,
+          [
+            'disabled',
+            'Phase 6E Kraken API key was deleted/rotated by owner action.',
+            req.session.userId,
+            referenceName
+          ]
+        );
+      }
+
+      if (connector) {
+        const settings = mergeProductionConnectionSettings(connector, {
+          referenceName: null,
+          localReferenceId: null,
+          connectionStatus: 'not_connected',
+          plainEnglishStatus: 'Kraken key deleted. Phase 6E is not ready.',
+          apiKeyFingerprint: null,
+          phase6EStatus: 'key_deleted',
+          phase6EReadiness: null,
+          phase6EDryRunProof: null,
+          phase6EPreflight: null,
+          phase6ESimulationPreview: null,
+          productionOrderEndpointCalled: false,
+          productionOrderEndpointEnabled: false
+        });
+
+        await dbRun(
+          `UPDATE exchange_connectors
+           SET status = ?, settings_json = ?, secret_storage_note = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          ['review_needed', JSON.stringify(settings), 'No credential values stored in SQLite.', connector.id]
+        );
+      }
+
+      await dbRun(
+        `INSERT INTO live_trading_safety_events
+         (user_id, event_type, status, summary, payload_json)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          'phase6e_kraken_key_deleted',
+          'complete',
+          'Phase 6E Kraken key deleted or rotated. Production order endpoint remains locked.',
+          JSON.stringify({
+            deleted: deletion.deleted,
+            productionOrderEndpointCalled: false,
+            productionOrderEndpointEnabled: false
+          })
+        ]
+      );
+
+      const state = await loadPhase6EState({ userId: req.session.userId });
+
+      res.json({
+        deleted: deletion.deleted,
+        wizard: state.wizard,
+        nextClick: 'Create a new restricted Kraken key if you want to continue.',
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('Phase 6E Kraken key delete', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase6e/verify-kraken-key', requireAuth, async (req, res) => {
+    try {
+      const connector = await findOrCreateProductionConnector({ exchangeName: 'kraken' });
+      const adapter = getProductionAdapter('kraken');
+      const credentials = await loadConnectorProductionCredentialsForUser(connector, req.session.userId);
+
+      if (!credentials) {
+        const state = await loadPhase6EState({ userId: req.session.userId });
+
+        return res.status(409).json({
+          error: 'No restricted Kraken API key is saved in the encrypted production vault.',
+          nextClick: 'Save Kraken Key To Vault',
+          wizard: state.wizard,
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      const krakenReadiness = await runKrakenAuthenticatedIntegration({
+        credentials,
+        adapter,
+        orderInput: {
+          exchangeName: 'kraken',
+          symbol: req.body?.symbol || req.body?.order?.symbol || 'BTC/USD',
+          notionalUsd: Number(req.body?.notionalUsd || req.body?.order?.notionalUsd || 1),
+          maxOrderUsd: Number(req.body?.maxOrderUsd || req.body?.order?.maxOrderUsd || 5),
+          ...(req.body?.order || {})
+        },
+        policy: req.body?.policy || {}
+      });
+      const settings = mergeProductionConnectionSettings(connector, {
+        connectionStatus: krakenReadiness.credentialVerification?.connectionStatus || krakenReadiness.status,
+        plainEnglishStatus: krakenReadiness.plainEnglishStatus,
+        phase6EStatus: krakenReadiness.criticalPassed ? 'verified' : 'blocked',
+        phase6EReadiness: krakenReadiness,
+        phase6EVerifiedAt: new Date().toISOString(),
+        phase6DReadiness: krakenReadiness,
+        phase6DReadinessStatus: krakenReadiness.status,
+        productionOrderEndpointCalled: false,
+        productionOrderEndpointEnabled: false
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET status = ?, settings_json = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          krakenReadiness.status === 'Unsafe Permissions Detected' ? 'review_needed' : 'configured',
+          JSON.stringify(settings),
+          connector.id
+        ]
+      );
+      await dbRun(
+        `INSERT INTO live_trading_safety_events
+         (user_id, event_type, status, summary, payload_json)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          'phase6e_verify_kraken_key',
+          krakenReadiness.criticalPassed ? 'complete' : 'blocked',
+          krakenReadiness.plainEnglishStatus,
+          JSON.stringify({
+            status: krakenReadiness.status,
+            checksPassed: krakenReadiness.checksPassed,
+            checksFailed: krakenReadiness.checksFailed,
+            productionOrderEndpointCalled: false,
+            productionOrderEndpointEnabled: false,
+            secretValuesReturnedToUi: false,
+            withdrawalsEnabled: false,
+            transfersEnabled: false,
+            walletSigningEnabled: false
+          })
+        ]
+      );
+
+      const state = await loadPhase6EState({
+        userId: req.session.userId,
+        krakenReadiness
+      });
+
+      res.status(krakenReadiness.criticalPassed ? 200 : 409).json({
+        krakenReadiness,
+        finalStatus: buildPhase6EFinalStatus({
+          credentialSaved: true,
+          krakenReadiness
+        }),
+        wizard: state.wizard,
+        nextClick: krakenReadiness.criticalPassed ? 'Run Kraken Dry-Run Proof' : krakenReadiness.nextClick,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('Phase 6E Verify Kraken Key', error)
+          : error.message,
+        nextClick: 'Fix the Kraken key, permissions, internet/VPN, or exchange availability issue, then verify again.',
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase6e/dry-run-proof', requireAuth, async (req, res) => {
+    try {
+      const connector = await findOrCreateProductionConnector({ exchangeName: 'kraken' });
+      const adapter = getProductionAdapter('kraken');
+      const credentials = await loadConnectorProductionCredentialsForUser(connector, req.session.userId);
+
+      if (!credentials) {
+        const state = await loadPhase6EState({ userId: req.session.userId });
+
+        return res.status(409).json({
+          error: 'No restricted Kraken API key is saved in the encrypted production vault.',
+          nextClick: 'Save Kraken Key To Vault',
+          wizard: state.wizard,
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      const policy = {
+        ...(defaultPhase6DTinyLivePolicy || {}),
+        ...(connector.settings?.productionConnection?.phase6DFramework?.policy || {}),
+        ...(req.body?.policy || {}),
+        exchangeName: 'kraken',
+        productionOrderEndpointEnabled: false
+      };
+      const requestedOrder = {
+        exchangeName: 'kraken',
+        symbol: req.body?.symbol || req.body?.order?.symbol || policy.defaultSymbol || 'BTC/USD',
+        side: req.body?.side || req.body?.order?.side || policy.defaultOrderSide || 'buy',
+        orderType: req.body?.orderType || req.body?.order?.orderType || policy.defaultOrderType || 'limit',
+        notionalUsd: Number(req.body?.notionalUsd || req.body?.order?.notionalUsd || policy.defaultTinyOrderUsd || 1),
+        maxOrderUsd: Number(req.body?.maxOrderUsd || req.body?.order?.maxOrderUsd || policy.maxOrderSizeUsd || 5),
+        quantity: Number(req.body?.quantity || req.body?.order?.quantity || 0),
+        limitPrice: Number(req.body?.limitPrice || req.body?.order?.limitPrice || 0)
+      };
+      const krakenReadiness = await runKrakenAuthenticatedIntegration({
+        credentials,
+        adapter,
+        orderInput: requestedOrder,
+        policy
+      });
+
+      if (!krakenReadiness.criticalPassed) {
+        const settings = mergeProductionConnectionSettings(connector, {
+          phase6EStatus: 'blocked',
+          phase6EReadiness: krakenReadiness,
+          phase6DReadiness: krakenReadiness,
+          productionOrderEndpointCalled: false,
+          productionOrderEndpointEnabled: false
+        });
+
+        await dbRun(
+          `UPDATE exchange_connectors
+           SET status = ?, settings_json = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          ['review_needed', JSON.stringify(settings), connector.id]
+        );
+        const state = await loadPhase6EState({
+          userId: req.session.userId,
+          krakenReadiness
+        });
+
+        return res.status(409).json({
+          error: krakenReadiness.plainEnglishStatus,
+          krakenReadiness,
+          finalStatus: state.wizard.finalStatus,
+          wizard: state.wizard,
+          nextClick: krakenReadiness.nextClick,
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      const marketData = krakenReadiness.credentialVerification?.proof?.marketData || {};
+      const price = Number(
+        requestedOrder.limitPrice
+          || (requestedOrder.side === 'sell' ? marketData.bidPrice : marketData.askPrice)
+          || marketData.midPrice
+          || 0
+      );
+      const quantity = Number(requestedOrder.quantity || 0) > 0
+        ? Number(requestedOrder.quantity)
+        : price > 0
+          ? Number((Number(requestedOrder.notionalUsd || policy.defaultTinyOrderUsd || 1) / price).toFixed(8))
+          : 0;
+      const dryRunOrder = {
+        ...requestedOrder,
+        quantity,
+        limitPrice: price
+      };
+      const context = await buildProductionSafetyContext({
+        userId: req.session.userId,
+        orderInput: dryRunOrder,
+        marketContext: {
+          productionDryRunPassed: true,
+          dryRunPassed: true,
+          liquidityUsd: Number(marketData.liquidityUsd || 1000000),
+          slippagePercent: Number(marketData.estimatedSlippagePercent ?? 0.05),
+          volatilityPercent: 0,
+          netSpreadPercent: Math.max(Number(marketData.spreadPercent || 0.1), Number(defaultPhase6Policy?.minNetSpreadPercent || 0.05)),
+          latencyMs: Number(req.body?.latencyMs || 250),
+          priceTimestamp: marketData.priceTimestamp || new Date().toISOString()
+        },
+        accountContext: {
+          exchangeExposureUsd: 0,
+          strategyExposureUsd: 0,
+          dailyDrawdownUsd: 0,
+          rollingLossUsd: 0,
+          repeatedFailures: 0,
+          ...(req.body?.accountContext || {})
+        },
+        ownerConfirmation: '',
+        policy: {
+          ...(defaultPhase6Policy || {}),
+          maxOrderSizeUsd: Number(policy.maxOrderSizeUsd || 5),
+          requireSandboxValidation: false,
+          ...(req.body?.productionPolicy || {})
+        }
+      });
+      const dryRunProof = buildPhase6CProductionDryRunProof({
+        order: context.order,
+        credentialVerification: krakenReadiness.credentialVerification,
+        safety: context.safety,
+        preview: context.preview,
+        riskProfile: context.riskProfile,
+        marketContext: context.marketContext,
+        policy: {
+          ...(defaultPhase6Policy || {}),
+          maxOrderSizeUsd: Number(policy.maxOrderSizeUsd || 5)
+        }
+      });
+      const simulationPreview = buildPhase6DLiveOrderSimulationPreview({
+        order: context.order,
+        krakenReadiness,
+        dryRunProof,
+        policy
+      });
+      const preflight = {
+        ...buildPhase6DProductionPreflight({
+          order: context.order,
+          krakenReadiness,
+          dryRunProof,
+          riskProfile: context.riskProfile,
+          simulationPreview,
+          ownerApprovalTyped: false,
+          emergencyStopAvailable: true,
+          policy
+        }),
+        title: 'Phase 6E Production Dry-Run Preflight',
+        phase: 'Phase 6E'
+      };
+      const finalStatus = buildPhase6EFinalStatus({
+        credentialSaved: true,
+        krakenReadiness,
+        dryRunProof,
+        preflight
+      });
+      const framework = buildPhase6DTinyLiveFramework({
+        krakenReadiness,
+        dryRunProof,
+        preflight,
+        simulationPreview,
+        policy,
+        armed: false
+      });
+      const status = preflight.technicalReady ? 'preview_ready' : 'preview_blocked';
+      const insert = await dbRun(
+        `INSERT INTO production_order_executions
+         (user_id, connector_id, risk_profile_id, strategy_id, exchange_name, symbol, side, order_type,
+          quantity, limit_price, notional_usd, max_order_usd, client_order_id, status, readiness_json,
+          preview_json, production_order_endpoint_enabled, production_order_endpoint_called,
+          automated_live_trading_enabled, unrestricted_autonomous_trading_enabled, wallet_signing_enabled,
+          withdrawals_enabled, margin_enabled, futures_enabled, leverage_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          context.connector?.id || connector.id,
+          context.riskProfile?.id || null,
+          context.order.strategyId,
+          context.order.exchangeName,
+          context.order.symbol,
+          context.order.side,
+          context.order.orderType,
+          context.order.quantity,
+          context.order.limitPrice || null,
+          context.order.notionalUsd || 0,
+          context.order.maxOrderUsd || 0,
+          context.order.clientOrderId,
+          status,
+          JSON.stringify({
+            phase6E: {
+              krakenReadiness,
+              dryRunProof,
+              preflight,
+              finalStatus,
+              framework
+            },
+            fullProductionSafety: context.safety
+          }),
+          JSON.stringify({
+            ...context.preview,
+            phase6E: {
+              simulationPreview,
+              preflight,
+              dryRunProof,
+              finalStatus
+            }
+          }),
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      );
+
+      await recordProductionOrderEvent({
+        executionId: insert.lastID,
+        userId: req.session.userId,
+        status,
+        summary: preflight.technicalReady
+          ? 'Phase 6E Kraken dry-run proof passed. No production order endpoint was called.'
+          : 'Phase 6E Kraken dry-run proof is blocked. No production order endpoint was called.',
+        payload: {
+          finalStatus,
+          krakenReadinessStatus: krakenReadiness.status,
+          dryRunProofStatus: dryRunProof.status,
+          preflightStatus: preflight.status,
+          productionOrderEndpointCalled: false,
+          productionOrderEndpointEnabled: false
+        }
+      });
+
+      const settings = mergeProductionConnectionSettings(connector, {
+        phase6EStatus: finalStatus.label,
+        phase6EReadiness: krakenReadiness,
+        phase6EDryRunProof: dryRunProof,
+        phase6EPreflight: preflight,
+        phase6ESimulationPreview: simulationPreview,
+        phase6EFinalStatus: finalStatus,
+        phase6DReadiness: krakenReadiness,
+        phase6DDryRunProof: dryRunProof,
+        phase6DPreflight: preflight,
+        phase6DSimulationPreview: simulationPreview,
+        phase6DFramework: {
+          ...(connector.settings?.productionConnection?.phase6DFramework || {}),
+          policy,
+          order: context.order,
+          armed: false,
+          emergencyStopped: false,
+          lastValidatedAt: new Date().toISOString(),
+          productionOrderExecutionId: insert.lastID,
+          productionOrderEndpointCalled: false,
+          productionOrderEndpointEnabled: false
+        },
+        productionOrderEndpointCalled: false,
+        productionOrderEndpointEnabled: false
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET status = ?, settings_json = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          preflight.technicalReady ? 'configured' : 'review_needed',
+          JSON.stringify(settings),
+          connector.id
+        ]
+      );
+      await dbRun(
+        `INSERT INTO live_trading_safety_events
+         (user_id, event_type, status, summary, payload_json)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          'phase6e_kraken_dry_run_proof',
+          status,
+          finalStatus.plainEnglish,
+          JSON.stringify({
+            executionId: insert.lastID,
+            finalStatus,
+            checksPassed: preflight.checksPassed,
+            checksFailed: preflight.checksFailed,
+            productionOrderEndpointCalled: false,
+            productionOrderEndpointEnabled: false,
+            withdrawalsEnabled: false,
+            walletSigningEnabled: false,
+            marginEnabled: false,
+            futuresEnabled: false,
+            leverageEnabled: false,
+            automatedLiveTradingEnabled: false
+          })
+        ]
+      );
+
+      const state = await loadPhase6EState({
+        userId: req.session.userId,
+        krakenReadiness,
+        dryRunProof,
+        preflight,
+        simulationPreview,
+        policy,
+        frameworkState: settings.productionConnection.phase6DFramework
+      });
+
+      res.status(preflight.technicalReady ? 201 : 409).json({
+        previewId: insert.lastID,
+        krakenReadiness,
+        dryRunProof,
+        simulationPreview,
+        preflight,
+        finalStatus,
+        wizard: state.wizard,
+        execution: parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [insert.lastID, req.session.userId])),
+        nextClick: finalStatus.nextClick,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('Phase 6E Kraken dry-run proof', error)
+          : error.message,
+        nextClick: 'Fix the failed Kraken verification, balance, minimum size, risk profile, or market-data check, then retry dry-run proof.',
         safetyBoundary: createProductionSafetyBoundary(false)
       });
     }

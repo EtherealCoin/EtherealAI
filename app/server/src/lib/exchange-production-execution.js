@@ -200,6 +200,7 @@ const PHASE6_PRODUCTION_ADAPTERS = {
 const PHASE6B_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
 const PHASE6C_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
 const PHASE6D_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
+const PHASE6E_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
 const PHASE6D_ARM_CONFIRMATION_PHRASE = 'I ARM KRAKEN TINY LIVE TEST FRAMEWORK';
 
 const DEFAULT_PHASE6D_TINY_LIVE_POLICY = {
@@ -226,6 +227,124 @@ const DEFAULT_PHASE6D_TINY_LIVE_POLICY = {
   leverageEnabled: false,
   autonomousTradingEnabled: false,
   productionOrderEndpointEnabled: false
+};
+
+const KRAKEN_PHASE6E_WALKTHROUGH = {
+  phase: 'Phase 6E',
+  exchangeName: 'kraken',
+  displayName: 'Kraken',
+  ownerPortalUrl: 'https://pro.kraken.com/app/settings/api',
+  officialSupportUrl: 'https://support.kraken.com/articles/how-to-create-an-api-key-on-kraken-pro',
+  officialSecurityUrl: 'https://support.kraken.com/articles/api-key-security',
+  officialApiKeyInfoUrl: 'https://docs.kraken.com/api/docs/rest-api/get-api-key-info/',
+  officialWithdrawUrl: 'https://docs.kraken.com/api/docs/rest-api/withdraw-funds/',
+  keyNameSuggestion: 'EtherealAI MacBook Restricted',
+  plainEnglishGoal: 'Create one restricted Kraken spot API key, save it to the encrypted local vault, verify account reads, then run a no-order production dry-run proof.',
+  walkthroughSteps: [
+    {
+      title: 'Open Kraken Pro API settings',
+      ownerAction: 'Log in to Kraken Pro, click the account icon in the upper-right corner, choose Settings, open the API tab, then click Create API key.',
+      whyItMatters: 'This is where Kraken lets you create a key with limited permissions instead of giving EtherealAI your Kraken password.'
+    },
+    {
+      title: 'Name the key clearly',
+      ownerAction: 'Use a name like EtherealAI MacBook Restricted.',
+      whyItMatters: 'A clear name makes it easy to delete or rotate the key later.'
+    },
+    {
+      title: 'Enable only the permissions needed for verification and a future tiny spot test',
+      ownerAction: 'Enable Query Funds. Enable Query Open Orders & Trades. If you want tiny live test eligibility later, enable Modify Orders and Cancel/Close Orders. Keep everything else off unless this screen says otherwise.',
+      whyItMatters: 'Query permissions let EtherealAI read balances and open-order status. Modify/Cancel permissions are needed only for a later owner-approved tiny spot test and stay locked by EtherealAI gates.'
+    },
+    {
+      title: 'Keep dangerous permissions disabled',
+      ownerAction: 'Do not enable Withdraw Funds. Do not use a Kraken Futures key. Do not enable transfers, funding movement, margin, futures, leverage, or broad admin-style access.',
+      whyItMatters: 'This protects the account if a key is ever exposed. EtherealAI automatically blocks unsafe permission signals.'
+    },
+    {
+      title: 'Copy the API key and private key once',
+      ownerAction: 'After Kraken generates the key, copy the API Key into the API key field and copy the Private Key into the private/secret key field.',
+      whyItMatters: 'Kraken calls the secret value a Private Key. EtherealAI stores it encrypted locally and never displays it again.'
+    },
+    {
+      title: 'Verify before doing anything live',
+      ownerAction: 'Click Verify Kraken Key, then Run Kraken Dry-Run Proof. Do not approve a real tiny live order until the next phase explicitly asks you.',
+      whyItMatters: 'Verification and dry-run proof confirm the key, balances, fees, symbol rules, and safety gates without calling Kraken AddOrder.'
+    }
+  ],
+  permissionsToEnable: [
+    {
+      label: 'Query Funds',
+      plainEnglish: 'Allows EtherealAI to read balances through Kraken Balance and TradeBalance. Required for verification and dry-run math.',
+      requiredFor: 'verification'
+    },
+    {
+      label: 'Query Open Orders & Trades',
+      plainEnglish: 'Allows EtherealAI to read existing open orders and trade/order status. Useful for later cancel/reconcile safety.',
+      requiredFor: 'tiny live readiness'
+    },
+    {
+      label: 'Query Closed Orders & Trades',
+      plainEnglish: 'Allows EtherealAI to read prior closed/canceled order history for reconciliation. Helpful but not used to place orders.',
+      requiredFor: 'audit and reconciliation'
+    },
+    {
+      label: 'Modify Orders',
+      plainEnglish: 'Allows order placement on Kraken. EtherealAI still keeps AddOrder locked until a later explicit owner approval phase.',
+      requiredFor: 'future tiny live test only'
+    },
+    {
+      label: 'Cancel/Close Orders',
+      plainEnglish: 'Allows canceling an open order if the later tiny live test needs emergency cancel. EtherealAI does not use it during Phase 6E dry-run.',
+      requiredFor: 'future tiny live cancel path'
+    }
+  ],
+  permissionsToDisable: [
+    {
+      label: 'Withdraw Funds',
+      plainEnglish: 'Would allow withdrawals through Kraken funding endpoints. This must stay disabled.'
+    },
+    {
+      label: 'Deposit Funds',
+      plainEnglish: 'Not needed for verification, dry-run proof, or tiny live trading.'
+    },
+    {
+      label: 'Funding transfers / wallet transfer / subaccount transfer',
+      plainEnglish: 'No movement of funds between accounts or wallets is needed for Phase 6E.'
+    },
+    {
+      label: 'Kraken Futures, margin, leverage, or derivatives access',
+      plainEnglish: 'Phase 6E is spot only. Do not use a Kraken Futures API key.'
+    },
+    {
+      label: 'Master, admin, root, or full-access key',
+      plainEnglish: 'Use one narrow key for EtherealAI and delete/rotate it if anything looks wrong.'
+    }
+  ],
+  fieldExplanations: [
+    {
+      field: 'API key',
+      enter: 'Paste the public Kraken API key.',
+      doNotEnter: 'Do not enter your Kraken login email, password, seed phrase, or bank information.'
+    },
+    {
+      field: 'Private/secret key',
+      enter: 'Paste the Kraken Private Key. Some API clients call this the API secret.',
+      doNotEnter: 'Do not paste a crypto wallet private key or seed phrase.'
+    },
+    {
+      field: 'Passphrase',
+      enter: 'Leave blank for Kraken. Kraken spot API keys do not require a passphrase in this workflow.',
+      doNotEnter: 'Do not invent a password here.'
+    }
+  ],
+  safetyWarnings: [
+    'Withdrawals and transfers must stay disabled.',
+    'Live trading stays locked after the key is saved.',
+    'The dry-run proof must report Endpoint called: No.',
+    'The private key is encrypted locally and never displayed again.',
+    'If unsafe permission is detected, delete the key on Kraken and rotate it inside EtherealAI.'
+  ]
 };
 
 const PHASE6B_ACTIVATION_EXCHANGE_GUIDES = {
@@ -3923,6 +4042,209 @@ function buildPhase6DWizard({
   };
 }
 
+function buildPhase6EChecklistItem({ id, label, passed, statusWhenFalse = 'Not Ready', plainEnglish, nextClick }) {
+  return {
+    id,
+    label,
+    passed: Boolean(passed),
+    status: passed ? 'Ready' : statusWhenFalse,
+    plainEnglish,
+    nextClick: passed ? 'No action needed.' : nextClick
+  };
+}
+
+function buildPhase6EFinalStatus({ credentialSaved = false, krakenReadiness = null, dryRunProof = null, preflight = null } = {}) {
+  const unsafe = krakenReadiness?.status === 'Unsafe Permissions Detected'
+    || krakenReadiness?.withdrawalPermissionDetected === true
+    || krakenReadiness?.marginOrLeverageDetected === true
+    || krakenReadiness?.futuresDetected === true;
+  const verified = krakenReadiness?.criticalPassed === true;
+  const dryRunProofPassed = dryRunProof?.passed === true;
+  const dryRunPassed = dryRunProofPassed && preflight?.technicalReady === true;
+
+  if (unsafe) {
+    return {
+      label: 'Blocked because unsafe permission detected',
+      status: 'BLOCKED',
+      tone: 'danger',
+      plainEnglish: 'The Kraken key appears unsafe for EtherealAI. Delete it on Kraken, rotate it in EtherealAI, and recreate a restricted spot key with withdrawals, transfers, margin, futures, and leverage disabled.',
+      nextClick: 'Delete / Rotate Kraken Key',
+      tinyLiveEligible: false
+    };
+  }
+
+  if (!credentialSaved) {
+    return {
+      label: 'Not ready',
+      status: 'NOT READY',
+      tone: 'warning',
+      plainEnglish: 'No restricted Kraken API key is saved in the encrypted local vault yet.',
+      nextClick: 'Follow Step 1, then Save Kraken Key To Vault',
+      tinyLiveEligible: false
+    };
+  }
+
+  if (!verified) {
+    return {
+      label: 'Not ready',
+      status: 'NOT READY',
+      tone: 'warning',
+      plainEnglish: krakenReadiness?.plainEnglishStatus || 'The Kraken key has not passed authenticated verification yet.',
+      nextClick: 'Verify Kraken Key',
+      tinyLiveEligible: false
+    };
+  }
+
+  if (!dryRunProofPassed) {
+    return {
+      label: 'Verified but dry-run missing',
+      status: 'VERIFIED',
+      tone: 'info',
+      plainEnglish: 'Kraken authenticated verification passed, but the no-order production dry-run proof has not passed yet.',
+      nextClick: 'Run Kraken Dry-Run Proof',
+      tinyLiveEligible: false
+    };
+  }
+
+  if (!dryRunPassed) {
+    return {
+      label: 'Not ready',
+      status: 'NOT READY',
+      tone: 'warning',
+      plainEnglish: preflight?.plainEnglishStatus || 'The no-order dry-run proof ran, but final preflight is still blocked. Fix the blocked preflight item and run Kraken Dry-Run Proof again.',
+      nextClick: 'Review the Tiny Live Test Readiness panel, then Run Kraken Dry-Run Proof again.',
+      tinyLiveEligible: false
+    };
+  }
+
+  return {
+    label: 'Dry-run passed, tiny live test eligible',
+    status: 'ELIGIBLE',
+    tone: 'success',
+    plainEnglish: 'The Kraken key verified, the no-order production dry-run proof passed, and the tiny live framework is technically eligible. Real order placement remains locked until the next explicit owner approval phase.',
+    nextClick: 'Stop here until you explicitly approve the next tiny live test phase.',
+    tinyLiveEligible: true
+  };
+}
+
+function buildPhase6EWalkthrough({
+  connector = null,
+  vaultStatus = null,
+  krakenReadiness = null,
+  dryRunProof = null,
+  preflight = null,
+  simulationPreview = null,
+  riskProfile = null,
+  latestOrders = [],
+  policy = {},
+  frameworkState = {}
+} = {}) {
+  const productionConnection = connector?.settings?.productionConnection || {};
+  const savedReadiness = krakenReadiness || productionConnection.phase6EReadiness || productionConnection.phase6DReadiness || null;
+  const savedDryRun = dryRunProof || productionConnection.phase6EDryRunProof || productionConnection.phase6DDryRunProof || null;
+  const savedPreflight = preflight || productionConnection.phase6EPreflight || productionConnection.phase6DPreflight || null;
+  const savedPreview = simulationPreview || productionConnection.phase6ESimulationPreview || productionConnection.phase6DSimulationPreview || null;
+  const credentialSaved = Boolean(productionConnection.referenceName)
+    || (vaultStatus?.entries || []).some(entry => normalizePhase6ExchangeName(entry.exchangeName) === PHASE6E_RECOMMENDED_FIRST_EXCHANGE);
+  const finalStatus = buildPhase6EFinalStatus({
+    credentialSaved,
+    krakenReadiness: savedReadiness,
+    dryRunProof: savedDryRun,
+    preflight: savedPreflight
+  });
+  const checklist = [
+    buildPhase6EChecklistItem({
+      id: 'walkthrough_reviewed',
+      label: 'Kraken walkthrough reviewed',
+      passed: true,
+      plainEnglish: 'The page shows where to go in Kraken and which permissions are safe or unsafe.',
+      nextClick: 'Read Step 1.'
+    }),
+    buildPhase6EChecklistItem({
+      id: 'restricted_key_saved',
+      label: 'Restricted Kraken key saved',
+      passed: credentialSaved,
+      plainEnglish: credentialSaved ? 'A Kraken production vault reference exists. Secret values are not displayed.' : 'Save the Kraken API key and private key to the encrypted local vault.',
+      nextClick: 'Save Kraken Key To Vault'
+    }),
+    buildPhase6EChecklistItem({
+      id: 'kraken_verified',
+      label: 'Kraken key verified',
+      passed: savedReadiness?.criticalPassed === true,
+      statusWhenFalse: savedReadiness?.status === 'Unsafe Permissions Detected' ? 'BLOCKED' : 'Not Ready',
+      plainEnglish: savedReadiness?.plainEnglishStatus || 'Run authenticated verification to read balances, account status, fees, symbol rules, and permission safety.',
+      nextClick: 'Verify Kraken Key'
+    }),
+    buildPhase6EChecklistItem({
+      id: 'withdrawals_disabled',
+      label: 'Withdrawals and transfers disabled',
+      passed: credentialSaved && savedReadiness?.withdrawalPermissionDetected === false,
+      statusWhenFalse: savedReadiness?.withdrawalPermissionDetected === true ? 'BLOCKED' : 'Not Ready',
+      plainEnglish: savedReadiness?.withdrawalPermissionDetected === false ? 'No withdrawal or transfer permission is detected by the verification model.' : 'Withdrawal safety has not been proven yet.',
+      nextClick: 'If this fails, delete the Kraken key and recreate it with Withdraw Funds disabled.'
+    }),
+    buildPhase6EChecklistItem({
+      id: 'dry_run_passed',
+      label: 'Production dry-run proof passed',
+      passed: savedDryRun?.passed === true,
+      plainEnglish: savedDryRun?.passed ? 'The exact tiny order passed dry-run proof without calling Kraken AddOrder.' : 'Run the no-order dry-run proof after verification passes.',
+      nextClick: 'Run Kraken Dry-Run Proof'
+    }),
+    buildPhase6EChecklistItem({
+      id: 'preflight_ready',
+      label: 'Tiny live readiness calculated',
+      passed: savedPreflight?.technicalReady === true,
+      plainEnglish: savedPreflight?.plainEnglishStatus || 'The app has not calculated final tiny live readiness yet.',
+      nextClick: 'Run Kraken Dry-Run Proof'
+    }),
+    buildPhase6EChecklistItem({
+      id: 'endpoint_still_locked',
+      label: 'Production order endpoint still locked',
+      passed: true,
+      plainEnglish: 'Phase 6E never calls Kraken AddOrder. Endpoint called: No.',
+      nextClick: 'No action needed.'
+    })
+  ];
+
+  return {
+    title: 'Phase 6E: Real Kraken API Key Connection Walkthrough',
+    phase: 'Phase 6E',
+    recommendedExchangeName: PHASE6E_RECOMMENDED_FIRST_EXCHANGE,
+    recommendedExchangeDisplayName: 'Kraken',
+    walkthrough: KRAKEN_PHASE6E_WALKTHROUGH,
+    credentialSaved,
+    apiKeyFingerprint: productionConnection.apiKeyFingerprint || null,
+    riskProfileReady: Boolean(riskProfile?.id) && riskProfile.status === 'active' && Number(riskProfile.kill_switch_enabled || 0) === 0,
+    finalStatus,
+    checklist,
+    krakenReadiness: savedReadiness,
+    dryRunProof: savedDryRun,
+    preflight: savedPreflight,
+    simulationPreview: savedPreview,
+    latestPhase6EOrder: (latestOrders || []).find(order => (
+      normalizePhase6ExchangeName(order.exchange_name) === 'kraken'
+        && (order.readiness?.phase6E || order.readiness?.phase6D)
+    )) || null,
+    defaultOrder: {
+      symbol: 'BTC/USD',
+      alternateSymbol: 'BTC/USDT',
+      side: 'buy',
+      orderType: 'limit',
+      quantity: 0,
+      limitPrice: 0,
+      notionalUsd: getPhase6DTinyLivePolicy(policy).defaultTinyOrderUsd,
+      maxOrderUsd: getPhase6DTinyLivePolicy(policy).maxOrderSizeUsd
+    },
+    whatToDoNow: finalStatus.nextClick,
+    safetyBoundary: {
+      ...createProductionSafetyBoundary(false),
+      phase6ECanPlaceOrder: false,
+      productionOrderEndpointCalled: false,
+      secretValuesReturnedToUi: false
+    }
+  };
+}
+
 function createPlainEnglishProductionError(exchangeName, error) {
   const rawMessage = String(error?.message || error || '').slice(0, 500);
   const lower = rawMessage.toLowerCase();
@@ -3962,8 +4284,10 @@ module.exports = {
   PHASE6B_RECOMMENDED_FIRST_EXCHANGE,
   PHASE6C_RECOMMENDED_FIRST_EXCHANGE,
   PHASE6D_RECOMMENDED_FIRST_EXCHANGE,
+  PHASE6E_RECOMMENDED_FIRST_EXCHANGE,
   PHASE6D_ARM_CONFIRMATION_PHRASE,
   DEFAULT_PHASE6D_TINY_LIVE_POLICY,
+  KRAKEN_PHASE6E_WALKTHROUGH,
   PHASE6B_ACTIVATION_EXCHANGE_GUIDES,
   getProductionAdapter,
   getProductionReferenceName,
@@ -3993,6 +4317,8 @@ module.exports = {
   buildPhase6DProductionPreflight,
   buildPhase6DTinyLiveFramework,
   buildPhase6DWizard,
+  buildPhase6EFinalStatus,
+  buildPhase6EWalkthrough,
   createProductionSafetyBoundary,
   createPlainEnglishProductionError
 };

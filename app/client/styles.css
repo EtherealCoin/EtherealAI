@@ -4719,6 +4719,12 @@ footer {
 .phase6d-step-grid,
 .phase6d-report-grid,
 .phase6d-proof-grid,
+.phase6e-summary-grid,
+.phase6e-guide-grid,
+.phase6e-key-fields,
+.phase6e-checklist,
+.phase6e-controls,
+.phase6e-proof-grid,
 .phase5-controls,
 .phase6-controls,
 .phase6-vault,
@@ -4743,7 +4749,8 @@ footer {
 
 .phase6b-hero,
 .phase6c-hero,
-.phase6d-hero {
+.phase6d-hero,
+.phase6e-hero {
     align-items: center;
     display: flex;
     gap: 16px;
@@ -4752,7 +4759,8 @@ footer {
 
 .phase6b-hero h2,
 .phase6c-hero h2,
-.phase6d-hero h2 {
+.phase6d-hero h2,
+.phase6e-hero h2 {
     margin-bottom: 8px;
 }
 
@@ -4804,6 +4812,10 @@ footer {
     border-color: color-mix(in srgb, var(--brand-blue) 36%, var(--brand-purple));
 }
 
+.phase6e-wizard {
+    border-color: color-mix(in srgb, var(--brand-pink) 34%, var(--brand-purple));
+}
+
 .phase6c-summary-grid,
 .phase6c-step-grid,
 .phase6c-report-grid,
@@ -4811,14 +4823,18 @@ footer {
 .phase6d-summary-grid,
 .phase6d-step-grid,
 .phase6d-report-grid,
-.phase6d-proof-grid {
+.phase6d-proof-grid,
+.phase6e-summary-grid,
+.phase6e-guide-grid,
+.phase6e-proof-grid {
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     margin: 18px 0;
 }
 
 .phase6b-controls,
 .phase6c-controls,
-.phase6d-controls {
+.phase6d-controls,
+.phase6e-controls {
     align-items: end;
     grid-template-columns: minmax(220px, 1.2fr) repeat(auto-fit, minmax(170px, 1fr));
     margin: 16px 0;
@@ -4830,10 +4846,23 @@ footer {
     margin: 12px 0 18px;
 }
 
+.phase6e-key-fields {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    margin: 12px 0;
+}
+
+.phase6e-checklist {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    margin: 14px 0;
+}
+
 .phase6b-controls label,
 .phase6c-controls label,
 .phase6d-controls label,
-.phase6d-arm-box label {
+.phase6d-arm-box label,
+.phase6e-controls label,
+.phase6e-key-fields label,
+.phase6e-checklist label {
     color: var(--text-primary);
     font-weight: 800;
 }
@@ -4863,7 +4892,12 @@ footer {
 .phase6d-step-grid article,
 .phase6d-report-grid article,
 .phase6d-proof-panel,
-.phase6d-check-item {
+.phase6d-check-item,
+.phase6e-summary-grid article,
+.phase6e-guide-card,
+.phase6e-key-panel,
+.phase6e-proof-panel,
+.phase6e-check-item {
     background: var(--surface-muted);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -4878,7 +4912,9 @@ footer {
 .phase6c-check-item span,
 .phase6d-summary-grid article span,
 .phase6d-step-grid article span,
-.phase6d-check-item span {
+.phase6d-check-item span,
+.phase6e-summary-grid article span,
+.phase6e-check-item span {
     color: inherit;
     display: block;
     font-size: 0.78rem;
@@ -4903,7 +4939,11 @@ footer {
 .phase6d-step-grid article strong,
 .phase6d-report-grid h3,
 .phase6d-proof-panel h3,
-.phase6d-check-item strong {
+.phase6d-check-item strong,
+.phase6e-summary-grid article strong,
+.phase6e-guide-card h3,
+.phase6e-proof-panel h3,
+.phase6e-check-item strong {
     color: inherit;
 }
 
@@ -4912,7 +4952,10 @@ footer {
 .phase6b-checklist-panel h3,
 .phase6b-tiny-live-panel h3,
 .phase6d-report-grid h3,
-.phase6d-proof-panel h3 {
+.phase6d-proof-panel h3,
+.phase6e-guide-card h3,
+.phase6e-proof-panel h3,
+.phase6e-key-panel h3 {
     margin-top: 0;
 }
 
@@ -4920,7 +4963,10 @@ footer {
 .phase6b-instructions ul,
 .phase6b-instructions ol,
 .phase6d-report-grid ul,
-.phase6d-proof-panel ul {
+.phase6d-proof-panel ul,
+.phase6e-guide-card ul,
+.phase6e-guide-card ol,
+.phase6e-proof-panel ul {
     color: var(--text-primary);
     line-height: 1.55;
     margin: 8px 0 0;
@@ -5363,6 +5409,11 @@ footer {
 :root[data-theme="night"] .phase6d-report-grid article,
 :root[data-theme="night"] .phase6d-proof-panel,
 :root[data-theme="night"] .phase6d-check-item,
+:root[data-theme="night"] .phase6e-summary-grid article,
+:root[data-theme="night"] .phase6e-guide-card,
+:root[data-theme="night"] .phase6e-key-panel,
+:root[data-theme="night"] .phase6e-proof-panel,
+:root[data-theme="night"] .phase6e-check-item,
 :root[data-theme="night"] .phase6-vault,
 :root[data-theme="night"] .phase6-acknowledgments,
 :root[data-theme="night"] .phase6-training,
@@ -5391,6 +5442,11 @@ footer {
 :root:not([data-theme="day"]) .phase6d-report-grid article,
 :root:not([data-theme="day"]) .phase6d-proof-panel,
 :root:not([data-theme="day"]) .phase6d-check-item,
+:root:not([data-theme="day"]) .phase6e-summary-grid article,
+:root:not([data-theme="day"]) .phase6e-guide-card,
+:root:not([data-theme="day"]) .phase6e-key-panel,
+:root:not([data-theme="day"]) .phase6e-proof-panel,
+:root:not([data-theme="day"]) .phase6e-check-item,
 :root:not([data-theme="day"]) .phase6-vault,
 :root:not([data-theme="day"]) .phase6-acknowledgments,
 :root:not([data-theme="day"]) .phase6-training {

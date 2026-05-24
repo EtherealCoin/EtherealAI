@@ -876,6 +876,150 @@
             <div id="phase6d-result" class="phase3-results">Phase 6D is ready to load. No real orders will be placed from this phase.</div>
         </section>
 
+        <section class="model-panel phase6e-wizard" id="kraken-api-key-walkthrough">
+            <div class="phase6e-hero">
+                <div>
+                    <span class="mode-pill">Phase 6E · Kraken Key</span>
+                    <h2>Phase 6E: Real Kraken API Key Connection Walkthrough</h2>
+                    <p class="inline-status">Create one restricted Kraken spot API key, save it to the encrypted local vault, verify it, and run a no-order production dry-run proof. This phase does not place an order and does not unlock live trading.</p>
+                </div>
+                <button id="phase6e-start" type="button" class="primary-action-button" onclick="startPhase6EWalkthrough()">Start Kraken Key Walkthrough</button>
+            </div>
+
+            <div class="phase6e-summary-grid">
+                <article>
+                    <span>Final Status</span>
+                    <strong id="phase6e-final-status">Not Ready</strong>
+                    <small id="phase6e-final-note">Save and verify a restricted Kraken key first.</small>
+                </article>
+                <article>
+                    <span>Real Orders</span>
+                    <strong>Locked</strong>
+                    <small>Kraken AddOrder is not called in Phase 6E.</small>
+                </article>
+                <article>
+                    <span>Secret Storage</span>
+                    <strong>Encrypted Local Vault</strong>
+                    <small>No secret value is displayed after saving.</small>
+                </article>
+                <article>
+                    <span>Dangerous Permissions</span>
+                    <strong>Must Stay Off</strong>
+                    <small>Withdrawals, transfers, margin, futures, and leverage are blocked.</small>
+                </article>
+            </div>
+
+            <div class="phase6e-guide-grid">
+                <article class="phase6e-guide-card">
+                    <h3>Where To Go In Kraken</h3>
+                    <ol id="phase6e-where-to-go">
+                        <li>Log in to Kraken Pro.</li>
+                        <li>Open the account menu in the upper-right corner.</li>
+                        <li>Choose Settings, then API, then Create API key.</li>
+                    </ol>
+                    <a class="secondary-button" href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noreferrer">Open Kraken API Settings</a>
+                </article>
+                <article class="phase6e-guide-card">
+                    <h3>Enable These</h3>
+                    <ul id="phase6e-enable-list"><li>Query Funds</li><li>Query Open Orders & Trades</li><li>Modify Orders only for future tiny live eligibility</li></ul>
+                </article>
+                <article class="phase6e-guide-card">
+                    <h3>Keep These Disabled</h3>
+                    <ul id="phase6e-disable-list"><li>Withdraw Funds</li><li>Transfers and funding movement</li><li>Margin, futures, leverage, and full-access keys</li></ul>
+                </article>
+            </div>
+
+            <div class="phase6e-key-panel">
+                <div>
+                    <h3>Add API Key Safely</h3>
+                    <p class="workflow-helper-text">Paste the Kraken API Key and Kraken Private Key here only after creating a restricted spot key. Kraken does not require a passphrase for this workflow. Do not paste a wallet seed phrase, wallet private key, Kraken password, bank login, or Apple ID password.</p>
+                </div>
+                <div class="phase6e-key-fields">
+                    <label for="phase6e-api-key">
+                        Kraken API key
+                        <input id="phase6e-api-key" type="password" autocomplete="off" placeholder="Paste Kraken API key">
+                    </label>
+                    <label for="phase6e-api-secret">
+                        Kraken private/secret key
+                        <input id="phase6e-api-secret" type="password" autocomplete="off" placeholder="Paste Kraken Private Key">
+                    </label>
+                </div>
+                <div class="phase6e-checklist">
+                    <label><input id="phase6e-check-walkthrough" type="checkbox"> I followed Kraken Pro -> Settings -> API -> Create API key.</label>
+                    <label><input id="phase6e-check-query-funds" type="checkbox"> Query Funds is enabled.</label>
+                    <label><input id="phase6e-check-query-open" type="checkbox"> Query Open Orders & Trades is enabled or intentionally reviewed.</label>
+                    <label><input id="phase6e-check-query-closed" type="checkbox"> Query Closed Orders & Trades is reviewed for future audit/reconciliation.</label>
+                    <label><input id="phase6e-check-modify" type="checkbox"> Modify Orders is enabled only if I want future tiny live test eligibility.</label>
+                    <label><input id="phase6e-check-cancel" type="checkbox"> Cancel/Close Orders is enabled only for future emergency cancel/reconciliation.</label>
+                    <label><input id="phase6e-check-withdraw" type="checkbox"> Withdraw Funds is disabled.</label>
+                    <label><input id="phase6e-check-deposit" type="checkbox"> Deposit Funds is disabled or intentionally not used.</label>
+                    <label><input id="phase6e-check-transfer" type="checkbox"> Transfers/funding movement are disabled or not available on this key.</label>
+                    <label><input id="phase6e-check-spot" type="checkbox"> This is a Kraken spot key, not a Kraken Futures key.</label>
+                    <label><input id="phase6e-check-margin" type="checkbox"> Margin is disabled/not used.</label>
+                    <label><input id="phase6e-check-futures" type="checkbox"> Futures are disabled/not used.</label>
+                    <label><input id="phase6e-check-leverage" type="checkbox"> Leverage is disabled/not used.</label>
+                    <label><input id="phase6e-check-ip" type="checkbox"> I reviewed IP restriction options.</label>
+                    <label><input id="phase6e-check-2fa" type="checkbox"> Kraken account/API security and 2FA are reviewed.</label>
+                    <label><input id="phase6e-check-master" type="checkbox"> This is not a master, admin, root, or full-access key.</label>
+                    <label><input id="phase6e-check-private-safe" type="checkbox"> I will not store this private key in unsafe notes, screenshots, or chat.</label>
+                    <label><input id="phase6e-check-real-money" type="checkbox"> I understand a later tiny live test uses real money only after separate approval.</label>
+                    <label><input id="phase6e-check-no-order" type="checkbox"> I understand Phase 6E saves/verifies/dry-runs only and places no real order.</label>
+                </div>
+                <div class="button-row">
+                    <button id="phase6e-save-key" type="button" onclick="savePhase6EKrakenKey()">Save Kraken Key To Vault</button>
+                    <button id="phase6e-delete-key" type="button" class="secondary-button" onclick="deletePhase6EKrakenKey()">Delete / Rotate Kraken Key</button>
+                </div>
+                <div id="phase6e-key-result" class="phase3-results">No Kraken key has been saved from this walkthrough yet.</div>
+            </div>
+
+            <div class="phase6e-controls">
+                <label for="phase6e-symbol">
+                    Tiny symbol
+                    <select id="phase6e-symbol">
+                        <option value="BTC/USD">BTC/USD</option>
+                        <option value="BTC/USDT">BTC/USDT</option>
+                        <option value="ETH/USD">ETH/USD</option>
+                        <option value="ETH/USDT">ETH/USDT</option>
+                    </select>
+                </label>
+                <label for="phase6e-notional">
+                    Tiny dry-run amount USD
+                    <input id="phase6e-notional" type="number" min="0" step="0.5" value="1">
+                </label>
+                <label for="phase6e-max-order">
+                    Hard max USD
+                    <input id="phase6e-max-order" type="number" min="0" step="0.5" value="5">
+                </label>
+                <label for="phase6e-limit-price">
+                    Limit price optional
+                    <input id="phase6e-limit-price" type="number" min="0" step="0.01" value="0">
+                </label>
+                <button id="phase6e-verify-key" type="button" onclick="verifyPhase6EKrakenKey()">Verify Kraken Key</button>
+                <button id="phase6e-dry-run" type="button" onclick="runPhase6EKrakenDryRun()">Run Kraken Dry-Run Proof</button>
+            </div>
+
+            <div class="phase6e-proof-grid">
+                <article class="phase6e-proof-panel">
+                    <h3>Owner Checklist</h3>
+                    <div id="phase6e-checklist-result">Start the walkthrough to load the current checklist.</div>
+                </article>
+                <article class="phase6e-proof-panel">
+                    <h3>Verification Result</h3>
+                    <div id="phase6e-verify-result">No Kraken verification has run yet.</div>
+                </article>
+                <article class="phase6e-proof-panel">
+                    <h3>Dry-Run Proof</h3>
+                    <div id="phase6e-dry-run-result">No production dry-run proof has run yet. Endpoint called: No.</div>
+                </article>
+                <article class="phase6e-proof-panel">
+                    <h3>Tiny Live Test Readiness</h3>
+                    <div id="phase6e-readiness-result">Not ready. Save and verify the Kraken key first.</div>
+                </article>
+            </div>
+
+            <div id="phase6e-result" class="phase3-results">Phase 6E is ready to load. Live trading remains locked.</div>
+        </section>
+
         <section class="model-panel" id="production-trading-command-center">
             <h2>Phase 6: Production Trading Command Center</h2>
             <p class="inline-status">Controlled production execution infrastructure is installed here. Real orders stay locked until production keys, exchange connectivity, sandbox evidence, owner approvals, dry-run checks, capital limits, and final typed confirmation all pass.</p>
@@ -1103,6 +1247,11 @@
         let latestPhase6DReadiness = null;
         let latestPhase6DPreflight = null;
         let latestPhase6DSimulationPreview = null;
+        let latestPhase6EWizard = null;
+        let latestPhase6EReadiness = null;
+        let latestPhase6EDryRunProof = null;
+        let latestPhase6EPreflight = null;
+        let latestPhase6ESimulationPreview = null;
         let latestPhase6Center = null;
         let latestPhase6PreviewId = null;
         let latestPhase6OrderId = null;
@@ -1916,9 +2065,9 @@
 
         function phase6CStatusClass(status) {
             const text = String(status || '').toLowerCase();
-            if (text.includes('safe') || text.includes('passed') || text.includes('verified') || text.includes('read-only') || text.includes('locked')) return 'status-success';
+            if (text.includes('safe') || text.includes('passed') || text.includes('verified') || text.includes('eligible') || text.includes('read-only') || text.includes('locked')) return 'status-success';
             if (text.includes('unsafe') || text.includes('failed') || text.includes('error')) return 'status-danger';
-            if (text.includes('missing') || text.includes('review') || text.includes('not eligible') || text.includes('blocked')) return 'status-warning';
+            if (text.includes('missing') || text.includes('review') || text.includes('not eligible') || text.includes('not ready') || text.includes('blocked')) return 'status-warning';
             return 'status-info';
         }
 
@@ -2031,6 +2180,7 @@
             await loadPhase6BWizard(exchangeName);
             await loadPhase6CWizard(exchangeName);
             await loadPhase6DFramework();
+            await loadPhase6EWalkthrough();
         }
 
         function openPhase6CVaultPanel() {
@@ -2433,6 +2583,291 @@
             await loadPhase6BWizard('kraken');
             await loadPhase6CWizard('kraken');
         }
+
+        function renderPhase6EChecklist(items = []) {
+            return items.map(item => `
+                <article class="phase6e-check-item ${phase6CStatusClass(item.status)}">
+                    <span>${escapeHtml(item.status || (item.passed ? 'Ready' : 'Not Ready'))}</span>
+                    <strong>${escapeHtml(item.label)}</strong>
+                    <p>${escapeHtml(item.plainEnglish || '')}</p>
+                    <small>${escapeHtml(item.nextClick || 'No action needed.')}</small>
+                </article>
+            `).join('') || '<p class="workflow-helper-text">No Phase 6E checklist loaded yet.</p>';
+        }
+
+        function renderPhase6EWalkthrough(data = {}) {
+            const wizard = data?.wizard || data || {};
+            const walkthrough = wizard.walkthrough || data.walkthrough || {};
+            latestPhase6EWizard = wizard;
+            latestPhase6EReadiness = wizard.krakenReadiness || latestPhase6EReadiness;
+            latestPhase6EDryRunProof = wizard.dryRunProof || latestPhase6EDryRunProof;
+            latestPhase6EPreflight = wizard.preflight || latestPhase6EPreflight;
+            latestPhase6ESimulationPreview = wizard.simulationPreview || latestPhase6ESimulationPreview;
+
+            const finalStatus = wizard.finalStatus || {};
+            document.getElementById('phase6e-final-status').textContent = finalStatus.label || 'Not Ready';
+            document.getElementById('phase6e-final-note').textContent = finalStatus.plainEnglish || 'Save and verify a restricted Kraken key first.';
+            document.getElementById('phase6e-result').innerHTML = `
+                <article class="phase6e-check-item ${phase6CStatusClass(finalStatus.status || finalStatus.tone)}">
+                    <span>${escapeHtml(finalStatus.status || 'NOT READY')}</span>
+                    <strong>${escapeHtml(finalStatus.label || 'Not ready')}</strong>
+                    <p>${escapeHtml(finalStatus.plainEnglish || 'Start the Kraken walkthrough.')}</p>
+                    <small>${escapeHtml(finalStatus.nextClick || 'Start Kraken Key Walkthrough')} · Endpoint called: No.</small>
+                </article>
+            `;
+
+            document.getElementById('phase6e-where-to-go').innerHTML = (walkthrough.walkthroughSteps || []).map(step => `
+                <li><strong>${escapeHtml(step.title)}</strong>: ${escapeHtml(step.ownerAction)} <span>${escapeHtml(step.whyItMatters || '')}</span></li>
+            `).join('') || '<li>Log in to Kraken Pro, open Settings, open API, then create an API key.</li>';
+            document.getElementById('phase6e-enable-list').innerHTML = (walkthrough.permissionsToEnable || []).map(item => `
+                <li><strong>${escapeHtml(item.label)}</strong>: ${escapeHtml(item.plainEnglish)} <em>${escapeHtml(item.requiredFor || '')}</em></li>
+            `).join('') || '<li>Query Funds</li>';
+            document.getElementById('phase6e-disable-list').innerHTML = (walkthrough.permissionsToDisable || []).map(item => `
+                <li><strong>${escapeHtml(item.label)}</strong>: ${escapeHtml(item.plainEnglish)}</li>
+            `).join('') || '<li>Withdraw Funds</li>';
+            document.getElementById('phase6e-checklist-result').innerHTML = `<div class="phase6e-proof-grid">${renderPhase6EChecklist(wizard.checklist || [])}</div>`;
+
+            const readiness = latestPhase6EReadiness || wizard.krakenReadiness;
+            document.getElementById('phase6e-verify-result').innerHTML = readiness ? `
+                <article class="phase6e-check-item ${phase6CStatusClass(readiness.status)}">
+                    <span>${escapeHtml(readiness.status || 'Review')}</span>
+                    <strong>Kraken key verification</strong>
+                    <p>${escapeHtml(readiness.plainEnglishStatus || 'Verification result loaded.')}</p>
+                    <small>Balances: ${readiness.balancesReadable ? 'readable' : 'not ready'} · fees: ${readiness.feesLoaded ? 'loaded' : 'conservative'} · withdrawals: ${readiness.withdrawalPermissionDetected ? 'unsafe' : 'not detected'} · Endpoint called: No.</small>
+                </article>
+                <div class="phase6e-proof-grid">${renderPhase6EChecklist(readiness.checklist || [])}</div>
+            ` : 'No Kraken verification has run yet.';
+
+            const dryRun = latestPhase6EDryRunProof || wizard.dryRunProof;
+            const preflight = latestPhase6EPreflight || wizard.preflight;
+            document.getElementById('phase6e-dry-run-result').innerHTML = dryRun || preflight ? `
+                <article class="phase6e-check-item ${phase6CStatusClass(preflight?.status || dryRun?.status)}">
+                    <span>${escapeHtml(preflight?.status || dryRun?.status || 'Review')}</span>
+                    <strong>${escapeHtml(dryRun?.title || 'Production Dry-Run Proof')}</strong>
+                    <p>${escapeHtml(preflight?.plainEnglishStatus || dryRun?.plainEnglishStatus || 'Dry-run result loaded.')}</p>
+                    <small>Endpoint called: ${preflight?.productionOrderEndpointCalled ? 'Yes' : 'No'} · price ${formatUsd(dryRun?.livePrice || preflight?.simulationPreview?.expectedFillPrice || 0)} · fee ${Number(dryRun?.feeEstimatePercent || preflight?.simulationPreview?.feePercent || 0).toFixed(4)}%</small>
+                </article>
+                <div class="phase6e-proof-grid">${renderPhase6EChecklist(preflight?.checks || dryRun?.checklist || [])}</div>
+            ` : 'No production dry-run proof has run yet. Endpoint called: No.';
+
+            document.getElementById('phase6e-readiness-result').innerHTML = `
+                <article class="phase6e-check-item ${phase6CStatusClass(finalStatus.status || finalStatus.tone)}">
+                    <span>${escapeHtml(finalStatus.status || 'NOT READY')}</span>
+                    <strong>${escapeHtml(finalStatus.label || 'Not ready')}</strong>
+                    <p>${escapeHtml(finalStatus.plainEnglish || 'Save and verify the Kraken key first.')}</p>
+                    <small>Tiny live eligible: ${finalStatus.tinyLiveEligible ? 'yes' : 'no'} · Live trading locked: yes · Wallet signing disabled: yes.</small>
+                </article>
+            `;
+
+            const defaultOrder = wizard.defaultOrder || {};
+            if (defaultOrder.symbol) document.getElementById('phase6e-symbol').value = defaultOrder.symbol;
+            if (defaultOrder.notionalUsd) document.getElementById('phase6e-notional').value = defaultOrder.notionalUsd;
+            if (defaultOrder.maxOrderUsd) document.getElementById('phase6e-max-order').value = defaultOrder.maxOrderUsd;
+        }
+
+        function phase6EOrderPayload() {
+            return {
+                exchangeName: 'kraken',
+                symbol: document.getElementById('phase6e-symbol').value || 'BTC/USD',
+                side: 'buy',
+                orderType: 'limit',
+                quantity: 0,
+                limitPrice: Number(document.getElementById('phase6e-limit-price').value || 0),
+                notionalUsd: Number(document.getElementById('phase6e-notional').value || 1),
+                maxOrderUsd: Number(document.getElementById('phase6e-max-order').value || 5)
+            };
+        }
+
+        async function loadPhase6EWalkthrough() {
+            const response = await fetch('/api/v1/live-trading-launch/phase6e/walkthrough');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase6e-result').textContent = data.error || 'Unable to load Phase 6E.';
+                return null;
+            }
+
+            renderPhase6EWalkthrough(data);
+            return data.wizard;
+        }
+
+        async function startPhase6EWalkthrough() {
+            document.getElementById('phase6e-result').textContent = 'Loading Kraken key walkthrough. Live trading remains locked.';
+            await ensureProductionConnector('kraken');
+            await loadPhase6EWalkthrough();
+        }
+
+        function phase6EPermissionsChecklist() {
+            return {
+                walkthroughReviewed: document.getElementById('phase6e-check-walkthrough').checked,
+                queryFundsEnabled: document.getElementById('phase6e-check-query-funds').checked,
+                queryOpenOrdersTradesEnabled: document.getElementById('phase6e-check-query-open').checked,
+                queryClosedOrdersTradesReviewed: document.getElementById('phase6e-check-query-closed').checked,
+                modifyOrdersEnabled: document.getElementById('phase6e-check-modify').checked,
+                cancelCloseOrdersEnabled: document.getElementById('phase6e-check-cancel').checked,
+                withdrawFundsDisabled: document.getElementById('phase6e-check-withdraw').checked,
+                depositFundsDisabled: document.getElementById('phase6e-check-deposit').checked,
+                transfersDisabled: document.getElementById('phase6e-check-transfer').checked,
+                spotKeyOnly: document.getElementById('phase6e-check-spot').checked,
+                marginDisabled: document.getElementById('phase6e-check-margin').checked,
+                futuresDisabled: document.getElementById('phase6e-check-futures').checked,
+                leverageDisabled: document.getElementById('phase6e-check-leverage').checked,
+                ipRestrictionReviewed: document.getElementById('phase6e-check-ip').checked,
+                twoFactorEnabled: document.getElementById('phase6e-check-2fa').checked,
+                noMasterKey: document.getElementById('phase6e-check-master').checked,
+                privateKeyWillNotBeSharedElsewhere: document.getElementById('phase6e-check-private-safe').checked,
+                ownerUnderstandsTinyLiveUsesRealMoneyLater: document.getElementById('phase6e-check-real-money').checked,
+                ownerUnderstandsNoOrderYet: document.getElementById('phase6e-check-no-order').checked
+            };
+        }
+
+        async function savePhase6EKrakenKey() {
+            const output = document.getElementById('phase6e-key-result');
+            output.textContent = 'Saving Kraken key to the encrypted local vault. Secret values will be cleared and not displayed again.';
+            await ensureProductionConnector('kraken');
+            const response = await fetch('/api/v1/live-trading-launch/phase6e/save-kraken-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    apiKey: document.getElementById('phase6e-api-key').value,
+                    apiSecret: document.getElementById('phase6e-api-secret').value,
+                    permissionsChecklist: phase6EPermissionsChecklist()
+                })
+            });
+            const data = await response.json();
+            document.getElementById('phase6e-api-key').value = '';
+            document.getElementById('phase6e-api-secret').value = '';
+
+            if (!response.ok) {
+                output.innerHTML = `
+                    <article class="phase6e-check-item status-warning">
+                        <strong>Kraken key not saved</strong>
+                        <p>${escapeHtml(data.error || 'Review the visible checklist and key fields.')}</p>
+                        <small>${escapeHtml((data.missing || []).join(', ') || data.nextClick || 'Complete the checklist, then save again.')} · Endpoint called: No.</small>
+                    </article>
+                `;
+                if (data.wizard) renderPhase6EWalkthrough(data);
+                return;
+            }
+
+            output.innerHTML = `
+                <article class="phase6e-check-item status-success">
+                    <strong>Kraken key saved to encrypted vault</strong>
+                    <p>Fingerprint ${escapeHtml(data.saved?.apiKeyFingerprint || 'saved')}. Secret values were not returned to the browser.</p>
+                    <small>Next: Verify Kraken Key. Live trading remains locked.</small>
+                </article>
+            `;
+            renderPhase6EWalkthrough(data);
+            await loadPhase6Status();
+            await loadPhase6DFramework();
+        }
+
+        async function deletePhase6EKrakenKey() {
+            const output = document.getElementById('phase6e-key-result');
+            output.textContent = 'Deleting/rotating the Kraken vault entry. Production order endpoints remain locked.';
+            const response = await fetch('/api/v1/live-trading-launch/phase6e/kraken-key', { method: 'DELETE' });
+            const data = await response.json();
+
+            output.innerHTML = `
+                <article class="phase6e-check-item ${response.ok ? 'status-success' : 'status-warning'}">
+                    <strong>${response.ok ? 'Kraken key deleted/rotated' : 'Delete needs review'}</strong>
+                    <p>${escapeHtml(data.nextClick || data.error || 'Kraken vault entry reviewed.')}</p>
+                    <small>Endpoint called: No · live trading locked.</small>
+                </article>
+            `;
+            if (data.wizard) renderPhase6EWalkthrough(data);
+            await loadPhase6Status();
+            await loadPhase6DFramework();
+        }
+
+        async function verifyPhase6EKrakenKey() {
+            document.getElementById('phase6e-verify-result').textContent = 'Verifying Kraken key. This reads account metadata only and calls no order endpoint.';
+            await ensureProductionConnector('kraken');
+            const response = await fetch('/api/v1/live-trading-launch/phase6e/verify-kraken-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order: phase6EOrderPayload() })
+            });
+            const data = await response.json();
+            latestPhase6EReadiness = data.krakenReadiness || latestPhase6EReadiness;
+
+            if (!response.ok && !data.wizard) {
+                document.getElementById('phase6e-verify-result').innerHTML = `
+                    <article class="phase6e-check-item status-warning">
+                        <strong>Kraken verification blocked</strong>
+                        <p>${escapeHtml(data.error || 'Verification did not pass.')}</p>
+                        <small>${escapeHtml(data.nextClick || 'Fix the visible issue, then verify again.')} · Endpoint called: No.</small>
+                    </article>
+                `;
+                return;
+            }
+
+            renderPhase6EWalkthrough(data);
+            await loadPhase6Status();
+            await loadPhase6DFramework();
+        }
+
+        async function runPhase6EKrakenDryRun() {
+            document.getElementById('phase6e-dry-run-result').textContent = 'Running Kraken dry-run proof. This checks the exact tiny order and calls no order endpoint.';
+            await ensureProductionConnector('kraken');
+            const order = phase6EOrderPayload();
+            const response = await fetch('/api/v1/live-trading-launch/phase6e/dry-run-proof', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(order)
+            });
+            const data = await response.json();
+            latestPhase6EReadiness = data.krakenReadiness || latestPhase6EReadiness;
+            latestPhase6EDryRunProof = data.dryRunProof || latestPhase6EDryRunProof;
+            latestPhase6EPreflight = data.preflight || latestPhase6EPreflight;
+            latestPhase6ESimulationPreview = data.simulationPreview || latestPhase6ESimulationPreview;
+
+            if (data.previewId) {
+                latestPhase6PreviewId = data.previewId;
+                latestPhase6OrderId = data.previewId;
+            }
+
+            if (!response.ok && !data.wizard) {
+                document.getElementById('phase6e-dry-run-result').innerHTML = `
+                    <article class="phase6e-check-item status-warning">
+                        <strong>Kraken dry-run blocked</strong>
+                        <p>${escapeHtml(data.error || 'Dry-run proof did not pass.')}</p>
+                        <small>${escapeHtml(data.nextClick || 'Fix the visible issue, then run dry-run again.')} · Endpoint called: No.</small>
+                    </article>
+                `;
+                return;
+            }
+
+            renderPhase6EWalkthrough(data);
+            await loadPhase6Status();
+            await loadPhase6DFramework();
+        }
+
+        window.EtherealAIPhase6E = {
+            startPhase6EWalkthrough,
+            savePhase6EKrakenKey,
+            deletePhase6EKrakenKey,
+            verifyPhase6EKrakenKey,
+            runPhase6EKrakenDryRun,
+            loadPhase6EWalkthrough
+        };
+
+        document.addEventListener('click', event => {
+            const action = event.target?.closest?.(
+                '#phase6e-start, #phase6e-save-key, #phase6e-delete-key, #phase6e-verify-key, #phase6e-dry-run'
+            );
+            if (!action) return;
+
+            event.preventDefault();
+            const actions = {
+                'phase6e-start': startPhase6EWalkthrough,
+                'phase6e-save-key': savePhase6EKrakenKey,
+                'phase6e-delete-key': deletePhase6EKrakenKey,
+                'phase6e-verify-key': verifyPhase6EKrakenKey,
+                'phase6e-dry-run': runPhase6EKrakenDryRun
+            };
+            actions[action.id]?.();
+        });
 
         function phase6CardClass(status) {
             const text = String(status || '').toLowerCase();
@@ -3334,6 +3769,7 @@
             await loadPhase6BWizard(exchangeName);
             await loadPhase6CWizard(exchangeName);
             await loadPhase6DFramework();
+            await loadPhase6EWalkthrough();
         }
 
         async function testPhase6ProductionConnection() {
@@ -3387,6 +3823,8 @@
             await loadPhase6Status();
             await loadPhase6BWizard(exchangeName);
             await loadPhase6CWizard(exchangeName);
+            await loadPhase6DFramework();
+            await loadPhase6EWalkthrough();
         }
 
         async function loadPhase6Status() {
@@ -3405,6 +3843,7 @@
                 latestAccountScan,
                 phase4: latestPhase4CommandCenter,
                 phase5: latestPhase5TreasuryCommand,
+                phase6e: latestPhase6EWizard,
                 phase6: data.center
             }, null, 2);
             return data.center;
@@ -3840,6 +4279,7 @@
         loadPhase6BWizard();
         loadPhase6CWizard();
         loadPhase6DFramework();
+        loadPhase6EWalkthrough();
         loadPhase6Status();
         scanPhase3AReadiness();
     </script>
