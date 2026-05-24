@@ -113,6 +113,7 @@ function registerExchangeMetadataRoutes(app, {
   defaultPhase6Policy,
   phase6ProductionAdapters,
   phase6BRecommendedFirstExchange,
+  phase6CRecommendedFirstExchange,
   phase6BActivationExchangeGuides,
   getProductionAdapter,
   getProductionReferenceName,
@@ -133,6 +134,10 @@ function registerExchangeMetadataRoutes(app, {
   buildPhase6ApprovalCenter,
   buildExchangeVerificationChecklist,
   buildProductionActivationWizard,
+  verifyProductionExchangeCredentials,
+  buildPhase6CProductionDryRunProof,
+  buildPhase6CTinyLiveEligibility,
+  buildPhase6CWizard,
   createProductionSafetyBoundary,
   createPlainEnglishProductionError,
   evaluateExchangeConnectorReadiness,
@@ -1158,6 +1163,47 @@ function registerExchangeMetadataRoutes(app, {
     };
   }
 
+  async function loadPhase6CState({ userId, selectedExchangeName, credentialVerification = null, dryRunProof = null }) {
+    const rows = await dbAll(
+      `${exchangeConnectorSelect}
+       ORDER BY exchange_connectors.created_at DESC
+       LIMIT 500`
+    );
+    const connectors = rows.map(parseExchangeConnector);
+    const [vaultStatus, approvals, latestOrders, latestSandboxTests, riskProfile] = await Promise.all([
+      getProductionVaultStatus(),
+      getLatestProductionApprovals(userId, 100),
+      getLatestProductionOrders(userId, 25),
+      getLatestSandboxOrderTests(userId, 25),
+      getActiveLiveReadinessRiskProfile()
+    ]);
+    const exchangeReadiness = await getProductionExchangeReadiness({ connectors, userId });
+    const wizard = buildPhase6CWizard({
+      connectors,
+      vaultStatus,
+      approvals,
+      latestOrders,
+      riskProfile,
+      latestSandboxTests,
+      exchangeReadiness,
+      selectedExchangeName,
+      credentialVerification,
+      dryRunProof
+    });
+
+    return {
+      connectors,
+      vaultStatus,
+      approvals,
+      latestOrders,
+      latestSandboxTests,
+      riskProfile,
+      exchangeReadiness,
+      wizard,
+      safetyBoundary: createProductionSafetyBoundary(false)
+    };
+  }
+
   app.get('/api/v1/local-secret-provider-capabilities', requireAuth, (req, res) => {
     try {
       res.json({ capabilities: readSecretProviderCapabilities() });
@@ -2018,6 +2064,345 @@ function registerExchangeMetadataRoutes(app, {
         error: createPlainEnglishProductionError
           ? createPlainEnglishProductionError('Phase 6B activation wizard', error)
           : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.get('/api/v1/live-trading-launch/phase6c/wizard', requireAuth, async (req, res) => {
+    try {
+      const selectedExchangeName = normalizeExchangeId(req.query?.exchange || phase6CRecommendedFirstExchange || phase6BRecommendedFirstExchange || 'kraken');
+      const state = await loadPhase6CState({
+        userId: req.session.userId,
+        selectedExchangeName
+      });
+
+      res.json({
+        wizard: state.wizard,
+        exchangeReadiness: state.exchangeReadiness,
+        recommendedExchangeName: state.wizard.recommendedExchangeName,
+        selectedExchangeName: state.wizard.selectedExchangeName,
+        safetyBoundary: state.safetyBoundary
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('Phase 6C real credential verification wizard', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase6c/verify-credentials', requireAuth, async (req, res) => {
+    try {
+      const exchangeName = normalizeExchangeId(req.body?.exchangeName || req.body?.exchange || phase6CRecommendedFirstExchange || 'kraken');
+      const connector = await findOrCreateProductionConnector({ exchangeName });
+      const adapter = getProductionAdapter(exchangeName);
+
+      if (!connector || !adapter) {
+        return res.status(400).json({
+          error: 'Choose Kraken, Coinbase Advanced, Binance, OKX, or Bybit before verifying credentials.',
+          nextClick: 'Choose one supported exchange.',
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      const credentials = await loadConnectorProductionCredentialsForUser(connector, req.session.userId);
+
+      if (!credentials) {
+        const state = await loadPhase6CState({
+          userId: req.session.userId,
+          selectedExchangeName: exchangeName
+        });
+
+        return res.status(409).json({
+          error: `No encrypted production API key is saved for ${adapter.displayName}.`,
+          nextClick: 'Click Add API Key Safely, save a restricted key to the production vault, then verify again.',
+          wizard: state.wizard,
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      const verification = await verifyProductionExchangeCredentials({
+        credentials,
+        adapter,
+        orderInput: {
+          ...(phase6BActivationExchangeGuides?.[exchangeName]?.defaultOrder || {}),
+          ...(req.body?.order || {}),
+          exchangeName
+        }
+      });
+      const settings = mergeProductionConnectionSettings(connector, {
+        connectionStatus: verification.connectionStatus,
+        plainEnglishStatus: verification.plainEnglishStatus,
+        phase6CVerificationStatus: verification.status,
+        lastPhase6CVerificationAt: new Date().toISOString(),
+        phase6CVerification: {
+          exchangeName: verification.exchangeName,
+          displayName: verification.displayName,
+          status: verification.status,
+          passed: verification.passed,
+          criticalPassed: verification.criticalPassed,
+          connectionStatus: verification.connectionStatus,
+          tradingPermissionPresent: verification.tradingPermissionPresent,
+          withdrawalPermissionDetected: verification.withdrawalPermissionDetected,
+          balancesReadable: verification.balancesReadable,
+          feesLoaded: verification.feesLoaded,
+          exactFeesLoaded: verification.exactFeesLoaded,
+          symbolRulesLoaded: verification.symbolRulesLoaded,
+          minimumOrderLoaded: verification.minimumOrderLoaded,
+          livePriceLoaded: verification.livePriceLoaded,
+          checklist: verification.checklist,
+          checksPassed: verification.checksPassed,
+          checksFailed: verification.checksFailed,
+          proof: {
+            permissions: verification.proof?.permissions,
+            symbolRules: verification.proof?.symbolRules,
+            accountLimits: verification.proof?.accountLimits,
+            fees: verification.proof?.fees,
+            rateLimits: verification.proof?.rateLimits,
+            marketData: verification.proof?.marketData,
+            proofSources: verification.proof?.proofSources
+          },
+          plainEnglishStatus: verification.plainEnglishStatus,
+          secretValuesReturnedToUi: false,
+          productionOrderEndpointCalled: false,
+          productionOrderEndpointEnabled: false
+        }
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET status = ?, settings_json = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          verification.status === 'Unsafe Permissions Detected' ? 'review_needed' : 'configured',
+          JSON.stringify(settings),
+          connector.id
+        ]
+      );
+      await dbRun(
+        `INSERT INTO live_trading_safety_events
+         (user_id, event_type, status, summary, payload_json)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          'phase6c_real_credential_verification',
+          verification.passed ? 'complete' : 'review_needed',
+          `${adapter.displayName} Phase 6C credential verification finished with status ${verification.status}.`,
+          JSON.stringify({
+            exchangeName,
+            status: verification.status,
+            checksPassed: verification.checksPassed,
+            checksFailed: verification.checksFailed,
+            productionOrderEndpointCalled: false,
+            productionOrderEndpointEnabled: false,
+            withdrawalsEnabled: false,
+            walletSigningEnabled: false,
+            automatedLiveTradingEnabled: false
+          })
+        ]
+      );
+
+      const state = await loadPhase6CState({
+        userId: req.session.userId,
+        selectedExchangeName: exchangeName,
+        credentialVerification: verification
+      });
+
+      res.status(verification.passed ? 200 : 409).json({
+        verification,
+        wizard: state.wizard,
+        nextClick: verification.nextClick,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError(req.body?.exchangeName || 'Phase 6C credential verification', error)
+          : error.message,
+        nextClick: 'Fix the credential, permission, internet, VPN, or exchange availability issue, then verify again.',
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase6c/dry-run-proof', requireAuth, async (req, res) => {
+    try {
+      const exchangeName = normalizeExchangeId(req.body?.exchangeName || req.body?.exchange || phase6CRecommendedFirstExchange || 'kraken');
+      const connector = await findOrCreateProductionConnector({ exchangeName });
+      const adapter = getProductionAdapter(exchangeName);
+
+      if (!connector || !adapter) {
+        return res.status(400).json({
+          error: 'Choose Kraken, Coinbase Advanced, Binance, OKX, or Bybit before running dry-run proof.',
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      const credentials = await loadConnectorProductionCredentialsForUser(connector, req.session.userId);
+
+      if (!credentials) {
+        const state = await loadPhase6CState({ userId: req.session.userId, selectedExchangeName: exchangeName });
+
+        return res.status(409).json({
+          error: `No encrypted production API key is saved for ${adapter.displayName}.`,
+          nextClick: 'Click Add API Key Safely, save a restricted key, then run the dry-run proof.',
+          wizard: state.wizard,
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      const defaultOrder = phase6BActivationExchangeGuides?.[exchangeName]?.defaultOrder || {};
+      const requestedOrder = {
+        ...defaultOrder,
+        ...(req.body?.order || {}),
+        exchangeName
+      };
+      const verification = await verifyProductionExchangeCredentials({
+        credentials,
+        adapter,
+        orderInput: requestedOrder
+      });
+      const marketData = verification.proof?.marketData || {};
+      const dryRunOrder = {
+        ...requestedOrder,
+        limitPrice: Number(requestedOrder.limitPrice || 0) > 0
+          ? Number(requestedOrder.limitPrice)
+          : Number(marketData.askPrice || marketData.midPrice || requestedOrder.limitPrice || 0)
+      };
+      const context = await buildProductionSafetyContext({
+        userId: req.session.userId,
+        orderInput: dryRunOrder,
+        marketContext: {
+          productionDryRunPassed: true,
+          dryRunPassed: true,
+          liquidityUsd: Number(marketData.liquidityUsd || 1000000),
+          slippagePercent: Number(marketData.estimatedSlippagePercent ?? 0.05),
+          volatilityPercent: 0,
+          netSpreadPercent: Math.max(Number(marketData.spreadPercent || 0.1), Number(defaultPhase6Policy?.minNetSpreadPercent || 0.05)),
+          latencyMs: Number(req.body?.latencyMs || 250),
+          priceTimestamp: marketData.priceTimestamp || new Date().toISOString()
+        },
+        accountContext: req.body?.accountContext || {},
+        ownerConfirmation: '',
+        policy: req.body?.policy || {}
+      });
+      const dryRunProof = buildPhase6CProductionDryRunProof({
+        order: context.order,
+        credentialVerification: verification,
+        safety: context.safety,
+        preview: context.preview,
+        riskProfile: context.riskProfile,
+        marketContext: context.marketContext,
+        policy: {
+          ...(defaultPhase6Policy || {}),
+          ...(req.body?.policy || {})
+        }
+      });
+      const status = dryRunProof.passed ? 'preview_ready' : 'preview_blocked';
+      const insert = await dbRun(
+        `INSERT INTO production_order_executions
+         (user_id, connector_id, risk_profile_id, strategy_id, exchange_name, symbol, side, order_type,
+          quantity, limit_price, notional_usd, max_order_usd, client_order_id, status, readiness_json,
+          preview_json, production_order_endpoint_enabled, production_order_endpoint_called,
+          automated_live_trading_enabled, unrestricted_autonomous_trading_enabled, wallet_signing_enabled,
+          withdrawals_enabled, margin_enabled, futures_enabled, leverage_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          context.connector?.id || null,
+          context.riskProfile?.id || null,
+          context.order.strategyId,
+          context.order.exchangeName,
+          context.order.symbol,
+          context.order.side,
+          context.order.orderType,
+          context.order.quantity,
+          context.order.limitPrice || null,
+          context.order.notionalUsd || 0,
+          context.order.maxOrderUsd || 0,
+          context.order.clientOrderId,
+          status,
+          JSON.stringify({
+            phase6C: dryRunProof,
+            fullProductionSafety: context.safety
+          }),
+          JSON.stringify({
+            ...context.preview,
+            phase6CDryRunProof: dryRunProof
+          }),
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      );
+
+      await recordProductionOrderEvent({
+        executionId: insert.lastID,
+        userId: req.session.userId,
+        status,
+        summary: dryRunProof.passed
+          ? 'Phase 6C production dry-run proof passed. No production order endpoint was called.'
+          : 'Phase 6C production dry-run proof is blocked. No production order endpoint was called.',
+        payload: {
+          dryRunProof,
+          productionOrderEndpointCalled: false,
+          productionOrderEndpointEnabled: false
+        }
+      });
+      await dbRun(
+        `INSERT INTO live_trading_safety_events
+         (user_id, event_type, status, summary, payload_json)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          'phase6c_production_dry_run_proof',
+          status,
+          dryRunProof.plainEnglishStatus,
+          JSON.stringify({
+            exchangeName,
+            symbol: context.order.symbol,
+            status,
+            checksPassed: dryRunProof.checksPassed,
+            checksFailed: dryRunProof.checksFailed,
+            productionOrderEndpointCalled: false,
+            withdrawalsEnabled: false,
+            walletSigningEnabled: false,
+            automatedLiveTradingEnabled: false
+          })
+        ]
+      );
+
+      const state = await loadPhase6CState({
+        userId: req.session.userId,
+        selectedExchangeName: exchangeName,
+        credentialVerification: verification,
+        dryRunProof
+      });
+
+      res.status(dryRunProof.passed ? 201 : 409).json({
+        previewId: insert.lastID,
+        verification,
+        dryRunProof,
+        execution: parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [insert.lastID, req.session.userId])),
+        wizard: state.wizard,
+        nextClick: dryRunProof.nextClick,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError(req.body?.exchangeName || 'Phase 6C production dry-run proof', error)
+          : error.message,
+        nextClick: 'Fix the failed dry-run input, credential, risk, balance, or market data issue, then retry.',
         safetyBoundary: createProductionSafetyBoundary(false)
       });
     }

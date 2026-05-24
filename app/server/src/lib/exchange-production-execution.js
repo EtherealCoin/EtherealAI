@@ -197,14 +197,15 @@ const PHASE6_PRODUCTION_ADAPTERS = {
   }
 };
 
-const PHASE6B_RECOMMENDED_FIRST_EXCHANGE = 'binance';
+const PHASE6B_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
+const PHASE6C_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
 
 const PHASE6B_ACTIVATION_EXCHANGE_GUIDES = {
   binance: {
     exchangeName: 'binance',
     displayName: 'Binance',
-    recommendedFirst: true,
-    recommendedReason: 'Recommended first for the technical path because EtherealAI already has the most complete Binance sandbox/testnet adapter, spot order model, and permission detection. If Binance is not available in your region, use Kraken or Coinbase Advanced next.',
+    recommendedFirst: false,
+    recommendedReason: 'Technically strong for sandbox/testnet coverage, but availability varies by region. Use it after Kraken if it is available to you and you can create a restricted spot-only key.',
     ownerPortalUrl: 'https://www.binance.com/en/my/settings/api-management',
     officialDocsUrl: PHASE6_PRODUCTION_ADAPTERS.binance.docsUrl,
     credentialFields: ['API Key', 'Secret Key'],
@@ -243,10 +244,10 @@ const PHASE6B_ACTIVATION_EXCHANGE_GUIDES = {
   kraken: {
     exchangeName: 'kraken',
     displayName: 'Kraken',
-    recommendedFirst: false,
-    recommendedReason: 'Good first alternative if Binance is not available. It is US-accessible and uses a simple API key/private-key pair, but its sandbox path needs manual exchange-docs review.',
+    recommendedFirst: true,
+    recommendedReason: 'Recommended first for Phase 6C because it is a US-accessible spot venue with a simple API key/private-key flow and an API key info endpoint that can verify permissions without placing orders.',
     ownerPortalUrl: 'https://pro.kraken.com/app/settings/api',
-    officialDocsUrl: 'https://support.kraken.com/hc/en-us/articles/360000919966-How-to-create-an-API-key',
+    officialDocsUrl: 'https://support.kraken.com/articles/how-to-create-an-api-key-on-kraken-pro',
     credentialFields: ['API Key', 'Private Key'],
     requiredPermissions: ['Query funds', 'Query open orders/trades', 'Create and modify orders only when preparing tiny live testing'],
     forbiddenPermissions: ['Withdraw funds', 'Deposit funds', 'Margin', 'Futures', 'Leverage'],
@@ -2187,6 +2188,875 @@ function buildProductionActivationWizard({
   };
 }
 
+function flattenPermissionTokens(value, prefix = '') {
+  const tokens = [];
+
+  if (value === null || value === undefined) {
+    return tokens;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      tokens.push(...flattenPermissionTokens(item, prefix));
+    }
+    return tokens;
+  }
+
+  if (typeof value === 'object') {
+    for (const [key, nested] of Object.entries(value)) {
+      const nextPrefix = prefix ? `${prefix}.${key}` : key;
+
+      if (nested === true) {
+        tokens.push(nextPrefix.toLowerCase());
+      } else if (nested === false || nested === null || nested === undefined) {
+        continue;
+      } else {
+        tokens.push(...flattenPermissionTokens(nested, nextPrefix));
+      }
+    }
+    return tokens;
+  }
+
+  tokens.push(String(value).toLowerCase());
+  return tokens;
+}
+
+function permissionTokensInclude(tokens = [], patterns = []) {
+  return tokens.some(token => patterns.some(pattern => pattern.test(String(token || ''))));
+}
+
+function parseKrakenApiKeyInfo(apiKeyInfo = {}) {
+  const result = apiKeyInfo.result || apiKeyInfo || {};
+  const tokens = flattenPermissionTokens(result);
+  const withdrawalPermissionDetected = permissionTokensInclude(tokens, [
+    /withdraw/,
+    /funds[-_\s.]*withdraw/,
+    /withdraw\s*funds/
+  ]);
+  const tradingPermissionDetected = permissionTokensInclude(tokens, [
+    /modify/,
+    /addorder/,
+    /add\s*order/,
+    /create.*order/,
+    /trades[-_\s.]*modify/,
+    /orders.*modify/
+  ]);
+  const readPermissionDetected = permissionTokensInclude(tokens, [
+    /query/,
+    /balance/,
+    /funds[-_\s.]*query/,
+    /trades[-_\s.]*query/
+  ]);
+  const restrictions = result.restrictions || result.restriction || result.api_key?.restrictions || {};
+
+  return {
+    loaded: Boolean(Object.keys(result).length),
+    keyName: result.name || result.description || result.api_key?.name || null,
+    permissionsRawReturned: Boolean(tokens.length),
+    permissionTokens: tokens.slice(0, 50),
+    withdrawalPermissionDetected,
+    tradingPermissionDetected,
+    readPermissionDetected,
+    restrictions,
+    permissionsSource: 'Kraken /0/private/GetApiKeyInfo'
+  };
+}
+
+function throwIfKrakenError(payload = {}, label = 'Kraken API') {
+  if (Array.isArray(payload.error) && payload.error.length) {
+    throw new Error(`${label}: ${payload.error.join('; ')}`);
+  }
+  return payload.result || {};
+}
+
+function firstObjectValue(value = {}) {
+  const entries = Object.entries(value || {});
+  return entries.length ? { key: entries[0][0], value: entries[0][1] } : { key: '', value: null };
+}
+
+function parseKrakenPairRules(assetPairs = {}, order = {}) {
+  const { key, value } = firstObjectValue(assetPairs);
+  const pair = value || {};
+  const makerFee = Array.isArray(pair.fees_maker) && pair.fees_maker[0] ? Number(pair.fees_maker[0][1]) : null;
+  const takerFee = Array.isArray(pair.fees) && pair.fees[0] ? Number(pair.fees[0][1]) : null;
+
+  return {
+    loaded: Boolean(pair && Object.keys(pair).length),
+    source: 'Kraken /0/public/AssetPairs',
+    pairKey: key || order.exchangeSymbol,
+    exchangeSymbol: order.exchangeSymbol,
+    minOrderSize: Number(pair.ordermin || 0),
+    minNotionalUsd: Number(pair.costmin || 0),
+    priceDecimals: Number(pair.pair_decimals ?? 2),
+    quantityDecimals: Number(pair.lot_decimals ?? 8),
+    makerFeePercent: Number.isFinite(makerFee) ? makerFee : null,
+    takerFeePercent: Number.isFinite(takerFee) ? takerFee : null,
+    rawRulesAvailable: true
+  };
+}
+
+function parseKrakenFeeProof(tradeVolume = {}, pairKey = '') {
+  const result = tradeVolume.result || tradeVolume || {};
+  const fees = result.fees || {};
+  const makerFees = result.fees_maker || {};
+  const feeRow = fees[pairKey] || firstObjectValue(fees).value || {};
+  const makerRow = makerFees[pairKey] || firstObjectValue(makerFees).value || {};
+  const takerFee = Number(feeRow.fee ?? feeRow.fee_percent ?? NaN);
+  const makerFee = Number(makerRow.fee ?? makerRow.fee_percent ?? NaN);
+
+  return {
+    exactLoaded: Number.isFinite(takerFee) || Number.isFinite(makerFee),
+    source: 'Kraken /0/private/TradeVolume',
+    makerFeePercent: Number.isFinite(makerFee) ? makerFee : null,
+    takerFeePercent: Number.isFinite(takerFee) ? takerFee : null,
+    fallbackFeePercent: 0.26,
+    feeTier: result.currency ? `${result.currency} fee tier` : null
+  };
+}
+
+function parseKrakenMarketProof({ ticker = {}, depth = {}, order = {}, symbolRules = {} }) {
+  const tickerPair = firstObjectValue(ticker).value || {};
+  const depthPair = firstObjectValue(depth).value || {};
+  const askPrice = Number(tickerPair.a?.[0] || depthPair.asks?.[0]?.[0] || 0);
+  const bidPrice = Number(tickerPair.b?.[0] || depthPair.bids?.[0]?.[0] || 0);
+  const lastPrice = Number(tickerPair.c?.[0] || 0);
+  const midPrice = askPrice > 0 && bidPrice > 0 ? (askPrice + bidPrice) / 2 : lastPrice || askPrice || bidPrice || 0;
+  const spreadPercent = askPrice > 0 && bidPrice > 0 && midPrice > 0
+    ? ((askPrice - bidPrice) / midPrice) * 100
+    : 0;
+  const visibleAskLiquidityUsd = (depthPair.asks || []).slice(0, 10).reduce((sum, row) => sum + Number(row[0] || 0) * Number(row[1] || 0), 0);
+  const visibleBidLiquidityUsd = (depthPair.bids || []).slice(0, 10).reduce((sum, row) => sum + Number(row[0] || 0) * Number(row[1] || 0), 0);
+  const liquidityUsd = Math.min(
+    visibleAskLiquidityUsd || Number.POSITIVE_INFINITY,
+    visibleBidLiquidityUsd || Number.POSITIVE_INFINITY
+  );
+  const effectiveLiquidityUsd = Number.isFinite(liquidityUsd) ? liquidityUsd : Math.max(visibleAskLiquidityUsd, visibleBidLiquidityUsd, 0);
+  const notional = Number(order.notionalUsd || order.maxOrderUsd || DEFAULT_PHASE6_POLICY.maxOrderSizeUsd || 10);
+  const estimatedSlippagePercent = effectiveLiquidityUsd > 0
+    ? Math.min(0.5, Math.max(0.01, spreadPercent / 2 + (notional / effectiveLiquidityUsd) * 100))
+    : 0.15;
+
+  return {
+    loaded: midPrice > 0,
+    source: 'Kraken /0/public/Ticker and /0/public/Depth',
+    bidPrice,
+    askPrice,
+    lastPrice,
+    midPrice,
+    spreadPercent: Number(spreadPercent.toFixed(6)),
+    estimatedSlippagePercent: Number(estimatedSlippagePercent.toFixed(6)),
+    liquidityUsd: Number(effectiveLiquidityUsd.toFixed(2)),
+    priceTimestamp: new Date().toISOString(),
+    minOrderSize: symbolRules.minOrderSize || 0,
+    minNotionalUsd: symbolRules.minNotionalUsd || 0
+  };
+}
+
+async function fetchKrakenPhase6CProof({ credentials, adapter, order }) {
+  const apiKeyPath = '/0/private/GetApiKeyInfo';
+  const apiKeySigned = signKrakenRequest({
+    credentials,
+    requestPath: apiKeyPath,
+    params: { nonce: Date.now() }
+  });
+  const apiKeyInfo = await fetchJson(`${adapter.baseUrl}${apiKeyPath}`, {
+    method: 'POST',
+    headers: apiKeySigned.headers,
+    body: apiKeySigned.body
+  });
+  const permissions = parseKrakenApiKeyInfo(throwIfKrakenError(apiKeyInfo, 'Kraken API key info'));
+  const pairPayload = await fetchJson(`${adapter.baseUrl}/0/public/AssetPairs?pair=${encodeURIComponent(order.exchangeSymbol)}`);
+  const pairResult = throwIfKrakenError(pairPayload, 'Kraken asset pairs');
+  const symbolRules = parseKrakenPairRules(pairResult, order);
+  let feeProof = {
+    exactLoaded: false,
+    source: 'Kraken conservative fallback',
+    makerFeePercent: symbolRules.makerFeePercent,
+    takerFeePercent: symbolRules.takerFeePercent,
+    fallbackFeePercent: symbolRules.takerFeePercent || 0.26,
+    feeTier: null,
+    warning: 'Exact account fee tier was not returned; conservative public pair fee assumptions are used.'
+  };
+
+  try {
+    const tradeVolumePath = '/0/private/TradeVolume';
+    const tradeVolumeSigned = signKrakenRequest({
+      credentials,
+      requestPath: tradeVolumePath,
+      params: { nonce: Date.now(), pair: symbolRules.pairKey || order.exchangeSymbol }
+    });
+    const tradeVolume = await fetchJson(`${adapter.baseUrl}${tradeVolumePath}`, {
+      method: 'POST',
+      headers: tradeVolumeSigned.headers,
+      body: tradeVolumeSigned.body
+    });
+    feeProof = parseKrakenFeeProof(throwIfKrakenError(tradeVolume, 'Kraken trade volume'), symbolRules.pairKey);
+  } catch (error) {
+    feeProof.warning = createPlainEnglishProductionError('kraken', error);
+  }
+
+  const [tickerResponse, depthResponse] = await Promise.all([
+    fetchJson(`${adapter.baseUrl}/0/public/Ticker?pair=${encodeURIComponent(order.exchangeSymbol)}`),
+    fetchJson(`${adapter.baseUrl}/0/public/Depth?pair=${encodeURIComponent(order.exchangeSymbol)}&count=10`)
+  ]);
+  const marketData = parseKrakenMarketProof({
+    ticker: throwIfKrakenError(tickerResponse, 'Kraken ticker'),
+    depth: throwIfKrakenError(depthResponse, 'Kraken order book'),
+    order,
+    symbolRules
+  });
+
+  return {
+    exchangeName: 'kraken',
+    displayName: adapter.displayName,
+    permissions,
+    symbolRules,
+    accountLimits: {
+      loaded: true,
+      source: 'Kraken pair rules plus API key restrictions',
+      restrictions: permissions.restrictions || {},
+      minOrderSize: symbolRules.minOrderSize,
+      minNotionalUsd: symbolRules.minNotionalUsd
+    },
+    fees: {
+      loaded: feeProof.exactLoaded || Number.isFinite(Number(feeProof.fallbackFeePercent)),
+      exactLoaded: feeProof.exactLoaded,
+      ...feeProof
+    },
+    rateLimits: {
+      loaded: true,
+      source: 'Kraken REST private endpoint rate counter',
+      plainEnglish: 'Phase 6C uses owner-clicked one-request verification and does not start a background live order loop.'
+    },
+    marketData,
+    proofSources: [
+      'Kraken /0/private/Balance',
+      'Kraken /0/private/GetApiKeyInfo',
+      'Kraken /0/public/AssetPairs',
+      'Kraken /0/private/TradeVolume when permission allows',
+      'Kraken /0/public/Ticker',
+      'Kraken /0/public/Depth'
+    ]
+  };
+}
+
+async function fetchGenericPhase6CProof({ adapter, order }) {
+  return {
+    exchangeName: adapter.exchangeName,
+    displayName: adapter.displayName,
+    permissions: {
+      loaded: false,
+      withdrawalPermissionDetected: null,
+      tradingPermissionDetected: null,
+      readPermissionDetected: null,
+      permissionsSource: 'Owner checklist and authenticated account endpoint'
+    },
+    symbolRules: {
+      loaded: Boolean(adapter.precisionModel),
+      source: `${adapter.displayName} local production adapter precision model`,
+      exchangeSymbol: order.exchangeSymbol,
+      minOrderSize: adapter.precisionModel?.minQuantity || 0,
+      minNotionalUsd: adapter.precisionModel?.minNotionalUsd || 0,
+      priceDecimals: adapter.precisionModel?.priceDecimals || 2,
+      quantityDecimals: adapter.precisionModel?.quantityDecimals || 8
+    },
+    accountLimits: {
+      loaded: Boolean(adapter.precisionModel),
+      source: `${adapter.displayName} local precision and safety policy`,
+      minOrderSize: adapter.precisionModel?.minQuantity || 0,
+      minNotionalUsd: adapter.precisionModel?.minNotionalUsd || 0
+    },
+    fees: {
+      loaded: true,
+      exactLoaded: false,
+      source: `${adapter.displayName} conservative fallback`,
+      makerFeePercent: null,
+      takerFeePercent: null,
+      fallbackFeePercent: 0.1,
+      warning: 'Exact account-specific fees need exchange-specific expansion; dry-run uses conservative fallback assumptions.'
+    },
+    rateLimits: {
+      loaded: true,
+      source: `${adapter.displayName} local production adapter`,
+      plainEnglish: 'Phase 6C keeps verification manual and does not start a background live order loop.'
+    },
+    marketData: {
+      loaded: false,
+      source: `${adapter.displayName} market proof pending`,
+      bidPrice: 0,
+      askPrice: 0,
+      midPrice: 0,
+      spreadPercent: 0.1,
+      estimatedSlippagePercent: 0.05,
+      liquidityUsd: 1000000,
+      priceTimestamp: new Date().toISOString()
+    },
+    proofSources: [`${adapter.displayName} authenticated account endpoint`, `${adapter.displayName} local adapter safety model`]
+  };
+}
+
+function normalizeAssetSymbol(value = '') {
+  const text = String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (text === 'XXBT' || text === 'XBT') return 'BTC';
+  if (text === 'ZUSD') return 'USD';
+  if (text === 'ZUSDT') return 'USDT';
+  if (text.length === 4 && /^[XZ]/.test(text)) return text.slice(1);
+  return text;
+}
+
+function findAvailableBalanceForAsset(balances = [], asset = '') {
+  const target = normalizeAssetSymbol(asset);
+  const match = (balances || []).find(row => normalizeAssetSymbol(row.asset) === target);
+  return Number(match?.free ?? match?.available ?? match?.balance ?? 0);
+}
+
+function buildPhase6CChecklistItem({ id, label, passed, statusWhenFalse = 'Missing', plainEnglish, nextClick }) {
+  return {
+    id,
+    label,
+    passed: Boolean(passed),
+    status: passed ? 'Safe' : statusWhenFalse,
+    plainEnglish,
+    nextClick: passed ? 'No action needed.' : nextClick
+  };
+}
+
+async function verifyProductionExchangeCredentials({ credentials, adapter, orderInput = {} }) {
+  const order = normalizeProductionOrderDraft({
+    exchangeName: adapter?.exchangeName,
+    ...(orderInput || {})
+  });
+
+  if (!credentials || !adapter) {
+    const displayName = adapter?.displayName || 'selected exchange';
+    return {
+      exchangeName: adapter?.exchangeName || order.exchangeName,
+      displayName,
+      status: 'Not Connected',
+      passed: false,
+      criticalPassed: false,
+      plainEnglishStatus: `No encrypted production API key is saved for ${displayName}. Save a restricted key to the local vault first.`,
+      order,
+      checklist: [
+        buildPhase6CChecklistItem({
+          id: 'api_connected',
+          label: 'API key saved and connected',
+          passed: false,
+          plainEnglish: 'EtherealAI cannot verify the exchange until a key is saved in the encrypted local vault.',
+          nextClick: 'Click Add API Key Safely.'
+        })
+      ],
+      safetyBoundary: createProductionSafetyBoundary(false)
+    };
+  }
+
+  const connection = await testProductionExchangeConnection({ credentials, adapter });
+  const proof = adapter.exchangeName === 'kraken'
+    ? await fetchKrakenPhase6CProof({ credentials, adapter, order })
+    : await fetchGenericPhase6CProof({ credentials, adapter, order });
+  const checklistPermissions = credentials.permissionsChecklist || {};
+  const withdrawalUnsafe = connection.canWithdraw === true
+    || proof.permissions?.withdrawalPermissionDetected === true
+    || checklistPermissions.withdrawalsDisabled !== true
+    || checklistPermissions.transfersDisabled !== true;
+  const marginUnsafe = connection.marginDetected === true
+    || checklistPermissions.marginDisabled !== true
+    || checklistPermissions.leverageDisabled !== true;
+  const futuresUnsafe = connection.futuresDetected === true
+    || checklistPermissions.futuresDisabled !== true;
+  const balancesReadable = Boolean(connection.balancesVisible) && Array.isArray(connection.balances);
+  const feeModelLoaded = proof.fees?.loaded === true;
+  const symbolRulesLoaded = proof.symbolRules?.loaded === true;
+  const minOrderLoaded = Number(proof.symbolRules?.minOrderSize || 0) > 0
+    || Number(proof.symbolRules?.minNotionalUsd || 0) > 0
+    || Boolean(adapter.precisionModel?.minQuantity || adapter.precisionModel?.minNotionalUsd);
+  const priceLoaded = proof.marketData?.loaded === true || Number(proof.marketData?.midPrice || 0) > 0;
+  const tradingPermissionPresent = connection.canTrade === true
+    || proof.permissions?.tradingPermissionDetected === true
+    || checklistPermissions.spotTradingEnabled === true;
+  const unsafe = withdrawalUnsafe || marginUnsafe || futuresUnsafe;
+  const connected = connection.status === 'production_account_verified';
+  const status = !connected
+    ? connection.status === 'error' ? 'Error' : 'Not Connected'
+    : unsafe
+      ? 'Unsafe Permissions Detected'
+      : tradingPermissionPresent
+        ? 'Trading Permission Present But Locked'
+        : 'Authenticated Read-Only';
+  const checklist = [
+    buildPhase6CChecklistItem({
+      id: 'api_connected',
+      label: 'API connected',
+      passed: connected,
+      plainEnglish: connected ? `${adapter.displayName} accepted the key for authenticated account reads.` : connection.plainEnglishStatus || 'The exchange did not accept the key.',
+      nextClick: 'Check the key and secret, then verify again.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'withdrawals_disabled',
+      label: 'Withdrawals disabled',
+      passed: !withdrawalUnsafe && connected,
+      statusWhenFalse: withdrawalUnsafe ? 'Unsafe' : 'Missing',
+      plainEnglish: !withdrawalUnsafe && connected ? 'No withdrawal capability is detected by the exchange proof or owner checklist.' : 'Withdrawal or transfer safety is not proven.',
+      nextClick: 'Delete this API key on the exchange and recreate it with withdrawals and transfers disabled.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'balances_readable',
+      label: 'Balances readable',
+      passed: balancesReadable,
+      plainEnglish: balancesReadable ? 'The account balance endpoint returned safely without placing any order.' : 'Balances are not readable yet.',
+      nextClick: 'Enable account balance read permission, then verify again.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'fees_loaded',
+      label: proof.fees?.exactLoaded ? 'Account fees loaded' : 'Conservative fee model loaded',
+      passed: feeModelLoaded,
+      statusWhenFalse: 'Review Needed',
+      plainEnglish: proof.fees?.exactLoaded ? 'Account-specific maker/taker fees were loaded.' : 'Exact fee tier was not confirmed; dry-run uses conservative assumptions until available.',
+      nextClick: 'Continue with conservative dry-run assumptions or add fee-read permission later.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'symbol_rules_loaded',
+      label: 'Symbol rules loaded',
+      passed: symbolRulesLoaded,
+      plainEnglish: symbolRulesLoaded ? 'Minimum order size and precision rules are available for the selected symbol.' : 'Symbol rules were not loaded.',
+      nextClick: 'Choose a supported spot symbol and verify again.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'minimum_order_loaded',
+      label: 'Minimum order size loaded',
+      passed: minOrderLoaded,
+      plainEnglish: minOrderLoaded ? 'The dry-run can compare the tiny order against exchange minimums.' : 'Minimum order size is missing.',
+      nextClick: 'Choose a supported spot symbol or update the exchange adapter.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'live_price_loaded',
+      label: 'Live price loaded',
+      passed: priceLoaded,
+      statusWhenFalse: 'Review Needed',
+      plainEnglish: priceLoaded ? 'A current market price is available for dry-run proof.' : 'Live price proof is not available yet.',
+      nextClick: 'Retry verification after checking internet/VPN/firewall.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'order_endpoint_locked',
+      label: 'Live order endpoint remains locked',
+      passed: true,
+      plainEnglish: 'Credential verification never calls a production order endpoint.',
+      nextClick: 'No action needed.'
+    })
+  ];
+  const criticalPassed = checklist
+    .filter(item => !['fees_loaded'].includes(item.id))
+    .every(item => item.passed)
+    && !unsafe;
+
+  return {
+    exchangeName: adapter.exchangeName,
+    displayName: adapter.displayName,
+    phase: 'Phase 6C',
+    status,
+    passed: criticalPassed,
+    criticalPassed,
+    connectionStatus: connection.status,
+    tradingPermissionPresent,
+    withdrawalPermissionDetected: withdrawalUnsafe,
+    marginOrLeverageDetected: marginUnsafe,
+    futuresDetected: futuresUnsafe,
+    balancesReadable,
+    balances: (connection.balances || []).slice(0, 20),
+    feesLoaded: feeModelLoaded,
+    exactFeesLoaded: proof.fees?.exactLoaded === true,
+    symbolRulesLoaded,
+    minimumOrderLoaded: minOrderLoaded,
+    livePriceLoaded: priceLoaded,
+    order,
+    proof,
+    checklist,
+    checksPassed: checklist.filter(item => item.passed).map(item => item.label),
+    checksFailed: checklist.filter(item => !item.passed).map(item => `${item.label}: ${item.plainEnglish}`),
+    plainEnglishStatus: unsafe
+      ? `${adapter.displayName} key is unsafe for EtherealAI. Delete it and recreate it without withdrawals, transfers, margin, futures, or leverage.`
+      : connected
+        ? `${adapter.displayName} credential verification passed for account reads. Trading permission, if present, remains locked and cannot place orders from this step.`
+        : connection.plainEnglishStatus || `${adapter.displayName} credential verification is not connected yet.`,
+    nextClick: criticalPassed ? 'Run Production Dry-Run Proof.' : 'Fix the failed check, then verify credentials again.',
+    safetyBoundary: createProductionSafetyBoundary(false)
+  };
+}
+
+function buildPhase6CProductionDryRunProof({
+  order,
+  credentialVerification = null,
+  safety = null,
+  preview = null,
+  riskProfile = null,
+  marketContext = {},
+  policy = DEFAULT_PHASE6_POLICY
+} = {}) {
+  const proof = credentialVerification?.proof || {};
+  const symbolRules = proof.symbolRules || {};
+  const marketData = proof.marketData || {};
+  const balances = credentialVerification?.balances || [];
+  const orderNotional = Number(order?.notionalUsd || order?.quantity * order?.limitPrice || order?.maxOrderUsd || 0);
+  const requiredAsset = order?.side === 'sell' ? order.baseAsset : order.quoteAsset;
+  const availableBalance = findAvailableBalanceForAsset(balances, requiredAsset);
+  const estimatedRequired = order?.side === 'sell' ? Number(order.quantity || 0) : orderNotional;
+  const balanceEnough = availableBalance >= estimatedRequired || estimatedRequired <= 0;
+  const minOrderSize = Number(symbolRules.minOrderSize || policy.minQuantity || 0);
+  const minNotionalUsd = Number(symbolRules.minNotionalUsd || policy.minOrderUsd || 0);
+  const minSizePassed = Number(order?.quantity || 0) >= minOrderSize || minOrderSize <= 0;
+  const minNotionalPassed = orderNotional >= minNotionalUsd || minNotionalUsd <= 0;
+  const safetyCheck = id => (safety?.checks || []).find(check => check.id === id);
+  const riskActive = Boolean(riskProfile?.id) && riskProfile.status === 'active';
+  const killSwitchOff = Boolean(riskProfile?.id) && Number(riskProfile.kill_switch_enabled || 0) === 0;
+  const withdrawalDisabled = credentialVerification?.withdrawalPermissionDetected === false
+    && credentialVerification?.status !== 'Unsafe Permissions Detected';
+  const liveEndpointBlocked = true;
+  const checks = [
+    buildPhase6CChecklistItem({
+      id: 'selected_exchange',
+      label: 'Selected exchange',
+      passed: Boolean(order?.exchangeName),
+      plainEnglish: order?.exchangeName ? `Dry-run is scoped to ${credentialVerification?.displayName || order.exchangeName}.` : 'No exchange selected.',
+      nextClick: 'Choose one exchange.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'selected_symbol',
+      label: 'Selected spot symbol',
+      passed: Boolean(order?.symbol),
+      plainEnglish: order?.symbol ? `Dry-run uses ${order.symbol} spot only.` : 'No spot symbol selected.',
+      nextClick: 'Choose one spot symbol.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'tiny_amount',
+      label: 'Tiny amount',
+      passed: orderNotional > 0 && orderNotional <= Number(policy.maxOrderSizeUsd || 10),
+      plainEnglish: `Dry-run order value is about $${orderNotional.toFixed(2)}. Phase 6C limit is $${Number(policy.maxOrderSizeUsd || 10).toFixed(2)}.`,
+      nextClick: 'Lower the test amount.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'account_balance',
+      label: 'Account balance available',
+      passed: balanceEnough,
+      statusWhenFalse: 'Missing',
+      plainEnglish: balanceEnough ? `${requiredAsset} balance appears sufficient for the tiny dry-run amount.` : `${requiredAsset} balance is not enough for this tiny dry-run amount.`,
+      nextClick: 'Lower the amount or fund the spot account before a live test.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'min_order_size',
+      label: 'Minimum order size passed',
+      passed: minSizePassed && minNotionalPassed,
+      plainEnglish: minSizePassed && minNotionalPassed ? 'The tiny amount is above exchange minimums.' : 'The tiny amount is below exchange minimum size or notional.',
+      nextClick: 'Increase the tiny amount to the exchange minimum.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'fee_estimate',
+      label: 'Fee estimate available',
+      passed: credentialVerification?.feesLoaded === true,
+      statusWhenFalse: 'Review Needed',
+      plainEnglish: credentialVerification?.exactFeesLoaded ? 'Exact account fee estimate is available.' : 'Conservative fee estimate is available for dry-run proof.',
+      nextClick: 'Verify credentials again or continue with conservative assumptions.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'live_price',
+      label: 'Live price loaded',
+      passed: credentialVerification?.livePriceLoaded === true,
+      plainEnglish: marketData.midPrice ? `Current modeled mid price is $${Number(marketData.midPrice).toFixed(2)}.` : 'Live price is not loaded.',
+      nextClick: 'Verify credentials again to refresh market data.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'spread_slippage',
+      label: 'Spread and slippage checked',
+      passed: Number(marketContext.slippagePercent ?? marketData.estimatedSlippagePercent ?? 0) <= Number(policy.maxSlippagePercent || 0.15),
+      plainEnglish: `Estimated slippage is ${Number(marketContext.slippagePercent ?? marketData.estimatedSlippagePercent ?? 0).toFixed(4)}%.`,
+      nextClick: 'Use a more liquid symbol or retry later.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'risk_profile',
+      label: 'Risk profile active',
+      passed: riskActive,
+      plainEnglish: riskActive ? `Risk profile ${riskProfile.name || riskProfile.id} is active.` : 'No active risk profile exists.',
+      nextClick: 'Activate a safe risk profile.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'kill_switch',
+      label: 'Kill switch off for dry-run',
+      passed: killSwitchOff,
+      plainEnglish: killSwitchOff ? 'Kill switch is off for this dry-run proof.' : 'Kill switch is on or no risk profile exists.',
+      nextClick: 'Only turn the kill switch off when ready for controlled testing.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'withdrawal_disabled',
+      label: 'Withdrawals disabled',
+      passed: withdrawalDisabled,
+      statusWhenFalse: 'Unsafe',
+      plainEnglish: withdrawalDisabled ? 'Withdrawal permission is not detected.' : 'Withdrawal safety is not proven.',
+      nextClick: 'Delete and recreate the API key without withdrawals.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'live_endpoint_blocked',
+      label: 'Live order endpoint still blocked',
+      passed: liveEndpointBlocked && preview?.safeToSubmit !== true,
+      plainEnglish: 'Phase 6C dry-run proof does not call or unlock the production order endpoint.',
+      nextClick: 'No action needed.'
+    })
+  ];
+  const passed = checks.every(check => check.passed);
+
+  return {
+    title: 'Production Dry-Run Proof',
+    phase: 'Phase 6C',
+    status: passed ? 'Dry-run proof passed; tiny live test still locked' : 'Dry-run proof blocked',
+    passed,
+    selectedExchange: credentialVerification?.displayName || order?.exchangeName || 'Selected exchange',
+    symbol: order?.symbol,
+    side: order?.side,
+    orderType: order?.orderType,
+    tinyAmountUsd: orderNotional,
+    quantity: order?.quantity,
+    limitPrice: order?.limitPrice || marketData.midPrice || null,
+    feeEstimatePercent: credentialVerification?.proof?.fees?.takerFeePercent
+      ?? credentialVerification?.proof?.fees?.fallbackFeePercent
+      ?? 0.1,
+    livePrice: marketData.midPrice || order?.limitPrice || null,
+    spreadPercent: Number(marketData.spreadPercent || marketContext.netSpreadPercent || 0),
+    slippagePercent: Number(marketContext.slippagePercent ?? marketData.estimatedSlippagePercent ?? 0),
+    liquidityUsd: Number(marketContext.liquidityUsd ?? marketData.liquidityUsd ?? 0),
+    accountBalance: { asset: requiredAsset, available: availableBalance, required: estimatedRequired },
+    checklist: checks,
+    checksPassed: checks.filter(check => check.passed).map(check => check.label),
+    checksFailed: checks.filter(check => !check.passed).map(check => `${check.label}: ${check.plainEnglish}`),
+    fullProductionSafetyStatus: safety?.status || 'locked',
+    fullProductionSafetyMissing: (safety?.missing || []).map(item => ({ id: item.id, label: item.label, note: item.note, nextAction: item.nextAction })),
+    plainEnglishStatus: passed
+      ? 'The exact tiny order passed Phase 6C dry-run proof. Real order placement is still locked until owner approvals and final typed confirmation exist.'
+      : 'The dry-run proof is blocked. No production order endpoint was called.',
+    nextClick: passed ? 'Review Tiny Live Test Eligibility.' : checks.find(check => !check.passed)?.nextClick || 'Fix the blocked item and retry.',
+    productionOrderEndpointCalled: false,
+    productionOrderEndpointEnabled: false,
+    safetyBoundary: createProductionSafetyBoundary(false)
+  };
+}
+
+function buildPhase6CTinyLiveEligibility({ credentialVerification = null, dryRunProof = null, riskProfile = null } = {}) {
+  const items = [
+    buildPhase6CChecklistItem({
+      id: 'exchange_connected',
+      label: 'Exchange connected',
+      passed: credentialVerification?.connectionStatus === 'production_account_verified',
+      plainEnglish: credentialVerification?.plainEnglishStatus || 'The exchange has not been verified yet.',
+      nextClick: 'Click Verify Real Exchange Credentials.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'withdrawals_disabled',
+      label: 'Withdrawals disabled',
+      passed: credentialVerification?.withdrawalPermissionDetected === false,
+      statusWhenFalse: 'Unsafe',
+      plainEnglish: credentialVerification?.withdrawalPermissionDetected === false ? 'Withdrawal safety passed.' : 'Withdrawal safety is not proven.',
+      nextClick: 'Recreate the API key without withdrawal permission.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'balances_readable',
+      label: 'Balances visible',
+      passed: credentialVerification?.balancesReadable === true,
+      plainEnglish: credentialVerification?.balancesReadable ? 'Balances can be read safely.' : 'Balances are not visible.',
+      nextClick: 'Fix account read permission and verify again.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'fees_loaded',
+      label: 'Fees loaded',
+      passed: credentialVerification?.feesLoaded === true,
+      statusWhenFalse: 'Review Needed',
+      plainEnglish: credentialVerification?.feesLoaded ? 'Fees are available for dry-run math.' : 'Fee estimate is missing.',
+      nextClick: 'Verify credentials again.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'symbol_rules_loaded',
+      label: 'Symbol limits loaded',
+      passed: credentialVerification?.symbolRulesLoaded === true,
+      plainEnglish: credentialVerification?.symbolRulesLoaded ? 'Symbol size and precision rules are available.' : 'Symbol rules are missing.',
+      nextClick: 'Choose a supported spot symbol.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'dry_run_passed',
+      label: 'Production dry-run passed',
+      passed: dryRunProof?.passed === true,
+      plainEnglish: dryRunProof?.passed ? 'The exact tiny order passed dry-run proof without calling the order endpoint.' : 'Dry-run proof has not passed yet.',
+      nextClick: 'Click Run Production Dry-Run Proof.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'risk_limits_active',
+      label: 'Risk limits active',
+      passed: Boolean(riskProfile?.id) && riskProfile.status === 'active' && Number(riskProfile.kill_switch_enabled || 0) === 0,
+      plainEnglish: riskProfile?.id ? 'An active risk profile is available and kill switch is off.' : 'No active risk profile is ready.',
+      nextClick: 'Activate a safe risk profile.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'owner_confirmation_required',
+      label: 'Owner typed confirmation required',
+      passed: false,
+      statusWhenFalse: 'Locked',
+      plainEnglish: 'The final live order still requires a typed owner confirmation later. This is intentionally not complete from Phase 6C.',
+      nextClick: 'Do not type a final order phrase until every tiny-live gate passes.'
+    }),
+    buildPhase6CChecklistItem({
+      id: 'emergency_stop_available',
+      label: 'Emergency stop available',
+      passed: true,
+      plainEnglish: 'Emergency stop remains available and disables production approvals/live connector flags.',
+      nextClick: 'No action needed.'
+    })
+  ];
+
+  return {
+    title: 'Tiny Live Test Eligibility',
+    status: items.filter(item => item.id !== 'owner_confirmation_required').every(item => item.passed)
+      ? 'Eligible except final owner confirmation'
+      : 'Not eligible yet',
+    eligibleExceptFinalConfirmation: items.filter(item => item.id !== 'owner_confirmation_required').every(item => item.passed),
+    items,
+    safetyBoundary: createProductionSafetyBoundary(false)
+  };
+}
+
+function buildPhase6CWizard({
+  connectors = [],
+  vaultStatus = null,
+  approvals = [],
+  latestOrders = [],
+  riskProfile = null,
+  latestSandboxTests = [],
+  exchangeReadiness = {},
+  selectedExchangeName = '',
+  credentialVerification = null,
+  dryRunProof = null
+} = {}) {
+  const selected = normalizePhase6ExchangeName(selectedExchangeName || PHASE6C_RECOMMENDED_FIRST_EXCHANGE);
+  const phase6B = buildProductionActivationWizard({
+    connectors,
+    vaultStatus,
+    approvals,
+    latestOrders,
+    riskProfile,
+    latestSandboxTests,
+    exchangeReadiness,
+    selectedExchangeName: selected
+  });
+  const selectedExchange = phase6B.checklist.exchanges.find(exchange => exchange.exchangeName === selected)
+    || phase6B.selectedExchange
+    || phase6B.checklist.exchanges[0];
+  const guide = PHASE6B_ACTIVATION_EXCHANGE_GUIDES[selectedExchange?.exchangeName] || selectedExchange?.guide || {};
+  const productionConnection = (connectors || []).find(connector => (
+    normalizePhase6ExchangeName(connector.settings?.registryId || connector.exchange_name) === selectedExchange?.exchangeName
+  ))?.settings?.productionConnection || {};
+  const latestPhase6CVerification = credentialVerification
+    || productionConnection.phase6CVerification
+    || null;
+  const latestDryRun = dryRunProof || selectedExchange?.latestDryRun || null;
+  const dryRunForEligibility = dryRunProof
+    || (latestDryRun?.status === 'preview_ready'
+      ? {
+          passed: true,
+          plainEnglishStatus: 'A prior production dry-run preview passed without calling the order endpoint.',
+          checksPassed: ['Production dry-run passed']
+        }
+      : null);
+  const tinyLiveEligibility = buildPhase6CTinyLiveEligibility({
+    credentialVerification: latestPhase6CVerification,
+    dryRunProof: dryRunForEligibility,
+    riskProfile
+  });
+  const steps = [
+    {
+      id: 'choose_exchange',
+      title: 'Step 1: Choose exchange',
+      status: selectedExchange ? 'Safe' : 'Missing',
+      button: 'Start Live Setup Safely',
+      plainEnglish: `${selectedExchange?.displayName || 'Kraken'} is selected. Kraken is recommended first for Phase 6C.`
+    },
+    {
+      id: 'add_api_key',
+      title: 'Step 2: Add API key safely',
+      status: selectedExchange?.productionCredentialsSaved ? 'Safe' : 'Missing',
+      button: 'Add API Key Safely',
+      plainEnglish: selectedExchange?.productionCredentialsSaved ? 'A production key reference exists in the encrypted vault.' : 'Save a restricted key to the encrypted local vault. It will not be displayed again.'
+    },
+    {
+      id: 'verify_permissions',
+      title: 'Step 3: Verify permissions',
+      status: latestPhase6CVerification?.status || (selectedExchange?.connected ? 'Authenticated Read-Only' : 'Missing'),
+      button: 'Verify Real Exchange Credentials',
+      plainEnglish: latestPhase6CVerification?.plainEnglishStatus || 'Verify account reads, withdrawal safety, balances, fees, limits, rate notes, and symbol rules.'
+    },
+    {
+      id: 'run_dry_run',
+      title: 'Step 4: Run production dry-run',
+      status: dryRunForEligibility?.passed || latestDryRun?.status === 'preview_ready' ? 'Safe' : 'Missing',
+      button: 'Run Production Dry-Run Proof',
+      plainEnglish: dryRunForEligibility?.plainEnglishStatus || 'Simulate the exact tiny order and prove the production order endpoint remains locked.'
+    },
+    {
+      id: 'review_eligibility',
+      title: 'Step 5: Review tiny live test eligibility',
+      status: tinyLiveEligibility.eligibleExceptFinalConfirmation ? 'Review Needed' : 'Locked',
+      button: 'Review Tiny Live Eligibility',
+      plainEnglish: tinyLiveEligibility.status
+    }
+  ];
+  const firstBlocked = steps.find(step => step.status !== 'Safe' && step.status !== 'Review Needed');
+  const reportChecksPassed = [
+    ...(latestPhase6CVerification?.checksPassed || []),
+    ...(dryRunProof?.checksPassed || [])
+  ];
+  const reportChecksFailed = [
+    ...(latestPhase6CVerification?.checksFailed || []),
+    ...(dryRunProof?.checksFailed || [])
+  ];
+
+  return {
+    title: 'Phase 6C: Real Credential Verification And Dry-Run Proof',
+    phase: 'Phase 6C',
+    recommendedExchangeName: PHASE6C_RECOMMENDED_FIRST_EXCHANGE,
+    recommendedExchangeDisplayName: PHASE6_PRODUCTION_ADAPTERS[PHASE6C_RECOMMENDED_FIRST_EXCHANGE]?.displayName || 'Kraken',
+    selectedExchangeName: selectedExchange?.exchangeName || PHASE6C_RECOMMENDED_FIRST_EXCHANGE,
+    selectedExchangeDisplayName: selectedExchange?.displayName || 'Kraken',
+    mostReadyExchange: selectedExchange?.displayName || 'Kraken',
+    status: tinyLiveEligibility.eligibleExceptFinalConfirmation ? 'Dry-run ready for owner review' : 'Locked setup in progress',
+    whatToDoNow: firstBlocked
+      ? `${firstBlocked.button}: ${firstBlocked.plainEnglish}`
+      : 'Review tiny live eligibility. The final order path is still locked until later owner confirmation.',
+    whatIsSafe: [
+      'Credential values stay in the encrypted production vault.',
+      'Verification reads account metadata only.',
+      'Production dry-run proof does not call the real order endpoint.',
+      'Withdrawals, wallet signing, margin, futures, leverage, and autonomous trading remain disabled.'
+    ],
+    whatIsLocked: [
+      'Unrestricted live trading remains locked.',
+      'Real order placement remains locked until all approvals and final typed confirmation exist.',
+      'Withdrawals and wallet signing remain disabled.',
+      'Autonomous trading remains disabled.'
+    ],
+    steps,
+    guide,
+    defaultOrder: guide.defaultOrder || { symbol: 'BTC/USD', side: 'buy', orderType: 'limit', quantity: 0.001, limitPrice: 0, notionalUsd: 10 },
+    selectedExchange,
+    credentialVerification: latestPhase6CVerification,
+    dryRunProof: dryRunProof || null,
+    tinyLiveEligibility,
+    report: {
+      mostReadyExchange: selectedExchange?.displayName || 'Kraken',
+      checksPassed: reportChecksPassed,
+      checksFailed: reportChecksFailed,
+      tinyLiveEligible: tinyLiveEligibility.eligibleExceptFinalConfirmation,
+      remainingBeforeFirstTinyLiveOrder: tinyLiveEligibility.items
+        .filter(item => !item.passed)
+        .map(item => `${item.label}: ${item.plainEnglish}`)
+    },
+    exchangeOptions: phase6B.exchangeOptions,
+    safetyBoundary: createProductionSafetyBoundary(false)
+  };
+}
+
 function createPlainEnglishProductionError(exchangeName, error) {
   const rawMessage = String(error?.message || error || '').slice(0, 500);
   const lower = rawMessage.toLowerCase();
@@ -2224,6 +3094,7 @@ module.exports = {
   DEFAULT_PHASE6_POLICY,
   PHASE6_PRODUCTION_ADAPTERS,
   PHASE6B_RECOMMENDED_FIRST_EXCHANGE,
+  PHASE6C_RECOMMENDED_FIRST_EXCHANGE,
   PHASE6B_ACTIVATION_EXCHANGE_GUIDES,
   getProductionAdapter,
   getProductionReferenceName,
@@ -2244,6 +3115,10 @@ module.exports = {
   buildPhase6ApprovalCenter,
   buildExchangeVerificationChecklist,
   buildProductionActivationWizard,
+  verifyProductionExchangeCredentials,
+  buildPhase6CProductionDryRunProof,
+  buildPhase6CTinyLiveEligibility,
+  buildPhase6CWizard,
   createProductionSafetyBoundary,
   createPlainEnglishProductionError
 };

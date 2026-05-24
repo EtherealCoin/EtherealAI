@@ -669,6 +669,100 @@
             <div id="phase6b-result" class="phase3-results">Phase 6B is ready to guide the first safe exchange connection. No live order path is enabled.</div>
         </section>
 
+        <section class="model-panel phase6c-wizard" id="real-credential-dry-run-proof">
+            <div class="phase6c-hero">
+                <div>
+                    <span class="mode-pill">Phase 6C · Real Proof</span>
+                    <h2>Phase 6C: Real Credential Verification And Dry-Run Proof</h2>
+                    <p class="inline-status">Make one exchange truly connectable end-to-end. This verifies real credentials and runs a no-order production dry-run proof. It does not place orders, enable withdrawals, enable wallet signing, or unlock automation.</p>
+                </div>
+                <button id="phase6c-start-safe" type="button" class="primary-action-button">Start Phase 6C Safely</button>
+            </div>
+
+            <div class="phase6c-summary-grid">
+                <article>
+                    <span>Recommended First</span>
+                    <strong id="phase6c-recommended-exchange">Kraken</strong>
+                    <small>US-accessible, simple API key flow, permission proof before orders.</small>
+                </article>
+                <article>
+                    <span>Real Orders</span>
+                    <strong>Locked</strong>
+                    <small>Dry-run proof calls no production order endpoint.</small>
+                </article>
+                <article>
+                    <span>Withdrawals</span>
+                    <strong>Must Be Disabled</strong>
+                    <small>Unsafe keys are rejected.</small>
+                </article>
+                <article>
+                    <span>Tiny Live Test</span>
+                    <strong id="phase6c-eligibility-summary">Not Eligible Yet</strong>
+                    <small>Final typed owner confirmation remains separate and locked.</small>
+                </article>
+            </div>
+
+            <div class="phase6c-controls">
+                <label for="phase6c-exchange">
+                    Step 1: Choose exchange
+                    <select id="phase6c-exchange">
+                        <option value="kraken">Kraken - recommended first</option>
+                        <option value="coinbase">Coinbase Advanced</option>
+                        <option value="binance">Binance</option>
+                        <option value="okx">OKX</option>
+                        <option value="bybit">Bybit</option>
+                    </select>
+                </label>
+                <button id="phase6c-add-key" type="button">Step 2: Add API Key Safely</button>
+                <button id="phase6c-verify-credentials" type="button">Step 3: Verify Real Exchange Credentials</button>
+                <button id="phase6c-run-dry-run-proof" type="button">Step 4: Run Production Dry-Run Proof</button>
+                <button id="phase6c-review-eligibility" type="button" class="secondary-button">Step 5: Review Tiny Live Eligibility</button>
+            </div>
+
+            <div class="phase6c-step-grid" id="phase6c-step-grid">
+                <article class="status-warning">
+                    <strong>Loading Phase 6C steps...</strong>
+                    <span>Choose Kraken first, then follow the buttons left to right.</span>
+                </article>
+            </div>
+
+            <div class="phase6c-report-grid">
+                <article>
+                    <h3>What To Do Now</h3>
+                    <p id="phase6c-what-now">Load Phase 6C, then follow the first missing step.</p>
+                </article>
+                <article>
+                    <h3>Checks Passed</h3>
+                    <ul id="phase6c-checks-passed"><li>No real credential proof has run yet.</li></ul>
+                </article>
+                <article>
+                    <h3>Checks Failed</h3>
+                    <ul id="phase6c-checks-failed"><li>Nothing failed yet.</li></ul>
+                </article>
+                <article>
+                    <h3>Remaining Before First Tiny Live Order</h3>
+                    <ul id="phase6c-remaining-work"><li>Verify credentials and run dry-run proof first.</li></ul>
+                </article>
+            </div>
+
+            <div class="phase6c-proof-grid">
+                <article class="phase6c-proof-panel">
+                    <h3>Real Credential Test</h3>
+                    <div id="phase6c-credential-result">No real credential test has run yet. Credentials must be saved only to the local encrypted vault.</div>
+                </article>
+                <article class="phase6c-proof-panel">
+                    <h3>Production Dry-Run Proof</h3>
+                    <div id="phase6c-dry-run-result">No production dry-run proof has run yet. This step checks balance, fees, live price, symbol limits, risk, kill switch, slippage, and endpoint lock.</div>
+                </article>
+                <article class="phase6c-proof-panel">
+                    <h3>Tiny Live Test Eligibility</h3>
+                    <div id="phase6c-eligibility-list">Tiny live testing remains locked. Review the checklist after dry-run proof.</div>
+                </article>
+            </div>
+
+            <div id="phase6c-result" class="phase3-results">Phase 6C is ready. Recommended first exchange: Kraken. No real orders will be placed from this phase.</div>
+        </section>
+
         <section class="model-panel" id="production-trading-command-center">
             <h2>Phase 6: Production Trading Command Center</h2>
             <p class="inline-status">Controlled production execution infrastructure is installed here. Real orders stay locked until production keys, exchange connectivity, sandbox evidence, owner approvals, dry-run checks, capital limits, and final typed confirmation all pass.</p>
@@ -889,6 +983,9 @@
         let latestPhase5TreasuryCommand = null;
         let latestPhase6BWizard = null;
         let latestPhase6BChecklist = null;
+        let latestPhase6CWizard = null;
+        let latestPhase6CVerification = null;
+        let latestPhase6CDryRunProof = null;
         let latestPhase6Center = null;
         let latestPhase6PreviewId = null;
         let latestPhase6OrderId = null;
@@ -1562,11 +1659,11 @@
             latestPhase6BWizard = wizard;
             latestPhase6BChecklist = data?.checklist || wizard.checklist || null;
 
-            document.getElementById('phase6b-exchange').value = wizard.selectedExchangeName || document.getElementById('phase6b-exchange').value || 'binance';
-            document.getElementById('phase6-exchange').value = wizard.selectedExchangeName || 'binance';
+            document.getElementById('phase6b-exchange').value = wizard.selectedExchangeName || document.getElementById('phase6b-exchange').value || 'kraken';
+            document.getElementById('phase6-exchange').value = wizard.selectedExchangeName || 'kraken';
             document.getElementById('phase6b-current-step').textContent = wizard.nextButton || 'Review guided setup';
             document.getElementById('phase6b-current-detail').textContent = wizard.whatToDoNow || 'Follow the next safe action.';
-            document.getElementById('phase6b-recommended-exchange').textContent = wizard.recommendedExchangeDisplayName || 'Binance';
+            document.getElementById('phase6b-recommended-exchange').textContent = wizard.recommendedExchangeDisplayName || 'Kraken';
             document.getElementById('phase6b-what-now').textContent = wizard.whatToDoNow || 'Follow the guided checklist.';
             document.getElementById('phase6b-missing-list').innerHTML = renderListItems(wizard.whatIsMissing, 'Nothing missing for the selected step.');
             document.getElementById('phase6b-safe-list').innerHTML = renderListItems(wizard.whatIsSafe, 'Core safety locks are active.');
@@ -1627,7 +1724,7 @@
         }
 
         async function loadPhase6BWizard(exchangeName = '') {
-            const selected = exchangeName || document.getElementById('phase6b-exchange').value || document.getElementById('phase6-exchange').value || 'binance';
+            const selected = exchangeName || document.getElementById('phase6b-exchange').value || document.getElementById('phase6-exchange').value || 'kraken';
             const response = await fetch(`/api/v1/live-trading-launch/phase6b/wizard?exchange=${encodeURIComponent(selected)}`);
             const data = await response.json();
 
@@ -1646,7 +1743,7 @@
         }
 
         async function startLiveSetupSafely() {
-            const exchangeName = document.getElementById('phase6b-exchange').value || 'binance';
+            const exchangeName = document.getElementById('phase6b-exchange').value || 'kraken';
             document.getElementById('phase6b-result').textContent = 'Creating or finding the locked connector, then loading the guided setup. No live order path is enabled.';
             await ensureProductionConnector(exchangeName);
             await loadPhase6Status();
@@ -1654,7 +1751,7 @@
         }
 
         function openPhase6VaultPanel() {
-            document.getElementById('phase6-exchange').value = document.getElementById('phase6b-exchange').value || 'binance';
+            document.getElementById('phase6-exchange').value = document.getElementById('phase6b-exchange').value || 'kraken';
             const panel = document.querySelector('.phase6-vault');
             if (panel) {
                 panel.open = true;
@@ -1664,7 +1761,7 @@
         }
 
         async function phase6BTestExchange() {
-            document.getElementById('phase6-exchange').value = document.getElementById('phase6b-exchange').value || 'binance';
+            document.getElementById('phase6-exchange').value = document.getElementById('phase6b-exchange').value || 'kraken';
             await testPhase6ProductionConnection();
             await loadPhase6BWizard(document.getElementById('phase6b-exchange').value);
         }
@@ -1672,7 +1769,7 @@
         async function phase6BRunDryRun() {
             const wizard = latestPhase6BWizard || await loadPhase6BWizard();
             const order = wizard?.defaultOrder || {};
-            document.getElementById('phase6-exchange').value = wizard?.selectedExchangeName || document.getElementById('phase6b-exchange').value || 'binance';
+            document.getElementById('phase6-exchange').value = wizard?.selectedExchangeName || document.getElementById('phase6b-exchange').value || 'kraken';
             document.getElementById('phase6-symbol').value = order.symbol || document.getElementById('phase6-symbol').value || 'BTC/USDT';
             document.getElementById('phase6-side').value = order.side || 'buy';
             document.getElementById('phase6-order-type').value = order.orderType || 'limit';
@@ -1698,6 +1795,211 @@
         async function phase6BEmergencyStop() {
             await phase6EmergencyStop();
             await loadPhase6BWizard(document.getElementById('phase6b-exchange').value);
+        }
+
+        function phase6CStatusClass(status) {
+            const text = String(status || '').toLowerCase();
+            if (text.includes('safe') || text.includes('passed') || text.includes('verified') || text.includes('read-only') || text.includes('locked')) return 'status-success';
+            if (text.includes('unsafe') || text.includes('failed') || text.includes('error')) return 'status-danger';
+            if (text.includes('missing') || text.includes('review') || text.includes('not eligible') || text.includes('blocked')) return 'status-warning';
+            return 'status-info';
+        }
+
+        function renderPhase6CChecklist(items = []) {
+            return items.map(item => `
+                <article class="phase6c-check-item ${phase6CStatusClass(item.status)}">
+                    <span>${escapeHtml(item.status || (item.passed ? 'Safe' : 'Missing'))}</span>
+                    <strong>${escapeHtml(item.label)}</strong>
+                    <p>${escapeHtml(item.plainEnglish || '')}</p>
+                    <small>${escapeHtml(item.nextClick || 'No action needed.')}</small>
+                </article>
+            `).join('') || '<p class="workflow-helper-text">No checklist loaded yet.</p>';
+        }
+
+        function renderPhase6CWizard(data = {}) {
+            const wizard = data?.wizard || data || {};
+            const selected = wizard.selectedExchange || {};
+            const defaultOrder = wizard.defaultOrder || {};
+            latestPhase6CWizard = wizard;
+            const selectedExchangeName = wizard.selectedExchangeName || document.getElementById('phase6c-exchange').value || 'kraken';
+            latestPhase6CVerification = wizard.credentialVerification
+                || (latestPhase6CVerification?.exchangeName === selectedExchangeName ? latestPhase6CVerification : null);
+            latestPhase6CDryRunProof = wizard.dryRunProof
+                || (latestPhase6CDryRunProof?.selectedExchange === wizard.selectedExchangeDisplayName ? latestPhase6CDryRunProof : null);
+
+            document.getElementById('phase6c-exchange').value = wizard.selectedExchangeName || document.getElementById('phase6c-exchange').value || 'kraken';
+            document.getElementById('phase6b-exchange').value = wizard.selectedExchangeName || document.getElementById('phase6b-exchange').value || 'kraken';
+            document.getElementById('phase6-exchange').value = wizard.selectedExchangeName || document.getElementById('phase6-exchange').value || 'kraken';
+            document.getElementById('phase6c-recommended-exchange').textContent = wizard.recommendedExchangeDisplayName || 'Kraken';
+            document.getElementById('phase6c-eligibility-summary').textContent = wizard.tinyLiveEligibility?.status || 'Not Eligible Yet';
+            document.getElementById('phase6c-what-now').textContent = wizard.whatToDoNow || 'Follow the first missing step.';
+
+            if (defaultOrder.symbol) document.getElementById('phase6-symbol').value = defaultOrder.symbol;
+            if (defaultOrder.side) document.getElementById('phase6-side').value = defaultOrder.side;
+            if (defaultOrder.orderType) document.getElementById('phase6-order-type').value = defaultOrder.orderType;
+            if (defaultOrder.quantity) document.getElementById('phase6-quantity').value = defaultOrder.quantity;
+            if (defaultOrder.limitPrice !== undefined) document.getElementById('phase6-limit-price').value = defaultOrder.limitPrice;
+            if (defaultOrder.notionalUsd) document.getElementById('phase6-notional').value = defaultOrder.notionalUsd;
+
+            document.getElementById('phase6c-step-grid').innerHTML = (wizard.steps || []).map(step => `
+                <article class="${phase6CStatusClass(step.status)}">
+                    <span>${escapeHtml(step.status || 'Review')}</span>
+                    <strong>${escapeHtml(step.title)}</strong>
+                    <p>${escapeHtml(step.plainEnglish || '')}</p>
+                    <small>Button: ${escapeHtml(step.button || 'Review')}</small>
+                </article>
+            `).join('') || '<article class="status-warning"><strong>Phase 6C steps not loaded.</strong></article>';
+
+            document.getElementById('phase6c-checks-passed').innerHTML = renderListItems(wizard.report?.checksPassed, 'No real proof checks have passed yet.');
+            document.getElementById('phase6c-checks-failed').innerHTML = renderListItems(wizard.report?.checksFailed, 'No failed checks are recorded.');
+            document.getElementById('phase6c-remaining-work').innerHTML = renderListItems(wizard.report?.remainingBeforeFirstTinyLiveOrder, 'Only final owner confirmation remains locked.');
+
+            const verification = latestPhase6CVerification || wizard.credentialVerification;
+            document.getElementById('phase6c-credential-result').innerHTML = verification ? `
+                <article class="phase6c-check-item ${phase6CStatusClass(verification.status)}">
+                    <span>${escapeHtml(verification.status || 'Review')}</span>
+                    <strong>${escapeHtml(verification.displayName || selected.displayName || 'Selected exchange')}</strong>
+                    <p>${escapeHtml(verification.plainEnglishStatus || 'Credential verification result loaded.')}</p>
+                    <small>Balances readable: ${verification.balancesReadable ? 'yes' : 'no'} · fees loaded: ${verification.feesLoaded ? 'yes' : 'no'} · symbol limits: ${verification.symbolRulesLoaded ? 'yes' : 'no'} · endpoint called: no</small>
+                </article>
+                <div class="phase6c-step-grid">${renderPhase6CChecklist(verification.checklist || [])}</div>
+            ` : 'No real credential test has run yet. Credentials must be saved only to the local encrypted vault.';
+
+            const dryRun = latestPhase6CDryRunProof || wizard.dryRunProof;
+            document.getElementById('phase6c-dry-run-result').innerHTML = dryRun ? `
+                <article class="phase6c-check-item ${dryRun.passed ? 'status-success' : 'status-warning'}">
+                    <span>${escapeHtml(dryRun.status || 'Dry-run review')}</span>
+                    <strong>${escapeHtml(dryRun.selectedExchange || selected.displayName || 'Selected exchange')} · ${escapeHtml(dryRun.symbol || '')}</strong>
+                    <p>${escapeHtml(dryRun.plainEnglishStatus || 'Dry-run proof loaded.')}</p>
+                    <small>Order endpoint called: ${dryRun.productionOrderEndpointCalled ? 'yes' : 'no'} · tiny amount ${formatUsd(dryRun.tinyAmountUsd)} · live price ${formatUsd(dryRun.livePrice)}</small>
+                </article>
+                <div class="phase6c-step-grid">${renderPhase6CChecklist(dryRun.checklist || [])}</div>
+            ` : 'No production dry-run proof has run yet. This step checks balance, fees, live price, symbol limits, risk, kill switch, slippage, and endpoint lock.';
+
+            document.getElementById('phase6c-eligibility-list').innerHTML = renderPhase6CChecklist(wizard.tinyLiveEligibility?.items || []);
+            document.getElementById('phase6c-result').innerHTML = `
+                <article class="phase3-account-card ${phase6CStatusClass(wizard.status)}">
+                    <strong>${escapeHtml(wizard.status || 'Phase 6C locked')}</strong>
+                    <span>${escapeHtml(wizard.whatToDoNow || 'Follow the next visible step.')}</span>
+                    <small>Most ready exchange: ${escapeHtml(wizard.report?.mostReadyExchange || wizard.selectedExchangeDisplayName || 'Kraken')} · live orders locked · wallet signing disabled · withdrawals disabled.</small>
+                </article>
+            `;
+        }
+
+        async function loadPhase6CWizard(exchangeName = '') {
+            const selected = exchangeName || document.getElementById('phase6c-exchange').value || document.getElementById('phase6b-exchange').value || 'kraken';
+            const response = await fetch(`/api/v1/live-trading-launch/phase6c/wizard?exchange=${encodeURIComponent(selected)}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase6c-result').textContent = data.error || 'Unable to load Phase 6C.';
+                return null;
+            }
+
+            renderPhase6CWizard(data);
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                roadmap: latestLiveRoadmap,
+                phase6c: data.wizard,
+                phase6b: latestPhase6BWizard,
+                phase6: latestPhase6Center
+            }, null, 2);
+            return data.wizard;
+        }
+
+        async function startPhase6CSafely() {
+            const exchangeName = document.getElementById('phase6c-exchange').value || 'kraken';
+            document.getElementById('phase6c-result').textContent = 'Starting Phase 6C safely. Creating/finding the locked connector and loading the proof wizard. No live order path is enabled.';
+            await ensureProductionConnector(exchangeName);
+            await loadPhase6Status();
+            await loadPhase6BWizard(exchangeName);
+            await loadPhase6CWizard(exchangeName);
+        }
+
+        function openPhase6CVaultPanel() {
+            const exchangeName = document.getElementById('phase6c-exchange').value || 'kraken';
+            document.getElementById('phase6-exchange').value = exchangeName;
+            document.getElementById('phase6b-exchange').value = exchangeName;
+            openPhase6VaultPanel();
+        }
+
+        async function phase6CVerifyCredentials() {
+            const exchangeName = document.getElementById('phase6c-exchange').value || 'kraken';
+            document.getElementById('phase6-exchange').value = exchangeName;
+            document.getElementById('phase6c-credential-result').textContent = 'Verifying real exchange credentials. This reads account metadata only and cannot place an order.';
+            await ensureProductionConnector(exchangeName);
+            const response = await fetch('/api/v1/live-trading-launch/phase6c/verify-credentials', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    exchangeName,
+                    order: phase6OrderPayload()
+                })
+            });
+            const data = await response.json();
+            latestPhase6CVerification = data.verification || null;
+
+            if (!response.ok && !data.wizard) {
+                document.getElementById('phase6c-credential-result').innerHTML = `
+                    <article class="phase6c-check-item status-warning">
+                        <strong>Credential verification blocked</strong>
+                        <p>${escapeHtml(data.error || 'Credential verification did not pass.')}</p>
+                        <small>${escapeHtml(data.nextClick || 'Save a restricted key first, then verify again.')} Endpoint called: no.</small>
+                    </article>
+                `;
+                return;
+            }
+
+            renderPhase6CWizard(data);
+            await loadPhase6Status();
+        }
+
+        async function phase6CRunDryRunProof() {
+            const exchangeName = document.getElementById('phase6c-exchange').value || 'kraken';
+            document.getElementById('phase6-exchange').value = exchangeName;
+            document.getElementById('phase6c-dry-run-result').textContent = 'Running production dry-run proof. This checks the exact tiny order and calls no production order endpoint.';
+            await ensureProductionConnector(exchangeName);
+            const response = await fetch('/api/v1/live-trading-launch/phase6c/dry-run-proof', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    exchangeName,
+                    order: phase6OrderPayload()
+                })
+            });
+            const data = await response.json();
+            latestPhase6CVerification = data.verification || latestPhase6CVerification;
+            latestPhase6CDryRunProof = data.dryRunProof || null;
+            if (data.previewId) {
+                latestPhase6PreviewId = data.previewId;
+                latestPhase6OrderId = data.previewId;
+            }
+
+            if (!response.ok && !data.wizard) {
+                document.getElementById('phase6c-dry-run-result').innerHTML = `
+                    <article class="phase6c-check-item status-warning">
+                        <strong>Dry-run proof blocked</strong>
+                        <p>${escapeHtml(data.error || 'Dry-run proof did not pass.')}</p>
+                        <small>${escapeHtml(data.nextClick || 'Fix the missing item, then retry.')} Endpoint called: no.</small>
+                    </article>
+                `;
+                return;
+            }
+
+            renderPhase6CWizard(data);
+            await loadPhase6Status();
+            await loadPhase6BWizard(exchangeName);
+        }
+
+        function phase6CReviewEligibility() {
+            const wizard = latestPhase6CWizard || {};
+            document.getElementById('phase6c-eligibility-list').innerHTML = renderPhase6CChecklist(wizard.tinyLiveEligibility?.items || []);
+            document.getElementById('phase6c-result').innerHTML = `
+                <article class="phase3-account-card ${wizard.tinyLiveEligibility?.eligibleExceptFinalConfirmation ? 'status-success' : 'status-warning'}">
+                    <strong>${escapeHtml(wizard.tinyLiveEligibility?.status || 'Tiny live test remains locked')}</strong>
+                    <span>Review the visible checklist. Final live order placement still requires separate owner approvals and typed confirmation.</span>
+                    <small>No autonomous trading · no wallet signing · no withdrawals · no unrestricted live trading.</small>
+                </article>
+            `;
         }
 
         function phase6CardClass(status) {
@@ -2511,7 +2813,7 @@
 
         function phase6OrderPayload() {
             return {
-                exchangeName: document.getElementById('phase6-exchange').value || 'binance',
+                exchangeName: document.getElementById('phase6-exchange').value || 'kraken',
                 symbol: document.getElementById('phase6-symbol').value || 'BTC/USDT',
                 side: document.getElementById('phase6-side').value || 'buy',
                 orderType: document.getElementById('phase6-order-type').value || 'limit',
@@ -2544,7 +2846,7 @@
         }
 
         async function savePhase6ProductionKey() {
-            const exchangeName = document.getElementById('phase6-exchange').value || 'binance';
+            const exchangeName = document.getElementById('phase6-exchange').value || 'kraken';
             const connectorId = await ensureProductionConnector(exchangeName);
             const output = document.getElementById('phase6-vault-result');
 
@@ -2598,10 +2900,11 @@
             `;
             await loadPhase6Status();
             await loadPhase6BWizard(exchangeName);
+            await loadPhase6CWizard(exchangeName);
         }
 
         async function testPhase6ProductionConnection() {
-            const exchangeName = document.getElementById('phase6-exchange').value || 'binance';
+            const exchangeName = document.getElementById('phase6-exchange').value || 'kraken';
             const connectorId = await ensureProductionConnector(exchangeName);
             const output = document.getElementById('phase6-vault-result');
 
@@ -2623,10 +2926,11 @@
             `;
             await loadPhase6Status();
             await loadPhase6BWizard(exchangeName);
+            await loadPhase6CWizard(exchangeName);
         }
 
         async function deletePhase6ProductionKey() {
-            const exchangeName = document.getElementById('phase6-exchange').value || 'binance';
+            const exchangeName = document.getElementById('phase6-exchange').value || 'kraken';
             const connectorId = await ensureProductionConnector(exchangeName);
             const output = document.getElementById('phase6-vault-result');
 
@@ -2648,6 +2952,7 @@
             `;
             await loadPhase6Status();
             await loadPhase6BWizard(exchangeName);
+            await loadPhase6CWizard(exchangeName);
         }
 
         async function loadPhase6Status() {
@@ -2705,6 +3010,7 @@
             `;
             await loadPhase6Status();
             await loadPhase6BWizard(document.getElementById('phase6-exchange').value);
+            await loadPhase6CWizard(document.getElementById('phase6-exchange').value);
         }
 
         async function previewPhase6Order() {
@@ -2738,11 +3044,13 @@
 
             if (!response.ok) {
                 await loadPhase6BWizard(document.getElementById('phase6-exchange').value);
+                await loadPhase6CWizard(document.getElementById('phase6-exchange').value);
                 return;
             }
 
             await loadPhase6Status();
             await loadPhase6BWizard(document.getElementById('phase6-exchange').value);
+            await loadPhase6CWizard(document.getElementById('phase6-exchange').value);
         }
 
         async function placePhase6Order() {
@@ -2779,6 +3087,7 @@
             renderPhase6Preview(data);
             await loadPhase6Status();
             await loadPhase6BWizard(document.getElementById('phase6-exchange').value);
+            await loadPhase6CWizard(document.getElementById('phase6-exchange').value);
         }
 
         async function phase6EmergencyStop() {
@@ -2796,6 +3105,7 @@
             `;
             await loadPhase6Status();
             await loadPhase6BWizard(document.getElementById('phase6-exchange').value);
+            await loadPhase6CWizard(document.getElementById('phase6-exchange').value);
         }
 
         async function trackLatestPhase6Order() {
@@ -3041,12 +3351,29 @@
         document.getElementById('run-phase5-treasury').addEventListener('click', runPhase5TreasuryCommandCenter);
         document.getElementById('phase5-freeze-capital').addEventListener('click', phase5EmergencyFreeze);
         document.getElementById('start-live-setup-safely').addEventListener('click', startLiveSetupSafely);
-        document.getElementById('phase6b-exchange').addEventListener('change', () => loadPhase6BWizard(document.getElementById('phase6b-exchange').value));
+        document.getElementById('phase6b-exchange').addEventListener('change', async () => {
+            const exchangeName = document.getElementById('phase6b-exchange').value;
+            document.getElementById('phase6c-exchange').value = exchangeName;
+            await loadPhase6BWizard(exchangeName);
+            await loadPhase6CWizard(exchangeName);
+        });
         document.getElementById('phase6b-open-key-panel').addEventListener('click', openPhase6VaultPanel);
         document.getElementById('phase6b-test-exchange').addEventListener('click', phase6BTestExchange);
         document.getElementById('phase6b-run-dry-run').addEventListener('click', phase6BRunDryRun);
         document.getElementById('phase6b-prepare-tiny-live').addEventListener('click', phase6BPrepareTinyLive);
         document.getElementById('phase6b-emergency-stop').addEventListener('click', phase6BEmergencyStop);
+        document.getElementById('phase6c-start-safe').addEventListener('click', startPhase6CSafely);
+        document.getElementById('phase6c-exchange').addEventListener('change', async () => {
+            const exchangeName = document.getElementById('phase6c-exchange').value;
+            document.getElementById('phase6b-exchange').value = exchangeName;
+            document.getElementById('phase6-exchange').value = exchangeName;
+            await loadPhase6BWizard(exchangeName);
+            await loadPhase6CWizard(exchangeName);
+        });
+        document.getElementById('phase6c-add-key').addEventListener('click', openPhase6CVaultPanel);
+        document.getElementById('phase6c-verify-credentials').addEventListener('click', phase6CVerifyCredentials);
+        document.getElementById('phase6c-run-dry-run-proof').addEventListener('click', phase6CRunDryRunProof);
+        document.getElementById('phase6c-review-eligibility').addEventListener('click', phase6CReviewEligibility);
         document.getElementById('refresh-phase6-status').addEventListener('click', loadPhase6Status);
         document.getElementById('save-phase6-production-key').addEventListener('click', savePhase6ProductionKey);
         document.getElementById('test-phase6-production-connection').addEventListener('click', testPhase6ProductionConnection);
@@ -3065,6 +3392,7 @@
         loadPhase4Status();
         loadPhase5Status();
         loadPhase6BWizard();
+        loadPhase6CWizard();
         loadPhase6Status();
         scanPhase3AReadiness();
     </script>

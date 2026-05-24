@@ -4708,6 +4708,11 @@ footer {
 .phase6b-summary-grid,
 .phase6b-guide-grid,
 .phase6b-checklist,
+.phase6c-summary-grid,
+.phase6c-controls,
+.phase6c-step-grid,
+.phase6c-report-grid,
+.phase6c-proof-grid,
 .phase5-controls,
 .phase6-controls,
 .phase6-vault,
@@ -4730,14 +4735,16 @@ footer {
     border-color: color-mix(in srgb, var(--brand-blue) 32%, var(--border));
 }
 
-.phase6b-hero {
+.phase6b-hero,
+.phase6c-hero {
     align-items: center;
     display: flex;
     gap: 16px;
     justify-content: space-between;
 }
 
-.phase6b-hero h2 {
+.phase6b-hero h2,
+.phase6c-hero h2 {
     margin-bottom: 8px;
 }
 
@@ -4781,13 +4788,27 @@ footer {
     margin: 18px 0;
 }
 
-.phase6b-controls {
+.phase6c-wizard {
+    border-color: color-mix(in srgb, var(--brand-pink) 28%, var(--brand-blue));
+}
+
+.phase6c-summary-grid,
+.phase6c-step-grid,
+.phase6c-report-grid,
+.phase6c-proof-grid {
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    margin: 18px 0;
+}
+
+.phase6b-controls,
+.phase6c-controls {
     align-items: end;
     grid-template-columns: minmax(220px, 1.2fr) repeat(auto-fit, minmax(170px, 1fr));
     margin: 16px 0;
 }
 
-.phase6b-controls label {
+.phase6b-controls label,
+.phase6c-controls label {
     color: var(--text-primary);
     font-weight: 800;
 }
@@ -4807,7 +4828,12 @@ footer {
 .phase6b-instructions,
 .phase6b-checklist-panel,
 .phase6b-tiny-live-panel,
-.phase6b-check-item {
+.phase6b-check-item,
+.phase6c-summary-grid article,
+.phase6c-step-grid article,
+.phase6c-report-grid article,
+.phase6c-proof-panel,
+.phase6c-check-item {
     background: var(--surface-muted);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -4816,7 +4842,10 @@ footer {
 }
 
 .phase6b-status-grid article span,
-.phase6b-check-item span {
+.phase6b-check-item span,
+.phase6c-summary-grid article span,
+.phase6c-step-grid article span,
+.phase6c-check-item span {
     color: inherit;
     display: block;
     font-size: 0.78rem;
@@ -4831,7 +4860,12 @@ footer {
 .phase6b-instructions h3,
 .phase6b-checklist-panel h3,
 .phase6b-tiny-live-panel h3,
-.phase6b-check-item strong {
+.phase6b-check-item strong,
+.phase6c-summary-grid article strong,
+.phase6c-step-grid article strong,
+.phase6c-report-grid h3,
+.phase6c-proof-panel h3,
+.phase6c-check-item strong {
     color: inherit;
 }
 
@@ -4886,9 +4920,22 @@ footer {
     gap: 8px;
 }
 
+.phase6c-step-grid article,
+.phase6c-proof-panel,
+.phase6c-check-item {
+    display: grid;
+    gap: 8px;
+}
+
 .phase6b-check-item p,
 .phase6b-check-item small,
-.phase6b-status-grid article small {
+.phase6b-status-grid article small,
+.phase6c-summary-grid article small,
+.phase6c-step-grid article small,
+.phase6c-check-item p,
+.phase6c-check-item small,
+.phase6c-proof-panel p,
+.phase6c-proof-panel small {
     color: inherit;
     line-height: 1.45;
 }
@@ -5255,6 +5302,11 @@ footer {
 :root[data-theme="night"] .phase6b-tiny-live-panel,
 :root[data-theme="night"] .phase6b-check-item,
 :root[data-theme="night"] .phase6b-order-preview,
+:root[data-theme="night"] .phase6c-summary-grid article,
+:root[data-theme="night"] .phase6c-step-grid article,
+:root[data-theme="night"] .phase6c-report-grid article,
+:root[data-theme="night"] .phase6c-proof-panel,
+:root[data-theme="night"] .phase6c-check-item,
 :root[data-theme="night"] .phase6-vault,
 :root[data-theme="night"] .phase6-acknowledgments,
 :root[data-theme="night"] .phase6-training,
@@ -5273,6 +5325,11 @@ footer {
 :root:not([data-theme="day"]) .phase6b-tiny-live-panel,
 :root:not([data-theme="day"]) .phase6b-check-item,
 :root:not([data-theme="day"]) .phase6b-order-preview,
+:root:not([data-theme="day"]) .phase6c-summary-grid article,
+:root:not([data-theme="day"]) .phase6c-step-grid article,
+:root:not([data-theme="day"]) .phase6c-report-grid article,
+:root:not([data-theme="day"]) .phase6c-proof-panel,
+:root:not([data-theme="day"]) .phase6c-check-item,
 :root:not([data-theme="day"]) .phase6-vault,
 :root:not([data-theme="day"]) .phase6-acknowledgments,
 :root:not([data-theme="day"]) .phase6-training {
