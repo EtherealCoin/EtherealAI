@@ -4699,6 +4699,12 @@ footer {
 
 .live-launch-status-grid,
 .live-scan-controls,
+.kraken-live-stepper,
+.kraken-live-layout,
+.kraken-live-permission-grid,
+.kraken-live-confirmations,
+.kraken-live-save-panel,
+.kraken-live-status-grid,
 .live-sandbox-safety-grid,
 .live-sandbox-controls,
 .live-tiny-safety-grid,
@@ -4754,6 +4760,7 @@ footer {
 .phase6b-hero,
 .phase6c-hero,
 .phase6d-hero,
+.kraken-live-hero,
 .phase6e-hero,
 .phase6f-hero {
     align-items: center;
@@ -4765,6 +4772,7 @@ footer {
 .phase6b-hero h2,
 .phase6c-hero h2,
 .phase6d-hero h2,
+.kraken-live-hero h2,
 .phase6e-hero h2,
 .phase6f-hero h2 {
     margin-bottom: 8px;
@@ -4799,6 +4807,12 @@ footer {
     text-decoration: none;
 }
 
+.giant-action-button {
+    font-size: 1.02rem;
+    min-height: 56px;
+    padding: 14px 18px;
+}
+
 .button-link.secondary-button {
     background: var(--surface-muted);
     border-color: var(--border);
@@ -4818,6 +4832,10 @@ footer {
     border-color: color-mix(in srgb, var(--brand-blue) 36%, var(--brand-purple));
 }
 
+.kraken-live-setup-walkthrough {
+    border-color: color-mix(in srgb, var(--status-warning) 45%, var(--brand-blue));
+}
+
 .phase6e-wizard {
     border-color: color-mix(in srgb, var(--brand-pink) 34%, var(--brand-purple));
 }
@@ -4827,6 +4845,9 @@ footer {
 }
 
 .phase6c-summary-grid,
+.kraken-live-stepper,
+.kraken-live-permission-grid,
+.kraken-live-status-grid,
 .phase6c-step-grid,
 .phase6c-report-grid,
 .phase6c-proof-grid,
@@ -4844,6 +4865,7 @@ footer {
 }
 
 .phase6b-controls,
+.kraken-live-save-panel,
 .phase6c-controls,
 .phase6d-controls,
 .phase6e-controls,
@@ -4857,6 +4879,16 @@ footer {
     align-items: end;
     grid-template-columns: minmax(260px, 2fr) repeat(auto-fit, minmax(170px, 1fr));
     margin: 12px 0 18px;
+}
+
+.kraken-live-layout {
+    grid-template-columns: minmax(280px, 1.15fr) minmax(280px, 1fr);
+    margin: 18px 0;
+}
+
+.kraken-live-confirmations {
+    grid-template-columns: 1fr;
+    margin-top: 14px;
 }
 
 .phase6e-key-fields {
@@ -4898,6 +4930,12 @@ footer {
 }
 
 .phase6b-status-grid article,
+.kraken-live-instructions,
+.kraken-live-permissions,
+.kraken-live-step,
+.kraken-live-permission-grid div,
+.kraken-live-save-panel,
+.kraken-live-status-grid article,
 .phase6b-summary-grid article,
 .phase6b-instructions,
 .phase6b-checklist-panel,
@@ -4930,6 +4968,8 @@ footer {
 }
 
 .phase6b-status-grid article span,
+.kraken-live-step span,
+.kraken-live-status-grid article span,
 .phase6b-check-item span,
 .phase6c-summary-grid article span,
 .phase6c-step-grid article span,
@@ -4951,6 +4991,12 @@ footer {
 }
 
 .phase6b-status-grid article strong,
+.kraken-live-instructions h3,
+.kraken-live-permissions h3,
+.kraken-live-step strong,
+.kraken-live-permission-grid div strong,
+.kraken-live-save-panel h3,
+.kraken-live-status-grid article strong,
 .phase6b-summary-grid h3,
 .phase6b-instructions h3,
 .phase6b-checklist-panel h3,
@@ -4977,6 +5023,9 @@ footer {
 }
 
 .phase6b-summary-grid h3,
+.kraken-live-instructions h3,
+.kraken-live-permissions h3,
+.kraken-live-save-panel h3,
 .phase6b-instructions h3,
 .phase6b-checklist-panel h3,
 .phase6b-tiny-live-panel h3,
@@ -4991,6 +5040,7 @@ footer {
 }
 
 .phase6b-summary-grid ul,
+.kraken-live-screen-list,
 .phase6b-instructions ul,
 .phase6b-instructions ol,
 .phase6d-report-grid ul,
@@ -5038,6 +5088,54 @@ footer {
 .phase6b-check-item {
     display: grid;
     gap: 8px;
+}
+
+.kraken-live-step {
+    cursor: pointer;
+    min-height: 132px;
+}
+
+.kraken-live-step.active {
+    background: color-mix(in srgb, var(--status-warning) 16%, var(--surface-muted));
+    border-color: color-mix(in srgb, var(--status-warning) 55%, var(--border));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--status-warning) 24%, transparent);
+}
+
+.kraken-live-step span {
+    align-items: center;
+    background: var(--status-warning);
+    border-radius: 999px;
+    color: #111827;
+    display: inline-flex;
+    height: 28px;
+    justify-content: center;
+    margin-bottom: 10px;
+    width: 28px;
+}
+
+.kraken-live-current-step span {
+    color: var(--status-warning);
+    display: block;
+    font-weight: 900;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+.kraken-live-permission-grid div {
+    display: grid;
+    gap: 6px;
+}
+
+.kraken-live-confirmations label,
+.kraken-live-save-panel label {
+    color: var(--text-primary);
+    font-weight: 800;
+}
+
+.kraken-live-save-panel {
+    align-items: end;
+    grid-template-columns: minmax(260px, 1.4fr) repeat(auto-fit, minmax(190px, 1fr));
+    margin: 18px 0;
 }
 
 .phase6c-step-grid article,
@@ -5428,6 +5526,12 @@ footer {
 :root[data-theme="night"] .live-candidate-card,
 :root[data-theme="night"] .live-next-card,
 :root[data-theme="night"] .live-paper-sim-result,
+:root[data-theme="night"] .kraken-live-instructions,
+:root[data-theme="night"] .kraken-live-permissions,
+:root[data-theme="night"] .kraken-live-step,
+:root[data-theme="night"] .kraken-live-permission-grid div,
+:root[data-theme="night"] .kraken-live-save-panel,
+:root[data-theme="night"] .kraken-live-status-grid article,
 :root[data-theme="night"] .live-sandbox-safety-grid article,
 :root[data-theme="night"] .live-tiny-safety-grid article,
 :root[data-theme="night"] .tiny-confirmation-box,
@@ -5465,6 +5569,12 @@ footer {
 :root:not([data-theme="day"]) .live-candidate-card,
 :root:not([data-theme="day"]) .live-next-card,
 :root:not([data-theme="day"]) .live-paper-sim-result,
+:root:not([data-theme="day"]) .kraken-live-instructions,
+:root:not([data-theme="day"]) .kraken-live-permissions,
+:root:not([data-theme="day"]) .kraken-live-step,
+:root:not([data-theme="day"]) .kraken-live-permission-grid div,
+:root:not([data-theme="day"]) .kraken-live-save-panel,
+:root:not([data-theme="day"]) .kraken-live-status-grid article,
 :root:not([data-theme="day"]) .live-sandbox-safety-grid article,
 :root:not([data-theme="day"]) .live-tiny-safety-grid article,
 :root:not([data-theme="day"]) .tiny-confirmation-box,

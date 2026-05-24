@@ -876,6 +876,101 @@
             <div id="phase6d-result" class="phase3-results">Phase 6D is ready to load. No real orders will be placed from this phase.</div>
         </section>
 
+        <section class="model-panel kraken-live-setup-walkthrough" id="kraken-live-setup-walkthrough">
+            <div class="kraken-live-hero">
+                <div>
+                    <span class="mode-pill">Owner walkthrough</span>
+                    <h2>Kraken Live Setup Walkthrough</h2>
+                    <p class="inline-status">One guided path for creating the restricted Kraken spot key, saving it safely, verifying the connection, running a dry-run proof, and checking tiny live eligibility. No live order is placed here.</p>
+                </div>
+                <button id="start-kraken-live-setup" type="button" class="primary-action-button giant-action-button">Start Kraken Live Setup Walkthrough</button>
+            </div>
+
+            <div class="kraken-live-stepper" aria-label="Kraken live setup steps">
+                <article data-kraken-step-card="1" class="kraken-live-step active"><span>1</span><strong>Create restricted Kraken spot key</strong><small>Open Kraken Pro and create a key for this Mac.</small></article>
+                <article data-kraken-step-card="2" class="kraken-live-step"><span>2</span><strong>Confirm withdrawals and transfers are off</strong><small>Money movement permissions must stay disabled.</small></article>
+                <article data-kraken-step-card="3" class="kraken-live-step"><span>3</span><strong>Confirm margin, futures, and leverage are off</strong><small>Spot only. No borrowed money.</small></article>
+                <article data-kraken-step-card="4" class="kraken-live-step"><span>4</span><strong>Save key into encrypted vault</strong><small>Secret values are cleared after saving.</small></article>
+                <article data-kraken-step-card="5" class="kraken-live-step"><span>5</span><strong>Verify Kraken Connection</strong><small>Read account status safely.</small></article>
+                <article data-kraken-step-card="6" class="kraken-live-step"><span>6</span><strong>Build Tiny Live Preview</strong><small>Dry-run only. No order endpoint.</small></article>
+                <article data-kraken-step-card="7" class="kraken-live-step"><span>7</span><strong>Eligibility result</strong><small>Shows ready or exactly what is missing.</small></article>
+            </div>
+
+            <div class="kraken-live-layout">
+                <article class="kraken-live-instructions">
+                    <div class="kraken-live-current-step">
+                        <span id="kraken-live-step-number">Step 1 of 7</span>
+                        <h3 id="kraken-live-step-title">Create a restricted Kraken spot key</h3>
+                        <p id="kraken-live-step-copy">Open Kraken Pro, go to Settings, open API, and create a new key for EtherealAI.</p>
+                    </div>
+                    <ol class="kraken-live-screen-list" id="kraken-live-screen-list">
+                        <li><strong>Screen 1:</strong> Log in to Kraken Pro and open the profile menu in the upper-right corner.</li>
+                        <li><strong>Screen 2:</strong> Choose Settings.</li>
+                        <li><strong>Screen 3:</strong> Open API, then choose Create API key.</li>
+                        <li><strong>Screen 4:</strong> Name it EtherealAI Restricted Spot.</li>
+                    </ol>
+                    <div class="button-row">
+                        <a class="secondary-button" href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noreferrer">Open Kraken API Settings</a>
+                        <button id="kraken-live-prev-step" type="button" class="secondary-button">Back</button>
+                        <button id="kraken-live-next-step" type="button">Next Step</button>
+                    </div>
+                </article>
+
+                <article class="kraken-live-permissions">
+                    <h3>Kraken Permissions</h3>
+                    <p class="workflow-helper-text">Use these settings exactly. The spot order permission is only for a future tiny live test; EtherealAI still keeps live orders locked.</p>
+                    <div class="kraken-live-permission-grid">
+                        <div class="status-success"><strong>Enable</strong><span>Query Funds</span><small>Lets EtherealAI read balances.</small></div>
+                        <div class="status-success"><strong>Enable</strong><span>Query Open Orders & Trades</span><small>Lets EtherealAI verify order status later.</small></div>
+                        <div class="status-success"><strong>Enable</strong><span>Query Closed Orders & Trades</span><small>Helps future reconciliation.</small></div>
+                        <div class="status-warning"><strong>Enable for tiny test eligibility</strong><span>Modify Orders</span><small>Required later for one tiny spot order. Still locked by EtherealAI.</small></div>
+                        <div class="status-danger"><strong>Keep Off</strong><span>Withdraw Funds</span><small>Never enable withdrawal permission.</small></div>
+                        <div class="status-danger"><strong>Keep Off</strong><span>Transfers / funding movement</span><small>Never enable movement between accounts.</small></div>
+                        <div class="status-danger"><strong>Keep Off</strong><span>Margin, futures, leverage</span><small>Use spot only.</small></div>
+                        <div class="status-danger"><strong>Do Not Use</strong><span>Master, admin, root, or full-access key</span><small>Create a restricted key only.</small></div>
+                    </div>
+                    <div class="kraken-live-confirmations">
+                        <label><input id="kraken-live-confirm-created" type="checkbox"> I created a new restricted Kraken spot key for EtherealAI.</label>
+                        <label><input id="kraken-live-confirm-read" type="checkbox"> Balance and order history reading permissions are enabled.</label>
+                        <label><input id="kraken-live-confirm-modify" type="checkbox"> Spot order permission is enabled only for future tiny live test eligibility.</label>
+                        <label><input id="kraken-live-confirm-withdrawals-off" type="checkbox"> Withdrawals and transfers are off.</label>
+                        <label><input id="kraken-live-confirm-margin-off" type="checkbox"> Margin, futures, and leverage are off.</label>
+                        <label><input id="kraken-live-confirm-ip-2fa" type="checkbox"> I reviewed Kraken account security, 2FA, and IP restriction options.</label>
+                        <label><input id="kraken-live-confirm-private-safe" type="checkbox"> I will not put this key in notes, screenshots, chat, or email.</label>
+                        <label><input id="kraken-live-confirm-no-order" type="checkbox"> I understand this setup does not place a live order.</label>
+                    </div>
+                </article>
+            </div>
+
+            <div class="kraken-live-save-panel">
+                <div>
+                    <h3>Save Key Safely</h3>
+                    <p class="workflow-helper-text">Paste the Kraken key values here only. Do not enter a Kraken password, wallet seed phrase, wallet private key, bank login, email password, or Apple ID password.</p>
+                </div>
+                <label for="kraken-live-api-key">
+                    Kraken API key
+                    <input id="kraken-live-api-key" type="password" autocomplete="off" placeholder="Paste Kraken API key">
+                </label>
+                <label for="kraken-live-api-secret">
+                    Kraken private/secret key
+                    <input id="kraken-live-api-secret" type="password" autocomplete="off" placeholder="Paste Kraken Private Key">
+                </label>
+                <button id="kraken-live-save-key" type="button">Save Key Safely</button>
+                <button id="kraken-live-verify" type="button">Verify Connection</button>
+                <button id="kraken-live-dry-run" type="button">Dry-Run Proof</button>
+                <button id="kraken-live-preview" type="button">Tiny Live Eligibility</button>
+            </div>
+
+            <div class="kraken-live-status-grid">
+                <article><span>Key Saved</span><strong id="kraken-live-key-status">Not Yet</strong><small id="kraken-live-key-note">Save the restricted key first.</small></article>
+                <article><span>Kraken Connection</span><strong id="kraken-live-verify-status">Not Checked</strong><small id="kraken-live-verify-note">Verify after saving.</small></article>
+                <article><span>Dry-Run Proof</span><strong id="kraken-live-dry-run-status">Not Run</strong><small id="kraken-live-dry-run-note">No order endpoint is called.</small></article>
+                <article><span>Tiny Live Eligibility</span><strong id="kraken-live-eligibility-status">Not Eligible Yet</strong><small id="kraken-live-eligibility-note">Build the tiny preview after verification.</small></article>
+            </div>
+
+            <div id="kraken-live-result" class="phase3-results">Click Start Kraken Live Setup Walkthrough. This setup cannot place a live order.</div>
+        </section>
+
         <section class="model-panel phase6e-wizard" id="kraken-api-key-walkthrough">
             <div class="phase6e-hero">
                 <div>
@@ -2762,6 +2857,7 @@
             if (defaultOrder.symbol) document.getElementById('phase6e-symbol').value = defaultOrder.symbol;
             if (defaultOrder.notionalUsd) document.getElementById('phase6e-notional').value = defaultOrder.notionalUsd;
             if (defaultOrder.maxOrderUsd) document.getElementById('phase6e-max-order').value = defaultOrder.maxOrderUsd;
+            renderKrakenLiveSetupStatus();
         }
 
         function phase6EOrderPayload() {
@@ -2942,6 +3038,270 @@
             await loadPhase6DFramework();
         }
 
+        const krakenLiveSetupSteps = [
+            {
+                number: 1,
+                title: 'Create a restricted Kraken spot key',
+                copy: 'Open Kraken Pro, go to Settings, open API, and create a new key named EtherealAI Restricted Spot.',
+                screens: [
+                    ['Screen 1', 'Log in to Kraken Pro and open the profile menu in the upper-right corner.'],
+                    ['Screen 2', 'Choose Settings.'],
+                    ['Screen 3', 'Open API, then choose Create API key.'],
+                    ['Screen 4', 'Name it EtherealAI Restricted Spot.']
+                ]
+            },
+            {
+                number: 2,
+                title: 'Confirm withdrawals and transfers are off',
+                copy: 'On the Kraken permission screen, leave every money-movement permission off. This is the most important safety setting.',
+                screens: [
+                    ['Withdraw Funds', 'Leave this off. EtherealAI should never have withdrawal permission.'],
+                    ['Transfers or funding movement', 'Leave this off. EtherealAI should not move money between accounts.'],
+                    ['Deposit permissions', 'Leave off unless Kraken requires it for display only. It is not needed here.']
+                ]
+            },
+            {
+                number: 3,
+                title: 'Confirm margin, futures, and leverage are off',
+                copy: 'Use a Kraken spot key only. Do not use Kraken Futures, margin, leverage, master, admin, root, or full-access keys.',
+                screens: [
+                    ['Spot only', 'The key should belong to Kraken spot, not Kraken Futures.'],
+                    ['Margin', 'Keep margin off.'],
+                    ['Futures and leverage', 'Keep futures and leverage off.']
+                ]
+            },
+            {
+                number: 4,
+                title: 'Save key into encrypted vault',
+                copy: 'Paste the Kraken API key and Kraken private/secret key into EtherealAI. The values are saved to the encrypted local vault and cleared from the screen.',
+                screens: [
+                    ['Copy from Kraken', 'Copy the API key from Kraken into the first field.'],
+                    ['Copy private key', 'Copy the Kraken private/secret key into the second field.'],
+                    ['Save safely', 'Click Save Key Safely. Do not put these values in notes, screenshots, chat, or email.']
+                ]
+            },
+            {
+                number: 5,
+                title: 'Verify Kraken Connection',
+                copy: 'EtherealAI checks that the key can read the account safely and that dangerous permissions are not detected.',
+                screens: [
+                    ['Click Verify Connection', 'This reads account metadata only.'],
+                    ['Read the result', 'If Kraken rejects the key, the screen tells you whether it looks like a signature, key, permission, or IP issue.'],
+                    ['Fix if needed', 'Rotate the key and repeat the same restricted settings if anything is unsafe.']
+                ]
+            },
+            {
+                number: 6,
+                title: 'Build Tiny Live Preview',
+                copy: 'EtherealAI builds a dry-run preview for one tiny test amount. It estimates fees, slippage, minimum order size, and risk without placing an order.',
+                screens: [
+                    ['Click Dry-Run Proof', 'This proves the exact tiny setup without calling the order endpoint.'],
+                    ['Click Tiny Live Eligibility', 'This shows whether the account is technically ready for a later tiny test.'],
+                    ['Review blockers', 'If blocked, the result tells you exactly what is missing.']
+                ]
+            },
+            {
+                number: 7,
+                title: 'Read the eligibility result',
+                copy: 'If eligible, EtherealAI can prepare locked tiny live test mode later. This setup still does not place an order or unlock autonomous trading.',
+                screens: [
+                    ['Eligible', 'Means the key, balance, rules, dry-run, and safety checks look ready for a later owner-approved tiny test.'],
+                    ['Not eligible', 'Means the screen will show the exact missing item.'],
+                    ['Still locked', 'Live order placement remains blocked until a later explicit approval step.']
+                ]
+            }
+        ];
+        let currentKrakenLiveStep = 1;
+
+        function setKrakenLiveStep(stepNumber, note = '') {
+            currentKrakenLiveStep = Math.min(Math.max(Number(stepNumber || 1), 1), krakenLiveSetupSteps.length);
+            const step = krakenLiveSetupSteps[currentKrakenLiveStep - 1];
+            document.querySelectorAll('[data-kraken-step-card]').forEach(card => {
+                const active = Number(card.dataset.krakenStepCard) === currentKrakenLiveStep;
+                card.classList.toggle('active', active);
+            });
+            document.getElementById('kraken-live-step-number').textContent = `Step ${step.number} of ${krakenLiveSetupSteps.length}`;
+            document.getElementById('kraken-live-step-title').textContent = step.title;
+            document.getElementById('kraken-live-step-copy').textContent = note || step.copy;
+            document.getElementById('kraken-live-screen-list').innerHTML = step.screens.map(item => `
+                <li><strong>${escapeHtml(item[0])}:</strong> ${escapeHtml(item[1])}</li>
+            `).join('');
+        }
+
+        function krakenLiveRequiredConfirmations() {
+            return [
+                ['kraken-live-confirm-created', 'Create a new restricted Kraken spot key.'],
+                ['kraken-live-confirm-read', 'Enable balance and order-history reading permissions.'],
+                ['kraken-live-confirm-modify', 'Enable spot order permission only for future tiny live eligibility.'],
+                ['kraken-live-confirm-withdrawals-off', 'Confirm withdrawals and transfers are off.'],
+                ['kraken-live-confirm-margin-off', 'Confirm margin, futures, and leverage are off.'],
+                ['kraken-live-confirm-ip-2fa', 'Review Kraken account security, 2FA, and IP restriction options.'],
+                ['kraken-live-confirm-private-safe', 'Confirm the key will not be stored in unsafe places.'],
+                ['kraken-live-confirm-no-order', 'Confirm this setup does not place a live order.']
+            ].filter(([id]) => !document.getElementById(id)?.checked).map(([, label]) => label);
+        }
+
+        function syncKrakenLiveChecklistToPhase6E() {
+            const setChecked = (id, value = true) => {
+                const input = document.getElementById(id);
+                if (input) input.checked = value;
+            };
+
+            setChecked('phase6e-check-walkthrough');
+            setChecked('phase6e-check-query-funds');
+            setChecked('phase6e-check-query-open');
+            setChecked('phase6e-check-query-closed');
+            setChecked('phase6e-check-modify');
+            setChecked('phase6e-check-cancel', false);
+            setChecked('phase6e-check-withdraw');
+            setChecked('phase6e-check-deposit', false);
+            setChecked('phase6e-check-transfer');
+            setChecked('phase6e-check-spot');
+            setChecked('phase6e-check-margin');
+            setChecked('phase6e-check-futures');
+            setChecked('phase6e-check-leverage');
+            setChecked('phase6e-check-ip');
+            setChecked('phase6e-check-2fa');
+            setChecked('phase6e-check-master');
+            setChecked('phase6e-check-private-safe');
+            setChecked('phase6e-check-real-money');
+            setChecked('phase6e-check-no-order');
+        }
+
+        function renderKrakenLiveSetupStatus() {
+            const finalStatus = latestPhase6EWizard?.finalStatus || {};
+            const phase6F = latestPhase6F || {};
+            const eligibility = phase6F.tinyLiveEligibility || {};
+            const readiness = latestPhase6FReadiness || latestPhase6EReadiness || phase6F.krakenReadiness || {};
+            const dryRun = latestPhase6EDryRunProof || phase6F.dryRunProof || {};
+
+            document.getElementById('kraken-live-key-status').textContent = latestPhase6EWizard?.credentialSaved || phase6F.credentialSaved ? 'Saved' : 'Not Yet';
+            document.getElementById('kraken-live-key-note').textContent = latestPhase6EWizard?.apiKeyFingerprint ? `Fingerprint ${latestPhase6EWizard.apiKeyFingerprint}` : 'Save the restricted key first.';
+            document.getElementById('kraken-live-verify-status').textContent = readiness.criticalPassed ? 'Verified' : (readiness.status || 'Not Checked');
+            document.getElementById('kraken-live-verify-note').textContent = readiness.plainEnglishStatus || phase6F.authIssue?.plainEnglish || 'Verify after saving.';
+            document.getElementById('kraken-live-dry-run-status').textContent = dryRun.passed ? 'Passed' : (finalStatus.label || 'Not Run');
+            document.getElementById('kraken-live-dry-run-note').textContent = dryRun.plainEnglishStatus || finalStatus.plainEnglish || 'No order endpoint is called.';
+            document.getElementById('kraken-live-eligibility-status').textContent = eligibility.label || finalStatus.label || 'Not Eligible Yet';
+            document.getElementById('kraken-live-eligibility-note').textContent = eligibility.nextClick || finalStatus.nextClick || 'Build the tiny preview after verification.';
+        }
+
+        async function startKrakenLiveSetupWalkthrough() {
+            document.getElementById('kraken-live-result').innerHTML = `
+                <article class="phase6f-check-item status-info">
+                    <strong>Kraken setup walkthrough started</strong>
+                    <p>Follow the visible steps from top to bottom. This setup cannot place a live order.</p>
+                    <small>Next: create the restricted Kraken spot key and confirm the permission boxes.</small>
+                </article>
+            `;
+            setKrakenLiveStep(1);
+            await ensureProductionConnector('kraken');
+            await loadPhase6EWalkthrough();
+            await loadPhase6FStatus();
+            document.getElementById('kraken-live-setup-walkthrough').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function saveKrakenLiveSetupKey() {
+            const output = document.getElementById('kraken-live-result');
+            const apiKey = document.getElementById('kraken-live-api-key').value.trim();
+            const apiSecret = document.getElementById('kraken-live-api-secret').value.trim();
+            const missing = krakenLiveRequiredConfirmations();
+
+            if (!apiKey) missing.push('Paste the Kraken API key.');
+            if (!apiSecret) missing.push('Paste the Kraken private/secret key.');
+
+            if (missing.length) {
+                setKrakenLiveStep(4, 'Finish the missing items below before saving the key.');
+                output.innerHTML = `
+                    <article class="phase6f-check-item status-warning">
+                        <strong>Key not saved yet</strong>
+                        <p>Finish these visible items first:</p>
+                        <ul>${missing.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+                        <small>No live order was placed. No order endpoint was called.</small>
+                    </article>
+                `;
+                return;
+            }
+
+            syncKrakenLiveChecklistToPhase6E();
+            output.textContent = 'Saving key to encrypted local vault. Secret values will be cleared from the screen.';
+            await ensureProductionConnector('kraken');
+            const response = await fetch('/api/v1/live-trading-launch/phase6e/save-kraken-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    apiKey,
+                    apiSecret,
+                    permissionsChecklist: phase6EPermissionsChecklist()
+                })
+            });
+            const data = await response.json();
+            document.getElementById('kraken-live-api-key').value = '';
+            document.getElementById('kraken-live-api-secret').value = '';
+
+            if (!response.ok) {
+                output.innerHTML = `
+                    <article class="phase6f-check-item status-warning">
+                        <strong>Key was not saved</strong>
+                        <p>${escapeHtml(data.error || 'Review the visible checklist and key fields.')}</p>
+                        <small>${escapeHtml((data.missing || []).join(' · ') || data.nextClick || 'Complete the checklist, then save again.')} No live order was placed.</small>
+                    </article>
+                `;
+                if (data.wizard) renderPhase6EWalkthrough(data);
+                return;
+            }
+
+            renderPhase6EWalkthrough(data);
+            setKrakenLiveStep(5, 'Key saved. Now verify the Kraken connection.');
+            output.innerHTML = `
+                <article class="phase6f-check-item status-success">
+                    <strong>Key saved safely</strong>
+                    <p>Secret values were saved to the encrypted local vault and cleared from the screen.</p>
+                    <small>Next: click Verify Connection. No live order was placed.</small>
+                </article>
+            `;
+            await loadPhase6FStatus();
+            await loadPhase6Status();
+        }
+
+        async function verifyKrakenLiveSetupConnection() {
+            setKrakenLiveStep(5);
+            await phase6FVerifyKraken();
+            renderKrakenLiveSetupStatus();
+            document.getElementById('kraken-live-result').innerHTML = `
+                <article class="phase6f-check-item ${latestPhase6FReadiness?.criticalPassed ? 'status-success' : 'status-warning'}">
+                    <strong>${latestPhase6FReadiness?.criticalPassed ? 'Connection verified' : 'Connection needs review'}</strong>
+                    <p>${escapeHtml(latestPhase6FReadiness?.plainEnglishStatus || latestPhase6F?.authIssue?.plainEnglish || 'Read the Kraken Connection result below.')}</p>
+                    <small>No live order was placed. No order endpoint was called.</small>
+                </article>
+            `;
+        }
+
+        async function runKrakenLiveSetupDryRun() {
+            setKrakenLiveStep(6);
+            await runPhase6EKrakenDryRun();
+            renderKrakenLiveSetupStatus();
+            document.getElementById('kraken-live-result').innerHTML = `
+                <article class="phase6f-check-item ${latestPhase6EDryRunProof?.passed ? 'status-success' : 'status-warning'}">
+                    <strong>${latestPhase6EDryRunProof?.passed ? 'Dry-run proof passed' : 'Dry-run proof needs review'}</strong>
+                    <p>${escapeHtml(latestPhase6EPreflight?.plainEnglishStatus || latestPhase6EDryRunProof?.plainEnglishStatus || 'Review the dry-run proof result below.')}</p>
+                    <small>No live order was placed. No order endpoint was called.</small>
+                </article>
+            `;
+        }
+
+        async function buildKrakenLiveSetupEligibility() {
+            setKrakenLiveStep(7);
+            await phase6FBuildPreview();
+            renderKrakenLiveSetupStatus();
+            document.getElementById('kraken-live-result').innerHTML = `
+                <article class="phase6f-check-item ${latestPhase6F?.tinyLiveEligibility?.eligible ? 'status-success' : 'status-warning'}">
+                    <strong>${escapeHtml(latestPhase6F?.tinyLiveEligibility?.label || 'Eligibility not ready yet')}</strong>
+                    <p>${escapeHtml(latestPhase6F?.tinyLiveEligibility?.eligible ? 'Tiny live test mode is eligible to prepare, but execution remains blocked.' : 'Review the missing item shown in the eligibility result.')}</p>
+                    <small>${escapeHtml(latestPhase6F?.tinyLiveEligibility?.nextClick || 'Fix the visible blocker.')} No live order was placed.</small>
+                </article>
+            `;
+        }
+
         function renderPhase6FItems(items = []) {
             return items.map(item => `
                 <article class="phase6f-check-item ${phase6CStatusClass(item.status)}">
@@ -3030,6 +3390,7 @@
             if (defaultOrder.symbol) document.getElementById('phase6f-symbol').value = defaultOrder.symbol;
             if (defaultOrder.notionalUsd) document.getElementById('phase6f-notional').value = defaultOrder.notionalUsd;
             if (defaultOrder.maxOrderUsd) document.getElementById('phase6f-max-order').value = defaultOrder.maxOrderUsd;
+            renderKrakenLiveSetupStatus();
         }
 
         function phase6FOrderPayload() {
@@ -3160,14 +3521,30 @@
             phase6FEnableTinyLiveMode
         };
 
+        window.EtherealAIKrakenLiveSetup = {
+            startKrakenLiveSetupWalkthrough,
+            saveKrakenLiveSetupKey,
+            verifyKrakenLiveSetupConnection,
+            runKrakenLiveSetupDryRun,
+            buildKrakenLiveSetupEligibility,
+            setKrakenLiveStep
+        };
+
         document.addEventListener('click', event => {
             const action = event.target?.closest?.(
-                '#phase6e-start, #phase6e-save-key, #phase6e-delete-key, #phase6e-verify-key, #phase6e-dry-run, #phase6f-refresh, #phase6f-verify, #phase6f-preview, #phase6f-enable'
+                '#start-kraken-live-setup, #kraken-live-prev-step, #kraken-live-next-step, #kraken-live-save-key, #kraken-live-verify, #kraken-live-dry-run, #kraken-live-preview, #phase6e-start, #phase6e-save-key, #phase6e-delete-key, #phase6e-verify-key, #phase6e-dry-run, #phase6f-refresh, #phase6f-verify, #phase6f-preview, #phase6f-enable'
             );
             if (!action) return;
 
             event.preventDefault();
             const actions = {
+                'start-kraken-live-setup': startKrakenLiveSetupWalkthrough,
+                'kraken-live-prev-step': () => setKrakenLiveStep(currentKrakenLiveStep - 1),
+                'kraken-live-next-step': () => setKrakenLiveStep(currentKrakenLiveStep + 1),
+                'kraken-live-save-key': saveKrakenLiveSetupKey,
+                'kraken-live-verify': verifyKrakenLiveSetupConnection,
+                'kraken-live-dry-run': runKrakenLiveSetupDryRun,
+                'kraken-live-preview': buildKrakenLiveSetupEligibility,
                 'phase6e-start': startPhase6EWalkthrough,
                 'phase6e-save-key': savePhase6EKrakenKey,
                 'phase6e-delete-key': deletePhase6EKrakenKey,
