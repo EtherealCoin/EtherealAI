@@ -88,12 +88,12 @@
         '/live-trading-launch': {
             area: 'Live Trading Launch Center',
             title: 'Start Live Setup Safely Without Unlocking Autonomy',
-            summary: 'Use the guided wizard to connect one exchange, verify permissions, run a production dry-run, and prepare one tiny live test. Withdrawals, wallet signing, margin, futures, leverage, and autonomous scaling stay locked.',
-            primaryAction: { label: 'Start Phase 6C Safely', selector: '#phase6c-start-safe' },
-            keepIds: ['live-trading-activation-wizard', 'real-credential-dry-run-proof', 'live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center'],
-            keepHeadings: ['What Should I Do Next?', 'Live Trading Activation Wizard', 'Exchange Verification Checklist', 'Read-Only Arbitrage Scanner', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center', 'Phase 6: Production Trading Command Center'],
+            summary: 'Use the guided wizard to connect Kraken first, verify permissions, run a production dry-run, prepare one tiny live framework, and keep withdrawals, wallet signing, margin, futures, leverage, and autonomous scaling locked.',
+            primaryAction: { label: 'Start Phase 6D Safely', selector: '#phase6d-start-safe' },
+            keepIds: ['live-trading-activation-wizard', 'real-credential-dry-run-proof', 'kraken-tiny-live-framework', 'live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center'],
+            keepHeadings: ['What Should I Do Next?', 'Live Trading Activation Wizard', 'Exchange Verification Checklist', 'Phase 6D: Kraken Authenticated Readiness And Tiny Live Test Framework', 'Read-Only Arbitrage Scanner', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center', 'Phase 6: Production Trading Command Center'],
             readyLabel: 'Live Trading Launch Locked Safely',
-            nextText: 'Click Start Phase 6C Safely. The wizard walks through one Kraken-first exchange connection, encrypted vault storage, real credential verification, production dry-run proof, and tiny live eligibility while keeping live orders locked.',
+            nextText: 'Click Start Phase 6D Safely. The wizard walks through one Kraken-first exchange connection, authenticated readiness, production preflight, simulation preview, and a one-order framework while keeping live orders locked.',
             cards: [
                 ['Guided activation', 'One exchange first, one visible next step, no raw developer workflow.'],
                 ['Read-only expansion', 'Fetch public and authenticated read-only data without placing orders.'],
@@ -107,8 +107,9 @@
                 ['2. Save restricted API key', 'Open the official exchange key page, disable withdrawals/transfers, then save to the encrypted local vault.', { label: 'Open Key Panel', selector: '#phase6b-open-key-panel' }],
                 ['3. Test this exchange', 'Read account metadata only and verify withdrawals are disabled.', { label: 'Test This Exchange', selector: '#phase6b-test-exchange' }],
                 ['4. Run production dry-run', 'Simulate the exact tiny order without calling the production order endpoint.', { label: 'Run Guided Production Dry-Run', selector: '#phase6b-run-dry-run' }],
-                ['5. Prepare tiny live test', 'Review what is still locked before any manual final confirmation.', { label: 'Prepare Tiny Live Test', selector: '#phase6b-prepare-tiny-live' }],
-                ['6. Emergency stop', 'Disable production approvals and live connector flags if anything looks unsafe.', { label: 'Emergency Stop Production', selector: '#phase6-emergency-stop' }]
+                ['5. Prepare tiny live test', 'Create the one-order framework with no loops, no retry automation, and no scaling.', { label: 'Prepare Tiny Live Test', selector: '#phase6d-prepare' }],
+                ['6. Validate preflight', 'Check balances, minimum order size, fees, slippage, kill switch, emergency stop, and endpoint lock.', { label: 'Validate Tiny Live Test', selector: '#phase6d-validate' }],
+                ['7. Emergency stop', 'Disable production approvals and live connector flags if anything looks unsafe.', { label: 'Emergency Stop Production', selector: '#phase6d-emergency-stop' }]
             ]
         },
         '/operator-control': {

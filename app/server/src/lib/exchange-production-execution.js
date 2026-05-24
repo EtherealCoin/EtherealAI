@@ -199,6 +199,34 @@ const PHASE6_PRODUCTION_ADAPTERS = {
 
 const PHASE6B_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
 const PHASE6C_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
+const PHASE6D_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
+const PHASE6D_ARM_CONFIRMATION_PHRASE = 'I ARM KRAKEN TINY LIVE TEST FRAMEWORK';
+
+const DEFAULT_PHASE6D_TINY_LIVE_POLICY = {
+  exchangeName: 'kraken',
+  defaultSymbol: 'BTC/USD',
+  defaultOrderSide: 'buy',
+  defaultOrderType: 'limit',
+  defaultTinyOrderUsd: 1,
+  maxOrderSizeUsd: 5,
+  oneOrderOnly: true,
+  noLoops: true,
+  noAutonomousRetry: true,
+  noScaling: true,
+  noRecurringTrades: true,
+  requireAuthenticatedReadiness: true,
+  requireProductionDryRunProof: true,
+  requirePreflightValidation: true,
+  requireExplicitTypedOwnerApproval: true,
+  withdrawalsEnabled: false,
+  transfersEnabled: false,
+  walletSigningEnabled: false,
+  marginEnabled: false,
+  futuresEnabled: false,
+  leverageEnabled: false,
+  autonomousTradingEnabled: false,
+  productionOrderEndpointEnabled: false
+};
 
 const PHASE6B_ACTIVATION_EXCHANGE_GUIDES = {
   binance: {
@@ -3057,6 +3085,844 @@ function buildPhase6CWizard({
   };
 }
 
+function buildPhase6DChecklistItem({ id, label, passed, statusWhenFalse = 'Missing', plainEnglish, nextClick }) {
+  return {
+    id,
+    label,
+    passed: Boolean(passed),
+    status: passed ? 'SAFE' : statusWhenFalse,
+    plainEnglish,
+    nextClick: passed ? 'No action needed.' : nextClick
+  };
+}
+
+function getPhase6DTinyLivePolicy(policy = {}) {
+  return {
+    ...DEFAULT_PHASE6D_TINY_LIVE_POLICY,
+    ...(policy || {}),
+    exchangeName: 'kraken',
+    oneOrderOnly: true,
+    noLoops: true,
+    noAutonomousRetry: true,
+    noScaling: true,
+    noRecurringTrades: true,
+    withdrawalsEnabled: false,
+    transfersEnabled: false,
+    walletSigningEnabled: false,
+    marginEnabled: false,
+    futuresEnabled: false,
+    leverageEnabled: false,
+    autonomousTradingEnabled: false,
+    productionOrderEndpointEnabled: false
+  };
+}
+
+function detectKrakenMasterKeySignal(permissions = {}) {
+  const keyName = String(permissions?.keyName || '').toLowerCase();
+  const tokens = Array.isArray(permissions?.permissionTokens) ? permissions.permissionTokens : [];
+  const tokenText = tokens.join(' ');
+
+  return /master|root|owner|admin|all access|full access/.test(`${keyName} ${tokenText}`);
+}
+
+async function fetchKrakenPrivateProof({ credentials, adapter, requestPath, params = {}, label }) {
+  const signed = signKrakenRequest({
+    credentials,
+    requestPath,
+    params: {
+      nonce: Date.now(),
+      ...params
+    }
+  });
+  const response = await fetchJson(`${adapter.baseUrl}${requestPath}`, {
+    method: 'POST',
+    headers: signed.headers,
+    body: signed.body
+  });
+
+  return throwIfKrakenError(response, label || requestPath);
+}
+
+async function fetchKrakenOptionalPrivateProof({ credentials, adapter, requestPath, params = {}, label }) {
+  try {
+    return {
+      loaded: true,
+      result: await fetchKrakenPrivateProof({ credentials, adapter, requestPath, params, label }),
+      warning: ''
+    };
+  } catch (error) {
+    return {
+      loaded: false,
+      result: null,
+      warning: createPlainEnglishProductionError('kraken', error)
+    };
+  }
+}
+
+async function fetchKrakenSystemStatus({ adapter }) {
+  try {
+    const status = await fetchJson(`${adapter.baseUrl}/0/public/SystemStatus`);
+    const result = throwIfKrakenError(status, 'Kraken system status');
+
+    return {
+      loaded: true,
+      status: result.status || 'unknown',
+      timestamp: result.timestamp || new Date().toISOString(),
+      plainEnglish: result.status === 'online'
+        ? 'Kraken reports the spot API is online.'
+        : `Kraken system status is ${result.status || 'unknown'}.`
+    };
+  } catch (error) {
+    return {
+      loaded: false,
+      status: 'unknown',
+      timestamp: new Date().toISOString(),
+      plainEnglish: createPlainEnglishProductionError('kraken', error)
+    };
+  }
+}
+
+async function runKrakenAuthenticatedIntegration({ credentials, adapter, orderInput = {}, policy = {} } = {}) {
+  const effectivePolicy = getPhase6DTinyLivePolicy(policy);
+  const krakenAdapter = adapter || PHASE6_PRODUCTION_ADAPTERS.kraken;
+  const order = normalizeProductionOrderDraft({
+    exchangeName: 'kraken',
+    symbol: effectivePolicy.defaultSymbol,
+    side: effectivePolicy.defaultOrderSide,
+    orderType: effectivePolicy.defaultOrderType,
+    notionalUsd: effectivePolicy.defaultTinyOrderUsd,
+    maxOrderUsd: effectivePolicy.maxOrderSizeUsd,
+    ...(orderInput || {})
+  });
+
+  if (!krakenAdapter || krakenAdapter.exchangeName !== 'kraken') {
+    return {
+      exchangeName: 'kraken',
+      displayName: 'Kraken',
+      phase: 'Phase 6D',
+      status: 'Unsupported',
+      passed: false,
+      criticalPassed: false,
+      plainEnglishStatus: 'Phase 6D is intentionally scoped to Kraken first.',
+      checklist: [
+        buildPhase6DChecklistItem({
+          id: 'kraken_selected',
+          label: 'Kraken selected',
+          passed: false,
+          plainEnglish: 'Choose Kraken for the first real authenticated exchange path.',
+          nextClick: 'Choose Kraken.'
+        })
+      ],
+      safetyBoundary: createProductionSafetyBoundary(false)
+    };
+  }
+
+  if (!credentials) {
+    return {
+      exchangeName: 'kraken',
+      displayName: 'Kraken',
+      phase: 'Phase 6D',
+      status: 'Not Connected',
+      passed: false,
+      criticalPassed: false,
+      plainEnglishStatus: 'No restricted Kraken production key is saved in the encrypted local vault.',
+      order,
+      checklist: [
+        buildPhase6DChecklistItem({
+          id: 'api_key_saved',
+          label: 'Restricted Kraken API key saved',
+          passed: false,
+          plainEnglish: 'Save a Kraken key in the encrypted production vault. Do not enable withdrawals, transfers, margin, futures, or leverage.',
+          nextClick: 'Click Add API Key Safely.'
+        })
+      ],
+      safetyBoundary: createProductionSafetyBoundary(false)
+    };
+  }
+
+  const credentialVerification = await verifyProductionExchangeCredentials({
+    credentials,
+    adapter: krakenAdapter,
+    orderInput: order
+  });
+  const systemStatus = await fetchKrakenSystemStatus({ adapter: krakenAdapter });
+  const tradeBalance = await fetchKrakenOptionalPrivateProof({
+    credentials,
+    adapter: krakenAdapter,
+    requestPath: '/0/private/TradeBalance',
+    params: { asset: order.quoteAsset || 'USD' },
+    label: 'Kraken trade balance'
+  });
+  const openOrders = await fetchKrakenOptionalPrivateProof({
+    credentials,
+    adapter: krakenAdapter,
+    requestPath: '/0/private/OpenOrders',
+    label: 'Kraken open orders'
+  });
+  const permissions = credentialVerification.proof?.permissions || {};
+  const masterKeyDetected = detectKrakenMasterKeySignal(permissions);
+  const withdrawalUnsafe = credentialVerification.withdrawalPermissionDetected === true;
+  const marginUnsafe = credentialVerification.marginOrLeverageDetected === true;
+  const futuresUnsafe = credentialVerification.futuresDetected === true;
+  const balancesReadable = credentialVerification.balancesReadable === true;
+  const feesLoaded = credentialVerification.feesLoaded === true;
+  const symbolRulesLoaded = credentialVerification.symbolRulesLoaded === true;
+  const orderPrecisionLoaded = Number(credentialVerification.proof?.symbolRules?.priceDecimals ?? NaN) >= 0
+    && Number(credentialVerification.proof?.symbolRules?.quantityDecimals ?? NaN) >= 0;
+  const accountStatusLoaded = systemStatus.loaded === true;
+  const connected = credentialVerification.connectionStatus === 'production_account_verified';
+  const unsafe = withdrawalUnsafe || marginUnsafe || futuresUnsafe || masterKeyDetected;
+  const checklist = [
+    buildPhase6DChecklistItem({
+      id: 'kraken_authenticated',
+      label: 'Kraken authenticated',
+      passed: connected,
+      plainEnglish: connected ? 'Kraken accepted the key for authenticated account reads.' : 'Kraken did not accept the key yet.',
+      nextClick: 'Save or rotate the restricted Kraken key, then run readiness again.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'balances_readable',
+      label: 'Balances readable',
+      passed: balancesReadable,
+      plainEnglish: balancesReadable ? 'Kraken balance data was read without placing an order.' : 'Balance read access is missing.',
+      nextClick: 'Enable Query Funds / balance read permission on the Kraken key.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'fee_schedule_loaded',
+      label: credentialVerification.exactFeesLoaded ? 'Fee schedule loaded' : 'Conservative fee schedule loaded',
+      passed: feesLoaded,
+      statusWhenFalse: 'Review Needed',
+      plainEnglish: credentialVerification.exactFeesLoaded ? 'Account-specific maker/taker fees were loaded.' : 'Exact fees were not confirmed; EtherealAI will use conservative fee assumptions.',
+      nextClick: 'Keep conservative fee assumptions or enable fee-volume read permission.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'minimum_order_rules',
+      label: 'Minimum order rules loaded',
+      passed: symbolRulesLoaded && credentialVerification.minimumOrderLoaded === true,
+      plainEnglish: symbolRulesLoaded ? 'Kraken pair minimums and precision are available for preflight checks.' : 'Kraken pair rules are missing.',
+      nextClick: 'Use BTC/USD, ETH/USD, or another supported spot pair and run readiness again.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'order_precision',
+      label: 'Order precision loaded',
+      passed: orderPrecisionLoaded,
+      plainEnglish: orderPrecisionLoaded ? 'Price and quantity decimal limits are available.' : 'Price or quantity precision is missing.',
+      nextClick: 'Refresh Kraken pair metadata.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'account_status',
+      label: 'Exchange/account status checked',
+      passed: accountStatusLoaded && systemStatus.status !== 'maintenance',
+      statusWhenFalse: 'Review Needed',
+      plainEnglish: systemStatus.plainEnglish,
+      nextClick: 'Wait until Kraken reports online status, then rerun readiness.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'permissions_validated',
+      label: 'Permissions validated',
+      passed: connected && !unsafe,
+      statusWhenFalse: unsafe ? 'BLOCKED' : 'Missing',
+      plainEnglish: unsafe
+        ? 'The key has an unsafe signal. Delete it and recreate it without withdrawals, transfers, margin, futures, leverage, or master/full-access naming.'
+        : 'No unsafe permission signal was detected.',
+      nextClick: 'Use a restricted Kraken key only.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'withdrawals_blocked',
+      label: 'Withdrawals blocked',
+      passed: connected && !withdrawalUnsafe,
+      statusWhenFalse: withdrawalUnsafe ? 'BLOCKED' : 'Missing',
+      plainEnglish: !withdrawalUnsafe && connected ? 'Withdrawal permission is not detected.' : 'Withdrawal safety is not proven.',
+      nextClick: 'Delete the API key on Kraken and recreate it with Withdraw Funds disabled.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'no_margin_futures_leverage',
+      label: 'No margin, futures, or leverage',
+      passed: connected && !marginUnsafe && !futuresUnsafe,
+      statusWhenFalse: marginUnsafe || futuresUnsafe ? 'BLOCKED' : 'Missing',
+      plainEnglish: !marginUnsafe && !futuresUnsafe && connected ? 'The key is treated as spot-only.' : 'Margin/futures/leverage safety is not proven.',
+      nextClick: 'Recreate the key as spot-only.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'read_open_orders_optional',
+      label: 'Open-order read checked',
+      passed: openOrders.loaded,
+      statusWhenFalse: 'Review Needed',
+      plainEnglish: openOrders.loaded ? 'Open-order read access responded.' : openOrders.warning || 'Open-order read permission did not respond.',
+      nextClick: 'Enable order-query permission if you want order tracking before the tiny live path.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'rate_limit_model',
+      label: 'Rate limits modeled',
+      passed: true,
+      plainEnglish: 'Phase 6D uses owner-clicked requests only and does not start polling or trading loops.',
+      nextClick: 'No action needed.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'live_endpoint_locked',
+      label: 'Live order endpoint locked',
+      passed: true,
+      plainEnglish: 'Phase 6D readiness never calls Kraken AddOrder.',
+      nextClick: 'No action needed.'
+    })
+  ];
+  const criticalPassed = checklist
+    .filter(item => !['fee_schedule_loaded', 'read_open_orders_optional'].includes(item.id))
+    .every(item => item.passed)
+    && !unsafe;
+
+  return {
+    exchangeName: 'kraken',
+    displayName: 'Kraken',
+    phase: 'Phase 6D',
+    status: unsafe
+      ? 'Unsafe Permissions Detected'
+      : criticalPassed
+        ? 'Kraken Authenticated Readiness Passed'
+        : 'Kraken Authenticated Readiness Blocked',
+    passed: criticalPassed,
+    criticalPassed,
+    order,
+    credentialVerification,
+    permissions,
+    masterKeyDetected,
+    withdrawalPermissionDetected: withdrawalUnsafe,
+    marginOrLeverageDetected: marginUnsafe,
+    futuresDetected: futuresUnsafe,
+    balancesReadable,
+    balances: credentialVerification.balances || [],
+    feesLoaded,
+    exactFeesLoaded: credentialVerification.exactFeesLoaded === true,
+    symbolRulesLoaded,
+    minimumOrderLoaded: credentialVerification.minimumOrderLoaded === true,
+    orderPrecisionLoaded,
+    rateLimits: {
+      loaded: true,
+      source: 'Kraken REST private endpoint counter model',
+      ownerClickedOnly: true,
+      backgroundPollingEnabled: false,
+      plainEnglish: 'No background trading or polling loop is started by Phase 6D.'
+    },
+    accountStatus: {
+      loaded: systemStatus.loaded,
+      status: systemStatus.status,
+      plainEnglish: systemStatus.plainEnglish,
+      tradeBalanceLoaded: tradeBalance.loaded,
+      openOrdersLoaded: openOrders.loaded,
+      tradeBalanceWarning: tradeBalance.warning || '',
+      openOrdersWarning: openOrders.warning || ''
+    },
+    proofSources: [
+      'Kraken /0/private/Balance',
+      'Kraken /0/private/GetApiKeyInfo',
+      'Kraken /0/public/AssetPairs',
+      'Kraken /0/private/TradeVolume when permission allows',
+      'Kraken /0/private/TradeBalance when permission allows',
+      'Kraken /0/private/OpenOrders when permission allows',
+      'Kraken /0/public/SystemStatus',
+      'Kraken /0/public/Ticker',
+      'Kraken /0/public/Depth'
+    ],
+    checklist,
+    checksPassed: checklist.filter(item => item.passed).map(item => item.label),
+    checksFailed: checklist.filter(item => !item.passed).map(item => `${item.label}: ${item.plainEnglish}`),
+    plainEnglishStatus: unsafe
+      ? 'The Kraken key is unsafe for EtherealAI. Delete it and recreate a restricted key before continuing.'
+      : criticalPassed
+        ? 'Kraken authenticated readiness passed. Balances, permissions, symbol rules, fee model, market data, and safety locks are ready for dry-run validation.'
+        : 'Kraken authenticated readiness is still blocked. Fix the visible checklist before preparing a tiny live test.',
+    nextClick: criticalPassed ? 'Prepare Tiny Live Test.' : checklist.find(item => !item.passed)?.nextClick || 'Fix the blocked item and rerun readiness.',
+    productionOrderEndpointCalled: false,
+    productionOrderEndpointEnabled: false,
+    safetyBoundary: createProductionSafetyBoundary(false)
+  };
+}
+
+function buildPhase6DLiveOrderSimulationPreview({
+  order,
+  krakenReadiness = null,
+  dryRunProof = null,
+  policy = {}
+} = {}) {
+  const effectivePolicy = getPhase6DTinyLivePolicy(policy);
+  const normalizedOrder = normalizeProductionOrderDraft({
+    exchangeName: 'kraken',
+    symbol: effectivePolicy.defaultSymbol,
+    side: effectivePolicy.defaultOrderSide,
+    orderType: effectivePolicy.defaultOrderType,
+    notionalUsd: effectivePolicy.defaultTinyOrderUsd,
+    maxOrderUsd: effectivePolicy.maxOrderSizeUsd,
+    ...(order || {})
+  });
+  const verification = krakenReadiness?.credentialVerification || krakenReadiness || {};
+  const proof = verification.proof || {};
+  const marketData = proof.marketData || {};
+  const symbolRules = proof.symbolRules || {};
+  const fees = proof.fees || {};
+  const feePercent = Number(
+    fees.takerFeePercent
+      ?? fees.fallbackFeePercent
+      ?? krakenReadiness?.credentialVerification?.proof?.fees?.fallbackFeePercent
+      ?? 0.26
+  );
+  const expectedFillPrice = Number(normalizedOrder.limitPrice || 0) > 0
+    ? Number(normalizedOrder.limitPrice)
+    : normalizedOrder.side === 'buy'
+      ? Number(marketData.askPrice || marketData.midPrice || 0)
+      : Number(marketData.bidPrice || marketData.midPrice || 0);
+  const orderNotional = Number(normalizedOrder.notionalUsd || normalizedOrder.quantity * expectedFillPrice || effectivePolicy.defaultTinyOrderUsd);
+  const expectedQuantity = Number(normalizedOrder.quantity || (expectedFillPrice > 0 ? orderNotional / expectedFillPrice : 0));
+  const expectedFeesUsd = Number(((orderNotional * feePercent) / 100).toFixed(8));
+  const slippagePercent = Number(marketData.estimatedSlippagePercent ?? 0.05);
+  const spreadPercent = Number(marketData.spreadPercent ?? 0);
+  const requiredAsset = normalizedOrder.side === 'sell' ? normalizedOrder.baseAsset : normalizedOrder.quoteAsset;
+  const availableBalance = findAvailableBalanceForAsset(krakenReadiness?.balances || verification.balances || [], requiredAsset);
+  const requiredBalance = normalizedOrder.side === 'sell' ? expectedQuantity : orderNotional + expectedFeesUsd;
+  const estimatedRemainingBalance = Number((availableBalance - requiredBalance).toFixed(8));
+  const minOrderSize = Number(symbolRules.minOrderSize || 0);
+  const minNotionalUsd = Number(symbolRules.minNotionalUsd || 0);
+  const abortConditions = [];
+
+  if (!expectedFillPrice) abortConditions.push('Live Kraken price is not loaded.');
+  if (orderNotional > Number(effectivePolicy.maxOrderSizeUsd || 0)) abortConditions.push(`Tiny order value exceeds the Phase 6D maximum of $${Number(effectivePolicy.maxOrderSizeUsd || 0).toFixed(2)}.`);
+  if (expectedQuantity < minOrderSize && minOrderSize > 0) abortConditions.push('Expected quantity is below Kraken minimum order size.');
+  if (orderNotional < minNotionalUsd && minNotionalUsd > 0) abortConditions.push('Expected notional value is below Kraken minimum order value.');
+  if (availableBalance < requiredBalance) abortConditions.push(`${requiredAsset} balance is not sufficient for the previewed tiny order.`);
+  if (slippagePercent > Number(effectivePolicy.maxSlippagePercent ?? DEFAULT_PHASE6_POLICY.maxSlippagePercent)) abortConditions.push('Estimated slippage is above the configured tolerance.');
+  if (krakenReadiness?.criticalPassed !== true) abortConditions.push('Kraken authenticated readiness has not passed.');
+  if (dryRunProof?.passed !== true) abortConditions.push('Production dry-run proof has not passed.');
+
+  return {
+    title: 'Live Order Simulation Preview',
+    phase: 'Phase 6D',
+    status: abortConditions.length ? 'BLOCKED' : 'READY',
+    plainEnglishStatus: abortConditions.length
+      ? 'The tiny live preview is blocked. No production order endpoint was called.'
+      : 'The tiny live preview is ready for owner review. The production order endpoint remains locked.',
+    exchange: 'Kraken',
+    symbol: normalizedOrder.symbol,
+    side: normalizedOrder.side,
+    orderType: normalizedOrder.orderType,
+    expectedFillPrice,
+    expectedFeesUsd,
+    feePercent,
+    expectedSlippagePercent: slippagePercent,
+    expectedSpreadPercent: spreadPercent,
+    expectedQuantity,
+    expectedNotionalUsd: orderNotional,
+    expectedRemainingBalance: {
+      asset: requiredAsset,
+      availableBefore: availableBalance,
+      required: requiredBalance,
+      estimatedAfter: estimatedRemainingBalance
+    },
+    estimatedLatencyRisk: Number(effectivePolicy.maxLatencyMs || DEFAULT_PHASE6_POLICY.maxLatencyMs) <= 1000
+      ? 'Low if refreshed immediately before final owner approval.'
+      : 'Review latency before any future live order.',
+    abortConditions,
+    dryRunProofPassed: dryRunProof?.passed === true,
+    productionOrderEndpointCalled: false,
+    productionOrderEndpointEnabled: false,
+    safetyBoundary: createProductionSafetyBoundary(false)
+  };
+}
+
+function buildPhase6DProductionPreflight({
+  order,
+  krakenReadiness = null,
+  dryRunProof = null,
+  riskProfile = null,
+  simulationPreview = null,
+  ownerApprovalTyped = false,
+  emergencyStopAvailable = true,
+  policy = {}
+} = {}) {
+  const effectivePolicy = getPhase6DTinyLivePolicy(policy);
+  const normalizedOrder = normalizeProductionOrderDraft({
+    exchangeName: 'kraken',
+    symbol: effectivePolicy.defaultSymbol,
+    side: effectivePolicy.defaultOrderSide,
+    orderType: effectivePolicy.defaultOrderType,
+    notionalUsd: effectivePolicy.defaultTinyOrderUsd,
+    maxOrderUsd: effectivePolicy.maxOrderSizeUsd,
+    ...(order || {})
+  });
+  const preview = simulationPreview || buildPhase6DLiveOrderSimulationPreview({
+    order: normalizedOrder,
+    krakenReadiness,
+    dryRunProof,
+    policy: effectivePolicy
+  });
+  const accountStatusOnline = ['online', 'unknown'].includes(String(krakenReadiness?.accountStatus?.status || '').toLowerCase())
+    && krakenReadiness?.accountStatus?.status !== 'maintenance';
+  const riskActive = Boolean(riskProfile?.id) && riskProfile.status === 'active';
+  const killSwitchOff = riskActive && Number(riskProfile?.kill_switch_enabled || 0) === 0;
+  const feeImpactPercent = Number(preview.feePercent || 0) + Number(preview.expectedSlippagePercent || 0);
+  const checks = [
+    buildPhase6DChecklistItem({
+      id: 'balances_verified',
+      label: 'Balances verified',
+      passed: krakenReadiness?.balancesReadable === true && !preview.abortConditions.some(item => /balance/i.test(item)),
+      plainEnglish: 'Kraken balances must be readable and sufficient for the tiny preview.',
+      nextClick: 'Lower the tiny amount or fund the spot account.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'minimum_order_size',
+      label: 'Minimum order size verified',
+      passed: !preview.abortConditions.some(item => /minimum|notional/i.test(item)),
+      plainEnglish: 'The tiny order must satisfy Kraken minimum size and notional rules.',
+      nextClick: 'Increase the tiny amount to the exchange minimum.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'exchange_status',
+      label: 'Exchange status verified',
+      passed: accountStatusOnline,
+      statusWhenFalse: 'Review Needed',
+      plainEnglish: krakenReadiness?.accountStatus?.plainEnglish || 'Kraken status is not loaded.',
+      nextClick: 'Wait for Kraken online status, then validate again.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'spread_slippage',
+      label: 'Spread and slippage verified',
+      passed: !preview.abortConditions.some(item => /slippage|price/i.test(item)),
+      plainEnglish: `Estimated spread/slippage cost is ${feeImpactPercent.toFixed(4)}% including fee assumptions.`,
+      nextClick: 'Refresh prices or choose a more liquid pair.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'fee_impact',
+      label: 'Fee impact checked',
+      passed: Number.isFinite(feeImpactPercent) && feeImpactPercent <= 1,
+      statusWhenFalse: 'Review Needed',
+      plainEnglish: `Estimated fee impact uses ${Number(preview.feePercent || 0).toFixed(4)}% taker-fee assumptions.`,
+      nextClick: 'Rerun readiness to refresh fee data.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'kill_switch',
+      label: 'Kill switch verified',
+      passed: killSwitchOff,
+      statusWhenFalse: 'BLOCKED',
+      plainEnglish: killSwitchOff ? 'An active risk profile exists and the kill switch is off for validation.' : 'No active risk profile is ready or the kill switch is on.',
+      nextClick: 'Activate a safe risk profile before any tiny live validation.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'emergency_stop',
+      label: 'Emergency stop exists',
+      passed: emergencyStopAvailable,
+      statusWhenFalse: 'BLOCKED',
+      plainEnglish: 'Emergency Stop disables production approvals and live connector flags.',
+      nextClick: 'Do not continue until Emergency Stop is available.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'production_endpoint_locked',
+      label: 'Production endpoint modeled and locked',
+      passed: true,
+      plainEnglish: 'The Kraken AddOrder route exists in the codebase, but Phase 6D does not call or unlock it.',
+      nextClick: 'No action needed.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'dry_run_passed',
+      label: 'Dry-run proof already passed',
+      passed: dryRunProof?.passed === true,
+      statusWhenFalse: 'BLOCKED',
+      plainEnglish: dryRunProof?.passed ? 'No-order production dry-run proof passed.' : 'No passing no-order dry-run proof exists yet.',
+      nextClick: 'Click Validate Tiny Live Test.'
+    }),
+    buildPhase6DChecklistItem({
+      id: 'typed_owner_approval',
+      label: 'Typed owner approval required',
+      passed: ownerApprovalTyped === true,
+      statusWhenFalse: 'LOCKED',
+      plainEnglish: 'This phase requires a typed owner phrase to arm the framework, but it still does not place a real order.',
+      nextClick: `Type exactly: ${PHASE6D_ARM_CONFIRMATION_PHRASE}`
+    })
+  ];
+  const technicalReady = checks
+    .filter(item => item.id !== 'typed_owner_approval')
+    .every(item => item.passed);
+
+  return {
+    title: 'Real Production Preflight Engine',
+    phase: 'Phase 6D',
+    status: technicalReady ? 'READY' : 'BLOCKED',
+    technicalReady,
+    readyToPlace: false,
+    ownerApprovalTyped: ownerApprovalTyped === true,
+    order: normalizedOrder,
+    checks,
+    checksPassed: checks.filter(item => item.passed).map(item => item.label),
+    checksFailed: checks.filter(item => !item.passed).map(item => `${item.label}: ${item.plainEnglish}`),
+    simulationPreview: preview,
+    plainEnglishStatus: technicalReady
+      ? 'Preflight is technically ready for an armed framework. Real order placement is still locked and will require a later separate final owner instruction.'
+      : 'Preflight is blocked. No production order endpoint was called.',
+    nextClick: technicalReady ? 'Arm Tiny Live Test Framework.' : checks.find(item => !item.passed)?.nextClick || 'Fix the blocked item.',
+    productionOrderEndpointReachableModeled: true,
+    productionOrderEndpointCalled: false,
+    productionOrderEndpointEnabled: false,
+    safetyBoundary: createProductionSafetyBoundary(false)
+  };
+}
+
+function buildPhase6DTinyLiveFramework({
+  krakenReadiness = null,
+  dryRunProof = null,
+  preflight = null,
+  simulationPreview = null,
+  policy = {},
+  armed = false,
+  emergencyStopped = false
+} = {}) {
+  const effectivePolicy = getPhase6DTinyLivePolicy(policy);
+  const prepared = Boolean(effectivePolicy.oneOrderOnly && effectivePolicy.productionOrderEndpointEnabled === false);
+  const validated = preflight?.technicalReady === true;
+  const armedSafely = armed === true && validated && emergencyStopped !== true;
+  const steps = [
+    {
+      id: 'prepare',
+      label: 'Prepare Tiny Live Test',
+      status: prepared ? 'SAFE' : 'BLOCKED',
+      passed: prepared,
+      plainEnglish: 'One exchange, one symbol, one tiny order, spot only, no loops, no autonomous retry, no scaling.',
+      nextClick: prepared ? 'Run Kraken Authenticated Readiness.' : 'Use the safe defaults.'
+    },
+    {
+      id: 'kraken_readiness',
+      label: 'Run Kraken Authenticated Readiness',
+      status: krakenReadiness?.criticalPassed ? 'SAFE' : 'BLOCKED',
+      passed: krakenReadiness?.criticalPassed === true,
+      plainEnglish: krakenReadiness?.plainEnglishStatus || 'Kraken readiness has not passed yet.',
+      nextClick: 'Click Run Kraken Authenticated Readiness.'
+    },
+    {
+      id: 'validate',
+      label: 'Validate Tiny Live Test',
+      status: validated ? 'READY' : 'BLOCKED',
+      passed: validated,
+      plainEnglish: preflight?.plainEnglishStatus || 'Run production preflight after Kraken readiness passes.',
+      nextClick: 'Click Validate Tiny Live Test.'
+    },
+    {
+      id: 'arm',
+      label: 'Arm Tiny Live Test Framework',
+      status: armedSafely ? 'READY' : validated ? 'LOCKED' : 'BLOCKED',
+      passed: armedSafely,
+      plainEnglish: armedSafely
+        ? 'The framework is armed for later owner review, but the live order endpoint is still disabled.'
+        : 'Arming requires the Phase 6D phrase after validation. Arming still does not place an order.',
+      nextClick: validated ? `Type exactly: ${PHASE6D_ARM_CONFIRMATION_PHRASE}` : 'Validate first.'
+    },
+    {
+      id: 'emergency_stop',
+      label: 'Emergency Stop',
+      status: emergencyStopped ? 'SAFE' : 'READY',
+      passed: true,
+      plainEnglish: emergencyStopped ? 'Emergency Stop was used and production flags are disabled.' : 'Emergency Stop is available and keeps production flags disabled.',
+      nextClick: 'Click Emergency Stop if anything looks wrong.'
+    }
+  ];
+
+  return {
+    title: 'Tiny Live Test Framework',
+    phase: 'Phase 6D',
+    status: emergencyStopped
+      ? 'SAFE'
+      : armedSafely
+        ? 'READY - Framework Armed, Order Endpoint Locked'
+        : validated
+          ? 'READY - Awaiting Arm Phrase'
+          : 'NOT READY',
+    prepared,
+    validated,
+    armed: armedSafely,
+    emergencyStopped: emergencyStopped === true,
+    rules: {
+      maxOrderSizeUsd: effectivePolicy.maxOrderSizeUsd,
+      defaultTinyOrderUsd: effectivePolicy.defaultTinyOrderUsd,
+      oneOrderOnly: effectivePolicy.oneOrderOnly,
+      loopsEnabled: false,
+      autonomousRetryEnabled: false,
+      scalingEnabled: false,
+      recurringTradesEnabled: false,
+      withdrawalsEnabled: false,
+      transfersEnabled: false,
+      walletSigningEnabled: false,
+      marginEnabled: false,
+      futuresEnabled: false,
+      leverageEnabled: false,
+      autonomousTradingEnabled: false,
+      productionOrderEndpointEnabled: false
+    },
+    steps,
+    krakenReadiness,
+    dryRunProof,
+    preflight,
+    simulationPreview,
+    stillLocked: [
+      'Real order placement remains locked.',
+      'Autonomous trading remains disabled.',
+      'Withdrawals and transfers remain disabled.',
+      'Wallet signing remains disabled.',
+      'Margin, futures, and leverage remain disabled.',
+      'A later separate final owner instruction is still required before any real order.'
+    ],
+    safetyBoundary: createProductionSafetyBoundary(false)
+  };
+}
+
+function buildPhase6DWizard({
+  connectors = [],
+  vaultStatus = null,
+  selectedExchangeName = '',
+  riskProfile = null,
+  latestOrders = [],
+  krakenReadiness = null,
+  dryRunProof = null,
+  preflight = null,
+  simulationPreview = null,
+  policy = {},
+  frameworkState = {}
+} = {}) {
+  const selected = normalizePhase6ExchangeName(selectedExchangeName || PHASE6D_RECOMMENDED_FIRST_EXCHANGE);
+  const connector = (connectors || []).find(item => (
+    normalizePhase6ExchangeName(item.settings?.registryId || item.exchange_name) === PHASE6D_RECOMMENDED_FIRST_EXCHANGE
+  )) || null;
+  const productionConnection = connector?.settings?.productionConnection || {};
+  const savedReadiness = krakenReadiness || productionConnection.phase6DReadiness || null;
+  const savedDryRun = dryRunProof || productionConnection.phase6DDryRunProof || null;
+  const savedPreflight = preflight || productionConnection.phase6DPreflight || null;
+  const savedPreview = simulationPreview || productionConnection.phase6DSimulationPreview || null;
+  const savedFramework = {
+    ...(productionConnection.phase6DFramework || {}),
+    ...(frameworkState || {})
+  };
+  const framework = buildPhase6DTinyLiveFramework({
+    krakenReadiness: savedReadiness,
+    dryRunProof: savedDryRun,
+    preflight: savedPreflight,
+    simulationPreview: savedPreview,
+    policy: {
+      ...getPhase6DTinyLivePolicy(policy),
+      ...(savedFramework.policy || {})
+    },
+    armed: savedFramework.armed === true,
+    emergencyStopped: savedFramework.emergencyStopped === true
+  });
+  const credentialSaved = Boolean(productionConnection.referenceName)
+    || (vaultStatus?.entries || []).some(entry => normalizePhase6ExchangeName(entry.exchangeName) === PHASE6D_RECOMMENDED_FIRST_EXCHANGE);
+  const latestPhase6DOrder = (latestOrders || []).find(order => (
+    normalizePhase6ExchangeName(order.exchange_name) === PHASE6D_RECOMMENDED_FIRST_EXCHANGE
+      && order.readiness?.phase6D
+  )) || null;
+  const steps = [
+    {
+      id: 'save_key',
+      title: 'Step 1: Save restricted Kraken key',
+      status: credentialSaved ? 'SAFE' : 'Missing',
+      button: 'Add API Key Safely',
+      plainEnglish: credentialSaved ? 'A Kraken production vault reference exists.' : 'Save a restricted Kraken key. Never enable Withdraw Funds.'
+    },
+    {
+      id: 'kraken_readiness',
+      title: 'Step 2: Run Kraken authenticated readiness',
+      status: savedReadiness?.status || 'Missing',
+      button: 'Run Kraken Authenticated Readiness',
+      plainEnglish: savedReadiness?.plainEnglishStatus || 'Read balances, permissions, fees, symbol rules, precision, account status, and rate-limit policy.'
+    },
+    {
+      id: 'prepare_tiny_live',
+      title: 'Step 3: Prepare tiny live test',
+      status: framework.prepared ? 'SAFE' : 'Missing',
+      button: 'Prepare Tiny Live Test',
+      plainEnglish: 'Prepare one tiny spot order framework. No loops, retries, scaling, withdrawals, wallet signing, margin, futures, or leverage.'
+    },
+    {
+      id: 'validate_tiny_live',
+      title: 'Step 4: Validate tiny live test',
+      status: savedPreflight?.status || 'Missing',
+      button: 'Validate Tiny Live Test',
+      plainEnglish: savedPreflight?.plainEnglishStatus || 'Run exact preflight and simulation preview. No production order endpoint is called.'
+    },
+    {
+      id: 'arm_tiny_live',
+      title: 'Step 5: Arm tiny live framework',
+      status: framework.armed ? 'READY' : framework.validated ? 'LOCKED' : 'BLOCKED',
+      button: 'Arm Tiny Live Test',
+      plainEnglish: framework.armed ? 'Framework armed. Order endpoint remains locked.' : 'Requires typed owner phrase after validation. Arming does not place an order.'
+    },
+    {
+      id: 'emergency_stop',
+      title: 'Step 6: Emergency stop',
+      status: 'READY',
+      button: 'Emergency Stop',
+      plainEnglish: 'Disable production approvals and live connector flags immediately if anything looks wrong.'
+    }
+  ];
+  const firstBlocked = steps.find(step => !['SAFE', 'READY'].includes(step.status));
+  const technicallyReady = framework.validated === true;
+
+  return {
+    title: 'Phase 6D: Kraken Authenticated Readiness And Tiny Live Test Framework',
+    phase: 'Phase 6D',
+    recommendedExchangeName: PHASE6D_RECOMMENDED_FIRST_EXCHANGE,
+    recommendedExchangeDisplayName: 'Kraken',
+    selectedExchangeName: selected === PHASE6D_RECOMMENDED_FIRST_EXCHANGE ? selected : PHASE6D_RECOMMENDED_FIRST_EXCHANGE,
+    selectedExchangeDisplayName: 'Kraken',
+    status: framework.status,
+    technicallyReady,
+    whatToDoNow: firstBlocked
+      ? `${firstBlocked.button}: ${firstBlocked.plainEnglish}`
+      : 'Review the armed framework. A later separate final owner instruction is still required before any real order.',
+    whatIsSafe: [
+      'Only Kraken is enabled for the first real authenticated readiness path.',
+      'Readiness uses authenticated reads and public market data only.',
+      'Preflight and preview call no Kraken AddOrder endpoint.',
+      'The tiny live framework is one order only, with no loops, no retry automation, and no scaling.',
+      'Withdrawals, transfers, wallet signing, margin, futures, and leverage remain disabled.'
+    ],
+    whatIsLocked: [
+      'Real order placement is locked.',
+      'Unrestricted live trading is locked.',
+      'Autonomous trading and scaling are locked.',
+      'Wallet signing and withdrawals are disabled.',
+      'A later explicit owner instruction is required before any real tiny live order.'
+    ],
+    defaultOrder: {
+      symbol: 'BTC/USD',
+      side: 'buy',
+      orderType: 'limit',
+      quantity: 0,
+      limitPrice: 0,
+      notionalUsd: DEFAULT_PHASE6D_TINY_LIVE_POLICY.defaultTinyOrderUsd,
+      maxOrderUsd: DEFAULT_PHASE6D_TINY_LIVE_POLICY.maxOrderSizeUsd
+    },
+    policy: getPhase6DTinyLivePolicy(policy),
+    armPhrase: PHASE6D_ARM_CONFIRMATION_PHRASE,
+    connectorExists: Boolean(connector?.id),
+    credentialSaved,
+    latestPhase6DOrder,
+    steps,
+    krakenReadiness: savedReadiness,
+    dryRunProof: savedDryRun,
+    preflight: savedPreflight,
+    simulationPreview: savedPreview,
+    framework,
+    report: {
+      krakenAuthenticatedSuccessfully: savedReadiness?.criticalPassed === true,
+      tinyLiveTechnicallyReady: technicallyReady,
+      orderEndpointCalled: false,
+      orderEndpointEnabled: false,
+      stillBlocksFirstTinyLiveTrade: [
+        ...(savedReadiness?.criticalPassed === true ? [] : ['Kraken authenticated readiness has not passed.']),
+        ...(savedDryRun?.passed === true ? [] : ['No-order production dry-run proof has not passed.']),
+        ...(savedPreflight?.technicalReady === true ? [] : ['Real production preflight has not passed.']),
+        ...(framework.armed ? [] : ['Tiny live framework has not been armed by typed owner phrase.']),
+        'The separate final live-order approval route remains locked and must be intentionally invoked later.'
+      ]
+    },
+    safetyBoundary: createProductionSafetyBoundary(false)
+  };
+}
+
 function createPlainEnglishProductionError(exchangeName, error) {
   const rawMessage = String(error?.message || error || '').slice(0, 500);
   const lower = rawMessage.toLowerCase();
@@ -3095,6 +3961,9 @@ module.exports = {
   PHASE6_PRODUCTION_ADAPTERS,
   PHASE6B_RECOMMENDED_FIRST_EXCHANGE,
   PHASE6C_RECOMMENDED_FIRST_EXCHANGE,
+  PHASE6D_RECOMMENDED_FIRST_EXCHANGE,
+  PHASE6D_ARM_CONFIRMATION_PHRASE,
+  DEFAULT_PHASE6D_TINY_LIVE_POLICY,
   PHASE6B_ACTIVATION_EXCHANGE_GUIDES,
   getProductionAdapter,
   getProductionReferenceName,
@@ -3119,6 +3988,11 @@ module.exports = {
   buildPhase6CProductionDryRunProof,
   buildPhase6CTinyLiveEligibility,
   buildPhase6CWizard,
+  runKrakenAuthenticatedIntegration,
+  buildPhase6DLiveOrderSimulationPreview,
+  buildPhase6DProductionPreflight,
+  buildPhase6DTinyLiveFramework,
+  buildPhase6DWizard,
   createProductionSafetyBoundary,
   createPlainEnglishProductionError
 };

@@ -4713,6 +4713,12 @@ footer {
 .phase6c-step-grid,
 .phase6c-report-grid,
 .phase6c-proof-grid,
+.phase6d-summary-grid,
+.phase6d-controls,
+.phase6d-arm-box,
+.phase6d-step-grid,
+.phase6d-report-grid,
+.phase6d-proof-grid,
 .phase5-controls,
 .phase6-controls,
 .phase6-vault,
@@ -4736,7 +4742,8 @@ footer {
 }
 
 .phase6b-hero,
-.phase6c-hero {
+.phase6c-hero,
+.phase6d-hero {
     align-items: center;
     display: flex;
     gap: 16px;
@@ -4744,7 +4751,8 @@ footer {
 }
 
 .phase6b-hero h2,
-.phase6c-hero h2 {
+.phase6c-hero h2,
+.phase6d-hero h2 {
     margin-bottom: 8px;
 }
 
@@ -4792,23 +4800,40 @@ footer {
     border-color: color-mix(in srgb, var(--brand-pink) 28%, var(--brand-blue));
 }
 
+.phase6d-wizard {
+    border-color: color-mix(in srgb, var(--brand-blue) 36%, var(--brand-purple));
+}
+
 .phase6c-summary-grid,
 .phase6c-step-grid,
 .phase6c-report-grid,
-.phase6c-proof-grid {
+.phase6c-proof-grid,
+.phase6d-summary-grid,
+.phase6d-step-grid,
+.phase6d-report-grid,
+.phase6d-proof-grid {
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     margin: 18px 0;
 }
 
 .phase6b-controls,
-.phase6c-controls {
+.phase6c-controls,
+.phase6d-controls {
     align-items: end;
     grid-template-columns: minmax(220px, 1.2fr) repeat(auto-fit, minmax(170px, 1fr));
     margin: 16px 0;
 }
 
+.phase6d-arm-box {
+    align-items: end;
+    grid-template-columns: minmax(260px, 2fr) repeat(auto-fit, minmax(170px, 1fr));
+    margin: 12px 0 18px;
+}
+
 .phase6b-controls label,
-.phase6c-controls label {
+.phase6c-controls label,
+.phase6d-controls label,
+.phase6d-arm-box label {
     color: var(--text-primary);
     font-weight: 800;
 }
@@ -4833,7 +4858,12 @@ footer {
 .phase6c-step-grid article,
 .phase6c-report-grid article,
 .phase6c-proof-panel,
-.phase6c-check-item {
+.phase6c-check-item,
+.phase6d-summary-grid article,
+.phase6d-step-grid article,
+.phase6d-report-grid article,
+.phase6d-proof-panel,
+.phase6d-check-item {
     background: var(--surface-muted);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -4845,7 +4875,10 @@ footer {
 .phase6b-check-item span,
 .phase6c-summary-grid article span,
 .phase6c-step-grid article span,
-.phase6c-check-item span {
+.phase6c-check-item span,
+.phase6d-summary-grid article span,
+.phase6d-step-grid article span,
+.phase6d-check-item span {
     color: inherit;
     display: block;
     font-size: 0.78rem;
@@ -4865,20 +4898,29 @@ footer {
 .phase6c-step-grid article strong,
 .phase6c-report-grid h3,
 .phase6c-proof-panel h3,
-.phase6c-check-item strong {
+.phase6c-check-item strong,
+.phase6d-summary-grid article strong,
+.phase6d-step-grid article strong,
+.phase6d-report-grid h3,
+.phase6d-proof-panel h3,
+.phase6d-check-item strong {
     color: inherit;
 }
 
 .phase6b-summary-grid h3,
 .phase6b-instructions h3,
 .phase6b-checklist-panel h3,
-.phase6b-tiny-live-panel h3 {
+.phase6b-tiny-live-panel h3,
+.phase6d-report-grid h3,
+.phase6d-proof-panel h3 {
     margin-top: 0;
 }
 
 .phase6b-summary-grid ul,
 .phase6b-instructions ul,
-.phase6b-instructions ol {
+.phase6b-instructions ol,
+.phase6d-report-grid ul,
+.phase6d-proof-panel ul {
     color: var(--text-primary);
     line-height: 1.55;
     margin: 8px 0 0;
@@ -4922,7 +4964,10 @@ footer {
 
 .phase6c-step-grid article,
 .phase6c-proof-panel,
-.phase6c-check-item {
+.phase6c-check-item,
+.phase6d-step-grid article,
+.phase6d-proof-panel,
+.phase6d-check-item {
     display: grid;
     gap: 8px;
 }
@@ -4935,7 +4980,13 @@ footer {
 .phase6c-check-item p,
 .phase6c-check-item small,
 .phase6c-proof-panel p,
-.phase6c-proof-panel small {
+.phase6c-proof-panel small,
+.phase6d-summary-grid article small,
+.phase6d-step-grid article small,
+.phase6d-check-item p,
+.phase6d-check-item small,
+.phase6d-proof-panel p,
+.phase6d-proof-panel small {
     color: inherit;
     line-height: 1.45;
 }
@@ -5307,6 +5358,11 @@ footer {
 :root[data-theme="night"] .phase6c-report-grid article,
 :root[data-theme="night"] .phase6c-proof-panel,
 :root[data-theme="night"] .phase6c-check-item,
+:root[data-theme="night"] .phase6d-summary-grid article,
+:root[data-theme="night"] .phase6d-step-grid article,
+:root[data-theme="night"] .phase6d-report-grid article,
+:root[data-theme="night"] .phase6d-proof-panel,
+:root[data-theme="night"] .phase6d-check-item,
 :root[data-theme="night"] .phase6-vault,
 :root[data-theme="night"] .phase6-acknowledgments,
 :root[data-theme="night"] .phase6-training,
@@ -5330,6 +5386,11 @@ footer {
 :root:not([data-theme="day"]) .phase6c-report-grid article,
 :root:not([data-theme="day"]) .phase6c-proof-panel,
 :root:not([data-theme="day"]) .phase6c-check-item,
+:root:not([data-theme="day"]) .phase6d-summary-grid article,
+:root:not([data-theme="day"]) .phase6d-step-grid article,
+:root:not([data-theme="day"]) .phase6d-report-grid article,
+:root:not([data-theme="day"]) .phase6d-proof-panel,
+:root:not([data-theme="day"]) .phase6d-check-item,
 :root:not([data-theme="day"]) .phase6-vault,
 :root:not([data-theme="day"]) .phase6-acknowledgments,
 :root:not([data-theme="day"]) .phase6-training {
