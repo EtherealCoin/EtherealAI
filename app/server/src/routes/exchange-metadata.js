@@ -106,6 +106,31 @@ function registerExchangeMetadataRoutes(app, {
   phase5Status,
   defaultPhase5TreasuryPolicy,
   buildTreasuryLiquidityCommandCenter,
+  phase6EnableLiveConfirmationPhrase,
+  phase6OrderConfirmationPhrase,
+  phase6ApprovalScopeTypes,
+  phase6OrderStatuses,
+  defaultPhase6Policy,
+  phase6ProductionAdapters,
+  getProductionAdapter,
+  getProductionReferenceName,
+  sanitizeProductionCredentialInput,
+  sanitizeProductionPermissionsChecklist,
+  saveProductionVaultCredentials,
+  loadProductionVaultCredentials,
+  deleteProductionVaultCredentials,
+  getProductionVaultStatus,
+  normalizeProductionOrderDraft,
+  createProductionOrderFingerprint,
+  testProductionExchangeConnection,
+  evaluateProductionOrderSafety,
+  createProductionOrderPreview,
+  runProductionOrderLifecycle,
+  queryProductionOrderStatus,
+  cancelProductionOrder,
+  buildPhase6ApprovalCenter,
+  createProductionSafetyBoundary,
+  createPlainEnglishProductionError,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,
@@ -195,6 +220,34 @@ function registerExchangeMetadataRoutes(app, {
         automatedLiveTradingEnabled: false,
         unrestrictedLiveTradingEnabled: false,
         liveTradingLocked: true,
+        walletSigningEnabled: false,
+        withdrawalsEnabled: false,
+        marginEnabled: false,
+        futuresEnabled: false,
+        leverageEnabled: false,
+        valuesDisplayed: false,
+        browserLocalStorageUsed: false,
+        ...updates
+      }
+    };
+  }
+
+  function mergeProductionConnectionSettings(connector, updates = {}) {
+    const currentSettings = connector?.settings && typeof connector.settings === 'object'
+      ? connector.settings
+      : {};
+    const currentConnection = currentSettings.productionConnection && typeof currentSettings.productionConnection === 'object'
+      ? currentSettings.productionConnection
+      : {};
+
+    return {
+      ...currentSettings,
+      productionConnection: {
+        ...currentConnection,
+        controlledProductionOnly: true,
+        defaultLocked: true,
+        automatedLiveTradingEnabled: false,
+        unrestrictedAutonomousTradingEnabled: false,
         walletSigningEnabled: false,
         withdrawalsEnabled: false,
         marginEnabled: false,
@@ -341,6 +394,69 @@ function registerExchangeMetadataRoutes(app, {
     };
   }
 
+  function parseProductionApproval(row) {
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      user_id: row.user_id,
+      scope_type: row.scope_type,
+      scope_value: row.scope_value,
+      exchange_name: row.exchange_name,
+      symbol: row.symbol,
+      strategy_id: row.strategy_id,
+      capital_limit_usd: row.capital_limit_usd,
+      status: row.status,
+      approval_hash_present: Boolean(row.approval_hash),
+      acknowledgment: JSON.parse(row.acknowledgment_json || '{}'),
+      expires_at: row.expires_at,
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    };
+  }
+
+  function parseProductionOrderExecution(row) {
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      user_id: row.user_id,
+      connector_id: row.connector_id,
+      risk_profile_id: row.risk_profile_id,
+      strategy_id: row.strategy_id,
+      exchange_name: row.exchange_name,
+      symbol: row.symbol,
+      side: row.side,
+      order_type: row.order_type,
+      quantity: row.quantity,
+      limit_price: row.limit_price,
+      notional_usd: row.notional_usd,
+      max_order_usd: row.max_order_usd,
+      client_order_id: row.client_order_id,
+      exchange_order_id: row.exchange_order_id,
+      status: row.status,
+      readiness: JSON.parse(row.readiness_json || '{}'),
+      preview: JSON.parse(row.preview_json || '{}'),
+      result: JSON.parse(row.result_json || '{}'),
+      owner_confirmation_hash_present: Boolean(row.owner_confirmation_hash),
+      production_order_endpoint_enabled: Boolean(row.production_order_endpoint_enabled),
+      production_order_endpoint_called: Boolean(row.production_order_endpoint_called),
+      automated_live_trading_enabled: Boolean(row.automated_live_trading_enabled),
+      unrestricted_autonomous_trading_enabled: Boolean(row.unrestricted_autonomous_trading_enabled),
+      wallet_signing_enabled: Boolean(row.wallet_signing_enabled),
+      withdrawals_enabled: Boolean(row.withdrawals_enabled),
+      margin_enabled: Boolean(row.margin_enabled),
+      futures_enabled: Boolean(row.futures_enabled),
+      leverage_enabled: Boolean(row.leverage_enabled),
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    };
+  }
+
   async function upsertReadOnlyLocalReference({ userId, existingReferenceId, label, referenceName, notes }) {
     let referenceRow = existingReferenceId
       ? await dbGet(
@@ -454,6 +570,25 @@ function registerExchangeMetadataRoutes(app, {
     return loadTinyLiveVaultCredentials(referenceName);
   }
 
+  async function loadConnectorProductionCredentialsForUser(connector, userId) {
+    const referenceName = connector.settings?.productionConnection?.referenceName || null;
+
+    if (!referenceName) {
+      return null;
+    }
+
+    const reference = await dbGet(
+      'SELECT * FROM local_secret_references WHERE user_id = ? AND reference_name = ? AND status = ?',
+      [userId, referenceName, 'configured']
+    );
+
+    if (!reference) {
+      return null;
+    }
+
+    return loadProductionVaultCredentials(referenceName);
+  }
+
   async function getActiveLiveReadinessRiskProfile() {
     return dbGet(
       `SELECT *
@@ -515,6 +650,32 @@ function registerExchangeMetadataRoutes(app, {
     );
 
     return rows.map(parseTreasuryIntelligenceRun);
+  }
+
+  async function getLatestProductionApprovals(userId, limit = 100) {
+    const rows = await dbAll(
+      `SELECT *
+       FROM production_execution_approvals
+       WHERE user_id = ?
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`,
+      [userId, limit]
+    );
+
+    return rows.map(parseProductionApproval);
+  }
+
+  async function getLatestProductionOrders(userId, limit = 25) {
+    const rows = await dbAll(
+      `SELECT *
+       FROM production_order_executions
+       WHERE user_id = ?
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`,
+      [userId, limit]
+    );
+
+    return rows.map(parseProductionOrderExecution);
   }
 
   async function getTreasuryWallets(userId) {
@@ -637,6 +798,63 @@ function registerExchangeMetadataRoutes(app, {
     return parseExchangeConnector(await getExchangeConnectorRow(result.lastID));
   }
 
+  async function findOrCreateProductionConnector({ exchangeName }) {
+    const exchangeId = normalizeExchangeId(exchangeName);
+    const rows = await dbAll(
+      `${exchangeConnectorSelect}
+       ORDER BY exchange_connectors.created_at DESC
+       LIMIT 500`
+    );
+    const existing = rows.map(parseExchangeConnector).find(connector => (
+      normalizeExchangeId(connector.settings?.registryId || connector.exchange_name) === exchangeId
+    ));
+
+    if (existing) {
+      return existing;
+    }
+
+    const entry = getExchangeConnectorRegistryEntry(exchangeId);
+
+    if (!entry) {
+      return null;
+    }
+
+    const placeholder = createExchangeConnectorPlaceholderInput(entry, {
+      mode: 'read_only',
+      status: 'disabled',
+      labelSuffix: 'Production Locked Placeholder'
+    });
+    const result = await dbRun(
+      `INSERT INTO exchange_connectors
+       (exchange_name, label, mode, status, settings_json, secret_storage_note)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        placeholder.exchangeName,
+        placeholder.label,
+        'read_only',
+        'disabled',
+        JSON.stringify({
+          ...(placeholder.settings || {}),
+          productionConnection: {
+            controlledProductionOnly: true,
+            connectionStatus: 'not_connected',
+            liveTradingLocked: true,
+            automatedLiveTradingEnabled: false,
+            unrestrictedAutonomousTradingEnabled: false,
+            walletSigningEnabled: false,
+            withdrawalsEnabled: false,
+            marginEnabled: false,
+            futuresEnabled: false,
+            leverageEnabled: false
+          }
+        }),
+        'No credential values stored in SQLite.'
+      ]
+    );
+
+    return parseExchangeConnector(await getExchangeConnectorRow(result.lastID));
+  }
+
   async function recordSandboxOrderEvent({ testId, userId, status, summary, payload = {} }) {
     await dbRun(
       `INSERT INTO sandbox_order_events
@@ -652,6 +870,15 @@ function registerExchangeMetadataRoutes(app, {
        (tiny_live_order_test_id, user_id, status, summary, payload_json)
        VALUES (?, ?, ?, ?, ?)`,
       [testId || null, userId, status, summary, JSON.stringify(payload || {})]
+    );
+  }
+
+  async function recordProductionOrderEvent({ executionId, userId, status, summary, payload = {} }) {
+    await dbRun(
+      `INSERT INTO production_order_events
+       (production_order_execution_id, user_id, status, summary, payload_json)
+       VALUES (?, ?, ?, ?, ?)`,
+      [executionId || null, userId, status, summary, JSON.stringify(payload || {})]
     );
   }
 
@@ -700,6 +927,41 @@ function registerExchangeMetadataRoutes(app, {
           futuresDetected: null,
           plainEnglishStatus: createPlainEnglishTinyLiveError
             ? createPlainEnglishTinyLiveError(exchangeId, error)
+            : error.message
+        };
+      }
+    }
+
+    return readiness;
+  }
+
+  async function getProductionExchangeReadiness({ connectors, userId }) {
+    const readiness = {};
+
+    for (const connector of connectors) {
+      const exchangeId = normalizeExchangeId(connector.settings?.registryId || connector.exchange_name);
+      const adapter = getProductionAdapter(exchangeId);
+
+      if (!adapter || !connector.settings?.productionConnection?.referenceName) {
+        continue;
+      }
+
+      try {
+        const credentials = await loadConnectorProductionCredentialsForUser(connector, userId);
+
+        if (credentials) {
+          readiness[exchangeId] = await testProductionExchangeConnection({ credentials, adapter });
+        }
+      } catch (error) {
+        readiness[exchangeId] = {
+          status: 'error',
+          canTrade: false,
+          canWithdraw: null,
+          spotAllowed: false,
+          marginDetected: null,
+          futuresDetected: null,
+          plainEnglishStatus: createPlainEnglishProductionError
+            ? createPlainEnglishProductionError(exchangeId, error)
             : error.message
         };
       }
@@ -785,6 +1047,108 @@ function registerExchangeMetadataRoutes(app, {
       latestTinyLiveOrders,
       livePermission,
       marketContext: effectiveMarketContext,
+      safety,
+      preview
+    };
+  }
+
+  async function buildProductionSafetyContext({
+    userId,
+    orderInput,
+    marketContext = {},
+    accountContext = {},
+    ownerConfirmation = '',
+    policy = {},
+    ignoreExecutionId = null
+  }) {
+    const order = normalizeProductionOrderDraft(orderInput || {});
+    const adapter = getProductionAdapter(order.exchangeName);
+    const connector = await findOrCreateProductionConnector({ exchangeName: order.exchangeName });
+    const [riskProfile, credentials, latestSandboxTests, latestTinyLiveOrders, approvals, latestProductionOrders] = await Promise.all([
+      getActiveLiveReadinessRiskProfile(),
+      connector ? loadConnectorProductionCredentialsForUser(connector, userId) : Promise.resolve(null),
+      getLatestSandboxOrderTests(userId, 25),
+      getLatestTinyLiveOrderTests(userId, 25),
+      getLatestProductionApprovals(userId, 100),
+      getLatestProductionOrders(userId, 50)
+    ]);
+    let productionPermission = null;
+
+    if (credentials && adapter) {
+      try {
+        productionPermission = await testProductionExchangeConnection({ credentials, adapter });
+      } catch (error) {
+        productionPermission = {
+          status: 'error',
+          canTrade: false,
+          canWithdraw: null,
+          spotAllowed: false,
+          marginDetected: null,
+          futuresDetected: null,
+          plainEnglishStatus: createPlainEnglishProductionError
+            ? createPlainEnglishProductionError(order.exchangeName, error)
+            : error.message
+        };
+      }
+    }
+
+    const recentOrderFingerprints = latestProductionOrders
+      .filter(test => Number(test.id) !== Number(ignoreExecutionId || 0))
+      .filter(test => Date.now() - Date.parse(test.created_at || new Date().toISOString()) <= Number(defaultPhase6Policy?.duplicateOrderWindowMs || 120000))
+      .map(test => test.readiness?.orderFingerprint || test.preview?.orderFingerprint)
+      .filter(Boolean);
+    const effectiveMarketContext = {
+      liquidityUsd: 1000000,
+      slippagePercent: 0.05,
+      volatilityPercent: 0,
+      netSpreadPercent: 0.1,
+      latencyMs: 250,
+      priceTimestamp: new Date().toISOString(),
+      productionDryRunPassed: false,
+      ...(marketContext || {})
+    };
+    const effectiveAccountContext = {
+      exchangeExposureUsd: 0,
+      strategyExposureUsd: 0,
+      dailyDrawdownUsd: 0,
+      rollingLossUsd: 0,
+      repeatedFailures: 0,
+      ...(accountContext || {})
+    };
+    const safety = evaluateProductionOrderSafety({
+      order,
+      adapter,
+      connector,
+      credentials,
+      productionPermission,
+      riskProfile,
+      sandboxEvidence: latestSandboxTests,
+      tinyLiveEvidence: latestTinyLiveOrders,
+      approvals,
+      marketContext: effectiveMarketContext,
+      accountContext: effectiveAccountContext,
+      recentOrderFingerprints,
+      ownerConfirmation,
+      policy: {
+        ...(defaultPhase6Policy || {}),
+        ...(policy || {})
+      }
+    });
+    const preview = createProductionOrderPreview({ order, safety, adapter, productionPermission });
+
+    return {
+      order,
+      adapter,
+      connector,
+      credentials,
+      riskProfile,
+      latestSandboxTests,
+      latestTinyLiveOrders,
+      latestProductionOrders,
+      approvals,
+      productionPermission,
+      marketContext: effectiveMarketContext,
+      accountContext: effectiveAccountContext,
       safety,
       preview
     };
@@ -1539,6 +1903,916 @@ function registerExchangeMetadataRoutes(app, {
           : error.message,
         safetyBoundary: buildTreasuryLiquidityCommandCenter({}).safetyBoundary
       });
+    }
+  });
+
+  app.get('/api/v1/live-trading-launch/phase6/status', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const [vaultStatus, approvals, latestOrders, latestSandboxTests, riskProfile] = await Promise.all([
+        getProductionVaultStatus(),
+        getLatestProductionApprovals(req.session.userId, 100),
+        getLatestProductionOrders(req.session.userId, 25),
+        getLatestSandboxOrderTests(req.session.userId, 25),
+        getActiveLiveReadinessRiskProfile()
+      ]);
+      const center = buildPhase6ApprovalCenter({
+        connectors,
+        vaultStatus,
+        approvals,
+        latestOrders,
+        riskProfile,
+        latestSandboxTests
+      });
+
+      res.json({
+        center,
+        adapters: Object.values(phase6ProductionAdapters || {}),
+        approvalScopeTypes: phase6ApprovalScopeTypes || [],
+        orderStatuses: phase6OrderStatuses || [],
+        latestOrders,
+        approvals,
+        approvalPhrase: phase6EnableLiveConfirmationPhrase,
+        orderPhrase: phase6OrderConfirmationPhrase,
+        defaultPolicy: defaultPhase6Policy,
+        safetyBoundary: center.safetyBoundary
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('Phase 6 Production Trading Command Center', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary ? createProductionSafetyBoundary(false) : {}
+      });
+    }
+  });
+
+  app.post('/api/v1/exchange-connectors/:id/production-credentials', requireAuth, async (req, res) => {
+    try {
+      const connector = parseExchangeConnector(await getExchangeConnectorRow(req.params.id));
+
+      if (!connector) {
+        return res.status(404).json({ error: 'Exchange connector not found' });
+      }
+
+      const exchangeId = normalizeExchangeId(connector.settings?.registryId || connector.exchange_name);
+      const adapter = getProductionAdapter(exchangeId);
+
+      if (!adapter) {
+        return res.status(400).json({
+          error: `${connector.label || exchangeId} is not supported for Phase 6 production execution.`,
+          automatedLiveTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false
+        });
+      }
+
+      const permissions = sanitizeProductionPermissionsChecklist(req.body?.permissionsChecklist || {});
+
+      if (permissions.missing.length) {
+        return res.status(400).json({
+          error: 'Complete every production safety checkbox before saving this key.',
+          missing: permissions.missing,
+          nextClick: 'Check every production safety box, then click Save Production API Key.',
+          automatedLiveTradingEnabled: false,
+          unrestrictedAutonomousTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          marginEnabled: false,
+          futuresEnabled: false,
+          leverageEnabled: false
+        });
+      }
+
+      const credentials = sanitizeProductionCredentialInput(req.body?.credentials || req.body || {}, adapter);
+      const referenceName = getProductionReferenceName({
+        userId: req.session.userId,
+        connectorId: connector.id,
+        exchangeName: exchangeId
+      });
+      const reference = await upsertReadOnlyLocalReference({
+        userId: req.session.userId,
+        existingReferenceId: null,
+        label: `${adapter.displayName} Controlled Production Vault`,
+        referenceName,
+        notes: 'Encrypted local Phase 6 production execution vault reference. Requires owner approvals, dry-run checks, and final typed confirmation before any order endpoint can be called.'
+      });
+      const saved = await saveProductionVaultCredentials({
+        referenceName,
+        connector,
+        exchangeName: exchangeId,
+        credentials,
+        permissionsChecklist: permissions.checklist
+      });
+      const previousConnection = connector.settings?.productionConnection || {};
+      const settings = mergeProductionConnectionSettings(connector, {
+        referenceName,
+        localReferenceId: reference.id,
+        connectionStatus: 'production_key_saved_locked',
+        plainEnglishStatus: 'Production key saved locally. Live execution remains locked until connectivity, approvals, dry-run, and final order confirmation pass.',
+        lastCredentialRotationAt: saved.rotatedAt,
+        rotationNumber: Number(previousConnection.rotationNumber || 0) + 1,
+        permissionsChecklist: permissions.checklist,
+        apiKeyFingerprint: saved.apiKeyFingerprint,
+        adapterStatus: adapter.adapterStatus
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET settings_json = ?, secret_storage_note = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          JSON.stringify(settings),
+          'Production credential values are encrypted in the local owner vault. SQLite stores only a local reference.',
+          connector.id
+        ]
+      );
+
+      res.status(201).json({
+        connector: parseExchangeConnector(await getExchangeConnectorRow(connector.id)),
+        reference,
+        vault: {
+          stored: true,
+          referenceName: saved.referenceName,
+          apiKeyFingerprint: saved.apiKeyFingerprint,
+          hasExtraPhrase: saved.hasExtraPhrase,
+          rotatedAt: saved.rotatedAt,
+          secretValuesReturned: false
+        },
+        nextClick: 'Click Test Production Connection.',
+        safetyBoundary: {
+          controlledProductionOnly: true,
+          productionOrderEndpointEnabled: false,
+          productionOrderEndpointCalled: false,
+          automatedLiveTradingEnabled: false,
+          unrestrictedAutonomousTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          marginEnabled: false,
+          futuresEnabled: false,
+          leverageEnabled: false,
+          privateValuesReturnedToUi: false
+        }
+      });
+    } catch (error) {
+      res.status(error.statusCode || 500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError(req.body?.exchangeName || 'production exchange', error)
+          : error.message
+      });
+    }
+  });
+
+  app.delete('/api/v1/exchange-connectors/:id/production-credentials', requireAuth, async (req, res) => {
+    try {
+      const connector = parseExchangeConnector(await getExchangeConnectorRow(req.params.id));
+
+      if (!connector) {
+        return res.status(404).json({ error: 'Exchange connector not found' });
+      }
+
+      const referenceName = connector.settings?.productionConnection?.referenceName || null;
+      const deletion = referenceName
+        ? await deleteProductionVaultCredentials(referenceName)
+        : { deleted: false, referenceName: null };
+
+      if (referenceName) {
+        await dbRun(
+          `UPDATE local_secret_references
+           SET status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = ? AND reference_name = ?`,
+          [
+            'disabled',
+            'Phase 6 production exchange API vault entry was deleted by owner action.',
+            req.session.userId,
+            referenceName
+          ]
+        );
+      }
+
+      const settings = mergeProductionConnectionSettings(connector, {
+        referenceName: null,
+        localReferenceId: null,
+        connectionStatus: 'not_connected',
+        plainEnglishStatus: 'Production key deleted. Production execution is locked.',
+        lastDeletedAt: new Date().toISOString(),
+        apiKeyFingerprint: null,
+        permissionsChecklist: null
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET settings_json = ?, secret_storage_note = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          JSON.stringify(settings),
+          'No credential values stored in SQLite.',
+          connector.id
+        ]
+      );
+
+      res.json({
+        deleted: deletion.deleted,
+        connector: parseExchangeConnector(await getExchangeConnectorRow(connector.id)),
+        nextClick: 'Save a new production key later if needed.',
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/exchange-connectors/:id/test-production-connection', requireAuth, async (req, res) => {
+    try {
+      const connector = parseExchangeConnector(await getExchangeConnectorRow(req.params.id));
+
+      if (!connector) {
+        return res.status(404).json({ error: 'Exchange connector not found' });
+      }
+
+      const exchangeId = normalizeExchangeId(connector.settings?.registryId || connector.exchange_name);
+      const adapter = getProductionAdapter(exchangeId);
+      const credentials = await loadConnectorProductionCredentialsForUser(connector, req.session.userId);
+      const test = await testProductionExchangeConnection({ credentials, adapter });
+      const settings = mergeProductionConnectionSettings(connector, {
+        connectionStatus: test.status,
+        plainEnglishStatus: test.plainEnglishStatus,
+        lastProductionConnectionTestAt: new Date().toISOString(),
+        lastProductionPermissionStatus: {
+          canTrade: test.canTrade,
+          canWithdraw: test.canWithdraw,
+          spotAllowed: test.spotAllowed,
+          marginDetected: test.marginDetected,
+          futuresDetected: test.futuresDetected
+        }
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET status = ?, settings_json = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          test.status === 'production_account_verified' ? 'configured' : 'review_needed',
+          JSON.stringify(settings),
+          connector.id
+        ]
+      );
+
+      res.json({
+        connector: parseExchangeConnector(await getExchangeConnectorRow(connector.id)),
+        test,
+        nextClick: test.status === 'production_account_verified'
+          ? 'Record owner approval gates, then run a production dry-run preview.'
+          : 'Fix the production key permissions, then test again.',
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('production connection test', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase6/approval', requireAuth, async (req, res) => {
+    try {
+      const scopeType = String(req.body?.scopeType || req.body?.scope_type || '').trim();
+      const exchangeName = normalizeExchangeId(req.body?.exchangeName || '');
+      const symbol = String(req.body?.symbol || '').trim().toUpperCase().replace('-', '/');
+      const strategyId = req.body?.strategyId ? Number(req.body.strategyId) : null;
+      const capitalLimitUsd = Math.max(0, Number(req.body?.capitalLimitUsd || 0));
+      const confirmation = String(req.body?.confirmation || '').trim();
+      const acknowledgment = {
+        liveRiskAcknowledged: Boolean(req.body?.liveRiskAcknowledged),
+        withdrawalsDisabledAcknowledged: Boolean(req.body?.withdrawalsDisabledAcknowledged),
+        noAutonomousScalingAcknowledged: Boolean(req.body?.noAutonomousScalingAcknowledged),
+        ownerUnderstandsRealMoney: Boolean(req.body?.ownerUnderstandsRealMoney)
+      };
+
+      if (!phase6ApprovalScopeTypes.includes(scopeType)) {
+        return res.status(400).json({ error: 'Choose a valid approval type.' });
+      }
+
+      if (confirmation !== phase6EnableLiveConfirmationPhrase) {
+        return res.status(400).json({
+          error: `Type exactly: ${phase6EnableLiveConfirmationPhrase}`,
+          nextClick: 'Type the approval phrase, then click Record Controlled Approval.',
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      if (!acknowledgment.liveRiskAcknowledged || !acknowledgment.withdrawalsDisabledAcknowledged || !acknowledgment.noAutonomousScalingAcknowledged || !acknowledgment.ownerUnderstandsRealMoney) {
+        return res.status(400).json({
+          error: 'Acknowledge the live-risk, withdrawal-disabled, no-autonomous-scaling, and real-money warnings before recording approval.',
+          nextClick: 'Check every acknowledgment box, then click Record Controlled Approval.',
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      let scopeValue = '';
+
+      if (scopeType === 'enable_live_trading') scopeValue = 'global';
+      if (scopeType === 'enable_exchange') scopeValue = exchangeName;
+      if (scopeType === 'enable_strategy') scopeValue = strategyId ? String(strategyId) : 'manual';
+      if (scopeType === 'increase_capital_limits') scopeValue = `capital:${capitalLimitUsd.toFixed(2)}`;
+      if (scopeType === 'enable_symbol') scopeValue = exchangeName && symbol ? `${exchangeName}:${symbol}` : symbol;
+
+      if (!scopeValue) {
+        return res.status(400).json({ error: 'This approval type needs an exchange, symbol, strategy, or capital limit.' });
+      }
+
+      const approvalHash = crypto
+        .createHash('sha256')
+        .update(`${req.session.userId}:${scopeType}:${scopeValue}:${confirmation}:${Date.now()}`)
+        .digest('hex');
+      const expiresAt = req.body?.expiresAt || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      const insert = await dbRun(
+        `INSERT INTO production_execution_approvals
+         (user_id, scope_type, scope_value, exchange_name, symbol, strategy_id, capital_limit_usd,
+          status, approval_hash, acknowledgment_json, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          scopeType,
+          scopeValue,
+          exchangeName || null,
+          symbol || null,
+          strategyId,
+          capitalLimitUsd,
+          'active',
+          approvalHash,
+          JSON.stringify(acknowledgment),
+          expiresAt
+        ]
+      );
+
+      await dbRun(
+        `INSERT INTO live_trading_safety_events
+         (user_id, event_type, status, summary, payload_json)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          'phase6_owner_approval_recorded',
+          'active',
+          `Owner recorded Phase 6 approval: ${scopeType} ${scopeValue}.`,
+          JSON.stringify({
+            scopeType,
+            scopeValue,
+            capitalLimitUsd,
+            liveTradingEnabled: false,
+            productionOrderEndpointEnabled: false,
+            autonomousLiveTradingEnabled: false,
+            withdrawalsEnabled: false,
+            walletSigningEnabled: false
+          })
+        ]
+      );
+
+      res.status(201).json({
+        approval: parseProductionApproval(await dbGet('SELECT * FROM production_execution_approvals WHERE id = ? AND user_id = ?', [insert.lastID, req.session.userId])),
+        nextClick: 'Run Production Dry-Run Preview.',
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase6/preview', requireAuth, async (req, res) => {
+    try {
+      const context = await buildProductionSafetyContext({
+        userId: req.session.userId,
+        orderInput: req.body?.order || req.body || {},
+        marketContext: {
+          ...(req.body?.marketContext || {}),
+          productionDryRunPassed: true
+        },
+        accountContext: req.body?.accountContext || {},
+        ownerConfirmation: req.body?.ownerConfirmation || '',
+        policy: req.body?.policy || {}
+      });
+      const manualCheckOnlyMissing = context.safety.missing.length === 1
+        && context.safety.missing[0]?.id === 'manual_order_confirmation';
+      const previewReady = context.safety.passed || manualCheckOnlyMissing;
+      const status = previewReady ? 'preview_ready' : 'preview_blocked';
+      const insert = await dbRun(
+        `INSERT INTO production_order_executions
+         (user_id, connector_id, risk_profile_id, strategy_id, exchange_name, symbol, side, order_type,
+          quantity, limit_price, notional_usd, max_order_usd, client_order_id, status, readiness_json,
+          preview_json, production_order_endpoint_enabled, production_order_endpoint_called,
+          automated_live_trading_enabled, unrestricted_autonomous_trading_enabled, wallet_signing_enabled,
+          withdrawals_enabled, margin_enabled, futures_enabled, leverage_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          context.connector?.id || null,
+          context.riskProfile?.id || null,
+          context.order.strategyId,
+          context.order.exchangeName,
+          context.order.symbol,
+          context.order.side,
+          context.order.orderType,
+          context.order.quantity,
+          context.order.limitPrice || null,
+          context.order.notionalUsd || 0,
+          context.order.maxOrderUsd || 0,
+          context.order.clientOrderId,
+          status,
+          JSON.stringify(context.safety),
+          JSON.stringify(context.preview),
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      );
+
+      await recordProductionOrderEvent({
+        executionId: insert.lastID,
+        userId: req.session.userId,
+        status,
+        summary: previewReady
+          ? 'Production order preview passed dry-run checks. The real order still requires final typed owner confirmation.'
+          : 'Production order preview is blocked. No production order endpoint was called.',
+        payload: {
+          preview: context.preview,
+          failedChecks: context.safety.missing,
+          safetyBoundary: {
+            ...context.safety.safetyBoundary,
+            productionOrderEndpointCalled: false
+          }
+        }
+      });
+
+      res.status(previewReady ? 201 : 409).json({
+        previewId: insert.lastID,
+        preview: context.preview,
+        safety: context.safety,
+        execution: parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [insert.lastID, req.session.userId])),
+        nextClick: previewReady
+          ? `Type "${phase6OrderConfirmationPhrase}" and click Place Controlled Production Order.`
+          : context.safety.nextClick,
+        safetyBoundary: {
+          ...context.safety.safetyBoundary,
+          productionOrderEndpointCalled: false
+        }
+      });
+    } catch (error) {
+      res.status(error.statusCode || 500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError(req.body?.order?.exchangeName || req.body?.exchangeName || 'production exchange', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase6/place', requireAuth, async (req, res) => {
+    const previewId = Number(req.body?.previewId || req.body?.id || 0);
+
+    try {
+      const existingRow = previewId
+        ? await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [previewId, req.session.userId])
+        : null;
+
+      if (!existingRow) {
+        return res.status(404).json({
+          error: 'Create a production order preview first, then place the order from that preview.',
+          nextClick: 'Click Run Production Dry-Run Preview.',
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      const existing = parseProductionOrderExecution(existingRow);
+      const ownerConfirmation = String(req.body?.ownerConfirmation || '').trim();
+      const orderInput = {
+        exchangeName: existing.exchange_name,
+        symbol: existing.symbol,
+        side: existing.side,
+        orderType: existing.order_type,
+        quantity: existing.quantity,
+        limitPrice: existing.limit_price,
+        notionalUsd: existing.notional_usd,
+        maxOrderUsd: existing.max_order_usd,
+        clientOrderId: existing.client_order_id,
+        strategyId: existing.strategy_id
+      };
+      const context = await buildProductionSafetyContext({
+        userId: req.session.userId,
+        orderInput,
+        marketContext: {
+          ...(req.body?.marketContext || {}),
+          productionDryRunPassed: true
+        },
+        accountContext: req.body?.accountContext || {},
+        ownerConfirmation,
+        policy: req.body?.policy || {},
+        ignoreExecutionId: existing.id
+      });
+      const ownerConfirmationHash = ownerConfirmation
+        ? crypto.createHash('sha256').update(`${req.session.userId}:${ownerConfirmation}`).digest('hex')
+        : null;
+
+      await dbRun(
+        `UPDATE production_order_executions
+         SET readiness_json = ?, preview_json = ?, owner_confirmation_hash = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        [
+          JSON.stringify(context.safety),
+          JSON.stringify(context.preview),
+          ownerConfirmationHash,
+          existing.id,
+          req.session.userId
+        ]
+      );
+
+      if (!context.safety.passed) {
+        await dbRun(
+          `UPDATE production_order_executions
+           SET status = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND user_id = ?`,
+          [
+            'rejected',
+            JSON.stringify({
+              resultScreen: {
+                exchange: context.adapter?.displayName || context.order.displayName,
+                symbol: context.order.symbol,
+                orderType: context.order.orderType,
+                notionalUsd: context.order.notionalUsd,
+                fillStatus: 'rejected',
+                rejectionReason: context.safety.missing[0]?.note || 'Production safety check failed.'
+              },
+              failedChecks: context.safety.missing,
+              safetyBoundary: {
+                ...context.safety.safetyBoundary,
+                productionOrderEndpointCalled: false
+              }
+            }),
+            existing.id,
+            req.session.userId
+          ]
+        );
+        await recordProductionOrderEvent({
+          executionId: existing.id,
+          userId: req.session.userId,
+          status: 'rejected',
+          summary: 'Production safety gates blocked the order. No production order endpoint was called.',
+          payload: { failedChecks: context.safety.missing }
+        });
+
+        return res.status(409).json({
+          execution: parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [existing.id, req.session.userId])),
+          safety: context.safety,
+          nextClick: context.safety.nextClick,
+          safetyBoundary: {
+            ...context.safety.safetyBoundary,
+            productionOrderEndpointCalled: false
+          }
+        });
+      }
+
+      await dbRun(
+        `UPDATE production_order_executions
+         SET status = ?, production_order_endpoint_enabled = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        ['approved', 1, existing.id, req.session.userId]
+      );
+      await recordProductionOrderEvent({
+        executionId: existing.id,
+        userId: req.session.userId,
+        status: 'approved',
+        summary: 'Owner manually approved one controlled production spot order. Autonomous trading remains disabled.',
+        payload: {
+          order: context.order,
+          safetyBoundary: context.safety.safetyBoundary
+        }
+      });
+
+      const lifecycle = await runProductionOrderLifecycle({
+        order: context.safety.normalizedOrder || context.order,
+        credentials: context.credentials,
+        adapter: context.adapter
+      });
+
+      await dbRun(
+        `UPDATE production_order_executions
+         SET status = ?, exchange_order_id = ?, result_json = ?, production_order_endpoint_called = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        [
+          lifecycle.status,
+          lifecycle.exchangeOrderId || null,
+          JSON.stringify(lifecycle),
+          lifecycle.safetyBoundary?.productionOrderEndpointCalled ? 1 : 0,
+          existing.id,
+          req.session.userId
+        ]
+      );
+      await recordProductionOrderEvent({
+        executionId: existing.id,
+        userId: req.session.userId,
+        status: lifecycle.status,
+        summary: `Controlled production spot order lifecycle finished with status ${lifecycle.status}.`,
+        payload: {
+          exchangeOrderId: lifecycle.exchangeOrderId,
+          resultScreen: lifecycle.resultScreen,
+          safetyBoundary: lifecycle.safetyBoundary
+        }
+      });
+
+      res.json({
+        execution: parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [existing.id, req.session.userId])),
+        resultScreen: lifecycle.resultScreen,
+        lifecycle,
+        safety: context.safety,
+        nextClick: 'Track order status or cancel the order if it is still open.',
+        safetyBoundary: {
+          ...lifecycle.safetyBoundary,
+          automatedLiveTradingEnabled: false,
+          unrestrictedAutonomousTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false
+        }
+      });
+    } catch (error) {
+      const message = createPlainEnglishProductionError
+        ? createPlainEnglishProductionError(req.body?.exchangeName || 'production exchange', error)
+        : error.message;
+
+      if (previewId) {
+        await dbRun(
+          `UPDATE production_order_executions
+           SET status = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ? AND user_id = ?`,
+          [
+            'rejected',
+            JSON.stringify({
+              resultScreen: {
+                fillStatus: 'rejected',
+                rejectionReason: message
+              },
+              rawError: error?.body || null,
+              safetyBoundary: createProductionSafetyBoundary(false)
+            }),
+            previewId,
+            req.session.userId
+          ]
+        );
+        await recordProductionOrderEvent({
+          executionId: previewId,
+          userId: req.session.userId,
+          status: 'rejected',
+          summary: message,
+          payload: { rawError: error?.body || null }
+        });
+      }
+
+      res.status(error.status || 500).json({
+        error: message,
+        execution: previewId
+          ? parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [previewId, req.session.userId]))
+          : null,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase6/orders/:id/cancel', requireAuth, async (req, res) => {
+    try {
+      const row = await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [req.params.id, req.session.userId]);
+
+      if (!row) {
+        return res.status(404).json({ error: 'Production order execution not found.' });
+      }
+
+      const execution = parseProductionOrderExecution(row);
+      const order = normalizeProductionOrderDraft({
+        exchangeName: execution.exchange_name,
+        symbol: execution.symbol,
+        side: execution.side,
+        orderType: execution.order_type,
+        quantity: execution.quantity,
+        limitPrice: execution.limit_price,
+        notionalUsd: execution.notional_usd,
+        maxOrderUsd: execution.max_order_usd,
+        clientOrderId: execution.client_order_id,
+        strategyId: execution.strategy_id
+      });
+      const connector = execution.connector_id
+        ? parseExchangeConnector(await getExchangeConnectorRow(execution.connector_id))
+        : await findOrCreateProductionConnector({ exchangeName: execution.exchange_name });
+      const [credentials, adapter] = await Promise.all([
+        connector ? loadConnectorProductionCredentialsForUser(connector, req.session.userId) : Promise.resolve(null),
+        Promise.resolve(getProductionAdapter(execution.exchange_name))
+      ]);
+      const canceled = await cancelProductionOrder({
+        order,
+        credentials,
+        adapter,
+        exchangeOrderId: execution.exchange_order_id
+      });
+
+      await dbRun(
+        `UPDATE production_order_executions
+         SET status = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        [
+          canceled.status,
+          JSON.stringify(canceled),
+          execution.id,
+          req.session.userId
+        ]
+      );
+      await recordProductionOrderEvent({
+        executionId: execution.id,
+        userId: req.session.userId,
+        status: canceled.status,
+        summary: `Production cancel request finished with status ${canceled.status}.`,
+        payload: canceled
+      });
+
+      res.json({
+        execution: parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [execution.id, req.session.userId])),
+        resultScreen: canceled.resultScreen,
+        cancellation: canceled,
+        safetyBoundary: canceled.safetyBoundary
+      });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('production cancel', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.get('/api/v1/live-trading-launch/phase6/orders/:id/status', requireAuth, async (req, res) => {
+    try {
+      const row = await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [req.params.id, req.session.userId]);
+
+      if (!row) {
+        return res.status(404).json({ error: 'Production order execution not found.' });
+      }
+
+      const execution = parseProductionOrderExecution(row);
+
+      if (!execution.exchange_order_id) {
+        return res.json({
+          execution,
+          resultScreen: execution.result?.resultScreen || execution.preview,
+          status: execution.status,
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      const order = normalizeProductionOrderDraft({
+        exchangeName: execution.exchange_name,
+        symbol: execution.symbol,
+        side: execution.side,
+        orderType: execution.order_type,
+        quantity: execution.quantity,
+        limitPrice: execution.limit_price,
+        notionalUsd: execution.notional_usd,
+        maxOrderUsd: execution.max_order_usd,
+        clientOrderId: execution.client_order_id,
+        strategyId: execution.strategy_id
+      });
+      const connector = execution.connector_id
+        ? parseExchangeConnector(await getExchangeConnectorRow(execution.connector_id))
+        : await findOrCreateProductionConnector({ exchangeName: execution.exchange_name });
+      const [credentials, adapter] = await Promise.all([
+        connector ? loadConnectorProductionCredentialsForUser(connector, req.session.userId) : Promise.resolve(null),
+        Promise.resolve(getProductionAdapter(execution.exchange_name))
+      ]);
+      const status = await queryProductionOrderStatus({
+        order,
+        credentials,
+        adapter,
+        exchangeOrderId: execution.exchange_order_id
+      });
+      const normalizedStatus = String(status?.status || status?.data?.[0]?.state || status?.result?.list?.[0]?.orderStatus || 'submitted');
+
+      await dbRun(
+        `UPDATE production_order_executions
+         SET status = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+        [
+          normalizedStatus,
+          JSON.stringify({ orderStatus: status, safetyBoundary: createProductionSafetyBoundary(false) }),
+          execution.id,
+          req.session.userId
+        ]
+      );
+      await recordProductionOrderEvent({
+        executionId: execution.id,
+        userId: req.session.userId,
+        status: normalizedStatus,
+        summary: `Production order status refreshed: ${normalizedStatus}.`,
+        payload: status
+      });
+
+      res.json({
+        execution: parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [execution.id, req.session.userId])),
+        status,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('production status', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase6/emergency-stop', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      let disabledCount = 0;
+
+      for (const connector of connectors) {
+        const settings = mergeProductionConnectionSettings(connector, {
+          liveTradingLocked: true,
+          productionOrderEndpointEnabled: false,
+          automatedLiveTradingEnabled: false,
+          unrestrictedAutonomousTradingEnabled: false,
+          walletSigningEnabled: false,
+          withdrawalsEnabled: false,
+          marginEnabled: false,
+          futuresEnabled: false,
+          leverageEnabled: false,
+          disabledByEmergencyStopAt: new Date().toISOString()
+        });
+
+        await dbRun(
+          `UPDATE exchange_connectors
+           SET mode = ?, status = ?, settings_json = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          [
+            String(connector.mode || '').includes('live') ? 'read_only' : connector.mode,
+            String(connector.mode || '').includes('live') ? 'disabled' : connector.status,
+            JSON.stringify(settings),
+            connector.id
+          ]
+        );
+        disabledCount += connector.settings?.productionConnection ? 1 : 0;
+      }
+
+      await dbRun(
+        `UPDATE production_execution_approvals
+         SET status = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = ? AND status = ?`,
+        ['emergency_disabled', req.session.userId, 'active']
+      );
+      await dbRun(
+        `INSERT INTO live_trading_safety_events
+         (user_id, event_type, status, summary, payload_json)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          'phase6_emergency_stop',
+          'complete',
+          'Phase 6 emergency stop disabled production approvals and live connector flags.',
+          JSON.stringify({
+            disabledCount,
+            productionOrderEndpointEnabled: false,
+            automatedLiveTradingEnabled: false,
+            unrestrictedAutonomousTradingEnabled: false,
+            walletSigningEnabled: false,
+            withdrawalsEnabled: false,
+            marginEnabled: false,
+            futuresEnabled: false,
+            leverageEnabled: false
+          })
+        ]
+      );
+
+      res.json({
+        status: 'complete',
+        disabledCount,
+        summary: 'Emergency stop complete. Production approvals and live connector flags are disabled.',
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
   });
 

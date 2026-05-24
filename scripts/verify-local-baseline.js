@@ -81,6 +81,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/exchange-tiny-live-execution.js',
     'app/server/src/lib/exchange-live-arbitrage-command.js',
     'app/server/src/lib/exchange-treasury-liquidity-intelligence.js',
+    'app/server/src/lib/exchange-production-execution.js',
     'app/server/src/lib/local-model-routing.js',
     'app/server/src/lib/local-model-runtime.js',
     'app/server/src/lib/live-execution-handoff.js',
@@ -3913,6 +3914,158 @@ function checkExchangeTreasuryLiquidityIntelligenceModule() {
   pass('exchange treasury liquidity intelligence module');
 }
 
+function checkExchangeProductionExecutionModule() {
+  const {
+    PHASE6_ENABLE_LIVE_CONFIRMATION_PHRASE,
+    PHASE6_ORDER_CONFIRMATION_PHRASE,
+    PHASE6_APPROVAL_SCOPE_TYPES,
+    PHASE6_ORDER_STATUSES,
+    DEFAULT_PHASE6_POLICY,
+    PHASE6_PRODUCTION_ADAPTERS,
+    normalizeProductionOrderDraft,
+    createProductionOrderFingerprint,
+    evaluateProductionOrderSafety,
+    createProductionOrderPreview,
+    buildPhase6ApprovalCenter,
+    createProductionSafetyBoundary
+  } = require(path.join(projectRoot, 'app/server/src/lib/exchange-production-execution'));
+  const order = normalizeProductionOrderDraft({
+    exchangeName: 'binance',
+    symbol: 'BTC/USDT',
+    side: 'buy',
+    orderType: 'limit',
+    quantity: 0.001,
+    limitPrice: 50000,
+    notionalUsd: 10,
+    maxOrderUsd: 10
+  });
+  const approvals = [
+    { scope_type: 'enable_live_trading', scope_value: 'global', status: 'active' },
+    { scope_type: 'enable_exchange', scope_value: 'binance', status: 'active' },
+    { scope_type: 'enable_strategy', scope_value: 'manual', status: 'active' },
+    { scope_type: 'enable_symbol', scope_value: 'binance:BTC/USDT', status: 'active' },
+    { scope_type: 'increase_capital_limits', scope_value: 'capital:10.00', status: 'active', capital_limit_usd: 10 }
+  ];
+  const credentials = {
+    apiKey: 'fixture-key',
+    apiSecret: 'fixture-secret',
+    permissionsChecklist: {
+      spotTradingEnabled: true,
+      withdrawalsDisabled: true,
+      transfersDisabled: true,
+      marginDisabled: true,
+      futuresDisabled: true,
+      leverageDisabled: true
+    }
+  };
+  const safety = evaluateProductionOrderSafety({
+    order,
+    adapter: PHASE6_PRODUCTION_ADAPTERS.binance,
+    connector: { id: 1, label: 'Binance Production Locked' },
+    credentials,
+    productionPermission: {
+      status: 'production_account_verified',
+      canTrade: true,
+      canWithdraw: false,
+      spotAllowed: true,
+      marginDetected: false,
+      futuresDetected: false,
+      plainEnglishStatus: 'fixture verified'
+    },
+    riskProfile: {
+      id: 1,
+      status: 'active',
+      max_order_value: 10,
+      max_daily_loss: 10,
+      kill_switch_enabled: 0
+    },
+    sandboxEvidence: [{ exchange_name: 'binance', status: 'filled' }],
+    tinyLiveEvidence: [],
+    approvals,
+    marketContext: {
+      productionDryRunPassed: true,
+      liquidityUsd: 100000,
+      slippagePercent: 0.05,
+      volatilityPercent: 1,
+      netSpreadPercent: 0.1,
+      latencyMs: 100,
+      priceTimestamp: new Date().toISOString()
+    },
+    accountContext: {
+      exchangeExposureUsd: 0,
+      strategyExposureUsd: 0,
+      dailyDrawdownUsd: 0,
+      rollingLossUsd: 0,
+      repeatedFailures: 0
+    },
+    recentOrderFingerprints: [],
+    ownerConfirmation: PHASE6_ORDER_CONFIRMATION_PHRASE
+  });
+  const preview = createProductionOrderPreview({
+    order,
+    safety,
+    adapter: PHASE6_PRODUCTION_ADAPTERS.binance,
+    productionPermission: { status: 'production_account_verified', canTrade: true, canWithdraw: false }
+  });
+  const blockedSafety = evaluateProductionOrderSafety({
+    order,
+    adapter: PHASE6_PRODUCTION_ADAPTERS.binance,
+    connector: { id: 1 },
+    credentials: null,
+    approvals: [],
+    riskProfile: null,
+    sandboxEvidence: [],
+    marketContext: {},
+    ownerConfirmation: ''
+  });
+  const center = buildPhase6ApprovalCenter({
+    connectors: [{ id: 1, exchange_name: 'binance', settings: { registryId: 'binance' } }],
+    vaultStatus: { entries: [{ exchangeName: 'binance' }] },
+    approvals,
+    latestOrders: [],
+    riskProfile: { id: 1, status: 'active', kill_switch_enabled: 0 },
+    latestSandboxTests: [{ exchange_name: 'binance', status: 'filled' }]
+  });
+  const boundary = createProductionSafetyBoundary(false);
+
+  if (
+    PHASE6_ENABLE_LIVE_CONFIRMATION_PHRASE !== 'I APPROVE CONTROLLED PRODUCTION LIVE TRADING'
+    || PHASE6_ORDER_CONFIRMATION_PHRASE !== 'I APPROVE THIS PRODUCTION ORDER'
+    || !PHASE6_APPROVAL_SCOPE_TYPES.includes('enable_exchange')
+    || !PHASE6_ORDER_STATUSES.includes('preview_blocked')
+    || DEFAULT_PHASE6_POLICY.defaultLocked !== true
+    || DEFAULT_PHASE6_POLICY.automatedLiveTradingEnabled !== false
+    || DEFAULT_PHASE6_POLICY.withdrawalsEnabled !== false
+    || DEFAULT_PHASE6_POLICY.walletSigningEnabled !== false
+    || PHASE6_PRODUCTION_ADAPTERS.binance.adapterStatus !== 'production_route_ready_locked'
+    || !PHASE6_PRODUCTION_ADAPTERS.coinbase
+    || !PHASE6_PRODUCTION_ADAPTERS.kraken
+    || !PHASE6_PRODUCTION_ADAPTERS.okx
+    || !PHASE6_PRODUCTION_ADAPTERS.bybit
+    || order.exchangeSymbol !== 'BTCUSDT'
+    || !createProductionOrderFingerprint(order).startsWith('production:binance')
+    || safety.passed !== true
+    || safety.safetyBoundary.productionOrderEndpointEnabled !== true
+    || safety.safetyBoundary.automatedLiveTradingEnabled !== false
+    || safety.safetyBoundary.withdrawalsEnabled !== false
+    || safety.safetyBoundary.walletSigningEnabled !== false
+    || preview.safeToSubmit !== true
+    || blockedSafety.passed !== false
+    || blockedSafety.safetyBoundary.productionOrderEndpointEnabled !== false
+    || center.title !== 'Phase 6: Production Trading Command Center'
+    || center.safetyBoundary.productionOrderEndpointEnabled !== false
+    || center.exchanges.length < 5
+    || boundary.productionOrderEndpointEnabled !== false
+    || boundary.automatedLiveTradingEnabled !== false
+    || boundary.withdrawalsEnabled !== false
+    || boundary.walletSigningEnabled !== false
+  ) {
+    fail('exchange production execution module did not preserve Phase 6 owner-gated production safety boundaries');
+  }
+
+  pass('exchange production execution module');
+}
+
 function checkStrategyResearchModule() {
   const {
     parseStrategy,
@@ -7385,6 +7538,7 @@ function checkLiveTradingLaunchCenterUi() {
   const tinyLiveExecution = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-tiny-live-execution.js'), 'utf8');
   const phase4Command = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-live-arbitrage-command.js'), 'utf8');
   const phase5Treasury = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-treasury-liquidity-intelligence.js'), 'utf8');
+  const phase6Production = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-production-execution.js'), 'utf8');
   const schema = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/database-schema.js'), 'utf8');
   const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
   const strategyLab = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
@@ -7429,6 +7583,23 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('Risk & Exposure Dashboard')
     || !html.includes('AI Decision Audit')
     || !html.includes('Emergency Capital Freeze / Keep Locked')
+    || !html.includes('Phase 6: Production Trading Command Center')
+    || !html.includes('Record Controlled Approval')
+    || !html.includes('Save Production API Key To Local Vault')
+    || !html.includes('Test Production Connection')
+    || !html.includes('Delete Production Key')
+    || !html.includes('Run Production Dry-Run Preview')
+    || !html.includes('Place Controlled Production Order')
+    || !html.includes('Track Latest Production Order')
+    || !html.includes('Cancel Latest Production Order')
+    || !html.includes('Emergency Stop Production')
+    || !html.includes('Live Positions Dashboard')
+    || !html.includes('Real Orders Dashboard')
+    || !html.includes('Real Fill Dashboard')
+    || !html.includes('Exchange Health Monitor')
+    || !html.includes('Capital Exposure Dashboard')
+    || !html.includes('Emergency Controls Dashboard')
+    || !html.includes('Risk Engine Dashboard')
     || !html.includes('/js/operator-next-action.js')
     || !html.includes('Scan Read-Only Accounts')
     || !html.includes('Run Dry-Run Safety Review')
@@ -7449,6 +7620,14 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('/api/v1/live-trading-launch/phase4/command-center')
     || !html.includes('/api/v1/live-trading-launch/phase5/status')
     || !html.includes('/api/v1/live-trading-launch/phase5/treasury-command-center')
+    || !html.includes('/api/v1/live-trading-launch/phase6/status')
+    || !html.includes('/api/v1/live-trading-launch/phase6/approval')
+    || !html.includes('/api/v1/live-trading-launch/phase6/preview')
+    || !html.includes('/api/v1/live-trading-launch/phase6/place')
+    || !html.includes('/api/v1/live-trading-launch/phase6/orders/')
+    || !html.includes('/api/v1/live-trading-launch/phase6/emergency-stop')
+    || !html.includes('/production-credentials')
+    || !html.includes('/test-production-connection')
     || !html.includes('/sandbox-credentials')
     || !html.includes('/tiny-live-credentials')
     || !html.includes('/api/v1/live-trading-launch/phase3c/orders/')
@@ -7477,6 +7656,11 @@ function checkLiveTradingLaunchCenterUi() {
     || !styles.includes('.phase5-controls')
     || !styles.includes('.phase5-dashboard-grid')
     || !styles.includes('.phase5-mini-card')
+    || !styles.includes('.phase6-controls')
+    || !styles.includes('.phase6-vault')
+    || !styles.includes('.phase6-dashboard-grid')
+    || !styles.includes('.phase6-mini-card')
+    || !styles.includes('.phase6-acknowledgments')
     || !routes.includes("app.get('/api/v1/live-trading-launch/roadmap'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/read-only-scan'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/paper-simulate-opportunity'")
@@ -7492,6 +7676,16 @@ function checkLiveTradingLaunchCenterUi() {
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase4/command-center'")
     || !routes.includes("app.get('/api/v1/live-trading-launch/phase5/status'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase5/treasury-command-center'")
+    || !routes.includes("app.get('/api/v1/live-trading-launch/phase6/status'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/phase6/approval'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/phase6/preview'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/phase6/place'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/phase6/orders/:id/cancel'")
+    || !routes.includes("app.get('/api/v1/live-trading-launch/phase6/orders/:id/status'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/phase6/emergency-stop'")
+    || !routes.includes("app.post('/api/v1/exchange-connectors/:id/production-credentials'")
+    || !routes.includes("app.delete('/api/v1/exchange-connectors/:id/production-credentials'")
+    || !routes.includes("app.post('/api/v1/exchange-connectors/:id/test-production-connection'")
     || !routes.includes("app.post('/api/v1/exchange-connectors/:id/tiny-live-credentials'")
     || !routes.includes("app.delete('/api/v1/exchange-connectors/:id/tiny-live-credentials'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase3c/orders/:id/cancel'")
@@ -7515,6 +7709,10 @@ function checkLiveTradingLaunchCenterUi() {
     || !server.includes('runTinyLiveOrderLifecycle')
     || !server.includes('buildLiveArbitrageCommandCenter')
     || !server.includes('buildTreasuryLiquidityCommandCenter')
+    || !server.includes('PHASE6_PRODUCTION_ADAPTERS')
+    || !server.includes('runProductionOrderLifecycle')
+    || !server.includes('queryProductionOrderStatus')
+    || !server.includes('cancelProductionOrder')
     || !routeRegistration.includes('scanReadOnlyArbitrageOpportunities')
     || !routeRegistration.includes('createPaperSimulationForOpportunity')
     || !routeRegistration.includes('scanAuthenticatedReadOnlyAccounts')
@@ -7527,6 +7725,10 @@ function checkLiveTradingLaunchCenterUi() {
     || !routeRegistration.includes('runTinyLiveOrderLifecycle')
     || !routeRegistration.includes('buildLiveArbitrageCommandCenter')
     || !routeRegistration.includes('buildTreasuryLiquidityCommandCenter')
+    || !routeRegistration.includes('buildPhase6ApprovalCenter')
+    || !routeRegistration.includes('runProductionOrderLifecycle')
+    || !routeRegistration.includes('queryProductionOrderStatus')
+    || !routeRegistration.includes('cancelProductionOrder')
     || !readOnlyConnections.includes('EXPANDED_READONLY_MARKET_VENUES')
     || !readOnlyConnections.includes('fetchKucoinMarketSnapshot')
     || !readOnlyConnections.includes('fetchGateMarketSnapshot')
@@ -7584,11 +7786,26 @@ function checkLiveTradingLaunchCenterUi() {
     || !phase5Treasury.includes('autonomousTreasuryActionsEnabled: false')
     || !phase5Treasury.includes('unrestrictedWithdrawalsEnabled: false')
     || !phase5Treasury.includes('unrestrictedWalletSigningEnabled: false')
+    || !phase6Production.includes('Phase 6: Production Trading Command Center')
+    || !phase6Production.includes('PHASE6_PRODUCTION_ADAPTERS')
+    || !phase6Production.includes('submitBinanceProductionOrder')
+    || !phase6Production.includes('submitCoinbaseProductionOrder')
+    || !phase6Production.includes('submitKrakenProductionOrder')
+    || !phase6Production.includes('submitOkxProductionOrder')
+    || !phase6Production.includes('submitBybitProductionOrder')
+    || !phase6Production.includes('queryProductionOrderStatus')
+    || !phase6Production.includes('cancelProductionOrder')
+    || !phase6Production.includes('saveProductionVaultCredentials')
+    || !phase6Production.includes('testProductionExchangeConnection')
+    || !phase6Production.includes('automatedLiveTradingEnabled: false')
+    || !phase6Production.includes('unrestrictedAutonomousTradingEnabled: false')
+    || !phase6Production.includes('withdrawalsEnabled: false')
+    || !phase6Production.includes('walletSigningEnabled: false')
     || !operatorMode.includes("'/live-trading-launch'")
-    || !operatorMode.includes('Monitor Multi-Exchange Arbitrage And Treasury Intelligence Without Unlocking Live Trading')
-    || !operatorMode.includes("keepIds: ['live-arbitrage-command-center', 'treasury-command-center']")
-    || !operatorMode.includes('Run Treasury Intelligence Refresh')
-    || !operatorMode.includes('No leverage, margin, futures, withdrawals, wallet signing, multi-leg live orders, or autonomous scaling.')
+    || !operatorMode.includes('Control Production Trading Infrastructure Without Unlocking Autonomy')
+    || !operatorMode.includes("keepIds: ['live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center']")
+    || !operatorMode.includes('Refresh Production Status')
+    || !operatorMode.includes('No leverage, margin, futures, withdrawals, wallet signing, unrestricted live orders, or autonomous scaling.')
     || !schema.includes('CREATE TABLE IF NOT EXISTS sandbox_order_tests')
     || !schema.includes('CREATE TABLE IF NOT EXISTS sandbox_order_events')
     || !schema.includes('CREATE TABLE IF NOT EXISTS tiny_live_order_tests')
@@ -7597,6 +7814,9 @@ function checkLiveTradingLaunchCenterUi() {
     || !schema.includes('CREATE TABLE IF NOT EXISTS live_arbitrage_command_events')
     || !schema.includes('CREATE TABLE IF NOT EXISTS treasury_intelligence_runs')
     || !schema.includes('CREATE TABLE IF NOT EXISTS treasury_intelligence_events')
+    || !schema.includes('CREATE TABLE IF NOT EXISTS production_execution_approvals')
+    || !schema.includes('CREATE TABLE IF NOT EXISTS production_order_executions')
+    || !schema.includes('CREATE TABLE IF NOT EXISTS production_order_events')
     || !schema.includes('CREATE TABLE IF NOT EXISTS live_trading_safety_events')
     || !dashboard.includes('/live-trading-launch')
     || !strategyLab.includes('/live-trading-launch')
@@ -8610,7 +8830,10 @@ function checkProjectHandoffDoc() {
       || doc.includes('Owner-test local MVP: 100% after the local owner acceptance record; 99% before owner acceptance in a fresh database.')
     )
     || !doc.includes('Local E2E path: complete for safe local paper operation')
-    || !doc.includes('Live E2E path: locked because credential loading')
+    || !(
+      doc.includes('Live E2E path: locked because credential loading')
+      || doc.includes('Live E2E path: locked for unrestricted/autonomous use.')
+    )
     || !doc.includes('## Current Owner-Test Snapshot')
     || !doc.includes('Owner evidence included · owner acceptance pending · live disabled')
     || !doc.includes('the completion ledger explaining why MVP/local paper/full live percentages are gated')
@@ -11585,6 +11808,7 @@ async function main() {
   checkExchangeTinyLiveExecutionModule();
   checkExchangeLiveArbitrageCommandModule();
   checkExchangeTreasuryLiquidityIntelligenceModule();
+  checkExchangeProductionExecutionModule();
   checkStrategyResearchModule();
   await checkStrategyDecisionLogRuntimeModule();
   checkStrategyMathModule();

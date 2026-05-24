@@ -87,25 +87,27 @@
         },
         '/live-trading-launch': {
             area: 'Live Trading Launch Center',
-            title: 'Monitor Multi-Exchange Arbitrage And Treasury Intelligence Without Unlocking Live Trading',
-            summary: 'Use read-only market data, venue scoring, spread ranking, treasury tracking, liquidity intelligence, allocation planning, and safety dashboards. Multi-leg live execution, withdrawals, wallet signing, margin, futures, leverage, and autonomous scaling stay locked.',
-            primaryAction: { label: 'Run Treasury Intelligence Refresh', selector: '#run-phase5-treasury' },
-            keepIds: ['live-arbitrage-command-center', 'treasury-command-center'],
-            keepHeadings: ['What Should I Do Next?', 'Read-Only Arbitrage Scanner', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center'],
+            title: 'Control Production Trading Infrastructure Without Unlocking Autonomy',
+            summary: 'Use read-only market data, venue scoring, spread ranking, treasury intelligence, production approval gates, dry-run previews, and emergency controls. Withdrawals, wallet signing, margin, futures, leverage, and autonomous scaling stay locked.',
+            primaryAction: { label: 'Refresh Production Status', selector: '#refresh-phase6-status' },
+            keepIds: ['live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center'],
+            keepHeadings: ['What Should I Do Next?', 'Read-Only Arbitrage Scanner', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center', 'Phase 6: Production Trading Command Center'],
             readyLabel: 'Live Trading Launch Locked Safely',
-            nextText: 'Run treasury intelligence after the read-only scan. Review spreads, liquidity, capital allocation, reserve ratio, cross-chain costs, and safety controls before any future owner-approved live expansion.',
+            nextText: 'Review Phase 6 status. Production order routing exists, but it stays locked until production keys, exchange connectivity, sandbox evidence, explicit approvals, dry-run checks, capital limits, and final typed confirmation pass.',
             cards: [
                 ['Read-only expansion', 'Fetch public and authenticated read-only data without placing orders.'],
                 ['Arbitrage intelligence', 'Rank best buy and sell venues after fees, slippage, latency, liquidity, and exchange health.'],
                 ['Treasury intelligence', 'Track capital, stablecoin inventory, chain metadata, opportunity confidence, and allocation reasoning.'],
-                ['Safety boundary', 'No leverage, margin, futures, withdrawals, wallet signing, multi-leg live orders, or autonomous scaling.']
+                ['Production gates', 'Production execution requires owner approvals, dry-run preview, capital limits, and final typed confirmation.'],
+                ['Safety boundary', 'No leverage, margin, futures, withdrawals, wallet signing, unrestricted live orders, or autonomous scaling.']
             ],
             workflow: [
                 ['1. Refresh launch status', 'Confirm live trading is still locked and read-only systems are available.', { label: 'Refresh Launch Status', selector: '#refresh-live-roadmap' }],
                 ['2. Run read-only scan', 'Compare market prices across connected and public venues without live orders.', { label: 'Run Read-Only Scan', selector: '#run-readonly-scan' }],
                 ['3. Run Phase 4 command center', 'Build the spread heatmap, opportunity queue, exchange health, capital allocation, risk, and recovery dashboards.', { label: 'Run Multi-Exchange Scan', selector: '#run-phase4-command-center' }],
                 ['4. Run Phase 5 treasury intelligence', 'Build treasury, liquidity, cross-chain, allocation, risk, and AI decision audit dashboards.', { label: 'Run Treasury Intelligence Refresh', selector: '#run-phase5-treasury' }],
-                ['5. Review emergency controls', 'Keep live connectors and treasury movement disabled if anything looks unsafe.', { label: 'Emergency Capital Freeze / Keep Locked', selector: '#phase5-freeze-capital' }]
+                ['5. Review Phase 6 production gates', 'See production adapters, approvals, dry-run preview, real-order ledger, and emergency controls.', { label: 'Refresh Production Status', selector: '#refresh-phase6-status' }],
+                ['6. Emergency stop', 'Disable production approvals and live connector flags if anything looks unsafe.', { label: 'Emergency Stop Production', selector: '#phase6-emergency-stop' }]
             ]
         },
         '/operator-control': {

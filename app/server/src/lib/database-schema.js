@@ -739,6 +739,81 @@ function initializeDatabase(db) {
     `);
 
     db.run(`
+      CREATE TABLE IF NOT EXISTS production_execution_approvals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        scope_type TEXT NOT NULL,
+        scope_value TEXT NOT NULL DEFAULT '',
+        exchange_name TEXT,
+        symbol TEXT,
+        strategy_id INTEGER,
+        capital_limit_usd REAL NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'active',
+        approval_hash TEXT NOT NULL,
+        acknowledgment_json TEXT NOT NULL DEFAULT '{}',
+        expires_at TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(strategy_id) REFERENCES trading_strategies(id)
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS production_order_executions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        connector_id INTEGER,
+        risk_profile_id INTEGER,
+        strategy_id INTEGER,
+        exchange_name TEXT NOT NULL,
+        symbol TEXT NOT NULL,
+        side TEXT NOT NULL,
+        order_type TEXT NOT NULL,
+        quantity REAL NOT NULL DEFAULT 0,
+        limit_price REAL,
+        notional_usd REAL NOT NULL DEFAULT 0,
+        max_order_usd REAL NOT NULL DEFAULT 0,
+        client_order_id TEXT NOT NULL,
+        exchange_order_id TEXT,
+        status TEXT NOT NULL DEFAULT 'preview_blocked',
+        readiness_json TEXT NOT NULL DEFAULT '{}',
+        preview_json TEXT NOT NULL DEFAULT '{}',
+        result_json TEXT NOT NULL DEFAULT '{}',
+        owner_confirmation_hash TEXT,
+        production_order_endpoint_enabled INTEGER NOT NULL DEFAULT 0,
+        production_order_endpoint_called INTEGER NOT NULL DEFAULT 0,
+        automated_live_trading_enabled INTEGER NOT NULL DEFAULT 0,
+        unrestricted_autonomous_trading_enabled INTEGER NOT NULL DEFAULT 0,
+        wallet_signing_enabled INTEGER NOT NULL DEFAULT 0,
+        withdrawals_enabled INTEGER NOT NULL DEFAULT 0,
+        margin_enabled INTEGER NOT NULL DEFAULT 0,
+        futures_enabled INTEGER NOT NULL DEFAULT 0,
+        leverage_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(connector_id) REFERENCES exchange_connectors(id),
+        FOREIGN KEY(risk_profile_id) REFERENCES risk_profiles(id),
+        FOREIGN KEY(strategy_id) REFERENCES trading_strategies(id)
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS production_order_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        production_order_execution_id INTEGER,
+        user_id INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        payload_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(production_order_execution_id) REFERENCES production_order_executions(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+
+    db.run(`
       CREATE TABLE IF NOT EXISTS arbitrage_simulation_runs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,

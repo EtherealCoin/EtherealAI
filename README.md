@@ -97,10 +97,12 @@ npm test
 
 The following are blocked by design:
 
-- Live trading
-- Live exchange order execution
-- Live exchange credential loading and order adapters
+- Unrestricted autonomous live trading
+- Production exchange order execution unless every Phase 6 owner approval, vault, safety, dry-run, and final typed confirmation gate passes for one controlled spot order
+- Autonomous live exchange order loops
 - Wallet/private-key handling
+- Withdrawals/transfers
+- Margin, futures, and leverage
 - External social posting
 - Domain or external account purchases
 - Solidity/token deployment
@@ -184,6 +186,19 @@ Phase 5 adds autonomous treasury and liquidity intelligence while preserving own
 - The AI decision audit explains why opportunities were selected or rejected and records the safety policy that prevented autonomous treasury movement.
 - Simple Operator Mode exposes the Phase 5 panel with `Run Treasury Intelligence Refresh`, treasury cards, liquidity dashboard, opportunity ranking board, cross-chain status, capital allocation heatmap, risk/exposure dashboard, and AI decision audit.
 - Autonomous treasury actions, unrestricted autonomous scaling, leverage, futures, withdrawals, wallet signing, live order endpoints, and bridge/transfer endpoints remain disabled.
+
+Phase 6 adds controlled production live execution infrastructure while preserving strict owner gates:
+
+- `/live-trading-launch` now includes `Phase 6: Production Trading Command Center`.
+- Production spot adapters are implemented for Binance, Coinbase Advanced, Kraken, OKX, and Bybit using each exchange's production trading/order APIs.
+- Production keys are stored only in `~/EtherealAI_Secrets/exchange-production-vault.json` with AES-256-GCM encryption and a permission-locked local key. SQLite stores only vault references, fingerprints, readiness snapshots, approvals, order ledger rows, and audit events.
+- The operator page exposes `Save Production API Key To Local Vault`, `Test Production Connection`, `Record Controlled Approval`, `Run Production Dry-Run Preview`, `Place Controlled Production Order`, `Track Latest Production Order`, `Cancel Latest Production Order`, and `Emergency Stop Production`.
+- Production connection testing reads account/permission metadata and verifies spot-only setup, no withdrawals/transfers, no margin/futures/leverage, and no wallet signing.
+- Owner approvals are scoped separately for global live gate, exchange, strategy/manual path, symbol, and capital limit. The approval phrase is `I APPROVE CONTROLLED PRODUCTION LIVE TRADING`; the final one-order phrase is `I APPROVE THIS PRODUCTION ORDER`.
+- Before a production endpoint can be called, EtherealAI checks production adapter readiness, connector existence, encrypted vault credentials, authenticated account verification, withdrawal-disabled status, no margin/futures/leverage, sandbox/tiny-live evidence, all owner approvals, active risk profile, kill switch off, order/capital/exchange/strategy limits, drawdown/loss limits, volatility, spread, slippage, stale price, liquidity, latency, precision/lot size, duplicate-order prevention, repeated-failure shutdown, production dry-run proof, and final typed owner confirmation.
+- Dry-run preview writes an audit ledger row but explicitly does not call a production order endpoint.
+- Emergency stop disables active production approvals and live connector flags.
+- Phase 6 still does not enable unrestricted autonomous trading, withdrawals, wallet signing, margin, futures, leverage, multi-leg autonomous scaling, or background live order loops.
 
 ## Multi-Agent Coordination
 

@@ -564,6 +564,193 @@
             <div id="phase5-result" class="phase3-results">Phase 5 is intelligence-only. Autonomous treasury movement is not enabled.</div>
         </section>
 
+        <section class="model-panel" id="production-trading-command-center">
+            <h2>Phase 6: Production Trading Command Center</h2>
+            <p class="inline-status">Controlled production execution infrastructure is installed here. Real orders stay locked until production keys, exchange connectivity, sandbox evidence, owner approvals, dry-run checks, capital limits, and final typed confirmation all pass.</p>
+            <div class="phase6-controls">
+                <label for="phase6-exchange">
+                    Exchange
+                    <select id="phase6-exchange">
+                        <option value="binance">Binance</option>
+                        <option value="coinbase">Coinbase Advanced</option>
+                        <option value="kraken">Kraken</option>
+                        <option value="okx">OKX</option>
+                        <option value="bybit">Bybit</option>
+                    </select>
+                </label>
+                <label for="phase6-symbol">
+                    Symbol
+                    <input id="phase6-symbol" value="BTC/USDT">
+                </label>
+                <label for="phase6-side">
+                    Side
+                    <select id="phase6-side">
+                        <option value="buy">Buy</option>
+                        <option value="sell">Sell</option>
+                    </select>
+                </label>
+                <label for="phase6-order-type">
+                    Order Type
+                    <select id="phase6-order-type">
+                        <option value="limit">Limit</option>
+                        <option value="market">Market</option>
+                        <option value="post_only">Post Only</option>
+                        <option value="ioc">IOC</option>
+                    </select>
+                </label>
+                <label for="phase6-quantity">
+                    Quantity
+                    <input id="phase6-quantity" type="number" min="0" step="0.000001" value="0.001">
+                </label>
+                <label for="phase6-limit-price">
+                    Limit Price
+                    <input id="phase6-limit-price" type="number" min="0" step="0.01" value="0">
+                </label>
+                <label for="phase6-notional">
+                    Max Order USD
+                    <input id="phase6-notional" type="number" min="0" step="1" value="10">
+                </label>
+            </div>
+            <div class="phase6-controls">
+                <label for="phase6-approval-type">
+                    Approval Type
+                    <select id="phase6-approval-type">
+                        <option value="enable_live_trading">Enable Live Trading Gate</option>
+                        <option value="enable_exchange">Enable This Exchange</option>
+                        <option value="enable_strategy">Enable Manual/Strategy</option>
+                        <option value="increase_capital_limits">Approve Capital Limit</option>
+                        <option value="enable_symbol">Enable This Symbol</option>
+                    </select>
+                </label>
+                <label for="phase6-capital-limit">
+                    Capital Limit USD
+                    <input id="phase6-capital-limit" type="number" min="0" step="1" value="10">
+                </label>
+                <label for="phase6-approval-confirmation">
+                    Approval Phrase
+                    <input id="phase6-approval-confirmation" placeholder="Type the live approval phrase">
+                </label>
+                <label for="phase6-order-confirmation">
+                    Final Order Phrase
+                    <input id="phase6-order-confirmation" placeholder="Type the final order phrase">
+                </label>
+            </div>
+            <div class="phase6-acknowledgments">
+                <label><input id="phase6-ack-live-risk" type="checkbox"> I understand this can use real money only after every gate passes.</label>
+                <label><input id="phase6-ack-withdrawals" type="checkbox"> Withdrawals and transfers must stay disabled.</label>
+                <label><input id="phase6-ack-no-autonomy" type="checkbox"> Autonomous scaling remains disabled.</label>
+                <label><input id="phase6-ack-real-money" type="checkbox"> I accept responsibility for controlled production risk.</label>
+            </div>
+            <details class="compact-details phase6-vault">
+                <summary>Save Production API Key To Local Vault</summary>
+                <p class="inline-status">Use a production spot API key only when you intentionally want to prepare a controlled live path. Disable withdrawals, transfers, margin, futures, leverage, and anything not needed. The key is encrypted locally and never displayed again. Saving a key does not place orders and does not enable automation.</p>
+                <div class="phase6-controls">
+                    <label for="phase6-api-key">
+                        Production API key
+                        <input id="phase6-api-key" type="password" autocomplete="off">
+                    </label>
+                    <label for="phase6-api-secret">
+                        Production API secret
+                        <input id="phase6-api-secret" type="password" autocomplete="off">
+                    </label>
+                    <label for="phase6-passphrase">
+                        Passphrase if exchange requires it
+                        <input id="phase6-passphrase" type="password" autocomplete="off">
+                    </label>
+                </div>
+                <div class="phase3a-checklist">
+                    <label class="checkbox-line"><input id="phase6-check-production-key" type="checkbox"> I intentionally created this production key for controlled spot trading.</label>
+                    <label class="checkbox-line"><input id="phase6-check-spot" type="checkbox"> Spot trading is enabled only for the approved exchange.</label>
+                    <label class="checkbox-line"><input id="phase6-check-withdrawals" type="checkbox"> Withdrawals are disabled.</label>
+                    <label class="checkbox-line"><input id="phase6-check-transfer" type="checkbox"> Transfers are disabled.</label>
+                    <label class="checkbox-line"><input id="phase6-check-margin" type="checkbox"> Margin trading is disabled.</label>
+                    <label class="checkbox-line"><input id="phase6-check-futures" type="checkbox"> Futures trading is disabled.</label>
+                    <label class="checkbox-line"><input id="phase6-check-leverage" type="checkbox"> Leverage is disabled.</label>
+                    <label class="checkbox-line"><input id="phase6-check-ip" type="checkbox"> IP restriction was reviewed for this connection.</label>
+                    <label class="checkbox-line"><input id="phase6-check-2fa" type="checkbox"> Two-factor protection is enabled on the exchange account.</label>
+                    <label class="checkbox-line"><input id="phase6-check-real-money" type="checkbox"> I understand this can use real money only after all gates pass.</label>
+                    <label class="checkbox-line"><input id="phase6-check-production-risk" type="checkbox"> I understand production trading risk.</label>
+                    <label class="checkbox-line"><input id="phase6-check-no-autonomous" type="checkbox"> I understand autonomous scaling remains disabled.</label>
+                </div>
+                <div class="button-row">
+                    <button id="save-phase6-production-key" type="button">Save Production Key To Local Vault</button>
+                    <button id="test-phase6-production-connection" type="button">Test Production Connection</button>
+                    <button id="delete-phase6-production-key" type="button" class="secondary-button">Delete Production Key</button>
+                </div>
+                <div id="phase6-vault-result" class="phase3-results">No production key saved from this page yet.</div>
+            </details>
+            <div class="button-row">
+                <button id="refresh-phase6-status" type="button">Refresh Production Status</button>
+                <button id="record-phase6-approval" type="button">Record Controlled Approval</button>
+                <button id="preview-phase6-order" type="button">Run Production Dry-Run Preview</button>
+                <button id="place-phase6-order" type="button" class="danger-button">Place Controlled Production Order</button>
+                <button id="track-phase6-order" type="button">Track Latest Production Order</button>
+                <button id="cancel-phase6-order" type="button" class="secondary-button">Cancel Latest Production Order</button>
+                <button id="phase6-emergency-stop" type="button" class="secondary-button">Emergency Stop Production</button>
+            </div>
+            <div class="phase6-dashboard-grid">
+                <article>
+                    <span>Production Status</span>
+                    <strong id="phase6-status">Locked</strong>
+                    <small id="phase6-status-detail">Owner approvals are required.</small>
+                </article>
+                <article>
+                    <span>Approvals</span>
+                    <strong id="phase6-approvals">0 active</strong>
+                    <small>Each exchange, symbol, strategy, and capital increase needs approval.</small>
+                </article>
+                <article>
+                    <span>Latest Preview</span>
+                    <strong id="phase6-preview-status">Waiting</strong>
+                    <small>No production order endpoint is called by preview.</small>
+                </article>
+                <article>
+                    <span>Safety</span>
+                    <strong id="phase6-safety">Locked</strong>
+                    <small>No withdrawals, wallet signing, leverage, futures, or autonomous trading.</small>
+                </article>
+            </div>
+            <div class="phase6-dashboard-grid">
+                <div class="phase6-panel">
+                    <h3>Production Trading Command Center</h3>
+                    <div id="phase6-command-dashboard">Refresh production status to load readiness.</div>
+                </div>
+                <div class="phase6-panel">
+                    <h3>Live Positions Dashboard</h3>
+                    <div id="phase6-positions-dashboard">Positions appear from authenticated production account reads only.</div>
+                </div>
+                <div class="phase6-panel">
+                    <h3>Real Orders Dashboard</h3>
+                    <div id="phase6-orders-dashboard">No production orders yet.</div>
+                </div>
+                <div class="phase6-panel">
+                    <h3>Real Fill Dashboard</h3>
+                    <div id="phase6-fills-dashboard">Fills and reconciliation appear after controlled execution.</div>
+                </div>
+                <div class="phase6-panel">
+                    <h3>Exchange Health Monitor</h3>
+                    <div id="phase6-exchange-health">Exchange health loads from the adapter matrix.</div>
+                </div>
+                <div class="phase6-panel">
+                    <h3>Capital Exposure Dashboard</h3>
+                    <div id="phase6-capital-dashboard">Capital protection gates are locked by default.</div>
+                </div>
+                <div class="phase6-panel">
+                    <h3>Emergency Controls Dashboard</h3>
+                    <div id="phase6-emergency-dashboard">Emergency stop disables approvals and live connector flags.</div>
+                </div>
+                <div class="phase6-panel">
+                    <h3>Risk Engine Dashboard</h3>
+                    <div id="phase6-risk-dashboard">Risk checks appear after preview.</div>
+                </div>
+            </div>
+            <div class="phase6-training">
+                <h3>Show Me How</h3>
+                <p class="workflow-helper-text">Production mode order: save production key, test connection, record approvals, run dry-run preview, type final order phrase, place one controlled order, monitor/cancel/reconcile, emergency stop if anything looks wrong.</p>
+            </div>
+            <div id="phase6-result" class="phase3-results">Phase 6 is locked. Production execution requires explicit owner approvals and final confirmation.</div>
+        </section>
+
         <section class="model-panel">
             <h2>Launch Roadmap</h2>
             <div id="live-roadmap-phases" class="live-roadmap-phases">Loading phases...</div>
@@ -595,6 +782,9 @@
         let latestTinyLiveOrderId = null;
         let latestPhase4CommandCenter = null;
         let latestPhase5TreasuryCommand = null;
+        let latestPhase6Center = null;
+        let latestPhase6PreviewId = null;
+        let latestPhase6OrderId = null;
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -1239,6 +1429,138 @@
                     <strong>${escapeHtml(command?.title || 'Treasury Command Center')}</strong>
                     <span>${escapeHtml(command?.nextRecommendedAction || 'Review treasury intelligence.')}</span>
                     <small>Autonomous treasury actions: ${command?.safetyBoundary?.autonomousTreasuryActionsEnabled ? 'enabled' : 'disabled'} · withdrawals: ${command?.safetyBoundary?.unrestrictedWithdrawalsEnabled ? 'enabled' : 'disabled'} · wallet signing: ${command?.safetyBoundary?.unrestrictedWalletSigningEnabled ? 'enabled' : 'disabled'}</small>
+                </article>
+            `;
+        }
+
+        function phase6CardClass(status) {
+            const text = String(status || '').toLowerCase();
+            if (text.includes('ready') || text.includes('verified') || text.includes('active')) return 'status-success';
+            if (text.includes('unsafe') || text.includes('error') || text.includes('rejected')) return 'status-danger';
+            if (text.includes('locked') || text.includes('blocked') || text.includes('review')) return 'status-warning';
+            return 'status-info';
+        }
+
+        function renderPhase6Center(center, latestOrders = [], approvals = []) {
+            latestPhase6Center = center;
+            if (latestOrders?.length && !latestPhase6OrderId) {
+                latestPhase6OrderId = latestOrders[0].id;
+            }
+            const exchanges = center?.exchanges || [];
+            const activeApprovals = center?.activeApprovals || approvals.filter(item => item.status === 'active');
+
+            document.getElementById('phase6-status').textContent = center?.status || 'Locked';
+            document.getElementById('phase6-status-detail').textContent = center?.plainEnglishStatus || 'Production execution remains locked.';
+            document.getElementById('phase6-approvals').textContent = `${activeApprovals.length} active`;
+            document.getElementById('phase6-safety').textContent = center?.safetyBoundary?.productionOrderEndpointEnabled ? 'Unlocked' : 'Locked';
+
+            document.getElementById('phase6-command-dashboard').innerHTML = `
+                <p class="workflow-helper-text">${escapeHtml(center?.plainEnglishStatus || 'Production execution remains locked.')}</p>
+                ${exchanges.map(exchange => `
+                    <article class="phase6-mini-card ${phase6CardClass(exchange.status)}">
+                        <strong>${escapeHtml(exchange.displayName)}</strong>
+                        <span>${escapeHtml(exchange.status)} · credentials ${exchange.productionCredentialsSaved ? 'saved' : 'missing'} · sandbox ${exchange.sandboxComplete ? 'complete' : 'needed'}</span>
+                        <small>${escapeHtml(exchange.nextButton || 'Review gates')}</small>
+                    </article>
+                `).join('') || '<p class="workflow-helper-text">No production adapters loaded.</p>'}
+            `;
+
+            document.getElementById('phase6-positions-dashboard').innerHTML = `
+                <article class="phase6-mini-card status-info">
+                    <strong>Account reads only</strong>
+                    <span>Balances and positions come from authenticated production account checks.</span>
+                    <small>No background trading loop is enabled.</small>
+                </article>
+            `;
+
+            document.getElementById('phase6-orders-dashboard').innerHTML = (latestOrders || []).slice(0, 8).map(order => `
+                <article class="phase6-mini-card ${phase6CardClass(order.status)}">
+                    <strong>#${escapeHtml(order.id)} ${escapeHtml(order.exchange_name)} ${escapeHtml(order.symbol)}</strong>
+                    <span>${escapeHtml(order.side)} ${escapeHtml(order.order_type)} · ${formatUsd(order.notional_usd || 0)} · ${escapeHtml(order.status)}</span>
+                    <small>Endpoint called: ${order.production_order_endpoint_called ? 'yes' : 'no'} · autonomous: ${order.automated_live_trading_enabled ? 'enabled' : 'disabled'}</small>
+                </article>
+            `).join('') || '<p class="workflow-helper-text">No production orders have been created.</p>';
+
+            document.getElementById('phase6-fills-dashboard').innerHTML = (latestOrders || []).filter(order => order.result?.resultScreen).slice(0, 6).map(order => `
+                <article class="phase6-mini-card ${phase6CardClass(order.result?.resultScreen?.fillStatus || order.status)}">
+                    <strong>${escapeHtml(order.result?.resultScreen?.fillStatus || order.status)}</strong>
+                    <span>${escapeHtml(order.result?.resultScreen?.exchange || order.exchange_name)} · order ${escapeHtml(order.exchange_order_id || 'not submitted')}</span>
+                    <small>Fees estimate ${escapeHtml(order.result?.resultScreen?.fees ?? 0)}</small>
+                </article>
+            `).join('') || '<p class="workflow-helper-text">No fills or reconciliation records yet.</p>';
+
+            document.getElementById('phase6-exchange-health').innerHTML = exchanges.map(exchange => `
+                <article class="phase6-mini-card ${phase6CardClass(exchange.status)}">
+                    <strong>${escapeHtml(exchange.displayName)}</strong>
+                    <span>${escapeHtml(exchange.adapterStatus)} · websocket ${escapeHtml(exchange.websocket?.status || 'spec ready')}</span>
+                    <small><a href="${escapeHtml(exchange.docsUrl || '#')}" target="_blank" rel="noreferrer">Official docs</a></small>
+                </article>
+            `).join('');
+
+            document.getElementById('phase6-capital-dashboard').innerHTML = `
+                <div class="live-candidate-metrics">
+                    <span>Max order: ${formatUsd(center?.policy?.maxOrderSizeUsd || 0)}</span>
+                    <span>Max capital exposure: ${formatUsd(center?.policy?.maxCapitalExposureUsd || 0)}</span>
+                    <span>Max exchange exposure: ${formatUsd(center?.policy?.maxExchangeExposureUsd || 0)}</span>
+                    <span>Max strategy exposure: ${formatUsd(center?.policy?.maxStrategyExposureUsd || 0)}</span>
+                    <span>Max daily drawdown: ${formatUsd(center?.policy?.maxDailyDrawdownUsd || 0)}</span>
+                    <span>Rolling loss limit: ${formatUsd(center?.policy?.rollingLossLimitUsd || 0)}</span>
+                </div>
+            `;
+
+            document.getElementById('phase6-emergency-dashboard').innerHTML = `
+                <article class="phase6-mini-card status-warning">
+                    <strong>Emergency stop ready</strong>
+                    <span>Disables active production approvals and live connector flags.</span>
+                    <small>Withdrawals and wallet signing remain disabled before and after emergency stop.</small>
+                </article>
+            `;
+
+            document.getElementById('phase6-risk-dashboard').innerHTML = `
+                <article class="phase6-mini-card status-warning">
+                    <strong>Risk engine locked</strong>
+                    <span>Preview runs stale price, liquidity, slippage, spread, drawdown, duplicate, precision, and capital gates.</span>
+                    <small>Place is blocked unless every gate passes.</small>
+                </article>
+            `;
+
+            document.getElementById('phase6-result').innerHTML = `
+                <article class="phase3-account-card status-warning">
+                    <strong>${escapeHtml(center?.title || 'Phase 6 Production Trading Command Center')}</strong>
+                    <span>${escapeHtml(center?.plainEnglishStatus || 'Production execution remains locked.')}</span>
+                    <small>Order endpoint enabled: ${center?.safetyBoundary?.productionOrderEndpointEnabled ? 'yes' : 'no'} · withdrawals: ${center?.safetyBoundary?.withdrawalsEnabled ? 'enabled' : 'disabled'} · wallet signing: ${center?.safetyBoundary?.walletSigningEnabled ? 'enabled' : 'disabled'} · autonomous: ${center?.safetyBoundary?.automatedLiveTradingEnabled ? 'enabled' : 'disabled'}</small>
+                </article>
+            `;
+        }
+
+        function renderPhase6Preview(data) {
+            const safety = data?.safety || data?.execution?.readiness || {};
+            const preview = data?.preview || data?.execution?.preview || {};
+            const missing = safety.missing || [];
+            latestPhase6PreviewId = data?.previewId || data?.execution?.id || latestPhase6PreviewId;
+            latestPhase6OrderId = data?.execution?.id || latestPhase6PreviewId || latestPhase6OrderId;
+            document.getElementById('phase6-preview-status').textContent = preview.status || data?.execution?.status || 'Review';
+            document.getElementById('phase6-result').innerHTML = `
+                <article class="phase3-account-card ${safety.safeToSubmit ? 'status-success' : 'status-warning'}">
+                    <strong>${escapeHtml(preview.exchange || 'Production Preview')}</strong>
+                    <span>${escapeHtml(safety.plainEnglishStatus || data?.nextClick || 'Review production gates.')}</span>
+                    <div class="read-only-spread-summary">
+                        <article><span>Symbol</span><strong>${escapeHtml(preview.symbol || '')}</strong><small>${escapeHtml(preview.side || '')}</small></article>
+                        <article><span>Type</span><strong>${escapeHtml(preview.orderType || '')}</strong><small>Spot only</small></article>
+                        <article><span>Amount</span><strong>${formatUsd(preview.notionalUsd || 0)}</strong><small>Max ${formatUsd(preview.maxOrderUsd || 0)}</small></article>
+                        <article><span>Endpoint Called</span><strong>No</strong><small>Preview/dry-run only</small></article>
+                    </div>
+                    ${missing.length ? `
+                        <div class="phase3a-checklist">
+                            ${missing.map(check => `
+                                <article class="status-warning">
+                                    <strong>${escapeHtml(check.label)}</strong>
+                                    <span>${escapeHtml(check.note || check.nextAction || '')}</span>
+                                </article>
+                            `).join('')}
+                        </div>
+                    ` : '<p class="workflow-helper-text">Only final owner order confirmation remains before controlled submission.</p>'}
+                    <p class="workflow-helper-text">Withdrawals, wallet signing, leverage, futures, and autonomous trading remain disabled.</p>
                 </article>
             `;
         }
@@ -1920,6 +2242,331 @@
             await loadPhase5Status();
         }
 
+        function phase6OrderPayload() {
+            return {
+                exchangeName: document.getElementById('phase6-exchange').value || 'binance',
+                symbol: document.getElementById('phase6-symbol').value || 'BTC/USDT',
+                side: document.getElementById('phase6-side').value || 'buy',
+                orderType: document.getElementById('phase6-order-type').value || 'limit',
+                quantity: Number(document.getElementById('phase6-quantity').value || 0),
+                limitPrice: Number(document.getElementById('phase6-limit-price').value || 0),
+                notionalUsd: Number(document.getElementById('phase6-notional').value || 0),
+                maxOrderUsd: Number(document.getElementById('phase6-notional').value || 0)
+            };
+        }
+
+        async function ensureProductionConnector(exchangeName) {
+            const current = (latestPhase6Center?.exchanges || []).find(exchange => exchange.exchangeName === exchangeName);
+
+            if (current?.connectorId) {
+                return current.connectorId;
+            }
+
+            await fetch('/api/v1/exchange-connectors/placeholders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    scope: 'single',
+                    exchangeId: exchangeName,
+                    mode: 'read_only'
+                })
+            });
+            const center = await loadPhase6Status();
+            const refreshed = (center?.exchanges || []).find(exchange => exchange.exchangeName === exchangeName);
+            return refreshed?.connectorId || null;
+        }
+
+        async function savePhase6ProductionKey() {
+            const exchangeName = document.getElementById('phase6-exchange').value || 'binance';
+            const connectorId = await ensureProductionConnector(exchangeName);
+            const output = document.getElementById('phase6-vault-result');
+
+            if (!connectorId) {
+                output.textContent = 'Create the exchange connector placeholder first, then retry.';
+                return;
+            }
+
+            output.textContent = 'Saving production key to the local encrypted vault. Secret values will not be displayed again.';
+            const response = await fetch(`/api/v1/exchange-connectors/${connectorId}/production-credentials`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    credentials: {
+                        apiKey: document.getElementById('phase6-api-key').value,
+                        apiSecret: document.getElementById('phase6-api-secret').value,
+                        passphrase: document.getElementById('phase6-passphrase').value
+                    },
+                    permissionsChecklist: {
+                        productionKeyReviewed: document.getElementById('phase6-check-production-key').checked,
+                        spotTradingEnabled: document.getElementById('phase6-check-spot').checked,
+                        withdrawalsDisabled: document.getElementById('phase6-check-withdrawals').checked,
+                        transfersDisabled: document.getElementById('phase6-check-transfer').checked,
+                        marginDisabled: document.getElementById('phase6-check-margin').checked,
+                        futuresDisabled: document.getElementById('phase6-check-futures').checked,
+                        leverageDisabled: document.getElementById('phase6-check-leverage').checked,
+                        ipRestrictionReviewed: document.getElementById('phase6-check-ip').checked,
+                        twoFactorEnabled: document.getElementById('phase6-check-2fa').checked,
+                        ownerUnderstandsRealMoney: document.getElementById('phase6-check-real-money').checked,
+                        ownerUnderstandsProductionRisk: document.getElementById('phase6-check-production-risk').checked,
+                        ownerUnderstandsNoAutonomousScaling: document.getElementById('phase6-check-no-autonomous').checked
+                    }
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Production key was not saved.';
+                return;
+            }
+
+            document.getElementById('phase6-api-key').value = '';
+            document.getElementById('phase6-api-secret').value = '';
+            document.getElementById('phase6-passphrase').value = '';
+            output.innerHTML = `
+                <article class="phase3-account-card status-success">
+                    <strong>Production key saved locally</strong>
+                    <span>Fingerprint ${escapeHtml(data.vault?.apiKeyFingerprint || 'saved')} · secret values were not returned to the UI.</span>
+                    <small>Next: Test Production Connection. No order endpoint was enabled.</small>
+                </article>
+            `;
+            await loadPhase6Status();
+        }
+
+        async function testPhase6ProductionConnection() {
+            const exchangeName = document.getElementById('phase6-exchange').value || 'binance';
+            const connectorId = await ensureProductionConnector(exchangeName);
+            const output = document.getElementById('phase6-vault-result');
+
+            if (!connectorId) {
+                output.textContent = 'Create the exchange connector placeholder first, then retry.';
+                return;
+            }
+
+            output.textContent = 'Testing production account permissions. This reads account metadata only and cannot place an order.';
+            const response = await fetch(`/api/v1/exchange-connectors/${connectorId}/test-production-connection`, { method: 'POST' });
+            const data = await response.json();
+
+            output.innerHTML = `
+                <article class="phase3-account-card ${response.ok ? 'status-success' : 'status-warning'}">
+                    <strong>${escapeHtml(data.test?.status || (response.ok ? 'Connection tested' : 'Connection review needed'))}</strong>
+                    <span>${escapeHtml(data.test?.plainEnglishStatus || data.error || 'Review the production key permissions.')}</span>
+                    <small>${escapeHtml(data.nextClick || 'Fix permissions if needed, then test again.')} Order endpoint enabled: no.</small>
+                </article>
+            `;
+            await loadPhase6Status();
+        }
+
+        async function deletePhase6ProductionKey() {
+            const exchangeName = document.getElementById('phase6-exchange').value || 'binance';
+            const connectorId = await ensureProductionConnector(exchangeName);
+            const output = document.getElementById('phase6-vault-result');
+
+            if (!connectorId) {
+                output.textContent = 'No production connector exists for this exchange yet.';
+                return;
+            }
+
+            output.textContent = 'Deleting the production vault entry. This keeps production execution locked.';
+            const response = await fetch(`/api/v1/exchange-connectors/${connectorId}/production-credentials`, { method: 'DELETE' });
+            const data = await response.json();
+
+            output.innerHTML = `
+                <article class="phase3-account-card ${response.ok ? 'status-success' : 'status-warning'}">
+                    <strong>${response.ok ? 'Production key deleted' : 'Delete needs review'}</strong>
+                    <span>${escapeHtml(data.nextClick || data.error || 'Production vault entry was reviewed.')}</span>
+                    <small>Production order endpoint enabled: no · withdrawals disabled · wallet signing disabled.</small>
+                </article>
+            `;
+            await loadPhase6Status();
+        }
+
+        async function loadPhase6Status() {
+            const response = await fetch('/api/v1/live-trading-launch/phase6/status');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase6-result').textContent = data.error || 'Unable to load Phase 6 Production Trading Command Center.';
+                return null;
+            }
+
+            renderPhase6Center(data.center, data.latestOrders, data.approvals);
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                roadmap: latestLiveRoadmap,
+                latestLiveScan,
+                latestAccountScan,
+                phase4: latestPhase4CommandCenter,
+                phase5: latestPhase5TreasuryCommand,
+                phase6: data.center
+            }, null, 2);
+            return data.center;
+        }
+
+        async function recordPhase6Approval() {
+            const output = document.getElementById('phase6-result');
+            output.textContent = 'Recording controlled production approval. This does not place an order or unlock automation.';
+            const response = await fetch('/api/v1/live-trading-launch/phase6/approval', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    scopeType: document.getElementById('phase6-approval-type').value,
+                    exchangeName: document.getElementById('phase6-exchange').value,
+                    symbol: document.getElementById('phase6-symbol').value,
+                    capitalLimitUsd: Number(document.getElementById('phase6-capital-limit').value || 0),
+                    confirmation: document.getElementById('phase6-approval-confirmation').value,
+                    liveRiskAcknowledged: document.getElementById('phase6-ack-live-risk').checked,
+                    withdrawalsDisabledAcknowledged: document.getElementById('phase6-ack-withdrawals').checked,
+                    noAutonomousScalingAcknowledged: document.getElementById('phase6-ack-no-autonomy').checked,
+                    ownerUnderstandsRealMoney: document.getElementById('phase6-ack-real-money').checked
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Approval was not recorded.';
+                return;
+            }
+
+            output.innerHTML = `
+                <article class="phase3-account-card status-success">
+                    <strong>Approval recorded</strong>
+                    <span>${escapeHtml(data.nextClick || 'Run Production Dry-Run Preview.')}</span>
+                    <small>Approval hash saved. No order endpoint was enabled by this action.</small>
+                </article>
+            `;
+            await loadPhase6Status();
+        }
+
+        async function previewPhase6Order() {
+            const output = document.getElementById('phase6-result');
+            output.textContent = 'Running production dry-run preview. No production order endpoint is called by this step.';
+            const response = await fetch('/api/v1/live-trading-launch/phase6/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order: phase6OrderPayload(),
+                    marketContext: {
+                        liquidityUsd: 1000000,
+                        slippagePercent: 0.05,
+                        volatilityPercent: 0,
+                        netSpreadPercent: 0.1,
+                        latencyMs: 250,
+                        priceTimestamp: new Date().toISOString()
+                    },
+                    accountContext: {
+                        exchangeExposureUsd: 0,
+                        strategyExposureUsd: 0,
+                        dailyDrawdownUsd: 0,
+                        rollingLossUsd: 0,
+                        repeatedFailures: 0
+                    },
+                    ownerConfirmation: ''
+                })
+            });
+            const data = await response.json();
+            renderPhase6Preview(data);
+
+            if (!response.ok) {
+                return;
+            }
+
+            await loadPhase6Status();
+        }
+
+        async function placePhase6Order() {
+            const output = document.getElementById('phase6-result');
+            if (!latestPhase6PreviewId) {
+                output.textContent = 'Create a production dry-run preview first. No order was placed.';
+                return;
+            }
+            output.textContent = 'Submitting controlled production order request. It will be blocked unless every gate still passes.';
+            const response = await fetch('/api/v1/live-trading-launch/phase6/place', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    previewId: latestPhase6PreviewId,
+                    ownerConfirmation: document.getElementById('phase6-order-confirmation').value,
+                    marketContext: {
+                        liquidityUsd: 1000000,
+                        slippagePercent: 0.05,
+                        volatilityPercent: 0,
+                        netSpreadPercent: 0.1,
+                        latencyMs: 250,
+                        priceTimestamp: new Date().toISOString()
+                    },
+                    accountContext: {
+                        exchangeExposureUsd: 0,
+                        strategyExposureUsd: 0,
+                        dailyDrawdownUsd: 0,
+                        rollingLossUsd: 0,
+                        repeatedFailures: 0
+                    }
+                })
+            });
+            const data = await response.json();
+            renderPhase6Preview(data);
+            await loadPhase6Status();
+        }
+
+        async function phase6EmergencyStop() {
+            const output = document.getElementById('phase6-result');
+            output.textContent = 'Running Phase 6 emergency stop. This disables production approvals and live connector flags.';
+            const response = await fetch('/api/v1/live-trading-launch/phase6/emergency-stop', { method: 'POST' });
+            const data = await response.json();
+
+            output.innerHTML = `
+                <article class="phase3-account-card ${response.ok ? 'status-success' : 'status-warning'}">
+                    <strong>${escapeHtml(data.status || 'Emergency stop')}</strong>
+                    <span>${escapeHtml(data.summary || data.error || 'Emergency stop completed.')}</span>
+                    <small>Production order endpoint enabled: no · withdrawals disabled · wallet signing disabled.</small>
+                </article>
+            `;
+            await loadPhase6Status();
+        }
+
+        async function trackLatestPhase6Order() {
+            const output = document.getElementById('phase6-result');
+
+            if (!latestPhase6OrderId) {
+                output.textContent = 'Create a production dry-run preview first. There is no production order to track yet.';
+                return;
+            }
+
+            output.textContent = 'Refreshing the latest production order status. This does not place a new order.';
+            const response = await fetch(`/api/v1/live-trading-launch/phase6/orders/${latestPhase6OrderId}/status`);
+            const data = await response.json();
+
+            output.innerHTML = `
+                <article class="phase3-account-card ${response.ok ? phase6CardClass(data.execution?.status || data.status) : 'status-warning'}">
+                    <strong>${escapeHtml(data.execution?.status || data.status || 'Status review')}</strong>
+                    <span>${escapeHtml(data.execution?.exchange_name || '')} ${escapeHtml(data.execution?.symbol || '')}</span>
+                    <small>${escapeHtml(data.error || 'Production order status refreshed. Wallet signing and withdrawals remain disabled.')}</small>
+                </article>
+            `;
+            await loadPhase6Status();
+        }
+
+        async function cancelLatestPhase6Order() {
+            const output = document.getElementById('phase6-result');
+
+            if (!latestPhase6OrderId) {
+                output.textContent = 'Create a production dry-run preview first. There is no production order to cancel yet.';
+                return;
+            }
+
+            output.textContent = 'Sending cancel request for the latest production order if it has an exchange order id.';
+            const response = await fetch(`/api/v1/live-trading-launch/phase6/orders/${latestPhase6OrderId}/cancel`, { method: 'POST' });
+            const data = await response.json();
+
+            output.innerHTML = `
+                <article class="phase3-account-card ${response.ok ? phase6CardClass(data.execution?.status || data.cancellation?.status) : 'status-warning'}">
+                    <strong>${escapeHtml(data.execution?.status || data.cancellation?.status || 'Cancel review')}</strong>
+                    <span>${escapeHtml(data.resultScreen?.exchange || data.execution?.exchange_name || '')} ${escapeHtml(data.resultScreen?.symbol || data.execution?.symbol || '')}</span>
+                    <small>${escapeHtml(data.error || 'Cancel lifecycle recorded. Emergency stop remains available.')}</small>
+                </article>
+            `;
+            await loadPhase6Status();
+        }
+
         async function runReadOnlyScan() {
             const output = document.getElementById('live-scan-summary');
             output.textContent = 'Running read-only market scan. No orders, wallet signing, or withdrawals are possible from this scan.';
@@ -2118,6 +2765,16 @@
         document.getElementById('refresh-phase5-status').addEventListener('click', loadPhase5Status);
         document.getElementById('run-phase5-treasury').addEventListener('click', runPhase5TreasuryCommandCenter);
         document.getElementById('phase5-freeze-capital').addEventListener('click', phase5EmergencyFreeze);
+        document.getElementById('refresh-phase6-status').addEventListener('click', loadPhase6Status);
+        document.getElementById('save-phase6-production-key').addEventListener('click', savePhase6ProductionKey);
+        document.getElementById('test-phase6-production-connection').addEventListener('click', testPhase6ProductionConnection);
+        document.getElementById('delete-phase6-production-key').addEventListener('click', deletePhase6ProductionKey);
+        document.getElementById('record-phase6-approval').addEventListener('click', recordPhase6Approval);
+        document.getElementById('preview-phase6-order').addEventListener('click', previewPhase6Order);
+        document.getElementById('place-phase6-order').addEventListener('click', placePhase6Order);
+        document.getElementById('track-phase6-order').addEventListener('click', trackLatestPhase6Order);
+        document.getElementById('cancel-phase6-order').addEventListener('click', cancelLatestPhase6Order);
+        document.getElementById('phase6-emergency-stop').addEventListener('click', phase6EmergencyStop);
 
         loadRoadmap();
         loadPhase3Status();
@@ -2125,6 +2782,7 @@
         loadPhase3CStatus();
         loadPhase4Status();
         loadPhase5Status();
+        loadPhase6Status();
         scanPhase3AReadiness();
     </script>
     <script src="/js/operator-next-action.js"></script>
