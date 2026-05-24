@@ -4725,6 +4725,10 @@ footer {
 .phase6e-checklist,
 .phase6e-controls,
 .phase6e-proof-grid,
+.phase6f-summary-grid,
+.phase6f-controls,
+.phase6f-proof-grid,
+.phase6f-enable-panel,
 .phase5-controls,
 .phase6-controls,
 .phase6-vault,
@@ -4750,7 +4754,8 @@ footer {
 .phase6b-hero,
 .phase6c-hero,
 .phase6d-hero,
-.phase6e-hero {
+.phase6e-hero,
+.phase6f-hero {
     align-items: center;
     display: flex;
     gap: 16px;
@@ -4760,7 +4765,8 @@ footer {
 .phase6b-hero h2,
 .phase6c-hero h2,
 .phase6d-hero h2,
-.phase6e-hero h2 {
+.phase6e-hero h2,
+.phase6f-hero h2 {
     margin-bottom: 8px;
 }
 
@@ -4816,6 +4822,10 @@ footer {
     border-color: color-mix(in srgb, var(--brand-pink) 34%, var(--brand-purple));
 }
 
+.phase6f-wizard {
+    border-color: color-mix(in srgb, var(--brand-blue) 42%, var(--brand-pink));
+}
+
 .phase6c-summary-grid,
 .phase6c-step-grid,
 .phase6c-report-grid,
@@ -4826,7 +4836,9 @@ footer {
 .phase6d-proof-grid,
 .phase6e-summary-grid,
 .phase6e-guide-grid,
-.phase6e-proof-grid {
+.phase6e-proof-grid,
+.phase6f-summary-grid,
+.phase6f-proof-grid {
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     margin: 18px 0;
 }
@@ -4834,7 +4846,8 @@ footer {
 .phase6b-controls,
 .phase6c-controls,
 .phase6d-controls,
-.phase6e-controls {
+.phase6e-controls,
+.phase6f-controls {
     align-items: end;
     grid-template-columns: minmax(220px, 1.2fr) repeat(auto-fit, minmax(170px, 1fr));
     margin: 16px 0;
@@ -4851,6 +4864,11 @@ footer {
     margin: 12px 0;
 }
 
+.phase6f-enable-panel {
+    grid-template-columns: minmax(260px, 2fr) repeat(auto-fit, minmax(220px, 1fr));
+    margin: 18px 0;
+}
+
 .phase6e-checklist {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     margin: 14px 0;
@@ -4862,7 +4880,9 @@ footer {
 .phase6d-arm-box label,
 .phase6e-controls label,
 .phase6e-key-fields label,
-.phase6e-checklist label {
+.phase6e-checklist label,
+.phase6f-controls label,
+.phase6f-enable-panel label {
     color: var(--text-primary);
     font-weight: 800;
 }
@@ -4897,7 +4917,11 @@ footer {
 .phase6e-guide-card,
 .phase6e-key-panel,
 .phase6e-proof-panel,
-.phase6e-check-item {
+.phase6e-check-item,
+.phase6f-summary-grid article,
+.phase6f-proof-panel,
+.phase6f-check-item,
+.phase6f-enable-panel {
     background: var(--surface-muted);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -4914,7 +4938,9 @@ footer {
 .phase6d-step-grid article span,
 .phase6d-check-item span,
 .phase6e-summary-grid article span,
-.phase6e-check-item span {
+.phase6e-check-item span,
+.phase6f-summary-grid article span,
+.phase6f-check-item span {
     color: inherit;
     display: block;
     font-size: 0.78rem;
@@ -4943,7 +4969,10 @@ footer {
 .phase6e-summary-grid article strong,
 .phase6e-guide-card h3,
 .phase6e-proof-panel h3,
-.phase6e-check-item strong {
+.phase6e-check-item strong,
+.phase6f-summary-grid article strong,
+.phase6f-proof-panel h3,
+.phase6f-check-item strong {
     color: inherit;
 }
 
@@ -4955,7 +4984,9 @@ footer {
 .phase6d-proof-panel h3,
 .phase6e-guide-card h3,
 .phase6e-proof-panel h3,
-.phase6e-key-panel h3 {
+.phase6e-key-panel h3,
+.phase6f-proof-panel h3,
+.phase6f-enable-panel h3 {
     margin-top: 0;
 }
 
@@ -4966,7 +4997,8 @@ footer {
 .phase6d-proof-panel ul,
 .phase6e-guide-card ul,
 .phase6e-guide-card ol,
-.phase6e-proof-panel ul {
+.phase6e-proof-panel ul,
+.phase6f-proof-panel ul {
     color: var(--text-primary);
     line-height: 1.55;
     margin: 8px 0 0;
@@ -5013,7 +5045,9 @@ footer {
 .phase6c-check-item,
 .phase6d-step-grid article,
 .phase6d-proof-panel,
-.phase6d-check-item {
+.phase6d-check-item,
+.phase6f-proof-panel,
+.phase6f-check-item {
     display: grid;
     gap: 8px;
 }
@@ -5032,7 +5066,12 @@ footer {
 .phase6d-check-item p,
 .phase6d-check-item small,
 .phase6d-proof-panel p,
-.phase6d-proof-panel small {
+.phase6d-proof-panel small,
+.phase6f-summary-grid article small,
+.phase6f-check-item p,
+.phase6f-check-item small,
+.phase6f-proof-panel p,
+.phase6f-proof-panel small {
     color: inherit;
     line-height: 1.45;
 }
@@ -5414,6 +5453,10 @@ footer {
 :root[data-theme="night"] .phase6e-key-panel,
 :root[data-theme="night"] .phase6e-proof-panel,
 :root[data-theme="night"] .phase6e-check-item,
+:root[data-theme="night"] .phase6f-summary-grid article,
+:root[data-theme="night"] .phase6f-proof-panel,
+:root[data-theme="night"] .phase6f-check-item,
+:root[data-theme="night"] .phase6f-enable-panel,
 :root[data-theme="night"] .phase6-vault,
 :root[data-theme="night"] .phase6-acknowledgments,
 :root[data-theme="night"] .phase6-training,
@@ -5447,6 +5490,10 @@ footer {
 :root:not([data-theme="day"]) .phase6e-key-panel,
 :root:not([data-theme="day"]) .phase6e-proof-panel,
 :root:not([data-theme="day"]) .phase6e-check-item,
+:root:not([data-theme="day"]) .phase6f-summary-grid article,
+:root:not([data-theme="day"]) .phase6f-proof-panel,
+:root:not([data-theme="day"]) .phase6f-check-item,
+:root:not([data-theme="day"]) .phase6f-enable-panel,
 :root:not([data-theme="day"]) .phase6-vault,
 :root:not([data-theme="day"]) .phase6-acknowledgments,
 :root:not([data-theme="day"]) .phase6-training {

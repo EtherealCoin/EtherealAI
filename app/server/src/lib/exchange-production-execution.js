@@ -201,6 +201,8 @@ const PHASE6B_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
 const PHASE6C_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
 const PHASE6D_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
 const PHASE6E_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
+const PHASE6F_RECOMMENDED_FIRST_EXCHANGE = 'kraken';
+const PHASE6F_ENABLE_CONFIRMATION_PHRASE = 'I ENABLE KRAKEN TINY LIVE TEST MODE';
 const PHASE6D_ARM_CONFIRMATION_PHRASE = 'I ARM KRAKEN TINY LIVE TEST FRAMEWORK';
 
 const DEFAULT_PHASE6D_TINY_LIVE_POLICY = {
@@ -4053,6 +4055,17 @@ function buildPhase6EChecklistItem({ id, label, passed, statusWhenFalse = 'Not R
   };
 }
 
+function buildPhase6FStatusItem({ id, label, passed, statusWhenFalse = 'Not ready', plainEnglish, nextClick }) {
+  return {
+    id,
+    label,
+    passed: Boolean(passed),
+    status: passed ? 'Working' : statusWhenFalse,
+    plainEnglish,
+    nextClick: passed ? 'No action needed.' : nextClick
+  };
+}
+
 function buildPhase6EFinalStatus({ credentialSaved = false, krakenReadiness = null, dryRunProof = null, preflight = null } = {}) {
   const unsafe = krakenReadiness?.status === 'Unsafe Permissions Detected'
     || krakenReadiness?.withdrawalPermissionDetected === true
@@ -4245,6 +4258,372 @@ function buildPhase6EWalkthrough({
   };
 }
 
+function classifyKrakenAuthenticationIssue({ error = null, krakenReadiness = null } = {}) {
+  const raw = String(error?.message || error || krakenReadiness?.plainEnglishStatus || krakenReadiness?.status || '').toLowerCase();
+  const unsafe = krakenReadiness?.status === 'Unsafe Permissions Detected'
+    || krakenReadiness?.withdrawalPermissionDetected === true
+    || krakenReadiness?.marginOrLeverageDetected === true
+    || krakenReadiness?.futuresDetected === true;
+  const invalidSignature = /invalid signature|eapi:invalid signature|invalid nonce|api-sign|signature/.test(raw);
+  const invalidKey = /invalid key|eapi:invalid key|unknown key|api-key/.test(raw);
+  const ipRestrictionIssue = /ip|address|whitelist|allowlist|restriction/.test(raw);
+  const missingPermission = /permission|denied|not allowed|query funds|balance read|open orders/.test(raw)
+    || krakenReadiness?.balancesReadable === false;
+
+  if (unsafe) {
+    return {
+      id: 'unsafe_permission',
+      label: 'Unsafe permission detected',
+      plainEnglish: 'The Kraken key is not safe for EtherealAI. Delete it, recreate a restricted spot key, and keep withdrawals, transfers, margin, futures, and leverage disabled.',
+      nextClick: 'Delete / Rotate Kraken Key'
+    };
+  }
+
+  if (invalidSignature) {
+    return {
+      id: 'invalid_signature',
+      label: 'Kraken rejected the signature',
+      plainEnglish: 'Kraken rejected the key signature. This usually means the Private Key was copied incorrectly, was not the Kraken Private Key, or does not match the API Key.',
+      nextClick: 'Delete / Rotate Kraken Key, then paste the matching Kraken API Key and Private Key.'
+    };
+  }
+
+  if (ipRestrictionIssue) {
+    return {
+      id: 'ip_restriction_issue',
+      label: 'IP restriction issue',
+      plainEnglish: 'Kraken may be blocking this Mac because the API key is restricted to a different IP address.',
+      nextClick: 'Update the Kraken API key IP restriction for this network or remove IP restriction until the connection is verified.'
+    };
+  }
+
+  if (invalidKey) {
+    return {
+      id: 'invalid_key',
+      label: 'Kraken rejected the key',
+      plainEnglish: 'Kraken did not accept this API key. Recreate a restricted Kraken Pro API key and paste the new values into the encrypted vault.',
+      nextClick: 'Delete / Rotate Kraken Key'
+    };
+  }
+
+  if (missingPermission) {
+    return {
+      id: 'missing_permission',
+      label: 'Missing permission',
+      plainEnglish: 'The Kraken key connected but does not have every read permission EtherealAI needs for readiness checks.',
+      nextClick: 'Enable the missing read permission in Kraken, then verify again.'
+    };
+  }
+
+  if (krakenReadiness?.criticalPassed === true) {
+    return {
+      id: 'works_safely',
+      label: 'Your key works safely',
+      plainEnglish: 'Kraken authentication passed and no unsafe permission signal is detected.',
+      nextClick: 'Build Tiny Live Preview'
+    };
+  }
+
+  return {
+    id: 'not_ready',
+    label: 'Not ready',
+    plainEnglish: krakenReadiness?.plainEnglishStatus || 'Save and verify a restricted Kraken key before checking tiny live eligibility.',
+    nextClick: 'Verify Kraken Connection'
+  };
+}
+
+function buildPhase6FTinyLivePreview({ simulationPreview = null, krakenReadiness = null, policy = {} } = {}) {
+  const effectivePolicy = getPhase6DTinyLivePolicy(policy);
+  const verification = krakenReadiness?.credentialVerification || {};
+  const symbolRules = verification.proof?.symbolRules || {};
+  const preview = simulationPreview || {};
+  const estimatedTinyOrderUsd = Number(preview.expectedNotionalUsd || effectivePolicy.defaultTinyOrderUsd || 1);
+  const estimatedFeesUsd = Number(preview.expectedFeesUsd || 0);
+  const estimatedSlippagePercent = Number(preview.expectedSlippagePercent ?? 0);
+  const minimumOrderSize = Number(symbolRules.minOrderSize || verification.proof?.marketData?.minOrderSize || 0);
+  const minimumNotionalUsd = Number(symbolRules.minNotionalUsd || verification.proof?.marketData?.minNotionalUsd || 0);
+  const exposureUsd = Number(Math.min(estimatedTinyOrderUsd, Number(effectivePolicy.maxOrderSizeUsd || 5)).toFixed(8));
+
+  return {
+    title: 'Tiny Live Preview',
+    exchange: 'Kraken',
+    symbol: preview.symbol || krakenReadiness?.order?.symbol || effectivePolicy.defaultSymbol || 'BTC/USD',
+    estimatedTinyOrderUsd,
+    estimatedQuantity: Number(preview.expectedQuantity || 0),
+    expectedFillPrice: Number(preview.expectedFillPrice || 0),
+    estimatedFeesUsd,
+    estimatedFeePercent: Number(preview.feePercent || 0),
+    expectedSlippagePercent: estimatedSlippagePercent,
+    minimumOrderSize,
+    minimumNotionalUsd,
+    estimatedRisk: `Exposure is capped to a tiny owner-approved test amount of $${exposureUsd.toFixed(2)}. No live order will be placed yet.`,
+    projectedExposureUsd: exposureUsd,
+    projectedRemainingBalance: preview.expectedRemainingBalance || null,
+    abortConditions: preview.abortConditions || ['Run authenticated readiness and dry-run proof before reviewing the tiny live preview.'],
+    noLiveOrderWillBePlacedYet: true,
+    productionOrderEndpointCalled: false,
+    productionOrderEndpointEnabled: false
+  };
+}
+
+function buildPhase6FOperatorResult({
+  connector = null,
+  vaultStatus = null,
+  krakenReadiness = null,
+  dryRunProof = null,
+  preflight = null,
+  simulationPreview = null,
+  riskProfile = null,
+  latestOrders = [],
+  policy = {},
+  authError = null,
+  modeState = null
+} = {}) {
+  const productionConnection = connector?.settings?.productionConnection || {};
+  const savedReadiness = krakenReadiness || productionConnection.phase6FReadiness || productionConnection.phase6EReadiness || productionConnection.phase6DReadiness || null;
+  const savedDryRun = dryRunProof || productionConnection.phase6FDryRunProof || productionConnection.phase6EDryRunProof || productionConnection.phase6DDryRunProof || null;
+  const savedPreflight = preflight || productionConnection.phase6FPreflight || productionConnection.phase6EPreflight || productionConnection.phase6DPreflight || null;
+  const savedPreview = simulationPreview || productionConnection.phase6FSimulationPreview || productionConnection.phase6ESimulationPreview || productionConnection.phase6DSimulationPreview || null;
+  const credentialSaved = Boolean(productionConnection.referenceName)
+    || (vaultStatus?.entries || []).some(entry => normalizePhase6ExchangeName(entry.exchangeName) === PHASE6F_RECOMMENDED_FIRST_EXCHANGE);
+  const authIssue = classifyKrakenAuthenticationIssue({ error: authError, krakenReadiness: savedReadiness });
+  const proof = savedReadiness?.credentialVerification?.proof || {};
+  const permissions = proof.permissions || savedReadiness?.permissions || {};
+  const orderPermissionPresent = savedReadiness?.credentialVerification?.tradingPermissionPresent === true
+    || savedReadiness?.credentialVerification?.status === 'Trading Permission Present But Locked'
+    || savedReadiness?.credentialVerification?.canTrade === true
+    || permissions.tradingPermissionDetected === true;
+  const authenticated = savedReadiness?.criticalPassed === true || savedReadiness?.credentialVerification?.connectionStatus === 'production_account_verified';
+  const unsafePermissionsDetected = savedReadiness?.status === 'Unsafe Permissions Detected'
+    || savedReadiness?.withdrawalPermissionDetected === true
+    || savedReadiness?.marginOrLeverageDetected === true
+    || savedReadiness?.futuresDetected === true;
+  const balanceReadSuccess = savedReadiness?.balancesReadable === true;
+  const marketMetadataSuccess = savedReadiness?.symbolRulesLoaded === true
+    && savedReadiness?.minimumOrderLoaded === true
+    && (proof.marketData?.loaded === true || Number(proof.marketData?.midPrice || 0) > 0);
+  const preview = buildPhase6FTinyLivePreview({
+    simulationPreview: savedPreview,
+    krakenReadiness: savedReadiness,
+    policy
+  });
+  const sufficientBalance = Boolean(savedPreview)
+    && !(savedPreview.abortConditions || []).some(item => /balance/i.test(item));
+  const minimumOrderKnown = savedReadiness?.minimumOrderLoaded === true
+    || Number(preview.minimumOrderSize || 0) > 0
+    || Number(preview.minimumNotionalUsd || 0) > 0;
+  const riskProfileActive = Boolean(riskProfile?.id) && riskProfile.status === 'active' && Number(riskProfile.kill_switch_enabled || 0) === 0;
+  const eligibilityChecks = [
+    buildPhase6FStatusItem({
+      id: 'encrypted_vault_active',
+      label: 'Encrypted vault active',
+      passed: credentialSaved,
+      plainEnglish: credentialSaved ? 'A Kraken credential reference exists in the encrypted local production vault.' : 'No Kraken key is saved in the encrypted local vault yet.',
+      nextClick: 'Save Kraken Key To Vault'
+    }),
+    buildPhase6FStatusItem({
+      id: 'authenticated',
+      label: 'Authenticated with Kraken',
+      passed: authenticated,
+      plainEnglish: authenticated ? 'Kraken accepted the key for account-read verification.' : 'Kraken authentication has not passed yet.',
+      nextClick: 'Verify Kraken Connection'
+    }),
+    buildPhase6FStatusItem({
+      id: 'withdrawals_disabled',
+      label: 'Withdrawals disabled',
+      passed: credentialSaved && savedReadiness?.withdrawalPermissionDetected === false,
+      statusWhenFalse: savedReadiness?.withdrawalPermissionDetected === true ? 'Unsafe' : 'Not ready',
+      plainEnglish: savedReadiness?.withdrawalPermissionDetected === false ? 'Withdrawal permission is not detected.' : 'Withdrawal safety is not proven.',
+      nextClick: 'Delete this key and recreate it with Withdraw Funds disabled.'
+    }),
+    buildPhase6FStatusItem({
+      id: 'futures_disabled',
+      label: 'Futures disabled',
+      passed: credentialSaved && savedReadiness?.futuresDetected === false,
+      statusWhenFalse: savedReadiness?.futuresDetected === true ? 'Unsafe' : 'Not ready',
+      plainEnglish: savedReadiness?.futuresDetected === false ? 'Futures permission is not detected.' : 'Futures safety is not proven.',
+      nextClick: 'Use a Kraken spot key only.'
+    }),
+    buildPhase6FStatusItem({
+      id: 'leverage_disabled',
+      label: 'Leverage disabled',
+      passed: credentialSaved && savedReadiness?.marginOrLeverageDetected === false,
+      statusWhenFalse: savedReadiness?.marginOrLeverageDetected === true ? 'Unsafe' : 'Not ready',
+      plainEnglish: savedReadiness?.marginOrLeverageDetected === false ? 'Margin/leverage permission is not detected.' : 'Margin or leverage safety is not proven.',
+      nextClick: 'Use a Kraken spot-only key.'
+    }),
+    buildPhase6FStatusItem({
+      id: 'margin_disabled',
+      label: 'Margin disabled',
+      passed: credentialSaved && savedReadiness?.marginOrLeverageDetected === false,
+      statusWhenFalse: savedReadiness?.marginOrLeverageDetected === true ? 'Unsafe' : 'Not ready',
+      plainEnglish: savedReadiness?.marginOrLeverageDetected === false ? 'Margin permission is not detected.' : 'Margin safety is not proven.',
+      nextClick: 'Use a Kraken spot-only key.'
+    }),
+    buildPhase6FStatusItem({
+      id: 'order_permission_present_locked',
+      label: 'Order permission present but locked',
+      passed: orderPermissionPresent,
+      plainEnglish: orderPermissionPresent ? 'The key appears able to support a future tiny spot order, but EtherealAI keeps the order endpoint locked.' : 'Your account cannot place orders yet from this key.',
+      nextClick: 'Enable Modify Orders only if you want future tiny live test eligibility.'
+    }),
+    buildPhase6FStatusItem({
+      id: 'sufficient_balance',
+      label: 'Sufficient tiny-test balance',
+      passed: sufficientBalance,
+      plainEnglish: sufficientBalance ? 'The current tiny preview does not show a balance blocker.' : 'A passing tiny preview has not proven sufficient balance yet.',
+      nextClick: 'Build Tiny Live Preview after verification.'
+    }),
+    buildPhase6FStatusItem({
+      id: 'minimum_order_size_known',
+      label: 'Minimum order size known',
+      passed: minimumOrderKnown,
+      plainEnglish: minimumOrderKnown ? 'Kraken minimum trade rules are available.' : 'Kraken minimum trade rules are not loaded yet.',
+      nextClick: 'Verify Kraken Connection'
+    }),
+    buildPhase6FStatusItem({
+      id: 'emergency_stop_enabled',
+      label: 'Emergency Stop enabled',
+      passed: true,
+      plainEnglish: 'Emergency Stop controls are available and keep production flags disabled.',
+      nextClick: 'No action needed.'
+    }),
+    buildPhase6FStatusItem({
+      id: 'dry_run_proof_passed',
+      label: 'Dry-run proof passed',
+      passed: savedDryRun?.passed === true && savedPreflight?.technicalReady === true,
+      plainEnglish: savedDryRun?.passed === true && savedPreflight?.technicalReady === true ? 'No-order dry-run proof and preflight passed.' : 'Dry-run proof has not fully passed yet.',
+      nextClick: 'Build Tiny Live Preview'
+    }),
+    buildPhase6FStatusItem({
+      id: 'audit_logging_active',
+      label: 'Audit logging active',
+      passed: true,
+      plainEnglish: 'Every Phase 6F verification, preview, and enable request writes local audit evidence.',
+      nextClick: 'No action needed.'
+    })
+  ];
+  const tinyLiveEligible = eligibilityChecks.every(item => item.passed)
+    && savedReadiness?.criticalPassed === true
+    && unsafePermissionsDetected !== true;
+  const operatorResults = [
+    buildPhase6FStatusItem({
+      id: 'key_works_safely',
+      label: 'Your key works safely',
+      passed: savedReadiness?.criticalPassed === true && unsafePermissionsDetected !== true,
+      statusWhenFalse: authIssue.id === 'unsafe_permission' ? 'Unsafe' : 'Not ready',
+      plainEnglish: authIssue.id === 'works_safely' ? authIssue.plainEnglish : savedReadiness?.plainEnglishStatus || authIssue.plainEnglish,
+      nextClick: authIssue.nextClick
+    }),
+    buildPhase6FStatusItem({
+      id: 'unsafe_permission_detected',
+      label: 'Unsafe permission detected',
+      passed: unsafePermissionsDetected !== true,
+      statusWhenFalse: 'Unsafe',
+      plainEnglish: unsafePermissionsDetected ? 'Unsafe Kraken permission signal detected.' : 'No unsafe permission signal is detected.',
+      nextClick: 'Delete / Rotate Kraken Key'
+    }),
+    buildPhase6FStatusItem({
+      id: 'signature_accepted',
+      label: 'Kraken signature accepted',
+      passed: authenticated || authIssue.id !== 'invalid_signature',
+      statusWhenFalse: 'Fix now',
+      plainEnglish: authIssue.id === 'invalid_signature' ? authIssue.plainEnglish : 'No invalid-signature blocker is currently detected.',
+      nextClick: authIssue.id === 'invalid_signature' ? authIssue.nextClick : 'No action needed.'
+    }),
+    buildPhase6FStatusItem({
+      id: 'ip_restriction_clear',
+      label: 'IP restriction clear',
+      passed: authIssue.id !== 'ip_restriction_issue',
+      statusWhenFalse: 'Fix now',
+      plainEnglish: authIssue.id === 'ip_restriction_issue' ? authIssue.plainEnglish : 'No IP restriction issue is currently detected.',
+      nextClick: authIssue.id === 'ip_restriction_issue' ? authIssue.nextClick : 'No action needed.'
+    }),
+    buildPhase6FStatusItem({
+      id: 'balance_read_success',
+      label: 'Your account can read balances',
+      passed: balanceReadSuccess,
+      plainEnglish: balanceReadSuccess ? 'Kraken balance read succeeded.' : 'Balance read has not succeeded yet.',
+      nextClick: 'Enable Query Funds / balance read permission, then verify again.'
+    }),
+    buildPhase6FStatusItem({
+      id: 'order_capability',
+      label: orderPermissionPresent ? 'Order permission present but locked' : 'Your account cannot place orders yet',
+      passed: orderPermissionPresent,
+      plainEnglish: orderPermissionPresent ? 'A later tiny live test can be prepared, but no order endpoint is enabled.' : 'This key is read-only for now. That is safe, but not enough for a future tiny live test.',
+      nextClick: 'Enable Modify Orders only if you want future tiny live eligibility.'
+    }),
+    buildPhase6FStatusItem({
+      id: 'market_metadata_success',
+      label: 'Market metadata success',
+      passed: marketMetadataSuccess,
+      plainEnglish: marketMetadataSuccess ? 'Kraken pair rules and live market metadata were loaded.' : 'Market metadata has not fully loaded yet.',
+      nextClick: 'Verify Kraken Connection'
+    }),
+    buildPhase6FStatusItem({
+      id: 'tiny_live_eligible',
+      label: 'Tiny live test eligible',
+      passed: tinyLiveEligible,
+      plainEnglish: tinyLiveEligible ? 'All Phase 6F tiny live eligibility checks passed. Execution remains blocked until a later final approval.' : 'Tiny live test mode is not eligible yet.',
+      nextClick: tinyLiveEligible ? 'Enable Tiny Live Test Mode' : eligibilityChecks.find(item => !item.passed)?.nextClick || 'Fix the blocked item.'
+    })
+  ];
+
+  return {
+    title: 'Phase 6F: First Authenticated Kraken Connection And Tiny Live Eligibility',
+    phase: 'Phase 6F',
+    recommendedExchangeName: PHASE6F_RECOMMENDED_FIRST_EXCHANGE,
+    recommendedExchangeDisplayName: 'Kraken',
+    credentialSaved,
+    apiKeyFingerprint: productionConnection.apiKeyFingerprint || null,
+    authenticated,
+    authIssue,
+    operatorStatusLabel: tinyLiveEligible ? 'Tiny live test eligible' : authIssue.label,
+    operatorResults,
+    tinyLiveEligibility: {
+      eligible: tinyLiveEligible,
+      label: tinyLiveEligible ? 'Tiny live test eligible' : 'Not eligible yet',
+      checks: eligibilityChecks,
+      nextClick: tinyLiveEligible ? 'Enable Tiny Live Test Mode' : eligibilityChecks.find(item => !item.passed)?.nextClick || 'Verify Kraken Connection'
+    },
+    tinyLivePreview: preview,
+    enableTinyLiveTestMode: {
+      label: 'Enable Tiny Live Test Mode',
+      canRequest: tinyLiveEligible,
+      executionBlocked: true,
+      requiresTypedConfirmation: true,
+      confirmationPhrase: PHASE6F_ENABLE_CONFIRMATION_PHRASE,
+      manualOwnerApprovalRequired: true,
+      emergencyStopArmedRequired: true,
+      currentModeStatus: modeState?.status || productionConnection.phase6FTinyLiveMode?.status || 'locked',
+      plainEnglish: tinyLiveEligible
+        ? 'You may request locked tiny live test mode. This still does not place an order.'
+        : 'Eligibility must pass before tiny live test mode can be requested.'
+    },
+    krakenReadiness: savedReadiness,
+    dryRunProof: savedDryRun,
+    preflight: savedPreflight,
+    simulationPreview: savedPreview,
+    riskProfileReady: riskProfileActive,
+    latestPhase6FOrder: (latestOrders || []).find(order => normalizePhase6ExchangeName(order.exchange_name) === 'kraken' && order.readiness?.phase6F) || null,
+    safetyBoundary: {
+      ...createProductionSafetyBoundary(false),
+      phase6FCanPlaceOrder: false,
+      tinyLiveModeExecutionBlocked: true,
+      productionOrderEndpointCalled: false,
+      productionOrderEndpointEnabled: false,
+      secretValuesReturnedToUi: false,
+      withdrawalsEnabled: false,
+      walletSigningEnabled: false,
+      marginEnabled: false,
+      futuresEnabled: false,
+      leverageEnabled: false,
+      autonomousLoopsEnabled: false,
+      scalingEnabled: false
+    }
+  };
+}
+
 function createPlainEnglishProductionError(exchangeName, error) {
   const rawMessage = String(error?.message || error || '').slice(0, 500);
   const lower = rawMessage.toLowerCase();
@@ -4285,6 +4664,8 @@ module.exports = {
   PHASE6C_RECOMMENDED_FIRST_EXCHANGE,
   PHASE6D_RECOMMENDED_FIRST_EXCHANGE,
   PHASE6E_RECOMMENDED_FIRST_EXCHANGE,
+  PHASE6F_RECOMMENDED_FIRST_EXCHANGE,
+  PHASE6F_ENABLE_CONFIRMATION_PHRASE,
   PHASE6D_ARM_CONFIRMATION_PHRASE,
   DEFAULT_PHASE6D_TINY_LIVE_POLICY,
   KRAKEN_PHASE6E_WALKTHROUGH,
@@ -4319,6 +4700,9 @@ module.exports = {
   buildPhase6DWizard,
   buildPhase6EFinalStatus,
   buildPhase6EWalkthrough,
+  classifyKrakenAuthenticationIssue,
+  buildPhase6FTinyLivePreview,
+  buildPhase6FOperatorResult,
   createProductionSafetyBoundary,
   createPlainEnglishProductionError
 };

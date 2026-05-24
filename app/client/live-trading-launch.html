@@ -1020,6 +1020,102 @@
             <div id="phase6e-result" class="phase3-results">Phase 6E is ready to load. Live trading remains locked.</div>
         </section>
 
+        <section class="model-panel phase6f-wizard" id="kraken-authenticated-eligibility">
+            <div class="phase6f-hero">
+                <div>
+                    <span class="mode-pill">Phase 6F · First Safe Readiness</span>
+                    <h2>Phase 6F: First Authenticated Kraken Connection And Tiny Live Eligibility</h2>
+                    <p class="inline-status">Use the restricted Kraken key from Phase 6E to prove account authentication, balance reads, market metadata, and tiny live readiness. This phase still does not place a live order.</p>
+                </div>
+                <button id="phase6f-refresh" type="button" class="primary-action-button">Refresh Kraken Readiness</button>
+            </div>
+
+            <div class="phase6f-summary-grid">
+                <article>
+                    <span>Kraken Key</span>
+                    <strong id="phase6f-auth-status">Not Ready</strong>
+                    <small id="phase6f-auth-note">Save the restricted Kraken key first.</small>
+                </article>
+                <article>
+                    <span>Permissions</span>
+                    <strong id="phase6f-key-status">Locked Safe</strong>
+                    <small>Withdrawals, transfers, margin, futures, and leverage must stay off.</small>
+                </article>
+                <article>
+                    <span>Balances</span>
+                    <strong id="phase6f-balance-status">Not Checked</strong>
+                    <small>Read-only balance check only.</small>
+                </article>
+                <article>
+                    <span>Tiny Live Test</span>
+                    <strong id="phase6f-eligible-status">Not Eligible Yet</strong>
+                    <small>No live order will be placed yet.</small>
+                </article>
+            </div>
+
+            <div class="phase6f-controls">
+                <label for="phase6f-symbol">
+                    Tiny test symbol
+                    <select id="phase6f-symbol">
+                        <option value="BTC/USD">BTC/USD</option>
+                        <option value="BTC/USDT">BTC/USDT</option>
+                        <option value="ETH/USD">ETH/USD</option>
+                        <option value="ETH/USDT">ETH/USDT</option>
+                    </select>
+                </label>
+                <label for="phase6f-notional">
+                    Tiny amount USD
+                    <input id="phase6f-notional" type="number" min="0" step="0.5" value="1">
+                </label>
+                <label for="phase6f-max-order">
+                    Hard max USD
+                    <input id="phase6f-max-order" type="number" min="0" step="0.5" value="5">
+                </label>
+                <label for="phase6f-limit-price">
+                    Limit price optional
+                    <input id="phase6f-limit-price" type="number" min="0" step="0.01" value="0">
+                </label>
+                <button id="phase6f-verify" type="button">Verify Kraken Connection</button>
+                <button id="phase6f-preview" type="button">Build Tiny Live Preview</button>
+            </div>
+
+            <div class="phase6f-proof-grid">
+                <article class="phase6f-proof-panel">
+                    <h3>Operator Result</h3>
+                    <div id="phase6f-operator-results">No Phase 6F check has run yet.</div>
+                </article>
+                <article class="phase6f-proof-panel">
+                    <h3>Tiny Live Eligibility</h3>
+                    <div id="phase6f-eligibility">Not eligible yet. Verify Kraken first.</div>
+                </article>
+                <article class="phase6f-proof-panel">
+                    <h3>Tiny Live Preview</h3>
+                    <div id="phase6f-preview-result">No preview has been built yet. No live order will be placed yet.</div>
+                </article>
+                <article class="phase6f-proof-panel">
+                    <h3>Safety Boundary</h3>
+                    <div id="phase6f-safety-boundary">Real orders locked. Wallet signing disabled. Withdrawals disabled. Autonomous loops disabled.</div>
+                </article>
+            </div>
+
+            <div class="phase6f-enable-panel">
+                <div>
+                    <h3>Enable Tiny Live Test Mode</h3>
+                    <p class="workflow-helper-text">This only prepares a locked tiny live test mode. It does not place an order. The execution endpoint remains blocked until a later owner-approved phase.</p>
+                </div>
+                <label for="phase6f-confirmation">
+                    Type the exact confirmation phrase
+                    <input id="phase6f-confirmation" type="text" autocomplete="off" placeholder="Shown after eligibility passes">
+                </label>
+                <label class="checkbox-line"><input id="phase6f-owner-approval" type="checkbox"> I approve preparing tiny live test mode only.</label>
+                <label class="checkbox-line"><input id="phase6f-emergency-armed" type="checkbox"> Emergency Stop is armed.</label>
+                <button id="phase6f-enable" type="button">Enable Tiny Live Test Mode</button>
+                <div id="phase6f-enable-result" class="phase3-results">Locked. Build a passing tiny live preview before using this.</div>
+            </div>
+
+            <div id="phase6f-result" class="phase3-results">Phase 6F is ready to load. No real orders will be placed from this phase.</div>
+        </section>
+
         <section class="model-panel" id="production-trading-command-center">
             <h2>Phase 6: Production Trading Command Center</h2>
             <p class="inline-status">Controlled production execution infrastructure is installed here. Real orders stay locked until production keys, exchange connectivity, sandbox evidence, owner approvals, dry-run checks, capital limits, and final typed confirmation all pass.</p>
@@ -1252,6 +1348,9 @@
         let latestPhase6EDryRunProof = null;
         let latestPhase6EPreflight = null;
         let latestPhase6ESimulationPreview = null;
+        let latestPhase6F = null;
+        let latestPhase6FReadiness = null;
+        let latestPhase6FPreview = null;
         let latestPhase6Center = null;
         let latestPhase6PreviewId = null;
         let latestPhase6OrderId = null;
@@ -2843,6 +2942,208 @@
             await loadPhase6DFramework();
         }
 
+        function renderPhase6FItems(items = []) {
+            return items.map(item => `
+                <article class="phase6f-check-item ${phase6CStatusClass(item.status)}">
+                    <span>${escapeHtml(item.status || (item.passed ? 'Ready' : 'Not Ready'))}</span>
+                    <strong>${escapeHtml(item.label)}</strong>
+                    <p>${escapeHtml(item.plainEnglish || '')}</p>
+                    <small>${escapeHtml(item.nextClick || 'No action needed.')}</small>
+                </article>
+            `).join('') || '<p class="workflow-helper-text">No Phase 6F checks loaded yet.</p>';
+        }
+
+        function renderPhase6F(data = {}) {
+            const phase6F = data.phase6F || data || {};
+            latestPhase6F = phase6F;
+            latestPhase6FReadiness = phase6F.krakenReadiness || data.krakenReadiness || latestPhase6FReadiness;
+            latestPhase6FPreview = phase6F.tinyLivePreview || data.simulationPreview || latestPhase6FPreview;
+
+            const operatorResults = phase6F.operatorResults || [];
+            const eligibility = phase6F.tinyLiveEligibility || {};
+            const preview = phase6F.tinyLivePreview || {};
+            const authItem = operatorResults.find(item => item.id === 'key_works_safely') || {};
+            const unsafeItem = operatorResults.find(item => item.id === 'unsafe_permission_detected') || {};
+            const balanceItem = operatorResults.find(item => item.id === 'balance_read_success') || {};
+
+            document.getElementById('phase6f-auth-status').textContent = phase6F.authenticated ? 'Authenticated' : (phase6F.credentialSaved ? 'Saved, Not Verified' : 'Not Ready');
+            document.getElementById('phase6f-auth-note').textContent = authItem.plainEnglish || phase6F.authIssue?.plainEnglish || 'Save and verify a restricted Kraken key first.';
+            document.getElementById('phase6f-key-status').textContent = unsafeItem.passed === false ? 'Unsafe' : 'Locked Safe';
+            document.getElementById('phase6f-balance-status').textContent = balanceItem.passed ? 'Readable' : 'Not Checked';
+            document.getElementById('phase6f-eligible-status').textContent = eligibility.label || 'Not Eligible Yet';
+            document.getElementById('phase6f-result').innerHTML = `
+                <article class="phase6f-check-item ${phase6CStatusClass(eligibility.eligible ? 'Ready' : phase6F.authIssue?.label)}">
+                    <span>${escapeHtml(eligibility.eligible ? 'READY' : 'NOT READY')}</span>
+                    <strong>${escapeHtml(phase6F.operatorStatusLabel || eligibility.label || 'Not ready')}</strong>
+                    <p>${escapeHtml(eligibility.eligible ? 'Tiny live test mode can be prepared, but execution remains blocked.' : phase6F.authIssue?.plainEnglish || 'Verify Kraken and build the tiny live preview.')}</p>
+                    <small>${escapeHtml(eligibility.nextClick || phase6F.authIssue?.nextClick || 'Verify Kraken Connection')} · No live order will be placed yet.</small>
+                </article>
+            `;
+
+            document.getElementById('phase6f-operator-results').innerHTML = `<div class="phase6f-proof-grid">${renderPhase6FItems(operatorResults)}</div>`;
+            document.getElementById('phase6f-eligibility').innerHTML = `
+                <article class="phase6f-check-item ${eligibility.eligible ? 'status-success' : 'status-warning'}">
+                    <span>${eligibility.eligible ? 'READY' : 'NOT READY'}</span>
+                    <strong>${escapeHtml(eligibility.label || 'Not eligible yet')}</strong>
+                    <p>${escapeHtml(eligibility.eligible ? 'All Phase 6F checks passed. Execution is still blocked until a later phase.' : 'Complete the missing checks below before preparing tiny live mode.')}</p>
+                    <small>${escapeHtml(eligibility.nextClick || 'Verify Kraken Connection')}</small>
+                </article>
+                <div class="phase6f-proof-grid">${renderPhase6FItems(eligibility.checks || [])}</div>
+            `;
+            document.getElementById('phase6f-preview-result').innerHTML = preview.title ? `
+                <article class="phase6f-check-item ${phase6CStatusClass(eligibility.eligible ? 'Ready' : 'Review')}">
+                    <span>No live order will be placed yet</span>
+                    <strong>${escapeHtml(preview.title)} · ${escapeHtml(preview.symbol || 'BTC/USD')}</strong>
+                    <div class="read-only-spread-summary">
+                        <article><span>Tiny amount</span><strong>${formatUsd(preview.estimatedTinyOrderUsd || 0)}</strong><small>Exposure cap ${formatUsd(preview.projectedExposureUsd || 0)}</small></article>
+                        <article><span>Estimated fee</span><strong>${formatUsd(preview.estimatedFeesUsd || 0)}</strong><small>${Number(preview.estimatedFeePercent || 0).toFixed(4)}%</small></article>
+                        <article><span>Slippage</span><strong>${Number(preview.expectedSlippagePercent || 0).toFixed(4)}%</strong><small>Estimated only</small></article>
+                        <article><span>Minimum</span><strong>${escapeHtml(preview.minimumOrderSize || preview.minimumNotionalUsd || 'unknown')}</strong><small>Kraken rule</small></article>
+                    </div>
+                    <p>${escapeHtml(preview.estimatedRisk || 'Preview not ready.')}</p>
+                    ${(preview.abortConditions || []).length ? `<small>Abort conditions: ${escapeHtml((preview.abortConditions || []).join(' · '))}</small>` : '<small>No preview abort conditions detected.</small>'}
+                </article>
+            ` : 'No preview has been built yet. No live order will be placed yet.';
+            document.getElementById('phase6f-safety-boundary').innerHTML = `
+                <article class="phase6f-check-item status-success">
+                    <span>LOCKED</span>
+                    <strong>Safety boundary active</strong>
+                    <p>Real order endpoint: disabled. Wallet signing: disabled. Withdrawals: disabled. Margin/futures/leverage: disabled. Autonomous loops: disabled.</p>
+                    <small>Endpoint called: ${phase6F.safetyBoundary?.productionOrderEndpointCalled ? 'Yes' : 'No'}.</small>
+                </article>
+            `;
+
+            const enable = phase6F.enableTinyLiveTestMode || {};
+            if (enable.confirmationPhrase) {
+                document.getElementById('phase6f-confirmation').placeholder = enable.confirmationPhrase;
+            }
+            document.getElementById('phase6f-enable-result').innerHTML = `
+                <article class="phase6f-check-item ${enable.canRequest ? 'status-warning' : 'status-info'}">
+                    <span>${escapeHtml(enable.currentModeStatus || 'locked')}</span>
+                    <strong>${escapeHtml(enable.label || 'Enable Tiny Live Test Mode')}</strong>
+                    <p>${escapeHtml(enable.plainEnglish || 'Eligibility must pass before tiny live test mode can be requested.')}</p>
+                    <small>Execution blocked: ${enable.executionBlocked ? 'yes' : 'no'} · owner approval required: ${enable.manualOwnerApprovalRequired ? 'yes' : 'no'}.</small>
+                </article>
+            `;
+
+            const defaultOrder = phase6F.defaultOrder || phase6F.krakenReadiness?.order || {};
+            if (defaultOrder.symbol) document.getElementById('phase6f-symbol').value = defaultOrder.symbol;
+            if (defaultOrder.notionalUsd) document.getElementById('phase6f-notional').value = defaultOrder.notionalUsd;
+            if (defaultOrder.maxOrderUsd) document.getElementById('phase6f-max-order').value = defaultOrder.maxOrderUsd;
+        }
+
+        function phase6FOrderPayload() {
+            return {
+                exchangeName: 'kraken',
+                symbol: document.getElementById('phase6f-symbol').value || 'BTC/USD',
+                side: 'buy',
+                orderType: 'limit',
+                quantity: 0,
+                limitPrice: Number(document.getElementById('phase6f-limit-price').value || 0),
+                notionalUsd: Number(document.getElementById('phase6f-notional').value || 1),
+                maxOrderUsd: Number(document.getElementById('phase6f-max-order').value || 5)
+            };
+        }
+
+        async function loadPhase6FStatus() {
+            const response = await fetch('/api/v1/live-trading-launch/phase6f/status');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase6f-result').textContent = data.error || 'Unable to load Phase 6F.';
+                return null;
+            }
+
+            renderPhase6F(data);
+            return data.phase6F;
+        }
+
+        async function phase6FVerifyKraken() {
+            document.getElementById('phase6f-operator-results').textContent = 'Verifying Kraken authentication. This reads account metadata only and calls no order endpoint.';
+            await ensureProductionConnector('kraken');
+            const response = await fetch('/api/v1/live-trading-launch/phase6f/authenticated-readiness', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order: phase6FOrderPayload() })
+            });
+            const data = await response.json();
+            latestPhase6FReadiness = data.krakenReadiness || latestPhase6FReadiness;
+
+            if (!response.ok && !data.phase6F) {
+                document.getElementById('phase6f-operator-results').innerHTML = `
+                    <article class="phase6f-check-item status-warning">
+                        <strong>Kraken verification blocked</strong>
+                        <p>${escapeHtml(data.error || 'Verification did not pass.')}</p>
+                        <small>${escapeHtml(data.nextClick || 'Fix the visible issue, then verify again.')} · Endpoint called: No.</small>
+                    </article>
+                `;
+                return;
+            }
+
+            renderPhase6F(data);
+            await loadPhase6Status();
+        }
+
+        async function phase6FBuildPreview() {
+            document.getElementById('phase6f-preview-result').textContent = 'Building tiny live preview. This does not place a real order and does not call Kraken AddOrder.';
+            await ensureProductionConnector('kraken');
+            const response = await fetch('/api/v1/live-trading-launch/phase6f/tiny-live-preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(phase6FOrderPayload())
+            });
+            const data = await response.json();
+            latestPhase6FReadiness = data.krakenReadiness || latestPhase6FReadiness;
+            latestPhase6FPreview = data.phase6F?.tinyLivePreview || data.simulationPreview || latestPhase6FPreview;
+
+            if (data.previewId) {
+                latestPhase6PreviewId = data.previewId;
+                latestPhase6OrderId = data.previewId;
+            }
+
+            if (!response.ok && !data.phase6F) {
+                document.getElementById('phase6f-preview-result').innerHTML = `
+                    <article class="phase6f-check-item status-warning">
+                        <strong>Tiny live preview blocked</strong>
+                        <p>${escapeHtml(data.error || 'Preview did not pass.')}</p>
+                        <small>${escapeHtml(data.nextClick || 'Fix the visible issue, then build preview again.')} · Endpoint called: No.</small>
+                    </article>
+                `;
+                return;
+            }
+
+            renderPhase6F(data);
+            await loadPhase6Status();
+        }
+
+        async function phase6FEnableTinyLiveMode() {
+            document.getElementById('phase6f-enable-result').textContent = 'Requesting locked tiny live test mode. This still does not place a real order.';
+            const response = await fetch('/api/v1/live-trading-launch/phase6f/enable-tiny-live-test-mode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    confirmation: document.getElementById('phase6f-confirmation').value,
+                    ownerApprovalAccepted: document.getElementById('phase6f-owner-approval').checked,
+                    emergencyStopArmed: document.getElementById('phase6f-emergency-armed').checked
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok && !data.phase6F) {
+                document.getElementById('phase6f-enable-result').innerHTML = `
+                    <article class="phase6f-check-item status-warning">
+                        <strong>Tiny live test mode remains locked</strong>
+                        <p>${escapeHtml(data.error || 'Enable request did not pass.')}</p>
+                        <small>${escapeHtml((data.missing || []).join(' · ') || data.nextClick || 'Complete the visible confirmations.')} · Endpoint called: No.</small>
+                    </article>
+                `;
+                return;
+            }
+
+            renderPhase6F(data);
+            await loadPhase6Status();
+        }
+
         window.EtherealAIPhase6E = {
             startPhase6EWalkthrough,
             savePhase6EKrakenKey,
@@ -2852,9 +3153,16 @@
             loadPhase6EWalkthrough
         };
 
+        window.EtherealAIPhase6F = {
+            loadPhase6FStatus,
+            phase6FVerifyKraken,
+            phase6FBuildPreview,
+            phase6FEnableTinyLiveMode
+        };
+
         document.addEventListener('click', event => {
             const action = event.target?.closest?.(
-                '#phase6e-start, #phase6e-save-key, #phase6e-delete-key, #phase6e-verify-key, #phase6e-dry-run'
+                '#phase6e-start, #phase6e-save-key, #phase6e-delete-key, #phase6e-verify-key, #phase6e-dry-run, #phase6f-refresh, #phase6f-verify, #phase6f-preview, #phase6f-enable'
             );
             if (!action) return;
 
@@ -2864,7 +3172,11 @@
                 'phase6e-save-key': savePhase6EKrakenKey,
                 'phase6e-delete-key': deletePhase6EKrakenKey,
                 'phase6e-verify-key': verifyPhase6EKrakenKey,
-                'phase6e-dry-run': runPhase6EKrakenDryRun
+                'phase6e-dry-run': runPhase6EKrakenDryRun,
+                'phase6f-refresh': loadPhase6FStatus,
+                'phase6f-verify': phase6FVerifyKraken,
+                'phase6f-preview': phase6FBuildPreview,
+                'phase6f-enable': phase6FEnableTinyLiveMode
             };
             actions[action.id]?.();
         });
@@ -3844,6 +4156,7 @@
                 phase4: latestPhase4CommandCenter,
                 phase5: latestPhase5TreasuryCommand,
                 phase6e: latestPhase6EWizard,
+                phase6f: latestPhase6F,
                 phase6: data.center
             }, null, 2);
             return data.center;
@@ -4280,6 +4593,7 @@
         loadPhase6CWizard();
         loadPhase6DFramework();
         loadPhase6EWalkthrough();
+        loadPhase6FStatus();
         loadPhase6Status();
         scanPhase3AReadiness();
     </script>
