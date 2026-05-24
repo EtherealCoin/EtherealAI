@@ -87,24 +87,25 @@
         },
         '/live-trading-launch': {
             area: 'Live Trading Launch Center',
-            title: 'Monitor Multi-Exchange Arbitrage Without Unlocking Live Trading',
-            summary: 'Use read-only market data, venue scoring, spread ranking, inventory planning, and safety dashboards. Multi-leg live execution, withdrawals, wallet signing, margin, futures, leverage, and autonomous scaling stay locked.',
-            primaryAction: { label: 'Run Multi-Exchange Scan', selector: '#run-phase4-command-center' },
-            keepIds: ['live-arbitrage-command-center'],
-            keepHeadings: ['What Should I Do Next?', 'Read-Only Arbitrage Scanner', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center'],
+            title: 'Monitor Multi-Exchange Arbitrage And Treasury Intelligence Without Unlocking Live Trading',
+            summary: 'Use read-only market data, venue scoring, spread ranking, treasury tracking, liquidity intelligence, allocation planning, and safety dashboards. Multi-leg live execution, withdrawals, wallet signing, margin, futures, leverage, and autonomous scaling stay locked.',
+            primaryAction: { label: 'Run Treasury Intelligence Refresh', selector: '#run-phase5-treasury' },
+            keepIds: ['live-arbitrage-command-center', 'treasury-command-center'],
+            keepHeadings: ['What Should I Do Next?', 'Read-Only Arbitrage Scanner', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center'],
             readyLabel: 'Live Trading Launch Locked Safely',
-            nextText: 'Run a read-only scan first. Use the Phase 4 command center to review spreads, exchange health, capital limits, and recovery warnings before any future owner-approved live expansion.',
+            nextText: 'Run treasury intelligence after the read-only scan. Review spreads, liquidity, capital allocation, reserve ratio, cross-chain costs, and safety controls before any future owner-approved live expansion.',
             cards: [
                 ['Read-only expansion', 'Fetch public and authenticated read-only data without placing orders.'],
                 ['Arbitrage intelligence', 'Rank best buy and sell venues after fees, slippage, latency, liquidity, and exchange health.'],
-                ['Controlled expansion', 'Capital allocation, inventory warnings, outage handling, and retry plans are modeled only.'],
+                ['Treasury intelligence', 'Track capital, stablecoin inventory, chain metadata, opportunity confidence, and allocation reasoning.'],
                 ['Safety boundary', 'No leverage, margin, futures, withdrawals, wallet signing, multi-leg live orders, or autonomous scaling.']
             ],
             workflow: [
                 ['1. Refresh launch status', 'Confirm live trading is still locked and read-only systems are available.', { label: 'Refresh Launch Status', selector: '#refresh-live-roadmap' }],
                 ['2. Run read-only scan', 'Compare market prices across connected and public venues without live orders.', { label: 'Run Read-Only Scan', selector: '#run-readonly-scan' }],
                 ['3. Run Phase 4 command center', 'Build the spread heatmap, opportunity queue, exchange health, capital allocation, risk, and recovery dashboards.', { label: 'Run Multi-Exchange Scan', selector: '#run-phase4-command-center' }],
-                ['4. Review emergency controls', 'Keep live connectors disabled and use emergency stop if anything looks unsafe.', { label: 'Emergency Stop / Keep Live Locked', selector: '#phase4-emergency-stop' }]
+                ['4. Run Phase 5 treasury intelligence', 'Build treasury, liquidity, cross-chain, allocation, risk, and AI decision audit dashboards.', { label: 'Run Treasury Intelligence Refresh', selector: '#run-phase5-treasury' }],
+                ['5. Review emergency controls', 'Keep live connectors and treasury movement disabled if anything looks unsafe.', { label: 'Emergency Capital Freeze / Keep Locked', selector: '#phase5-freeze-capital' }]
             ]
         },
         '/operator-control': {

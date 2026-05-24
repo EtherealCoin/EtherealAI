@@ -102,6 +102,10 @@ function registerExchangeMetadataRoutes(app, {
   phase4SupportedVenues,
   phase4NetworkCostBaselines,
   buildLiveArbitrageCommandCenter,
+  phase5AiModes,
+  phase5Status,
+  defaultPhase5TreasuryPolicy,
+  buildTreasuryLiquidityCommandCenter,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,
@@ -293,6 +297,50 @@ function registerExchangeMetadataRoutes(app, {
     };
   }
 
+  function parseTreasuryIntelligenceRun(row) {
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      user_id: row.user_id,
+      symbol: row.symbol,
+      status: row.status,
+      ai_mode: row.ai_mode,
+      options: JSON.parse(row.options_json || '{}'),
+      treasuryCommand: JSON.parse(row.treasury_command_json || '{}'),
+      safetyBoundary: JSON.parse(row.safety_boundary_json || '{}'),
+      autonomous_actions_enabled: Boolean(row.autonomous_actions_enabled),
+      withdrawals_enabled: Boolean(row.withdrawals_enabled),
+      wallet_signing_enabled: Boolean(row.wallet_signing_enabled),
+      leverage_enabled: Boolean(row.leverage_enabled),
+      futures_enabled: Boolean(row.futures_enabled),
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    };
+  }
+
+  function parseTreasuryWalletRow(row) {
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      label: row.label,
+      wallet_kind: row.wallet_kind,
+      chain_family: row.chain_family,
+      network: row.network,
+      public_address: row.public_address || '',
+      status: row.status,
+      assignment: JSON.parse(row.assignment_json || '[]'),
+      permissionScope: JSON.parse(row.permission_scope_json || '{}'),
+      signingEnabled: Boolean(row.signing_enabled),
+      liveExecutionEnabled: Boolean(row.live_execution_enabled)
+    };
+  }
+
   async function upsertReadOnlyLocalReference({ userId, existingReferenceId, label, referenceName, notes }) {
     let referenceRow = existingReferenceId
       ? await dbGet(
@@ -456,6 +504,31 @@ function registerExchangeMetadataRoutes(app, {
     return rows.map(parseLiveArbitrageCommandRun);
   }
 
+  async function getLatestTreasuryIntelligenceRuns(userId, limit = 5) {
+    const rows = await dbAll(
+      `SELECT *
+       FROM treasury_intelligence_runs
+       WHERE user_id = ?
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`,
+      [userId, limit]
+    );
+
+    return rows.map(parseTreasuryIntelligenceRun);
+  }
+
+  async function getTreasuryWallets(userId) {
+    const rows = await dbAll(
+      `SELECT *
+       FROM owner_wallets
+       WHERE user_id = ?
+       ORDER BY updated_at DESC, id DESC`,
+      [userId]
+    );
+
+    return rows.map(parseTreasuryWalletRow);
+  }
+
   async function findOrCreateSandboxConnector({ exchangeName }) {
     const exchangeId = normalizeExchangeId(exchangeName);
     const rows = await dbAll(
@@ -586,6 +659,15 @@ function registerExchangeMetadataRoutes(app, {
     await dbRun(
       `INSERT INTO live_arbitrage_command_events
        (command_run_id, user_id, event_type, status, summary, payload_json)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [runId || null, userId, eventType, status, summary, JSON.stringify(payload || {})]
+    );
+  }
+
+  async function recordTreasuryIntelligenceEvent({ runId, userId, eventType, status, summary, payload = {} }) {
+    await dbRun(
+      `INSERT INTO treasury_intelligence_events
+       (treasury_run_id, user_id, event_type, status, summary, payload_json)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [runId || null, userId, eventType, status, summary, JSON.stringify(payload || {})]
     );
@@ -1249,6 +1331,213 @@ function registerExchangeMetadataRoutes(app, {
           ? createPlainEnglishExchangeError('Phase 4 Live Arbitrage Command Center', error)
           : error.message,
         safetyBoundary: buildLiveArbitrageCommandCenter({}).safetyBoundary
+      });
+    }
+  });
+
+  app.get('/api/v1/live-trading-launch/phase5/status', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const [latestTreasuryRuns, latestPhase4Runs, wallets] = await Promise.all([
+        getLatestTreasuryIntelligenceRuns(req.session.userId, 5),
+        getLatestLiveArbitrageCommandRuns(req.session.userId, 5),
+        getTreasuryWallets(req.session.userId)
+      ]);
+      const phase4 = latestPhase4Runs[0]?.commandCenter || buildLiveArbitrageCommandCenter({
+        connectors,
+        scan: null,
+        accountScan: null,
+        websocketPlan: buildWebSocketHealthPlan(),
+        options: {
+          symbol: req.query?.symbol || 'BTC/USDT'
+        },
+        policy: defaultPhase4RiskPolicy
+      });
+      const treasuryCommand = latestTreasuryRuns[0]?.treasuryCommand || buildTreasuryLiquidityCommandCenter({
+        accountScan: null,
+        scan: null,
+        phase4,
+        wallets,
+        networkCostBaselines: phase4NetworkCostBaselines || {},
+        options: {
+          symbol: req.query?.symbol || 'BTC/USDT',
+          aiMode: req.query?.aiMode || 'Manual Approval Required'
+        },
+        policy: defaultPhase5TreasuryPolicy
+      });
+
+      res.json({
+        treasuryCommand,
+        latestRuns: latestTreasuryRuns,
+        phase4,
+        aiModes: phase5AiModes || {},
+        statuses: phase5Status || {},
+        safetyBoundary: treasuryCommand.safetyBoundary
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase5/treasury-command-center', requireAuth, async (req, res) => {
+    try {
+      const options = {
+        symbol: req.body?.symbol || 'BTC/USDT',
+        orderSizeUsd: req.body?.orderSizeUsd,
+        minNetSpreadPercent: req.body?.minNetSpreadPercent,
+        minLiquidityUsd: req.body?.minLiquidityUsd,
+        maxLatencyMs: req.body?.maxLatencyMs,
+        maxSlippagePercent: req.body?.maxSlippagePercent,
+        maxCapitalPerExchangeUsd: req.body?.maxCapitalPerExchangeUsd,
+        maxCapitalPerStrategyUsd: req.body?.maxCapitalPerStrategyUsd,
+        quoteAsset: req.body?.quoteAsset || 'USDT',
+        aiMode: req.body?.aiMode || 'Manual Approval Required',
+        planningCapitalUsd: req.body?.planningCapitalUsd,
+        reserveRatioPercent: req.body?.reserveRatioPercent,
+        maxExchangeConcentrationPercent: req.body?.maxExchangeConcentrationPercent,
+        maxStablecoinConcentrationPercent: req.body?.maxStablecoinConcentrationPercent,
+        maxStrategyCapitalPercent: req.body?.maxStrategyCapitalPercent,
+        maxOpportunityCapitalPercent: req.body?.maxOpportunityCapitalPercent
+      };
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const [scan, accountScan, wallets, sandboxVaultStatus, latestSandboxTests, latestTinyLiveOrders, tinyVaultStatus] = await Promise.all([
+        scanReadOnlyArbitrageOpportunities({
+          connectors,
+          symbol: options.symbol,
+          connectedOnly: req.body?.connectedOnly === true,
+          includeExpanded: req.body?.includeExpanded !== false,
+          minNetProfitPercent: options.minNetSpreadPercent,
+          minLiquidityUsd: options.minLiquidityUsd,
+          maxLatencyMs: options.maxLatencyMs,
+          orderSizeUsd: options.orderSizeUsd,
+          slippagePercent: options.maxSlippagePercent,
+          maxVenues: req.body?.maxVenues || 16,
+          maxCandidates: req.body?.maxCandidates || 24
+        }),
+        scanAuthenticatedReadOnlyAccounts({
+          connectors,
+          symbol: options.symbol,
+          credentialLoader: connector => loadConnectorReadOnlyCredentialsForUser(connector, req.session.userId)
+        }),
+        getTreasuryWallets(req.session.userId),
+        getSandboxVaultStatus(),
+        getLatestSandboxOrderTests(req.session.userId, 25),
+        getLatestTinyLiveOrderTests(req.session.userId, 25),
+        getTinyLiveVaultStatus()
+      ]);
+      const phase3B = buildPhase3BSandboxStatus({
+        connectors,
+        vaultStatus: sandboxVaultStatus,
+        latestTests: latestSandboxTests
+      });
+      const riskProfile = await getActiveLiveReadinessRiskProfile();
+      const exchangeReadiness = await getTinyLiveExchangeReadiness({ connectors, userId: req.session.userId });
+      const phase3C = buildTinyLiveApprovalCenter({
+        connectors,
+        vaultStatus: tinyVaultStatus,
+        latestSandboxTests,
+        latestTinyLiveOrders,
+        riskProfile,
+        exchangeReadiness
+      });
+      const phase4 = buildLiveArbitrageCommandCenter({
+        connectors,
+        scan,
+        accountScan,
+        phase3B,
+        phase3C,
+        websocketPlan: buildWebSocketHealthPlan(),
+        options,
+        policy: {
+          ...(defaultPhase4RiskPolicy || {}),
+          globalKillSwitchEnabled: true,
+          multiExchangeLiveExecutionEnabled: false,
+          unrestrictedAutonomousScalingEnabled: false,
+          withdrawalsEnabled: false,
+          walletSigningEnabled: false,
+          marginEnabled: false,
+          futuresEnabled: false,
+          leverageEnabled: false
+        }
+      });
+      const treasuryCommand = buildTreasuryLiquidityCommandCenter({
+        accountScan,
+        scan,
+        phase4,
+        wallets,
+        networkCostBaselines: phase4NetworkCostBaselines || {},
+        options,
+        policy: {
+          ...(defaultPhase5TreasuryPolicy || {}),
+          treasuryKillSwitchEnabled: true,
+          emergencyCapitalFreezeEnabled: true,
+          autonomousTreasuryActionsEnabled: false,
+          unrestrictedAutonomousScalingEnabled: false,
+          unrestrictedLeverageEnabled: false,
+          unrestrictedFuturesEnabled: false,
+          unrestrictedWithdrawalsEnabled: false,
+          unrestrictedWalletSigningEnabled: false,
+          ownerApprovalRequired: true
+        }
+      });
+      const insert = await dbRun(
+        `INSERT INTO treasury_intelligence_runs
+         (user_id, symbol, status, ai_mode, options_json, treasury_command_json, safety_boundary_json,
+          autonomous_actions_enabled, withdrawals_enabled, wallet_signing_enabled, leverage_enabled, futures_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          treasuryCommand.options.symbol,
+          treasuryCommand.status,
+          treasuryCommand.aiMode,
+          JSON.stringify(treasuryCommand.options),
+          JSON.stringify(treasuryCommand),
+          JSON.stringify(treasuryCommand.safetyBoundary),
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      );
+
+      await recordTreasuryIntelligenceEvent({
+        runId: insert.lastID,
+        userId: req.session.userId,
+        eventType: 'phase5_treasury_command_center_refresh',
+        status: treasuryCommand.status,
+        summary: 'Phase 5 Treasury Command Center refreshed in intelligence-only mode. Autonomous treasury actions remain locked.',
+        payload: {
+          aiMode: treasuryCommand.aiMode,
+          selectedPlanningOpportunities: treasuryCommand.opportunityRanking.filter(item => item.selectedForPlanning).length,
+          safetyBoundary: treasuryCommand.safetyBoundary
+        }
+      });
+
+      res.status(201).json({
+        run: parseTreasuryIntelligenceRun(await dbGet('SELECT * FROM treasury_intelligence_runs WHERE id = ? AND user_id = ?', [insert.lastID, req.session.userId])),
+        treasuryCommand,
+        phase4,
+        scan,
+        accountScan,
+        safetyBoundary: treasuryCommand.safetyBoundary
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishExchangeError
+          ? createPlainEnglishExchangeError('Phase 5 Treasury Command Center', error)
+          : error.message,
+        safetyBoundary: buildTreasuryLiquidityCommandCenter({}).safetyBoundary
       });
     }
   });

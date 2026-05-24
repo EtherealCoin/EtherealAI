@@ -247,6 +247,12 @@ const {
   buildLiveArbitrageCommandCenter
 } = require('./lib/exchange-live-arbitrage-command');
 const {
+  PHASE5_AI_MODES,
+  PHASE5_STATUS,
+  DEFAULT_PHASE5_TREASURY_POLICY,
+  buildTreasuryLiquidityCommandCenter
+} = require('./lib/exchange-treasury-liquidity-intelligence');
+const {
   parseSocialPost,
   reviewSocialContent
 } = require('./lib/social-ops');
@@ -915,6 +921,10 @@ registerEtherealRoutes(app, {
   phase4SupportedVenues: PHASE4_SUPPORTED_VENUES,
   phase4NetworkCostBaselines: NETWORK_COST_BASELINES,
   buildLiveArbitrageCommandCenter,
+  phase5AiModes: PHASE5_AI_MODES,
+  phase5Status: PHASE5_STATUS,
+  defaultPhase5TreasuryPolicy: DEFAULT_PHASE5_TREASURY_POLICY,
+  buildTreasuryLiquidityCommandCenter,
   evaluateExchangeConnectorReadiness,
   evaluateExchangeAdapterContract,
   createExchangeAdapterContractSpec,

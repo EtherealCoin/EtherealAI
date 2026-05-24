@@ -703,6 +703,42 @@ function initializeDatabase(db) {
     `);
 
     db.run(`
+      CREATE TABLE IF NOT EXISTS treasury_intelligence_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        symbol TEXT NOT NULL DEFAULT 'BTC/USDT',
+        status TEXT NOT NULL DEFAULT 'intelligence_only_owner_approval_required',
+        ai_mode TEXT NOT NULL DEFAULT 'Manual Approval Required',
+        options_json TEXT NOT NULL DEFAULT '{}',
+        treasury_command_json TEXT NOT NULL DEFAULT '{}',
+        safety_boundary_json TEXT NOT NULL DEFAULT '{}',
+        autonomous_actions_enabled INTEGER NOT NULL DEFAULT 0,
+        withdrawals_enabled INTEGER NOT NULL DEFAULT 0,
+        wallet_signing_enabled INTEGER NOT NULL DEFAULT 0,
+        leverage_enabled INTEGER NOT NULL DEFAULT 0,
+        futures_enabled INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS treasury_intelligence_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        treasury_run_id INTEGER,
+        user_id INTEGER NOT NULL,
+        event_type TEXT NOT NULL,
+        status TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        payload_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(treasury_run_id) REFERENCES treasury_intelligence_runs(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+
+    db.run(`
       CREATE TABLE IF NOT EXISTS arbitrage_simulation_runs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,

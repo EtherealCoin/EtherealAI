@@ -466,6 +466,104 @@
             <div id="phase4-result" class="phase3-results">Phase 4 is planning/monitoring only. Multi-exchange live orders are not enabled.</div>
         </section>
 
+        <section class="model-panel" id="treasury-command-center">
+            <h2>Phase 5: Treasury Command Center</h2>
+            <p class="inline-status">Autonomous Treasury & Liquidity Intelligence tracks capital, exchange balances, stablecoin inventory, liquidity quality, cross-chain costs, allocation reasoning, and risk. It is intelligence-only: no withdrawals, wallet signing, leverage, futures, unrestricted scaling, or autonomous treasury movement.</p>
+            <div class="phase5-controls">
+                <label for="phase5-ai-mode">
+                    AI Mode
+                    <select id="phase5-ai-mode">
+                        <option>Manual Approval Required</option>
+                        <option>Conservative</option>
+                        <option>Balanced</option>
+                        <option>Aggressive</option>
+                    </select>
+                </label>
+                <label for="phase5-planning-capital">
+                    Planning capital USD
+                    <input id="phase5-planning-capital" type="number" value="1000" min="0" step="100">
+                </label>
+                <label for="phase5-reserve-ratio">
+                    Reserve ratio %
+                    <input id="phase5-reserve-ratio" type="number" value="70" min="0" max="100" step="1">
+                </label>
+                <label for="phase5-max-exchange">
+                    Max exchange concentration %
+                    <input id="phase5-max-exchange" type="number" value="35" min="1" max="100" step="1">
+                </label>
+                <label for="phase5-max-stablecoin">
+                    Max stablecoin concentration %
+                    <input id="phase5-max-stablecoin" type="number" value="65" min="1" max="100" step="1">
+                </label>
+                <label for="phase5-max-strategy">
+                    Max strategy capital %
+                    <input id="phase5-max-strategy" type="number" value="15" min="1" max="100" step="1">
+                </label>
+                <label for="phase5-max-opportunity">
+                    Max opportunity capital %
+                    <input id="phase5-max-opportunity" type="number" value="5" min="0.1" max="100" step="0.1">
+                </label>
+            </div>
+            <div class="button-row">
+                <button id="refresh-phase5-status" type="button">Refresh Treasury Status</button>
+                <button id="run-phase5-treasury" type="button">Run Treasury Intelligence Refresh</button>
+                <button id="phase5-freeze-capital" type="button" class="secondary-button">Emergency Capital Freeze / Keep Locked</button>
+            </div>
+            <div class="phase5-dashboard-grid">
+                <article>
+                    <span>Treasury</span>
+                    <strong id="phase5-total-capital">Loading</strong>
+                    <small id="phase5-total-detail">Treasury intelligence is loading.</small>
+                </article>
+                <article>
+                    <span>Stablecoins</span>
+                    <strong id="phase5-stablecoins">Review</strong>
+                    <small id="phase5-stablecoin-detail">Read-only balances are optional but improve accuracy.</small>
+                </article>
+                <article>
+                    <span>Opportunities</span>
+                    <strong id="phase5-opportunities">Waiting</strong>
+                    <small id="phase5-opportunity-detail">Run treasury refresh to rank opportunities.</small>
+                </article>
+                <article>
+                    <span>Safety</span>
+                    <strong id="phase5-safety">Locked</strong>
+                    <small>Autonomous treasury actions are not enabled.</small>
+                </article>
+            </div>
+            <div class="phase5-dashboard-grid">
+                <div class="phase5-panel">
+                    <h3>Treasury Command Center</h3>
+                    <div id="phase5-treasury-dashboard">Refresh treasury status to load capital tracking.</div>
+                </div>
+                <div class="phase5-panel">
+                    <h3>Liquidity Intelligence Dashboard</h3>
+                    <div id="phase5-liquidity-dashboard">Run treasury intelligence to analyze liquidity depth.</div>
+                </div>
+                <div class="phase5-panel">
+                    <h3>Opportunity Ranking Board</h3>
+                    <div id="phase5-opportunity-board">No treasury-ranked opportunities yet.</div>
+                </div>
+                <div class="phase5-panel">
+                    <h3>Cross-Chain Status Dashboard</h3>
+                    <div id="phase5-cross-chain-dashboard">Cross-chain intelligence is loading.</div>
+                </div>
+                <div class="phase5-panel">
+                    <h3>Capital Allocation Heatmap</h3>
+                    <div id="phase5-allocation-heatmap">No allocation plan yet.</div>
+                </div>
+                <div class="phase5-panel">
+                    <h3>Risk & Exposure Dashboard</h3>
+                    <div id="phase5-risk-dashboard">Risk controls are loading.</div>
+                </div>
+                <div class="phase5-panel phase5-wide-panel">
+                    <h3>AI Decision Audit</h3>
+                    <div id="phase5-ai-audit">No AI treasury audit has run yet.</div>
+                </div>
+            </div>
+            <div id="phase5-result" class="phase3-results">Phase 5 is intelligence-only. Autonomous treasury movement is not enabled.</div>
+        </section>
+
         <section class="model-panel">
             <h2>Launch Roadmap</h2>
             <div id="live-roadmap-phases" class="live-roadmap-phases">Loading phases...</div>
@@ -496,6 +594,7 @@
         let latestTinyLivePreview = null;
         let latestTinyLiveOrderId = null;
         let latestPhase4CommandCenter = null;
+        let latestPhase5TreasuryCommand = null;
 
         function escapeHtml(value) {
             return String(value ?? '')
@@ -912,6 +1011,13 @@
             return 'status-info';
         }
 
+        function phase5CardClass(status) {
+            if (status === 'Ready') return 'status-success';
+            if (status === 'Unsafe') return 'status-danger';
+            if (status === 'Locked' || status === 'Warning' || status === 'Review') return 'status-warning';
+            return 'status-info';
+        }
+
         function renderPhase4CommandCenter(commandCenter) {
             latestPhase4CommandCenter = commandCenter;
             const topOpportunity = commandCenter?.opportunityQueue?.[0] || null;
@@ -1009,6 +1115,130 @@
                     <strong>${escapeHtml(commandCenter?.title || 'Live Arbitrage Command Center')}</strong>
                     <span>${escapeHtml(commandCenter?.nextRecommendedAction || 'Run a scan.')}</span>
                     <small>Multi-leg live execution enabled: ${commandCenter?.safetyBoundary?.multiExchangeLiveExecutionEnabled ? 'yes' : 'no'} · withdrawals: ${commandCenter?.safetyBoundary?.withdrawalsEnabled ? 'enabled' : 'disabled'} · wallet signing: ${commandCenter?.safetyBoundary?.walletSigningEnabled ? 'enabled' : 'disabled'}</small>
+                </article>
+            `;
+        }
+
+        function renderPhase5TreasuryCommand(command) {
+            latestPhase5TreasuryCommand = command;
+            const treasury = command?.treasury || {};
+            const stableWarnings = treasury.warnings || [];
+            const selected = (command?.opportunityRanking || []).filter(item => item.selectedForPlanning);
+
+            document.getElementById('phase5-total-capital').textContent = formatUsd(treasury.totalCapitalUsd || 0);
+            document.getElementById('phase5-total-detail').textContent = `Idle ${formatUsd(treasury.idleCapitalUsd || 0)} · deployed ${formatUsd(treasury.deployedCapitalUsd || 0)} · reserve ${formatUsd(treasury.reserveRequiredUsd || 0)}.`;
+            document.getElementById('phase5-stablecoins').textContent = formatUsd(treasury.stablecoinInventoryUsd || 0);
+            document.getElementById('phase5-stablecoin-detail').textContent = stableWarnings[0] || 'Stablecoin inventory is modeled from read-only balances.';
+            document.getElementById('phase5-opportunities').textContent = `${selected.length} selected`;
+            document.getElementById('phase5-opportunity-detail').textContent = selected[0]
+                ? `${selected[0].buyVenue} -> ${selected[0].sellVenue} · score ${selected[0].treasuryScore}`
+                : 'No opportunity selected for planning yet.';
+            document.getElementById('phase5-safety').textContent = command?.riskExposureDashboard?.status || 'Locked';
+
+            document.getElementById('phase5-treasury-dashboard').innerHTML = `
+                <div class="live-candidate-metrics">
+                    <span>Total capital: ${formatUsd(treasury.totalCapitalUsd || 0)}</span>
+                    <span>Exchange visible: ${formatUsd(treasury.visibleExchangeCapitalUsd || 0)}</span>
+                    <span>Idle stablecoins: ${formatUsd(treasury.idleCapitalUsd || 0)}</span>
+                    <span>Deployed: ${formatUsd(treasury.deployedCapitalUsd || 0)}</span>
+                    <span>Reserve required: ${formatUsd(treasury.reserveRequiredUsd || 0)}</span>
+                    <span>Reserve gap: ${formatUsd(treasury.reserveGapUsd || 0)}</span>
+                    <span>Unrealized P/L: ${formatUsd(treasury.unrealizedPnlUsd || 0)}</span>
+                    <span>Realized P/L: ${formatUsd(treasury.realizedPnlUsd || 0)}</span>
+                </div>
+                ${(treasury.exchangeBalances || []).slice(0, 8).map(row => `
+                    <article class="phase5-mini-card ${row.authenticatedReadOnly ? 'status-success' : 'status-warning'}">
+                        <strong>${escapeHtml(row.displayName)}</strong>
+                        <span>Total ${formatUsd(row.totalUsd)} · stablecoins ${formatUsd(row.stablecoinUsd)}</span>
+                        <small>${escapeHtml(row.status)} · read-only only</small>
+                    </article>
+                `).join('') || '<p class="workflow-helper-text">No authenticated exchange balances are visible yet.</p>'}
+            `;
+
+            document.getElementById('phase5-liquidity-dashboard').innerHTML = `
+                <p class="workflow-helper-text">Venues checked: ${escapeHtml(command?.liquidityIntelligence?.summary?.venuesChecked || 0)} · thin books: ${escapeHtml(command?.liquidityIntelligence?.summary?.thinBookCount || 0)} · fragmented routes: ${escapeHtml(command?.liquidityIntelligence?.summary?.fragmentedRouteCount || 0)}</p>
+                ${(command?.liquidityIntelligence?.venueDepth || []).slice(0, 10).map(row => `
+                    <article class="phase5-mini-card ${phase5CardClass(row.status)}">
+                        <strong>${escapeHtml(row.displayName)}</strong>
+                        <span>Liquidity ${formatUsd(row.liquidityUsd)} · market impact score ${escapeHtml(row.marketImpactScore)}</span>
+                        <small>Slippage estimate ${formatPercent(row.slippageImpactPercent)} · latency ${escapeHtml(row.latencyMs)} ms</small>
+                    </article>
+                `).join('') || '<p class="workflow-helper-text">Run treasury intelligence to populate liquidity depth.</p>'}
+            `;
+
+            document.getElementById('phase5-opportunity-board').innerHTML = (command?.opportunityRanking || []).slice(0, 10).map(item => `
+                <article class="phase5-mini-card ${item.selectedForPlanning ? 'status-success' : 'status-warning'}">
+                    <strong>${escapeHtml(item.buyVenue)} -> ${escapeHtml(item.sellVenue)}</strong>
+                    <span>Score ${escapeHtml(item.treasuryScore)} · probability ${escapeHtml(item.executionProbability)} · net ${formatPercent(item.netSpreadAfterFeesPercent)}</span>
+                    <small>${escapeHtml(item.decision)} ${item.rejectionReasons?.length ? `Review: ${escapeHtml(item.rejectionReasons.join(', '))}` : ''}</small>
+                </article>
+            `).join('') || '<p class="workflow-helper-text">No ranked treasury opportunities yet.</p>';
+
+            document.getElementById('phase5-cross-chain-dashboard').innerHTML = `
+                ${(command?.crossChainIntelligence?.bestStablecoinInventoryRoutes || []).map(row => `
+                    <article class="phase5-mini-card status-info">
+                        <strong>${escapeHtml(row.chain)}</strong>
+                        <span>Route score ${escapeHtml(row.routeScore)} · cost ${formatUsd(row.estimatedStablecoinTransferCostUsd)}</span>
+                        <small>Transfer time ${escapeHtml(row.estimatedTransferTimeMinutes)} min · routing enabled: no</small>
+                    </article>
+                `).join('') || '<p class="workflow-helper-text">No chain route model yet.</p>'}
+                ${(command?.crossChainIntelligence?.warnings || []).map(warning => `<p class="workflow-helper-text">${escapeHtml(warning)}</p>`).join('')}
+            `;
+
+            document.getElementById('phase5-allocation-heatmap').innerHTML = `
+                <p class="workflow-helper-text">Mode: ${escapeHtml(command?.aiMode || 'Manual Approval Required')} · investable ${formatUsd(command?.dynamicCapitalAllocation?.investableCapitalUsd || 0)} · reserve ${formatUsd(command?.dynamicCapitalAllocation?.reserveCapitalUsd || 0)}</p>
+                ${(command?.dynamicCapitalAllocation?.allocations || []).map(row => `
+                    <article class="phase5-mini-card status-info">
+                        <strong>${escapeHtml(row.route)}</strong>
+                        <span>Suggested planning allocation ${formatUsd(row.suggestedCapitalUsd)}</span>
+                        <small>${escapeHtml(row.reason)} Owner approval required.</small>
+                    </article>
+                `).join('') || '<p class="workflow-helper-text">No allocation is recommended yet.</p>'}
+            `;
+
+            document.getElementById('phase5-risk-dashboard').innerHTML = `
+                <div class="live-candidate-metrics">
+                    <span>Treasury kill switch: ${escapeHtml(command?.riskExposureDashboard?.treasuryKillSwitch || 'on')}</span>
+                    <span>Emergency freeze: ${escapeHtml(command?.riskExposureDashboard?.emergencyCapitalFreeze || 'on')}</span>
+                    <span>Reserve ratio: ${formatPercent(command?.riskExposureDashboard?.reserveRatioPercent)}</span>
+                    <span>Max drawdown: ${formatPercent(command?.riskExposureDashboard?.maxTreasuryDrawdownPercent)}</span>
+                    <span>Max exchange concentration: ${formatPercent(command?.riskExposureDashboard?.maxExchangeConcentrationPercent)}</span>
+                    <span>Max stablecoin concentration: ${formatPercent(command?.riskExposureDashboard?.maxStablecoinConcentrationPercent)}</span>
+                </div>
+                ${(command?.riskExposureDashboard?.warnings || []).map(warning => `
+                    <article class="phase5-mini-card status-warning">
+                        <strong>Review needed</strong>
+                        <span>${escapeHtml(warning)}</span>
+                    </article>
+                `).join('') || '<p class="workflow-helper-text">No immediate risk warnings. Controls remain locked.</p>'}
+            `;
+
+            document.getElementById('phase5-ai-audit').innerHTML = `
+                <article class="phase5-mini-card status-info">
+                    <strong>${escapeHtml(command?.aiDecisionAudit?.status || 'Review')}</strong>
+                    <span>${escapeHtml(command?.aiDecisionAudit?.explanation || 'No AI decision audit yet.')}</span>
+                </article>
+                ${(command?.aiDecisionAudit?.selected || []).slice(0, 5).map(item => `
+                    <article class="phase5-mini-card status-success">
+                        <strong>${escapeHtml(item.route)}</strong>
+                        <span>Selected for planning · confidence ${escapeHtml(item.confidence)}</span>
+                        <small>${escapeHtml(item.whySelected)}</small>
+                    </article>
+                `).join('')}
+                ${(command?.aiDecisionAudit?.rejected || []).slice(0, 5).map(item => `
+                    <article class="phase5-mini-card status-warning">
+                        <strong>${escapeHtml(item.route)}</strong>
+                        <span>Rejected / held · confidence ${escapeHtml(item.confidence)}</span>
+                        <small>${escapeHtml((item.whyRejected || []).join(', '))}</small>
+                    </article>
+                `).join('')}
+            `;
+
+            document.getElementById('phase5-result').innerHTML = `
+                <article class="phase3-account-card status-warning">
+                    <strong>${escapeHtml(command?.title || 'Treasury Command Center')}</strong>
+                    <span>${escapeHtml(command?.nextRecommendedAction || 'Review treasury intelligence.')}</span>
+                    <small>Autonomous treasury actions: ${command?.safetyBoundary?.autonomousTreasuryActionsEnabled ? 'enabled' : 'disabled'} · withdrawals: ${command?.safetyBoundary?.unrestrictedWithdrawalsEnabled ? 'enabled' : 'disabled'} · wallet signing: ${command?.safetyBoundary?.unrestrictedWalletSigningEnabled ? 'enabled' : 'disabled'}</small>
                 </article>
             `;
         }
@@ -1569,7 +1799,8 @@
                 latestAccountScan,
                 latestAccountAware,
                 phase3C: latestPhase3C,
-                phase4: data.commandCenter
+                phase4: data.commandCenter,
+                phase5: latestPhase5TreasuryCommand
             }, null, 2);
             return data.commandCenter;
         }
@@ -1604,6 +1835,7 @@
             renderPhase4CommandCenter(data.commandCenter);
             document.getElementById('live-launch-raw').textContent = JSON.stringify({
                 phase4: data.commandCenter,
+                phase5: latestPhase5TreasuryCommand,
                 scan: data.scan,
                 accountScan: data.accountScan
             }, null, 2);
@@ -1614,6 +1846,78 @@
             output.textContent = 'Running emergency stop. This keeps live connector flags disabled and does not enable trading.';
             await emergencyStopLiveConnectors();
             await loadPhase4Status();
+        }
+
+        async function loadPhase5Status() {
+            const response = await fetch('/api/v1/live-trading-launch/phase5/status');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('phase5-result').textContent = data.error || 'Unable to load Phase 5 Treasury Command Center.';
+                return null;
+            }
+
+            renderPhase5TreasuryCommand(data.treasuryCommand);
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                roadmap: latestLiveRoadmap,
+                latestLiveScan,
+                latestAccountScan,
+                phase4: latestPhase4CommandCenter,
+                phase5: data.treasuryCommand
+            }, null, 2);
+            return data.treasuryCommand;
+        }
+
+        async function runPhase5TreasuryCommandCenter() {
+            const output = document.getElementById('phase5-result');
+            output.textContent = 'Running treasury intelligence refresh. This is intelligence-only and cannot move funds, withdraw, sign wallets, or place unrestricted live orders.';
+            const response = await fetch('/api/v1/live-trading-launch/phase5/treasury-command-center', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    symbol: document.getElementById('phase4-symbol').value || 'BTC/USDT',
+                    orderSizeUsd: Number(document.getElementById('phase4-order-size').value || 100),
+                    minNetSpreadPercent: Number(document.getElementById('phase4-min-spread').value || 0.08),
+                    minLiquidityUsd: Number(document.getElementById('phase4-min-liquidity').value || 1000),
+                    maxLatencyMs: Number(document.getElementById('phase4-max-latency').value || 1500),
+                    maxSlippagePercent: Number(document.getElementById('phase4-max-slippage').value || 0.15),
+                    aiMode: document.getElementById('phase5-ai-mode').value || 'Manual Approval Required',
+                    planningCapitalUsd: Number(document.getElementById('phase5-planning-capital').value || 1000),
+                    reserveRatioPercent: Number(document.getElementById('phase5-reserve-ratio').value || 70),
+                    maxExchangeConcentrationPercent: Number(document.getElementById('phase5-max-exchange').value || 35),
+                    maxStablecoinConcentrationPercent: Number(document.getElementById('phase5-max-stablecoin').value || 65),
+                    maxStrategyCapitalPercent: Number(document.getElementById('phase5-max-strategy').value || 15),
+                    maxOpportunityCapitalPercent: Number(document.getElementById('phase5-max-opportunity').value || 5),
+                    includeExpanded: true,
+                    maxVenues: 16,
+                    maxCandidates: 24
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                output.textContent = data.error || 'Phase 5 treasury intelligence refresh failed.';
+                return;
+            }
+
+            latestLiveScan = data.scan;
+            latestAccountScan = data.accountScan;
+            latestPhase4CommandCenter = data.phase4;
+            renderPhase4CommandCenter(data.phase4);
+            renderPhase5TreasuryCommand(data.treasuryCommand);
+            document.getElementById('live-launch-raw').textContent = JSON.stringify({
+                phase4: data.phase4,
+                phase5: data.treasuryCommand,
+                scan: data.scan,
+                accountScan: data.accountScan
+            }, null, 2);
+        }
+
+        async function phase5EmergencyFreeze() {
+            const output = document.getElementById('phase5-result');
+            output.textContent = 'Running emergency capital freeze. This keeps live connectors disabled and does not enable treasury movement.';
+            await emergencyStopLiveConnectors();
+            await loadPhase5Status();
         }
 
         async function runReadOnlyScan() {
@@ -1811,12 +2115,16 @@
         document.getElementById('refresh-phase4-status').addEventListener('click', loadPhase4Status);
         document.getElementById('run-phase4-command-center').addEventListener('click', runPhase4CommandCenter);
         document.getElementById('phase4-emergency-stop').addEventListener('click', phase4EmergencyStop);
+        document.getElementById('refresh-phase5-status').addEventListener('click', loadPhase5Status);
+        document.getElementById('run-phase5-treasury').addEventListener('click', runPhase5TreasuryCommandCenter);
+        document.getElementById('phase5-freeze-capital').addEventListener('click', phase5EmergencyFreeze);
 
         loadRoadmap();
         loadPhase3Status();
         loadPhase3BStatus();
         loadPhase3CStatus();
         loadPhase4Status();
+        loadPhase5Status();
         scanPhase3AReadiness();
     </script>
     <script src="/js/operator-next-action.js"></script>

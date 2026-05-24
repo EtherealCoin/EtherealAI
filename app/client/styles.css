@@ -4703,6 +4703,7 @@ footer {
 .live-sandbox-controls,
 .live-tiny-safety-grid,
 .live-tiny-controls,
+.phase5-controls,
 .phase4-controls,
 .live-roadmap-phases,
 .live-approval-center,
@@ -4874,6 +4875,7 @@ footer {
     text-transform: none;
 }
 
+.phase5-dashboard-grid,
 .phase4-dashboard-grid,
 .phase3-dashboard-grid {
     display: grid;
@@ -4882,6 +4884,9 @@ footer {
     margin-top: 16px;
 }
 
+.phase5-dashboard-grid > article,
+.phase5-panel,
+.phase5-mini-card,
 .phase4-dashboard-grid > article,
 .phase4-panel,
 .phase4-mini-card,
@@ -4897,6 +4902,8 @@ footer {
     padding: 14px;
 }
 
+.phase5-dashboard-grid > article span,
+.phase5-mini-card span,
 .phase4-dashboard-grid > article span,
 .phase4-mini-card span,
 .phase3-dashboard-grid > article span,
@@ -4911,6 +4918,9 @@ footer {
     text-transform: uppercase;
 }
 
+.phase5-dashboard-grid > article strong,
+.phase5-panel h3,
+.phase5-mini-card strong,
 .phase4-dashboard-grid > article strong,
 .phase4-panel h3,
 .phase4-mini-card strong,
@@ -4921,6 +4931,7 @@ footer {
     color: inherit;
 }
 
+.phase5-panel,
 .phase4-panel,
 .phase3-panel,
 .phase3-results {
@@ -4928,12 +4939,14 @@ footer {
     gap: 10px;
 }
 
+.phase5-panel h3,
 .phase4-panel h3,
 .phase3-panel h3 {
     font-size: 1rem;
     margin: 0 0 6px;
 }
 
+.phase5-mini-card,
 .phase4-mini-card,
 .phase3-mini-card,
 .phase3-account-card {
@@ -4942,12 +4955,18 @@ footer {
     margin-top: 8px;
 }
 
+.phase5-wide-panel {
+    grid-column: 1 / -1;
+}
+
+.phase5-controls,
 .phase4-controls {
     align-items: end;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     margin: 16px 0;
 }
 
+.phase5-controls label,
 .phase4-controls label {
     color: var(--text-primary);
     font-weight: 800;
@@ -4987,6 +5006,7 @@ footer {
 }
 
 .phase3-mini-card small,
+.phase5-mini-card small,
 .phase4-mini-card small,
 .phase3-account-card small,
 .phase3-account-card p {
@@ -5029,8 +5049,11 @@ footer {
 }
 
 :root[data-theme="night"] .phase3-dashboard-grid > article,
+:root[data-theme="night"] .phase5-dashboard-grid > article,
 :root[data-theme="night"] .phase4-dashboard-grid > article,
+:root[data-theme="night"] .phase5-panel,
 :root[data-theme="night"] .phase4-panel,
+:root[data-theme="night"] .phase5-mini-card,
 :root[data-theme="night"] .phase4-mini-card,
 :root[data-theme="night"] .phase3-panel,
 :root[data-theme="night"] .phase3-results,
@@ -5039,8 +5062,11 @@ footer {
 :root[data-theme="night"] .phase3a-checklist article,
 :root[data-theme="night"] .phase3a-exchange-grid > article,
 :root:not([data-theme="day"]) .phase3-dashboard-grid > article,
+:root:not([data-theme="day"]) .phase5-dashboard-grid > article,
 :root:not([data-theme="day"]) .phase4-dashboard-grid > article,
+:root:not([data-theme="day"]) .phase5-panel,
 :root:not([data-theme="day"]) .phase4-panel,
+:root:not([data-theme="day"]) .phase5-mini-card,
 :root:not([data-theme="day"]) .phase4-mini-card,
 :root:not([data-theme="day"]) .phase3-panel,
 :root:not([data-theme="day"]) .phase3-results,

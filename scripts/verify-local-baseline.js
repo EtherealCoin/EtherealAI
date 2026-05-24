@@ -80,6 +80,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/exchange-sandbox-execution.js',
     'app/server/src/lib/exchange-tiny-live-execution.js',
     'app/server/src/lib/exchange-live-arbitrage-command.js',
+    'app/server/src/lib/exchange-treasury-liquidity-intelligence.js',
     'app/server/src/lib/local-model-routing.js',
     'app/server/src/lib/local-model-runtime.js',
     'app/server/src/lib/live-execution-handoff.js',
@@ -3794,6 +3795,124 @@ function checkExchangeLiveArbitrageCommandModule() {
   pass('exchange live arbitrage command module');
 }
 
+function checkExchangeTreasuryLiquidityIntelligenceModule() {
+  const {
+    PHASE5_AI_MODES,
+    PHASE5_STATUS,
+    DEFAULT_PHASE5_TREASURY_POLICY,
+    createPhase5SafetyBoundary,
+    buildTreasuryManagement,
+    buildDynamicCapitalAllocation,
+    buildLiquidityIntelligence,
+    rankAutonomousTreasuryOpportunities,
+    buildCrossChainIntelligence,
+    buildTreasurySafetyControls,
+    buildAiDecisionAudit,
+    buildTreasuryLiquidityCommandCenter
+  } = require(path.join(projectRoot, 'app/server/src/lib/exchange-treasury-liquidity-intelligence'));
+  const accountScan = {
+    profiles: [{
+      exchangeName: 'binance',
+      displayName: 'Binance',
+      status: 'read_only_account_connected',
+      phase3AStatus: 'Authenticated Read-Only',
+      feeTier: { takerFeePercent: 0.1 },
+      balances: { visibleBalances: [{ asset: 'USDT', available: 500, total: 500, usdValue: 500 }] },
+      positions: { count: 0 }
+    }, {
+      exchangeName: 'coinbase',
+      displayName: 'Coinbase',
+      status: 'read_only_account_connected',
+      phase3AStatus: 'Authenticated Read-Only',
+      feeTier: { takerFeePercent: 0.12 },
+      balances: { visibleBalances: [{ asset: 'BTC', available: 0.01, total: 0.01, usdValue: 1000 }] },
+      positions: { count: 1 }
+    }]
+  };
+  const scan = {
+    snapshots: [
+      { status: 'ok', snapshot: { exchangeName: 'binance', displayName: 'Binance', bid: 100, ask: 99, latencyMs: 120, topAskLiquidityUsd: 50000, topBidLiquidityUsd: 50000 } },
+      { status: 'ok', snapshot: { exchangeName: 'coinbase', displayName: 'Coinbase', bid: 101, ask: 100.5, latencyMs: 180, topAskLiquidityUsd: 50000, topBidLiquidityUsd: 50000 } }
+    ]
+  };
+  const phase4 = {
+    options: { symbol: 'BTC/USDT', maxSlippagePercent: 0.15 },
+    safetyBoundary: { multiExchangeLiveExecutionEnabled: false },
+    spreadHeatmap: [{
+      route: 'Binance -> Coinbase',
+      status: 'Safe',
+      estimatedNetProfitPercent: 1.25,
+      liquidityUsd: 50000
+    }],
+    opportunityQueue: [{
+      routeId: 'fixture',
+      symbol: 'BTC/USDT',
+      buyVenue: 'binance',
+      sellVenue: 'coinbase',
+      estimatedNetProfitPercent: 1.25,
+      limitingLiquidityUsd: 50000,
+      latencyMs: 180,
+      confidenceScore: 90,
+      safetyStatus: 'Safe'
+    }]
+  };
+  const wallets = [{
+    label: 'Treasury Polygon',
+    chain_family: 'evm',
+    network: 'polygon',
+    public_address: '0x0000000000000000000000000000000000000000',
+    status: 'configured',
+    signing_enabled: 0,
+    live_execution_enabled: 0
+  }];
+  const treasury = buildTreasuryManagement({ accountScan, wallets, phase4, options: { planningCapitalUsd: 2000 } });
+  const liquidity = buildLiquidityIntelligence({ phase4, scan });
+  const ranked = rankAutonomousTreasuryOpportunities({ phase4 });
+  const allocation = buildDynamicCapitalAllocation({
+    treasury,
+    rankedOpportunities: ranked,
+    options: { aiMode: PHASE5_AI_MODES.BALANCED }
+  });
+  const crossChain = buildCrossChainIntelligence({ wallets, treasury });
+  const safety = buildTreasurySafetyControls({ treasury, allocation });
+  const audit = buildAiDecisionAudit({ rankedOpportunities: ranked, allocation, treasury, safety });
+  const command = buildTreasuryLiquidityCommandCenter({
+    accountScan,
+    scan,
+    phase4,
+    wallets,
+    options: { aiMode: PHASE5_AI_MODES.BALANCED, planningCapitalUsd: 2000 }
+  });
+  const boundary = createPhase5SafetyBoundary();
+
+  if (
+    PHASE5_AI_MODES.MANUAL_APPROVAL_REQUIRED !== 'Manual Approval Required'
+    || PHASE5_STATUS.LOCKED !== 'Locked'
+    || DEFAULT_PHASE5_TREASURY_POLICY.treasuryKillSwitchEnabled !== true
+    || DEFAULT_PHASE5_TREASURY_POLICY.autonomousTreasuryActionsEnabled !== false
+    || boundary.autonomousTreasuryActionsEnabled !== false
+    || boundary.unrestrictedWithdrawalsEnabled !== false
+    || boundary.unrestrictedWalletSigningEnabled !== false
+    || boundary.liveOrderEndpointEnabledForPhase5 !== false
+    || treasury.totalCapitalUsd < 1500
+    || treasury.stablecoinInventoryUsd < 500
+    || liquidity.venueDepth.length < 2
+    || ranked[0]?.executionAllowed !== false
+    || allocation.allocations[0]?.executionAllowed !== false
+    || crossChain.bestStablecoinInventoryRoutes.length < 3
+    || safety.safetyBoundary.autonomousTreasuryActionsEnabled !== false
+    || !audit.auditLogPolicy.includes('Phase 5 refresh is saved locally')
+    || command.title !== 'Treasury Command Center'
+    || command.safetyBoundary.bridgeOrTransferEndpointEnabled !== false
+    || command.safetyBoundary.unrestrictedAutonomousScalingEnabled !== false
+    || command.riskExposureDashboard.treasuryKillSwitch !== 'on'
+  ) {
+    fail('exchange treasury liquidity intelligence module did not preserve Phase 5 intelligence-only safety boundaries');
+  }
+
+  pass('exchange treasury liquidity intelligence module');
+}
+
 function checkStrategyResearchModule() {
   const {
     parseStrategy,
@@ -7265,6 +7384,7 @@ function checkLiveTradingLaunchCenterUi() {
   const sandboxExecution = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-sandbox-execution.js'), 'utf8');
   const tinyLiveExecution = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-tiny-live-execution.js'), 'utf8');
   const phase4Command = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-live-arbitrage-command.js'), 'utf8');
+  const phase5Treasury = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/exchange-treasury-liquidity-intelligence.js'), 'utf8');
   const schema = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/database-schema.js'), 'utf8');
   const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
   const strategyLab = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
@@ -7300,6 +7420,15 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('Capital Allocation Dashboard')
     || !html.includes('Risk Dashboard')
     || !html.includes('Recovery And Emergency Controls')
+    || !html.includes('Phase 5: Treasury Command Center')
+    || !html.includes('Run Treasury Intelligence Refresh')
+    || !html.includes('Liquidity Intelligence Dashboard')
+    || !html.includes('Opportunity Ranking Board')
+    || !html.includes('Cross-Chain Status Dashboard')
+    || !html.includes('Capital Allocation Heatmap')
+    || !html.includes('Risk & Exposure Dashboard')
+    || !html.includes('AI Decision Audit')
+    || !html.includes('Emergency Capital Freeze / Keep Locked')
     || !html.includes('/js/operator-next-action.js')
     || !html.includes('Scan Read-Only Accounts')
     || !html.includes('Run Dry-Run Safety Review')
@@ -7318,6 +7447,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('/api/v1/live-trading-launch/phase3c/emergency-stop')
     || !html.includes('/api/v1/live-trading-launch/phase4/status')
     || !html.includes('/api/v1/live-trading-launch/phase4/command-center')
+    || !html.includes('/api/v1/live-trading-launch/phase5/status')
+    || !html.includes('/api/v1/live-trading-launch/phase5/treasury-command-center')
     || !html.includes('/sandbox-credentials')
     || !html.includes('/tiny-live-credentials')
     || !html.includes('/api/v1/live-trading-launch/phase3c/orders/')
@@ -7343,6 +7474,9 @@ function checkLiveTradingLaunchCenterUi() {
     || !styles.includes('.phase4-controls')
     || !styles.includes('.phase4-dashboard-grid')
     || !styles.includes('.phase4-mini-card')
+    || !styles.includes('.phase5-controls')
+    || !styles.includes('.phase5-dashboard-grid')
+    || !styles.includes('.phase5-mini-card')
     || !routes.includes("app.get('/api/v1/live-trading-launch/roadmap'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/read-only-scan'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/paper-simulate-opportunity'")
@@ -7356,6 +7490,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase3c/emergency-stop'")
     || !routes.includes("app.get('/api/v1/live-trading-launch/phase4/status'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase4/command-center'")
+    || !routes.includes("app.get('/api/v1/live-trading-launch/phase5/status'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/phase5/treasury-command-center'")
     || !routes.includes("app.post('/api/v1/exchange-connectors/:id/tiny-live-credentials'")
     || !routes.includes("app.delete('/api/v1/exchange-connectors/:id/tiny-live-credentials'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase3c/orders/:id/cancel'")
@@ -7378,6 +7514,7 @@ function checkLiveTradingLaunchCenterUi() {
     || !server.includes('TINY_LIVE_EXCHANGE_ADAPTERS')
     || !server.includes('runTinyLiveOrderLifecycle')
     || !server.includes('buildLiveArbitrageCommandCenter')
+    || !server.includes('buildTreasuryLiquidityCommandCenter')
     || !routeRegistration.includes('scanReadOnlyArbitrageOpportunities')
     || !routeRegistration.includes('createPaperSimulationForOpportunity')
     || !routeRegistration.includes('scanAuthenticatedReadOnlyAccounts')
@@ -7389,6 +7526,7 @@ function checkLiveTradingLaunchCenterUi() {
     || !routeRegistration.includes('buildTinyLiveApprovalCenter')
     || !routeRegistration.includes('runTinyLiveOrderLifecycle')
     || !routeRegistration.includes('buildLiveArbitrageCommandCenter')
+    || !routeRegistration.includes('buildTreasuryLiquidityCommandCenter')
     || !readOnlyConnections.includes('EXPANDED_READONLY_MARKET_VENUES')
     || !readOnlyConnections.includes('fetchKucoinMarketSnapshot')
     || !readOnlyConnections.includes('fetchGateMarketSnapshot')
@@ -7435,10 +7573,21 @@ function checkLiveTradingLaunchCenterUi() {
     || !phase4Command.includes('buildRecoveryAndOrchestration')
     || !phase4Command.includes('multiExchangeLiveExecutionEnabled: false')
     || !phase4Command.includes('withdrawalsEnabled: false')
+    || !phase5Treasury.includes('Treasury Command Center')
+    || !phase5Treasury.includes('buildTreasuryManagement')
+    || !phase5Treasury.includes('buildDynamicCapitalAllocation')
+    || !phase5Treasury.includes('buildLiquidityIntelligence')
+    || !phase5Treasury.includes('rankAutonomousTreasuryOpportunities')
+    || !phase5Treasury.includes('buildCrossChainIntelligence')
+    || !phase5Treasury.includes('buildTreasurySafetyControls')
+    || !phase5Treasury.includes('buildAiDecisionAudit')
+    || !phase5Treasury.includes('autonomousTreasuryActionsEnabled: false')
+    || !phase5Treasury.includes('unrestrictedWithdrawalsEnabled: false')
+    || !phase5Treasury.includes('unrestrictedWalletSigningEnabled: false')
     || !operatorMode.includes("'/live-trading-launch'")
-    || !operatorMode.includes('Monitor Multi-Exchange Arbitrage Without Unlocking Live Trading')
-    || !operatorMode.includes("keepIds: ['live-arbitrage-command-center']")
-    || !operatorMode.includes('Run Multi-Exchange Scan')
+    || !operatorMode.includes('Monitor Multi-Exchange Arbitrage And Treasury Intelligence Without Unlocking Live Trading')
+    || !operatorMode.includes("keepIds: ['live-arbitrage-command-center', 'treasury-command-center']")
+    || !operatorMode.includes('Run Treasury Intelligence Refresh')
     || !operatorMode.includes('No leverage, margin, futures, withdrawals, wallet signing, multi-leg live orders, or autonomous scaling.')
     || !schema.includes('CREATE TABLE IF NOT EXISTS sandbox_order_tests')
     || !schema.includes('CREATE TABLE IF NOT EXISTS sandbox_order_events')
@@ -7446,6 +7595,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !schema.includes('CREATE TABLE IF NOT EXISTS tiny_live_order_events')
     || !schema.includes('CREATE TABLE IF NOT EXISTS live_arbitrage_command_runs')
     || !schema.includes('CREATE TABLE IF NOT EXISTS live_arbitrage_command_events')
+    || !schema.includes('CREATE TABLE IF NOT EXISTS treasury_intelligence_runs')
+    || !schema.includes('CREATE TABLE IF NOT EXISTS treasury_intelligence_events')
     || !schema.includes('CREATE TABLE IF NOT EXISTS live_trading_safety_events')
     || !dashboard.includes('/live-trading-launch')
     || !strategyLab.includes('/live-trading-launch')
@@ -11433,6 +11584,7 @@ async function main() {
   checkExchangeSandboxExecutionModule();
   checkExchangeTinyLiveExecutionModule();
   checkExchangeLiveArbitrageCommandModule();
+  checkExchangeTreasuryLiquidityIntelligenceModule();
   checkStrategyResearchModule();
   await checkStrategyDecisionLogRuntimeModule();
   checkStrategyMathModule();

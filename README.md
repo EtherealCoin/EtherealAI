@@ -173,6 +173,18 @@ Phase 4 adds controlled multi-exchange arbitrage expansion infrastructure while 
 - Simple Operator Mode now has a dedicated Live Trading Launch Center wrapper so Phase 4 is visible to a non-coder owner without switching into Advanced Developer Mode.
 - Multi-leg live execution, unrestricted autonomous scaling, leverage, margin, futures, withdrawals, wallet signing, and new Phase 4 order endpoints remain disabled.
 
+Phase 5 adds autonomous treasury and liquidity intelligence while preserving owner control:
+
+- `/live-trading-launch` now includes `Phase 5: Treasury Command Center`.
+- The treasury engine tracks planning capital, visible exchange balances, stablecoin inventory, chain metadata from public wallet records, idle/deployed capital, reserve gaps, and placeholder realized/unrealized P/L without moving funds.
+- Dynamic capital allocation is advisory only. It scores candidate opportunities against reserve ratio, exchange concentration, stablecoin concentration, strategy capital, opportunity capital, kill-switch, and emergency-freeze limits.
+- Liquidity intelligence analyzes visible depth, thin books, fragmentation, slippage impact, market impact, latency assumptions, and route quality.
+- Autonomous opportunity ranking scores net spread after fees, slippage, liquidity confidence, exchange health, latency confidence, historical fill reliability, volatility risk, and execution probability.
+- Cross-chain intelligence estimates bridge/network costs, transfer times, congestion, chain liquidity, and stablecoin routing candidates for planning only.
+- The AI decision audit explains why opportunities were selected or rejected and records the safety policy that prevented autonomous treasury movement.
+- Simple Operator Mode exposes the Phase 5 panel with `Run Treasury Intelligence Refresh`, treasury cards, liquidity dashboard, opportunity ranking board, cross-chain status, capital allocation heatmap, risk/exposure dashboard, and AI decision audit.
+- Autonomous treasury actions, unrestricted autonomous scaling, leverage, futures, withdrawals, wallet signing, live order endpoints, and bridge/transfer endpoints remain disabled.
+
 ## Multi-Agent Coordination
 
 The local multi-agent layer includes:
