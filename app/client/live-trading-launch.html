@@ -660,7 +660,7 @@
 
             <div class="phase6b-tiny-live-panel">
                 <h3>Tiny Live Test Preparation</h3>
-                <p id="phase6b-tiny-live-status">Locked until API verification, withdrawal-disabled proof, sandbox/testnet evidence, owner approvals, risk profile, and production dry-run all pass.</p>
+                <p id="phase6b-tiny-live-status">Locked until API verification, withdrawal-disabled proof, owner approvals, risk profile, and production dry-run all pass. Kraken does not need a separate sandbox blocker after authenticated dry-run proof passes.</p>
                 <div class="button-row">
                     <button id="phase6b-emergency-stop" type="button" class="secondary-button">Emergency Stop Everything Live</button>
                 </div>
@@ -973,7 +973,11 @@
 
             <div id="kraken-live-result" class="phase3-results">Click Start Kraken Live Setup Walkthrough. This setup cannot place a live order.</div>
 
-            <section class="kraken-auth-diagnostics" id="kraken-auth-diagnostics">
+            <details class="kraken-auth-diagnostics" id="kraken-auth-diagnostics">
+                <summary>
+                    <strong>Advanced Kraken Authentication Diagnostics</strong>
+                    <small>Open only if Verify Connection fails or you intentionally want redacted technical evidence.</small>
+                </summary>
                 <div class="kraken-auth-diagnostics-header">
                     <div>
                         <span class="mode-pill">Diagnostics mode</span>
@@ -1005,7 +1009,7 @@
                 <div id="kraken-auth-response-body" class="kraken-auth-response-body">Exact Kraken response body will appear here after the raw Balance test.</div>
                 <pre id="kraken-vault-operation-log" class="kraken-vault-operation-log">Vault operation log will show save, overwrite, delete, clear, readback, and verify source events. Full keys and full secrets are never shown.</pre>
                 <pre id="kraken-auth-debug-log" class="kraken-auth-debug-log" hidden>Click Test Raw Kraken Balance Endpoint first. Full keys and full secrets are never shown.</pre>
-            </section>
+            </details>
         </section>
 
         <section class="model-panel phase6e-wizard" id="kraken-api-key-walkthrough">
@@ -3633,7 +3637,7 @@
             document.getElementById('kraken-live-result').innerHTML = `
                 <article class="phase6f-check-item ${latestPhase6F?.tinyLiveEligibility?.eligible ? 'status-success' : 'status-warning'}">
                     <strong>${escapeHtml(latestPhase6F?.tinyLiveEligibility?.label || 'Eligibility not ready yet')}</strong>
-                    <p>${escapeHtml(latestPhase6F?.tinyLiveEligibility?.eligible ? 'Tiny live test mode is eligible to prepare, but execution remains blocked.' : 'Review the missing item shown in the eligibility result.')}</p>
+                    <p>${escapeHtml(latestPhase6F?.tinyLiveEligibility?.eligible ? 'SAFE READY FOR OPTIONAL TINY LIVE TEST. No order was placed, and execution remains blocked until explicit owner approval, typed confirmation, and a manual click.' : 'Review the missing item shown in the eligibility result.')}</p>
                     <small>${escapeHtml(latestPhase6F?.tinyLiveEligibility?.nextClick || 'Fix the visible blocker.')} No live order was placed.</small>
                 </article>
             `;
@@ -3658,6 +3662,7 @@
 
             const operatorResults = phase6F.operatorResults || [];
             const eligibility = phase6F.tinyLiveEligibility || {};
+            const ownerReadyStatus = phase6F.ownerReadyStatus || {};
             const preview = phase6F.tinyLivePreview || {};
             const authItem = operatorResults.find(item => item.id === 'key_works_safely') || {};
             const unsafeItem = operatorResults.find(item => item.id === 'unsafe_permission_detected') || {};
@@ -3669,10 +3674,18 @@
             document.getElementById('phase6f-balance-status').textContent = balanceItem.passed ? 'Readable' : 'Not Checked';
             document.getElementById('phase6f-eligible-status').textContent = eligibility.label || 'Not Eligible Yet';
             document.getElementById('phase6f-result').innerHTML = `
+                ${eligibility.eligible ? `
+                    <article class="phase6f-ready-card status-success">
+                        <span>SAFE</span>
+                        <strong>SAFE READY FOR OPTIONAL TINY LIVE TEST</strong>
+                        <p>${escapeHtml(ownerReadyStatus.plainEnglish || 'Kraken auth and no-order dry-run proof passed safely. Live order placement remains locked.')}</p>
+                        <small>${escapeHtml((ownerReadyStatus.locksPreserved || ['No live order was placed.', 'Autonomous trading remains disabled.']).join(' '))}</small>
+                    </article>
+                ` : ''}
                 <article class="phase6f-check-item ${phase6CStatusClass(eligibility.eligible ? 'Ready' : phase6F.authIssue?.label)}">
                     <span>${escapeHtml(eligibility.eligible ? 'READY' : 'NOT READY')}</span>
                     <strong>${escapeHtml(phase6F.operatorStatusLabel || eligibility.label || 'Not ready')}</strong>
-                    <p>${escapeHtml(eligibility.eligible ? 'Tiny live test mode can be prepared, but execution remains blocked.' : phase6F.authIssue?.plainEnglish || 'Verify Kraken and build the tiny live preview.')}</p>
+                    <p>${escapeHtml(eligibility.eligible ? 'Optional tiny live test mode can be prepared later, but execution remains blocked until explicit owner approval, typed confirmation, and a manual click.' : phase6F.authIssue?.plainEnglish || 'Verify Kraken and build the tiny live preview.')}</p>
                     <small>${escapeHtml(eligibility.nextClick || phase6F.authIssue?.nextClick || 'Verify Kraken Connection')} · No live order will be placed yet.</small>
                 </article>
             `;
@@ -3682,7 +3695,7 @@
                 <article class="phase6f-check-item ${eligibility.eligible ? 'status-success' : 'status-warning'}">
                     <span>${eligibility.eligible ? 'READY' : 'NOT READY'}</span>
                     <strong>${escapeHtml(eligibility.label || 'Not eligible yet')}</strong>
-                    <p>${escapeHtml(eligibility.eligible ? 'All Phase 6F checks passed. Execution is still blocked until a later phase.' : 'Complete the missing checks below before preparing tiny live mode.')}</p>
+                    <p>${escapeHtml(eligibility.eligible ? 'Kraken auth, dry-run proof, permission safety, and endpoint lock checks passed. Execution is still blocked until you intentionally approve it later.' : 'Complete the missing checks below before preparing tiny live mode.')}</p>
                     <small>${escapeHtml(eligibility.nextClick || 'Verify Kraken Connection')}</small>
                 </article>
                 <div class="phase6f-proof-grid">${renderPhase6FItems(eligibility.checks || [])}</div>
@@ -3698,7 +3711,9 @@
                         <article><span>Minimum</span><strong>${escapeHtml(preview.minimumOrderSize || preview.minimumNotionalUsd || 'unknown')}</strong><small>Kraken rule</small></article>
                     </div>
                     <p>${escapeHtml(preview.estimatedRisk || 'Preview not ready.')}</p>
-                    ${(preview.abortConditions || []).length ? `<small>Abort conditions: ${escapeHtml((preview.abortConditions || []).join(' · '))}</small>` : '<small>No preview abort conditions detected.</small>'}
+                    ${(preview.abortConditions || []).length
+                        ? `<small>${eligibility.eligible ? 'Final order checks still enforced later' : 'Preview blockers'}: ${escapeHtml((preview.abortConditions || []).join(' · '))}</small>`
+                        : '<small>No preview blockers detected.</small>'}
                 </article>
             ` : 'No preview has been built yet. No live order will be placed yet.';
             document.getElementById('phase6f-safety-boundary').innerHTML = `

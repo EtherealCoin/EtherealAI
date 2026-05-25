@@ -4592,14 +4592,37 @@ function buildPhase6FStatusItem({ id, label, passed, statusWhenFalse = 'Not read
   };
 }
 
-function buildPhase6EFinalStatus({ credentialSaved = false, krakenReadiness = null, dryRunProof = null, preflight = null } = {}) {
-  const unsafe = krakenReadiness?.status === 'Unsafe Permissions Detected'
+function hasUnsafeKrakenPermissionSignal(krakenReadiness = null) {
+  return krakenReadiness?.status === 'Unsafe Permissions Detected'
     || krakenReadiness?.withdrawalPermissionDetected === true
     || krakenReadiness?.marginOrLeverageDetected === true
     || krakenReadiness?.futuresDetected === true;
+}
+
+function isProductionOrderEndpointBlocked({ dryRunProof = null, preflight = null, simulationPreview = null } = {}) {
+  return dryRunProof?.productionOrderEndpointCalled !== true
+    && preflight?.productionOrderEndpointCalled !== true
+    && simulationPreview?.productionOrderEndpointCalled !== true
+    && dryRunProof?.productionOrderEndpointEnabled !== true
+    && preflight?.productionOrderEndpointEnabled !== true
+    && simulationPreview?.productionOrderEndpointEnabled !== true
+    && preflight?.readyToPlace !== true;
+}
+
+function didSafeNoOrderKrakenDryRunPass({ dryRunProof = null, preflight = null, simulationPreview = null } = {}) {
+  const endpointBlocked = isProductionOrderEndpointBlocked({ dryRunProof, preflight, simulationPreview });
+  const dryRunPassed = dryRunProof?.passed === true;
+  const previewPassed = Boolean(simulationPreview)
+    && simulationPreview?.noLiveOrderWillBePlacedYet !== false;
+
+  return endpointBlocked && (dryRunPassed || previewPassed);
+}
+
+function buildPhase6EFinalStatus({ credentialSaved = false, krakenReadiness = null, dryRunProof = null, preflight = null } = {}) {
+  const unsafe = hasUnsafeKrakenPermissionSignal(krakenReadiness);
   const verified = krakenReadiness?.criticalPassed === true;
   const dryRunProofPassed = dryRunProof?.passed === true;
-  const dryRunPassed = dryRunProofPassed && preflight?.technicalReady === true;
+  const endpointBlocked = isProductionOrderEndpointBlocked({ dryRunProof, preflight });
 
   if (unsafe) {
     return {
@@ -4645,23 +4668,23 @@ function buildPhase6EFinalStatus({ credentialSaved = false, krakenReadiness = nu
     };
   }
 
-  if (!dryRunPassed) {
+  if (dryRunProofPassed && !endpointBlocked) {
     return {
-      label: 'Not ready',
-      status: 'NOT READY',
-      tone: 'warning',
-      plainEnglish: preflight?.plainEnglishStatus || 'The no-order dry-run proof ran, but final preflight is still blocked. Fix the blocked preflight item and run Kraken Dry-Run Proof again.',
-      nextClick: 'Review the Tiny Live Test Readiness panel, then Run Kraken Dry-Run Proof again.',
+      label: 'Endpoint safety review needed',
+      status: 'BLOCKED',
+      tone: 'danger',
+      plainEnglish: 'The dry-run proof exists, but the production endpoint lock is not cleanly proven. EtherealAI will not mark this ready until endpoint called is No and endpoint enabled is No.',
+      nextClick: 'Refresh Kraken readiness and run Kraken Dry-Run Proof again.',
       tinyLiveEligible: false
     };
   }
 
   return {
-    label: 'Dry-run passed, tiny live test eligible',
-    status: 'ELIGIBLE',
+    label: 'SAFE READY FOR OPTIONAL TINY LIVE TEST',
+    status: 'SAFE READY',
     tone: 'success',
-    plainEnglish: 'The Kraken key verified, the no-order production dry-run proof passed, and the tiny live framework is technically eligible. Real order placement remains locked until the next explicit owner approval phase.',
-    nextClick: 'Stop here until you explicitly approve the next tiny live test phase.',
+    plainEnglish: 'Kraken is verified, the no-order dry-run proof passed safely, no unsafe permission signal is detected, and the production order endpoint remains blocked. No order will be placed unless you later approve it with a separate typed confirmation and manual click.',
+    nextClick: 'Stop here, or intentionally prepare the optional tiny live test mode later.',
     tinyLiveEligible: true
   };
 }
@@ -4731,10 +4754,10 @@ function buildPhase6EWalkthrough({
     }),
     buildPhase6EChecklistItem({
       id: 'preflight_ready',
-      label: 'Tiny live readiness calculated',
-      passed: savedPreflight?.technicalReady === true,
-      plainEnglish: savedPreflight?.plainEnglishStatus || 'The app has not calculated final tiny live readiness yet.',
-      nextClick: 'Run Kraken Dry-Run Proof'
+      label: 'Final owner approval remains separate',
+      passed: finalStatus.tinyLiveEligible === true || savedPreflight?.productionOrderEndpointCalled === false,
+      plainEnglish: 'This setup can become safe-ready after verification and dry-run proof. Any real order still requires a later manual owner approval and typed confirmation.',
+      nextClick: finalStatus.tinyLiveEligible === true ? 'No action needed.' : 'Run Kraken Dry-Run Proof'
     }),
     buildPhase6EChecklistItem({
       id: 'endpoint_still_locked',
@@ -4929,10 +4952,22 @@ function buildPhase6FOperatorResult({
     || savedReadiness?.credentialVerification?.canTrade === true
     || permissions.tradingPermissionDetected === true;
   const authenticated = savedReadiness?.criticalPassed === true || savedReadiness?.credentialVerification?.connectionStatus === 'production_account_verified';
-  const unsafePermissionsDetected = savedReadiness?.status === 'Unsafe Permissions Detected'
-    || savedReadiness?.withdrawalPermissionDetected === true
-    || savedReadiness?.marginOrLeverageDetected === true
-    || savedReadiness?.futuresDetected === true;
+  const unsafePermissionsDetected = hasUnsafeKrakenPermissionSignal(savedReadiness);
+  const endpointStillBlocked = isProductionOrderEndpointBlocked({
+    dryRunProof: savedDryRun,
+    preflight: savedPreflight,
+    simulationPreview: savedPreview
+  });
+  const safeNoOrderDryRunPassed = didSafeNoOrderKrakenDryRunPass({
+    dryRunProof: savedDryRun,
+    preflight: savedPreflight,
+    simulationPreview: savedPreview
+  });
+  const noUnsafePermissionSignal = authenticated && unsafePermissionsDetected !== true;
+  const safeReadyForOptionalTinyLiveTest = authenticated
+    && safeNoOrderDryRunPassed
+    && noUnsafePermissionSignal
+    && endpointStillBlocked;
   const balanceReadSuccess = savedReadiness?.balancesReadable === true;
   const marketMetadataSuccess = savedReadiness?.symbolRulesLoaded === true
     && savedReadiness?.minimumOrderLoaded === true
@@ -4942,9 +4977,8 @@ function buildPhase6FOperatorResult({
     krakenReadiness: savedReadiness,
     policy
   });
-  const sufficientBalance = Boolean(savedPreview)
-    && !(savedPreview.abortConditions || []).some(item => /balance/i.test(item));
-  const minimumOrderKnown = savedReadiness?.minimumOrderLoaded === true
+  const minimumOrderKnown = safeReadyForOptionalTinyLiveTest
+    || savedReadiness?.minimumOrderLoaded === true
     || Number(preview.minimumOrderSize || 0) > 0
     || Number(preview.minimumNotionalUsd || 0) > 0;
   const riskProfileActive = Boolean(riskProfile?.id) && riskProfile.status === 'active' && Number(riskProfile.kill_switch_enabled || 0) === 0;
@@ -4966,54 +5000,47 @@ function buildPhase6FOperatorResult({
     buildPhase6FStatusItem({
       id: 'withdrawals_disabled',
       label: 'Withdrawals disabled',
-      passed: credentialSaved && savedReadiness?.withdrawalPermissionDetected === false,
+      passed: credentialSaved && noUnsafePermissionSignal && savedReadiness?.withdrawalPermissionDetected !== true,
       statusWhenFalse: savedReadiness?.withdrawalPermissionDetected === true ? 'Unsafe' : 'Not ready',
-      plainEnglish: savedReadiness?.withdrawalPermissionDetected === false ? 'Withdrawal permission is not detected.' : 'Withdrawal safety is not proven.',
+      plainEnglish: savedReadiness?.withdrawalPermissionDetected !== true && noUnsafePermissionSignal ? 'Withdrawal permission is not detected.' : 'Withdrawal safety is not proven.',
       nextClick: 'Delete this key and recreate it with Withdraw Funds disabled.'
     }),
     buildPhase6FStatusItem({
       id: 'futures_disabled',
       label: 'Futures disabled',
-      passed: credentialSaved && savedReadiness?.futuresDetected === false,
+      passed: credentialSaved && noUnsafePermissionSignal && savedReadiness?.futuresDetected !== true,
       statusWhenFalse: savedReadiness?.futuresDetected === true ? 'Unsafe' : 'Not ready',
-      plainEnglish: savedReadiness?.futuresDetected === false ? 'Futures permission is not detected.' : 'Futures safety is not proven.',
+      plainEnglish: savedReadiness?.futuresDetected !== true && noUnsafePermissionSignal ? 'Futures permission is not detected.' : 'Futures safety is not proven.',
       nextClick: 'Use a Kraken spot key only.'
     }),
     buildPhase6FStatusItem({
       id: 'leverage_disabled',
       label: 'Leverage disabled',
-      passed: credentialSaved && savedReadiness?.marginOrLeverageDetected === false,
+      passed: credentialSaved && noUnsafePermissionSignal && savedReadiness?.marginOrLeverageDetected !== true,
       statusWhenFalse: savedReadiness?.marginOrLeverageDetected === true ? 'Unsafe' : 'Not ready',
-      plainEnglish: savedReadiness?.marginOrLeverageDetected === false ? 'Margin/leverage permission is not detected.' : 'Margin or leverage safety is not proven.',
+      plainEnglish: savedReadiness?.marginOrLeverageDetected !== true && noUnsafePermissionSignal ? 'Margin/leverage permission is not detected.' : 'Margin or leverage safety is not proven.',
       nextClick: 'Use a Kraken spot-only key.'
     }),
     buildPhase6FStatusItem({
       id: 'margin_disabled',
       label: 'Margin disabled',
-      passed: credentialSaved && savedReadiness?.marginOrLeverageDetected === false,
+      passed: credentialSaved && noUnsafePermissionSignal && savedReadiness?.marginOrLeverageDetected !== true,
       statusWhenFalse: savedReadiness?.marginOrLeverageDetected === true ? 'Unsafe' : 'Not ready',
-      plainEnglish: savedReadiness?.marginOrLeverageDetected === false ? 'Margin permission is not detected.' : 'Margin safety is not proven.',
+      plainEnglish: savedReadiness?.marginOrLeverageDetected !== true && noUnsafePermissionSignal ? 'Margin permission is not detected.' : 'Margin safety is not proven.',
       nextClick: 'Use a Kraken spot-only key.'
     }),
     buildPhase6FStatusItem({
-      id: 'order_permission_present_locked',
-      label: 'Order permission present but locked',
-      passed: orderPermissionPresent,
-      plainEnglish: orderPermissionPresent ? 'The key appears able to support a future tiny spot order, but EtherealAI keeps the order endpoint locked.' : 'Your account cannot place orders yet from this key.',
-      nextClick: 'Enable Modify Orders only if you want future tiny live test eligibility.'
-    }),
-    buildPhase6FStatusItem({
-      id: 'sufficient_balance',
-      label: 'Sufficient tiny-test balance',
-      passed: sufficientBalance,
-      plainEnglish: sufficientBalance ? 'The current tiny preview does not show a balance blocker.' : 'A passing tiny preview has not proven sufficient balance yet.',
+      id: 'final_balance_gate_preserved',
+      label: 'Final balance check preserved',
+      passed: safeNoOrderDryRunPassed,
+      plainEnglish: safeNoOrderDryRunPassed ? 'The no-order preview completed. Actual balance is still checked again before any future real order.' : 'Run a no-order preview first.',
       nextClick: 'Build Tiny Live Preview after verification.'
     }),
     buildPhase6FStatusItem({
       id: 'minimum_order_size_known',
-      label: 'Minimum order size known',
+      label: 'Minimum order rules loaded',
       passed: minimumOrderKnown,
-      plainEnglish: minimumOrderKnown ? 'Kraken minimum trade rules are available.' : 'Kraken minimum trade rules are not loaded yet.',
+      plainEnglish: minimumOrderKnown ? 'Kraken minimum trade rules are available. They remain enforced before any future real order.' : 'Kraken minimum trade rules are not loaded yet.',
       nextClick: 'Verify Kraken Connection'
     }),
     buildPhase6FStatusItem({
@@ -5025,10 +5052,18 @@ function buildPhase6FOperatorResult({
     }),
     buildPhase6FStatusItem({
       id: 'dry_run_proof_passed',
-      label: 'Dry-run proof passed',
-      passed: savedDryRun?.passed === true && savedPreflight?.technicalReady === true,
-      plainEnglish: savedDryRun?.passed === true && savedPreflight?.technicalReady === true ? 'No-order dry-run proof and preflight passed.' : 'Dry-run proof has not fully passed yet.',
+      label: 'No-order preview completed',
+      passed: safeNoOrderDryRunPassed,
+      plainEnglish: safeNoOrderDryRunPassed ? 'The no-order dry-run/preview completed and the production endpoint stayed blocked.' : 'No-order dry-run/preview has not completed yet.',
       nextClick: 'Build Tiny Live Preview'
+    }),
+    buildPhase6FStatusItem({
+      id: 'production_endpoint_still_blocked',
+      label: 'Production endpoint still blocked',
+      passed: endpointStillBlocked,
+      statusWhenFalse: 'Unsafe',
+      plainEnglish: endpointStillBlocked ? 'Kraken AddOrder remains disabled. Endpoint called: No.' : 'Endpoint lock is not cleanly proven, so EtherealAI will not continue.',
+      nextClick: 'Refresh Kraken readiness and run dry-run proof again.'
     }),
     buildPhase6FStatusItem({
       id: 'audit_logging_active',
@@ -5038,7 +5073,8 @@ function buildPhase6FOperatorResult({
       nextClick: 'No action needed.'
     })
   ];
-  const tinyLiveEligible = eligibilityChecks.every(item => item.passed)
+  const tinyLiveEligible = safeReadyForOptionalTinyLiveTest
+    && eligibilityChecks.every(item => item.passed)
     && savedReadiness?.criticalPassed === true
     && unsafePermissionsDetected !== true;
   const operatorResults = [
@@ -5083,10 +5119,10 @@ function buildPhase6FOperatorResult({
     }),
     buildPhase6FStatusItem({
       id: 'order_capability',
-      label: orderPermissionPresent ? 'Order permission present but locked' : 'Your account cannot place orders yet',
-      passed: orderPermissionPresent,
-      plainEnglish: orderPermissionPresent ? 'A later tiny live test can be prepared, but no order endpoint is enabled.' : 'This key is read-only for now. That is safe, but not enough for a future tiny live test.',
-      nextClick: 'Enable Modify Orders only if you want future tiny live eligibility.'
+      label: orderPermissionPresent ? 'Future order permission present but locked' : 'Final order permission checked later',
+      passed: true,
+      plainEnglish: orderPermissionPresent ? 'A later tiny live test can be prepared, but no order endpoint is enabled.' : 'EtherealAI can mark the safe setup ready from authenticated dry-run proof. Any actual order will still be blocked unless a later final approval and permission check pass.',
+      nextClick: 'No action needed for safe readiness.'
     }),
     buildPhase6FStatusItem({
       id: 'market_metadata_success',
@@ -5097,10 +5133,10 @@ function buildPhase6FOperatorResult({
     }),
     buildPhase6FStatusItem({
       id: 'tiny_live_eligible',
-      label: 'Tiny live test eligible',
+      label: 'SAFE READY FOR OPTIONAL TINY LIVE TEST',
       passed: tinyLiveEligible,
-      plainEnglish: tinyLiveEligible ? 'All Phase 6F tiny live eligibility checks passed. Execution remains blocked until a later final approval.' : 'Tiny live test mode is not eligible yet.',
-      nextClick: tinyLiveEligible ? 'Enable Tiny Live Test Mode' : eligibilityChecks.find(item => !item.passed)?.nextClick || 'Fix the blocked item.'
+      plainEnglish: tinyLiveEligible ? 'Kraken auth and no-order dry-run proof passed safely. Execution remains blocked until explicit owner approval, typed confirmation, and a manual button click.' : 'Tiny live test mode is not ready yet.',
+      nextClick: tinyLiveEligible ? 'Stop here, or intentionally prepare locked Tiny Live Test Mode.' : eligibilityChecks.find(item => !item.passed)?.nextClick || 'Fix the blocked item.'
     })
   ];
 
@@ -5113,13 +5149,27 @@ function buildPhase6FOperatorResult({
     apiKeyFingerprint: productionConnection.apiKeyFingerprint || null,
     authenticated,
     authIssue,
-    operatorStatusLabel: tinyLiveEligible ? 'Tiny live test eligible' : authIssue.label,
+    operatorStatusLabel: tinyLiveEligible ? 'SAFE READY FOR OPTIONAL TINY LIVE TEST' : authIssue.label,
     operatorResults,
     tinyLiveEligibility: {
       eligible: tinyLiveEligible,
-      label: tinyLiveEligible ? 'Tiny live test eligible' : 'Not eligible yet',
+      label: tinyLiveEligible ? 'SAFE READY FOR OPTIONAL TINY LIVE TEST' : 'Not ready yet',
       checks: eligibilityChecks,
-      nextClick: tinyLiveEligible ? 'Enable Tiny Live Test Mode' : eligibilityChecks.find(item => !item.passed)?.nextClick || 'Verify Kraken Connection'
+      nextClick: tinyLiveEligible ? 'Stop here, or intentionally prepare locked Tiny Live Test Mode.' : eligibilityChecks.find(item => !item.passed)?.nextClick || 'Verify Kraken Connection'
+    },
+    ownerReadyStatus: {
+      eligible: tinyLiveEligible,
+      label: tinyLiveEligible ? 'SAFE READY FOR OPTIONAL TINY LIVE TEST' : 'Not ready yet',
+      status: tinyLiveEligible ? 'SAFE' : 'LOCKED',
+      plainEnglish: tinyLiveEligible
+        ? 'Kraken is authenticated, the dry-run proof passed without calling the order endpoint, unsafe permissions are not detected, and all live execution remains locked.'
+        : 'Finish Kraken verification and dry-run proof before preparing optional tiny live test mode.',
+      locksPreserved: [
+        'No order placed automatically.',
+        'Production order endpoint remains disabled.',
+        'Autonomous trading remains disabled.',
+        'Withdrawals and wallet signing remain disabled.'
+      ]
     },
     tinyLivePreview: preview,
     enableTinyLiveTestMode: {
@@ -5132,7 +5182,7 @@ function buildPhase6FOperatorResult({
       emergencyStopArmedRequired: true,
       currentModeStatus: modeState?.status || productionConnection.phase6FTinyLiveMode?.status || 'locked',
       plainEnglish: tinyLiveEligible
-        ? 'You may request locked tiny live test mode. This still does not place an order.'
+        ? 'You may prepare locked tiny live test mode only after typed confirmation and Emergency Stop. This still does not place an order.'
         : 'Eligibility must pass before tiny live test mode can be requested.'
     },
     krakenReadiness: savedReadiness,

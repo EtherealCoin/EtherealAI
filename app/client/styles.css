@@ -4903,6 +4903,12 @@ footer {
     margin: 18px 0;
 }
 
+.phase6f-ready-card {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
 .phase6e-checklist {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     margin: 14px 0;
@@ -4966,6 +4972,7 @@ footer {
 .phase6f-summary-grid article,
 .phase6f-proof-panel,
 .phase6f-check-item,
+.phase6f-ready-card,
 .phase6f-enable-panel {
     background: var(--surface-muted);
     border: 1px solid var(--border);
@@ -4988,7 +4995,8 @@ footer {
 .phase6e-summary-grid article span,
 .phase6e-check-item span,
 .phase6f-summary-grid article span,
-.phase6f-check-item span {
+.phase6f-check-item span,
+.phase6f-ready-card span {
     color: inherit;
     display: block;
     font-size: 0.78rem;
@@ -5027,7 +5035,8 @@ footer {
 .phase6e-check-item strong,
 .phase6f-summary-grid article strong,
 .phase6f-proof-panel h3,
-.phase6f-check-item strong {
+.phase6f-check-item strong,
+.phase6f-ready-card strong {
     color: inherit;
 }
 
@@ -5147,6 +5156,25 @@ footer {
     margin: 18px 0 0;
 }
 
+.kraken-auth-diagnostics > summary {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    list-style: none;
+}
+
+.kraken-auth-diagnostics > summary::-webkit-details-marker {
+    display: none;
+}
+
+.kraken-auth-diagnostics > summary small {
+    color: inherit;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
 .kraken-auth-diagnostics-header {
     align-items: center;
     display: flex;
@@ -5203,7 +5231,8 @@ footer {
 .phase6d-proof-panel,
 .phase6d-check-item,
 .phase6f-proof-panel,
-.phase6f-check-item {
+.phase6f-check-item,
+.phase6f-ready-card {
     display: grid;
     gap: 8px;
 }
@@ -5226,6 +5255,8 @@ footer {
 .phase6f-summary-grid article small,
 .phase6f-check-item p,
 .phase6f-check-item small,
+.phase6f-ready-card p,
+.phase6f-ready-card small,
 .phase6f-proof-panel p,
 .phase6f-proof-panel small {
     color: inherit;
@@ -5622,6 +5653,7 @@ footer {
 :root[data-theme="night"] .phase6f-summary-grid article,
 :root[data-theme="night"] .phase6f-proof-panel,
 :root[data-theme="night"] .phase6f-check-item,
+:root[data-theme="night"] .phase6f-ready-card,
 :root[data-theme="night"] .phase6f-enable-panel,
 :root[data-theme="night"] .phase6-vault,
 :root[data-theme="night"] .phase6-acknowledgments,
@@ -5669,6 +5701,7 @@ footer {
 :root:not([data-theme="day"]) .phase6f-summary-grid article,
 :root:not([data-theme="day"]) .phase6f-proof-panel,
 :root:not([data-theme="day"]) .phase6f-check-item,
+:root:not([data-theme="day"]) .phase6f-ready-card,
 :root:not([data-theme="day"]) .phase6f-enable-panel,
 :root:not([data-theme="day"]) .phase6-vault,
 :root:not([data-theme="day"]) .phase6-acknowledgments,

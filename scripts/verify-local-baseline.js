@@ -4286,6 +4286,19 @@ function checkExchangeProductionExecutionModule() {
     dryRunProof: phase6EPassedDryRunProof,
     preflight: phase6EPassedPreflight
   });
+  const phase6EApprovalStillLockedPreflight = {
+    technicalReady: false,
+    readyToPlace: false,
+    productionOrderEndpointCalled: false,
+    productionOrderEndpointEnabled: false,
+    plainEnglishStatus: 'Dry-run passed; final live order approval remains locked.'
+  };
+  const phase6EFinalStatusWithApprovalStillLocked = buildPhase6EFinalStatus({
+    credentialSaved: true,
+    krakenReadiness: phase6DKrakenReadiness,
+    dryRunProof: phase6EPassedDryRunProof,
+    preflight: phase6EApprovalStillLockedPreflight
+  });
   const phase6EWalkthrough = buildPhase6EWalkthrough({
     connector: {
       id: 3,
@@ -4342,6 +4355,31 @@ function checkExchangeProductionExecutionModule() {
     krakenReadiness: phase6DKrakenReadiness,
     dryRunProof: phase6EPassedDryRunProof,
     preflight: phase6EPassedPreflight,
+    simulationPreview: phase6FSimulationPreview,
+    riskProfile: { id: 1, status: 'active', kill_switch_enabled: 0 },
+    latestOrders: [],
+    policy: DEFAULT_PHASE6D_TINY_LIVE_POLICY
+  });
+  const phase6FOperatorResultWithApprovalStillLocked = buildPhase6FOperatorResult({
+    connector: {
+      id: 3,
+      exchange_name: 'kraken',
+      settings: {
+        registryId: 'kraken',
+        productionConnection: {
+          referenceName: 'fixture',
+          apiKeyFingerprint: 'fixt...ture',
+          phase6FReadiness: phase6DKrakenReadiness,
+          phase6FDryRunProof: phase6EPassedDryRunProof,
+          phase6FPreflight: phase6EApprovalStillLockedPreflight,
+          phase6FSimulationPreview
+        }
+      }
+    },
+    vaultStatus: { entries: [{ exchangeName: 'kraken' }] },
+    krakenReadiness: phase6DKrakenReadiness,
+    dryRunProof: phase6EPassedDryRunProof,
+    preflight: phase6EApprovalStillLockedPreflight,
     simulationPreview: phase6FSimulationPreview,
     riskProfile: { id: 1, status: 'active', kill_switch_enabled: 0 },
     latestOrders: [],
@@ -4453,10 +4491,12 @@ function checkExchangeProductionExecutionModule() {
     || phase6DWizard.title !== 'Phase 6D: Kraken Authenticated Readiness And Tiny Live Test Framework'
     || phase6DWizard.recommendedExchangeName !== 'kraken'
     || phase6DWizard.safetyBoundary.productionOrderEndpointEnabled !== false
-    || phase6EFinalStatus.label !== 'Dry-run passed, tiny live test eligible'
+    || phase6EFinalStatus.label !== 'SAFE READY FOR OPTIONAL TINY LIVE TEST'
     || phase6EFinalStatus.tinyLiveEligible !== true
+    || phase6EFinalStatusWithApprovalStillLocked.label !== 'SAFE READY FOR OPTIONAL TINY LIVE TEST'
+    || phase6EFinalStatusWithApprovalStillLocked.tinyLiveEligible !== true
     || phase6EWalkthrough.title !== 'Phase 6E: Real Kraken API Key Connection Walkthrough'
-    || phase6EWalkthrough.finalStatus.label !== 'Dry-run passed, tiny live test eligible'
+    || phase6EWalkthrough.finalStatus.label !== 'SAFE READY FOR OPTIONAL TINY LIVE TEST'
     || phase6EWalkthrough.safetyBoundary.productionOrderEndpointCalled !== false
     || phase6EWalkthrough.safetyBoundary.phase6ECanPlaceOrder !== false
     || phase6FInvalidSignature.label !== 'Kraken rejected the signature'
@@ -4482,6 +4522,10 @@ function checkExchangeProductionExecutionModule() {
     || phase6FTinyLivePreview.productionOrderEndpointEnabled !== false
     || phase6FOperatorResult.title !== 'Phase 6F: First Authenticated Kraken Connection And Tiny Live Eligibility'
     || phase6FOperatorResult.tinyLiveEligibility.eligible !== true
+    || phase6FOperatorResult.tinyLiveEligibility.label !== 'SAFE READY FOR OPTIONAL TINY LIVE TEST'
+    || phase6FOperatorResult.ownerReadyStatus?.label !== 'SAFE READY FOR OPTIONAL TINY LIVE TEST'
+    || phase6FOperatorResultWithApprovalStillLocked.tinyLiveEligibility.eligible !== true
+    || phase6FOperatorResultWithApprovalStillLocked.safetyBoundary.productionOrderEndpointEnabled !== false
     || phase6FOperatorResult.enableTinyLiveTestMode.executionBlocked !== true
     || phase6FOperatorResult.enableTinyLiveTestMode.confirmationPhrase !== PHASE6F_ENABLE_CONFIRMATION_PHRASE
     || phase6FOperatorResult.safetyBoundary.productionOrderEndpointEnabled !== false
@@ -8072,6 +8116,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('Build Tiny Live Preview')
     || !html.includes('Enable Tiny Live Test Mode')
     || !html.includes('No live order will be placed yet')
+    || !html.includes('SAFE READY FOR OPTIONAL TINY LIVE TEST')
+    || !html.includes('Advanced Kraken Authentication Diagnostics')
     || !html.includes('window.EtherealAIPhase6F')
     || !html.includes("'phase6f-verify': phase6FVerifyKraken")
     || !html.includes('Phase 6: Production Trading Command Center')
@@ -8202,6 +8248,7 @@ function checkLiveTradingLaunchCenterUi() {
     || !styles.includes('.phase6f-summary-grid')
     || !styles.includes('.phase6f-proof-panel')
     || !styles.includes('.phase6f-check-item')
+    || !styles.includes('.phase6f-ready-card')
     || !styles.includes('.phase6f-enable-panel')
     || !styles.includes('.phase6-controls')
     || !styles.includes('.phase6-vault')
