@@ -331,6 +331,200 @@
         ]
     };
 
+    const ART_IMAGES = {
+        strategicPillars: '/public/brand/ethereal-community-strategic-pillars.png',
+        orbitalCore: '/public/brand/ethereal-community-orbital-core.png',
+        globe: '/public/brand/ethereal-community-globe-real.png',
+        particleGlobe: '/public/brand/ethereal-community-particle-globe-square.png',
+        math: '/public/brand/ethereal-community-purple-math-horizontal.png',
+        getReal: '/public/brand/ethereal-community-get-real-mission.png',
+        logoMaker: '/public/brand/ethereal-logo-generator-example.png',
+        digitalWorld: '/public/brand/ethereal-digital-world.png'
+    };
+
+    const pageArtShowcases = {
+        '/': {
+            eyebrow: 'Mission Control visual system',
+            title: 'Home base for the local AI operating system.',
+            body: 'This page is the daily command surface: system health, paper readiness, live locks, wallet status, and the safest next action. When fully completed, it becomes the one-screen executive cockpit for trading, automation, token creation, websites, socials, and security.',
+            heroImage: ART_IMAGES.digitalWorld,
+            cards: [
+                ['Core Status', ART_IMAGES.orbitalCore, 'Server, local AI, safety gates, and owner controls.'],
+                ['Paper Trading', ART_IMAGES.math, 'Strategy tests, simulated orders, costs, P/L, and decision reasons.'],
+                ['Security Boundary', ART_IMAGES.strategicPillars, 'Live trading, wallet signing, and external posting stay locked until approved.'],
+                ['Community Signal', ART_IMAGES.globe, 'Founder updates and public progress visuals can be generated from system state.']
+            ]
+        },
+        '/dashboard': {
+            eyebrow: 'Mission Control visual system',
+            title: 'Decide what to do next without reading developer diagnostics.',
+            body: 'Mission Control ties the whole build together. When fully completed, this becomes the executive overview for local AI health, paper trading, live readiness locks, treasury status, active bots, security, and community launch progress.',
+            heroImage: ART_IMAGES.strategicPillars,
+            cards: [
+                ['Operating Core', ART_IMAGES.orbitalCore, 'Local AI engine, memory, automation, and safety state.'],
+                ['Global Network', ART_IMAGES.globe, 'Chain-neutral trading, token, website, and community infrastructure.'],
+                ['Strategy Signal', ART_IMAGES.math, 'Paper results and proof-driven trading progress.'],
+                ['Launch Narrative', ART_IMAGES.getReal, 'Mission, ecosystem story, and public-facing progress copy.']
+            ]
+        },
+        '/owner-setup': {
+            eyebrow: 'Owner setup visual system',
+            title: 'Finish local setup without terminal commands.',
+            body: 'This page separates required local paper setup from optional future integrations. When fully completed, it guides a non-coder through wallets, credentials, backups, and approval gates without making optional API keys look like failures.',
+            heroImage: ART_IMAGES.orbitalCore,
+            cards: [
+                ['Required Now', ART_IMAGES.orbitalCore, 'Local server, paper schedule, risk profile, and live locks.'],
+                ['Wallet Metadata', ART_IMAGES.globe, 'Public wallet labels only. No seed phrases or private keys.'],
+                ['Optional Later', ART_IMAGES.digitalWorld, 'Exchange, social, GitHub, Cloudflare, and provider integrations.'],
+                ['Approval Gates', ART_IMAGES.strategicPillars, 'Future live actions require explicit owner approval.']
+            ]
+        },
+        '/strategy-lab': {
+            eyebrow: 'Trading intelligence visual system',
+            title: 'Build strategies and run safe paper simulations.',
+            body: 'This page turns trading ideas into structured paper tests. When fully completed, it supports indicator logic, cross-exchange arbitrage, DEX/CEX routing, spread analysis, risk controls, simulated fills, and human-readable trade explanations.',
+            heroImage: ART_IMAGES.math,
+            cards: [
+                ['Strategy Builder', ART_IMAGES.orbitalCore, 'Plain-English and structured strategy creation.'],
+                ['Arbitrage Engine', ART_IMAGES.globe, 'Venue comparison, fees, slippage, liquidity, and latency checks.'],
+                ['Paper Simulation', ART_IMAGES.math, 'Safe local testing with P/L, fills, warnings, and decision logs.'],
+                ['Future Live Gate', ART_IMAGES.strategicPillars, 'Production execution remains separate and owner-approved.']
+            ]
+        },
+        '/live-trading-launch': {
+            eyebrow: 'Live trading safety visual system',
+            title: 'Prepare live trading through locked, owner-approved gates.',
+            body: 'This page is for exchange verification, dry-run proof, tiny live test readiness, and emergency controls. When fully completed, it can move from read-only data to tightly controlled real execution without enabling autonomous scaling.',
+            heroImage: ART_IMAGES.strategicPillars,
+            cards: [
+                ['Exchange Verification', ART_IMAGES.orbitalCore, 'Restricted API keys, balances, fees, symbol rules, and unsafe-permission checks.'],
+                ['Dry-Run Proof', ART_IMAGES.math, 'Exact order previews before any production endpoint is allowed.'],
+                ['Tiny Live Test', ART_IMAGES.globe, 'One exchange, one symbol, tiny size, typed confirmation, cancel path.'],
+                ['Emergency Controls', ART_IMAGES.getReal, 'Kill switch, audit logs, stop controls, and rollback paths.']
+            ]
+        },
+        '/operator-control': {
+            eyebrow: 'Wallet boundary visual system',
+            title: 'Connect wallet metadata without surrendering keys.',
+            body: 'This page labels public wallets by purpose and keeps private key material outside the system. When fully completed, it supports isolated wallets for trading, treasury, deployment, recovery, and future hardware approval flows.',
+            heroImage: ART_IMAGES.globe,
+            cards: [
+                ['Public Metadata', ART_IMAGES.globe, 'Address, chain, label, project, and purpose.'],
+                ['Funding Separation', ART_IMAGES.strategicPillars, 'Treasury, trading, deployment, and recovery wallets stay scoped.'],
+                ['No Secrets', ART_IMAGES.orbitalCore, 'No seed phrase, private key, or wallet password entry.'],
+                ['Future Hardware Flow', ART_IMAGES.getReal, 'Owner-approved signing can be added later without weakening paper mode.']
+            ]
+        },
+        '/security-lockdown': {
+            eyebrow: 'Security command visual system',
+            title: 'Turn security findings into clear owner actions.',
+            body: 'This page translates local security checks into Safe, Review Needed, Fix Now, and Optional Later. When fully completed, it becomes the operator-facing command center for lockdown, recovery, backups, emergency shutdown, and attack-surface reduction.',
+            heroImage: ART_IMAGES.orbitalCore,
+            cards: [
+                ['Fix Now', ART_IMAGES.strategicPillars, 'Immediate owner tasks before sensitive work continues.'],
+                ['Review Needed', ART_IMAGES.digitalWorld, 'Network, device, and local service checks in plain English.'],
+                ['Emergency Steps', ART_IMAGES.getReal, 'Containment instructions if compromise is suspected.'],
+                ['Audit Trail', ART_IMAGES.math, 'Evidence, logs, and proof remain available in Advanced Mode.']
+            ]
+        },
+        '/solidity-lab': {
+            eyebrow: 'Token creation visual system',
+            title: 'Design chain-neutral tokens, websites, logos, and launch packets.',
+            body: 'This page drafts token specs, NFT utility, ecosystem use cases, website copy, whitepaper structure, roadmap, logo art, and listing evidence. When fully completed, it can guide a full token launch while deployment stays locked until owner approval.',
+            heroImage: ART_IMAGES.logoMaker,
+            cards: [
+                ['Logo Maker', ART_IMAGES.logoMaker, 'Generate identity directions, sample art, and token visuals.'],
+                ['Chain-Neutral Token', ART_IMAGES.globe, 'Polygon, Base, Solana, BNB, Avalanche, Ethereum, and future chains.'],
+                ['Website And Whitepaper', ART_IMAGES.getReal, 'Use case, roadmap, tokenomics, dapp story, and launch copy.'],
+                ['Listing Path', ART_IMAGES.strategicPillars, 'CoinMarketCap/CoinGecko evidence, socials, community, and proof.']
+            ]
+        },
+        '/social-ops': {
+            eyebrow: 'Community growth visual system',
+            title: 'Create local community content from real project progress.',
+            body: 'This page creates local drafts for founder updates, X, Discord, Telegram, Medium, YouTube, and listing evidence. When fully completed, it becomes the community manager and campaign planner for token launches while public posting stays owner-controlled.',
+            heroImage: ART_IMAGES.particleGlobe,
+            cards: [
+                ['Founder Updates', ART_IMAGES.strategicPillars, 'Turn build progress into readable public milestones.'],
+                ['Community Rooms', ART_IMAGES.globe, 'Discord, Telegram, and social launch planning.'],
+                ['Articles And Video', ART_IMAGES.math, 'Medium updates, YouTube chapters, and campaign scripts.'],
+                ['Listing Evidence', ART_IMAGES.getReal, 'Community growth proof and exchange/listing readiness content.']
+            ]
+        },
+        '/creator': {
+            eyebrow: 'Creator agent visual system',
+            title: 'Describe the build and let EtherealAI create the local plan.',
+            body: 'This page turns CEO-level ideas into executable plans before risky actions happen. When fully completed, it can coordinate coding, research, trading, Solidity, social, infrastructure, and validation agents behind owner-visible controls.',
+            heroImage: ART_IMAGES.digitalWorld,
+            cards: [
+                ['Idea Intake', ART_IMAGES.getReal, 'Plain-English build requests without developer workflow assumptions.'],
+                ['Plan First', ART_IMAGES.orbitalCore, 'Local task planning before commands or file changes.'],
+                ['Agent Coordination', ART_IMAGES.globe, 'Future specialist agents for trading, code, Solidity, social, and security.'],
+                ['Owner Review', ART_IMAGES.strategicPillars, 'Every critical action stays visible and logged.']
+            ]
+        },
+        '/operator-manual': {
+            eyebrow: 'Training visual system',
+            title: 'Learn the operating order without developer knowledge.',
+            body: 'This page teaches startup, setup, wallets, security, paper trading, live locks, proof packets, and emergency procedures. When fully completed, it becomes the built-in operating manual for a non-technical CEO.',
+            heroImage: ART_IMAGES.getReal,
+            cards: [
+                ['Start Here', ART_IMAGES.digitalWorld, 'Mission Control, next action, and Simple Mode basics.'],
+                ['Safety Rules', ART_IMAGES.strategicPillars, 'What never goes into the system and what stays locked.'],
+                ['Paper Operation', ART_IMAGES.math, 'How to build, run, and review safe paper tests.'],
+                ['Recovery', ART_IMAGES.orbitalCore, 'Backup, restore, shutdown, and owner control procedures.']
+            ]
+        },
+        '/operator-training': {
+            eyebrow: 'Tutorial library visual system',
+            title: 'Text and video-style lessons for every major tab.',
+            body: 'This page organizes the training path in order. When fully completed, every major workflow has text, transcript, video-player placeholders, pause-and-verify moments, and exact click instructions.',
+            heroImage: ART_IMAGES.digitalWorld,
+            cards: [
+                ['Text Lessons', ART_IMAGES.getReal, 'Plain-English instructions for every page.'],
+                ['Video Scripts', ART_IMAGES.particleGlobe, 'Udemy-style chapters, narration, and replayable steps.'],
+                ['Safe Defaults', ART_IMAGES.strategicPillars, 'Warnings and checks before dangerous actions.'],
+                ['Operator Confidence', ART_IMAGES.orbitalCore, 'Learn by clicking through the actual system.']
+            ]
+        },
+        '/owner-proof-packet': {
+            eyebrow: 'Proof packet visual system',
+            title: 'Collect local evidence before owner acceptance.',
+            body: 'This page packages readiness evidence, checksums, and owner acceptance records. When fully completed, it becomes the proof surface for audits, handoffs, acceptance gates, and recovery from interrupted work.',
+            heroImage: ART_IMAGES.strategicPillars,
+            cards: [
+                ['Evidence', ART_IMAGES.orbitalCore, 'Local readiness and proof rows.'],
+                ['Checksum', ART_IMAGES.math, 'Stable evidence marker for the packet.'],
+                ['Acceptance', ART_IMAGES.getReal, 'Manual owner review before marking complete.'],
+                ['Live Lock', ART_IMAGES.globe, 'Proof that live execution remains separated.']
+            ]
+        },
+        '/mvp-test-pass': {
+            eyebrow: 'MVP evidence visual system',
+            title: 'Review the test pass without exposing live controls.',
+            body: 'This page shows local MVP evidence, smoke checks, completion ledger, and live-disabled safety. When fully completed, it helps prove what works and what remains locked for future approval.',
+            heroImage: ART_IMAGES.math,
+            cards: [
+                ['Smoke Checks', ART_IMAGES.orbitalCore, 'Paper automation and local-only behavior.'],
+                ['Evidence Manifest', ART_IMAGES.strategicPillars, 'Downloadable local proof records.'],
+                ['Completion Ledger', ART_IMAGES.globe, 'Local E2E complete and Live E2E locked.'],
+                ['Owner Acceptance', ART_IMAGES.getReal, 'Final review routes back to the proof packet.']
+            ]
+        },
+        '/server-route-inventory': {
+            eyebrow: 'Advanced inventory visual system',
+            title: 'Inspect internal routes only when intentionally in developer mode.',
+            body: 'This page maps protected routes, proof coverage, and server boundaries. When fully completed, it remains the technical evidence layer behind the simple operator experience.',
+            heroImage: ART_IMAGES.orbitalCore,
+            cards: [
+                ['Routes', ART_IMAGES.digitalWorld, 'Protected pages, APIs, and local-only surfaces.'],
+                ['Boundaries', ART_IMAGES.strategicPillars, 'What each subsystem is allowed to do.'],
+                ['Proof Coverage', ART_IMAGES.math, 'Evidence that owner-facing safety pages exist.'],
+                ['Diagnostics', ART_IMAGES.getReal, 'Raw details stay here, not in Simple Mode.']
+            ]
+        }
+    };
+
     function escapeHtml(value) {
         return String(value ?? '')
             .replaceAll('&', '&amp;')
@@ -470,38 +664,45 @@
         `;
     }
 
-    function renderCommunityShowcase() {
+    function fallbackArtShowcase(config = {}) {
+        const area = config.area || 'EtherealAI';
+
+        return {
+            eyebrow: `${area} visual system`,
+            title: `${area} operator surface.`,
+            body: `${config.summary || 'Use this page for the current workflow.'} When fully completed, this surface will combine guided controls, safety boundaries, local AI output, and owner-visible proof for this part of EtherealAI.`,
+            heroImage: ART_IMAGES.digitalWorld,
+            cards: [
+                ['Current Page', ART_IMAGES.orbitalCore, `Controls and status for ${area}.`],
+                ['System Link', ART_IMAGES.globe, 'How this area connects to trading, automation, token, website, social, and security infrastructure.'],
+                ['Safe Operation', ART_IMAGES.strategicPillars, 'Owner-visible boundaries, locks, and next actions.'],
+                ['Future Potential', ART_IMAGES.getReal, 'What this area can become as the full operating system is completed.']
+            ]
+        };
+    }
+
+    function renderCommunityShowcase(config = currentConfig()) {
+        const showcase = pageArtShowcases[pagePath()] || fallbackArtShowcase(config);
+        const cards = showcase.cards || fallbackArtShowcase(config).cards;
+
         return `
-            <section class="operator-community-showcase" aria-label="Community progress art showcase">
+            <section class="operator-community-showcase" aria-label="${escapeHtml(config.area || 'EtherealAI')} visual art showcase">
                 <div class="operator-community-hero">
-                    <img src="/public/brand/ethereal-community-strategic-pillars.png" alt="Ethereal strategic pillars community artwork">
+                    <img src="${escapeHtml(showcase.heroImage || ART_IMAGES.digitalWorld)}" alt="${escapeHtml(config.area || 'EtherealAI')} visual system artwork">
                     <div>
-                        <span>Community progress presentation</span>
-                        <strong>EtherealAI is being built as a local AI operating system.</strong>
-                        <p>Use this art direction for founder updates, launch decks, Medium articles, X banners, Discord announcements, YouTube chapters, and token ecosystem pages.</p>
+                        <span>${escapeHtml(showcase.eyebrow)}</span>
+                        <strong>${escapeHtml(showcase.title)}</strong>
+                        <p>${escapeHtml(showcase.body)}</p>
                     </div>
                 </div>
                 <div class="operator-community-art-grid">
-                    <article>
-                        <img src="/public/brand/ethereal-community-orbital-core.png" alt="Orbital core neon identity artwork">
-                        <strong>Core System</strong>
-                        <span>AI engine, safety gates, local automation, and owner control.</span>
-                    </article>
-                    <article>
-                        <img src="/public/brand/ethereal-community-globe-real.png" alt="Digital globe network artwork">
-                        <strong>Global Network</strong>
-                        <span>Chain-neutral infrastructure, market intelligence, and community growth.</span>
-                    </article>
-                    <article>
-                        <img src="/public/brand/ethereal-community-purple-math-horizontal.png" alt="We Math Better campaign artwork">
-                        <strong>We Math Better</strong>
-                        <span>Trading logic, tokenomics, strategy research, and proof-driven progress.</span>
-                    </article>
-                    <article>
-                        <img src="/public/brand/ethereal-community-get-real-mission.png" alt="Get REAL mission artwork">
-                        <strong>Get REAL</strong>
-                        <span>Mission, ecosystem story, strategic pillars, and public launch narrative.</span>
-                    </article>
+                    ${cards.map(([title, image, body]) => `
+                        <article>
+                            <img src="${escapeHtml(image)}" alt="${escapeHtml(title)} artwork">
+                            <strong>${escapeHtml(title)}</strong>
+                            <span>${escapeHtml(body)}</span>
+                        </article>
+                    `).join('')}
                 </div>
             </section>
         `;
@@ -627,7 +828,7 @@
             <div id="operator-simple-status" class="operator-status-grid">
                 <article class="operator-status-tile"><span>Status</span><strong>Loading</strong><small>Checking local system.</small></article>
             </div>
-            ${renderCommunityShowcase()}
+            ${renderCommunityShowcase(config)}
             <div id="operator-simple-answers">${renderReadiness(null, config)}</div>
             ${renderWorkflow(config.workflow || [])}
             <div class="operator-task-grid">

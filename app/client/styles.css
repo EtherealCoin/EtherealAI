@@ -4233,6 +4233,10 @@ a:focus-visible {
         justify-content: stretch;
     }
 
+    body.operator-simple-mode .operator-workspace-actions {
+        grid-template-columns: 1fr;
+    }
+
     .operator-mode-actions button,
     .operator-secondary-action,
     .operator-primary-action {
@@ -6320,8 +6324,40 @@ body.operator-simple-mode .operator-workspace-header {
     border: 1px solid rgba(255, 43, 214, 0.28);
     display: grid;
     gap: 16px;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 500px);
     padding: 18px;
+}
+
+body.operator-simple-mode .operator-workspace-actions {
+    align-items: stretch;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+    justify-content: end;
+    max-width: 500px;
+    min-width: 360px;
+    width: min(42vw, 500px);
+}
+
+body.operator-simple-mode .operator-workspace-actions .operator-primary-action {
+    font-size: 0.82rem;
+    grid-column: 1 / -1;
+    min-height: 42px;
+    padding: 10px 14px;
+    width: 100%;
+}
+
+body.operator-simple-mode .operator-workspace-actions .operator-training-menu,
+body.operator-simple-mode .operator-workspace-actions .operator-secondary-action {
+    min-width: 0;
+    width: 100%;
+}
+
+body.operator-simple-mode .operator-workspace-actions .operator-training-menu > button,
+body.operator-simple-mode .operator-workspace-actions .operator-secondary-action {
+    min-height: 40px;
+    padding: 10px 12px;
+    width: 100%;
 }
 
 body.operator-simple-mode .operator-brand-heading {
@@ -6505,6 +6541,16 @@ body.operator-simple-mode .checkbox-grid label {
     body.operator-simple-mode .operator-mode-bar {
         grid-template-columns: 1fr;
         position: static;
+    }
+
+    body.operator-simple-mode .operator-workspace-header {
+        grid-template-columns: 1fr;
+    }
+
+    body.operator-simple-mode .operator-workspace-actions {
+        max-width: none;
+        min-width: 0;
+        width: 100%;
     }
 
     body.operator-simple-mode > nav {
