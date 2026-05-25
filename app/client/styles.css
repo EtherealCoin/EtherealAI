@@ -6079,9 +6079,13 @@ nav a:hover,
     --ethereal-ink: #06030a;
     --ethereal-panel: #09070d;
     --ethereal-panel-2: #0f0a16;
+    --ethereal-panel-3: #170d22;
     --ethereal-cyan: #00f5ff;
     --ethereal-pink: #ff2bd6;
     --ethereal-purple: #7c3cff;
+    --ethereal-amber: #f7b733;
+    --ethereal-green: #31f081;
+    --ethereal-red: #ff4d6d;
     --ethereal-soft: #f8f4ff;
     --ethereal-muted: #8aa0a8;
 }
@@ -6089,11 +6093,12 @@ nav a:hover,
 body.operator-simple-mode {
     background-color: var(--ethereal-black) !important;
     background-image:
-        linear-gradient(90deg, rgba(255, 43, 214, 0.08) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(0, 245, 255, 0.06) 1px, transparent 1px),
-        radial-gradient(circle at 82% 0%, rgba(0, 245, 255, 0.14), transparent 24rem),
-        radial-gradient(circle at 24% 82%, rgba(255, 43, 214, 0.12), transparent 28rem) !important;
-    background-size: 42px 42px, 42px 42px, auto, auto !important;
+        linear-gradient(90deg, rgba(255, 43, 214, 0.055) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(0, 245, 255, 0.045) 1px, transparent 1px),
+        radial-gradient(circle at 82% 0%, rgba(0, 245, 255, 0.12), transparent 25rem),
+        radial-gradient(circle at 18% 80%, rgba(255, 43, 214, 0.13), transparent 30rem),
+        linear-gradient(135deg, rgba(16, 8, 28, 0.74), rgba(0, 0, 0, 0.92)) !important;
+    background-size: 44px 44px, 44px 44px, auto, auto, auto !important;
     color: var(--ethereal-soft) !important;
 }
 
@@ -6114,8 +6119,11 @@ body.operator-simple-mode::before {
 
 body.operator-simple-mode .operator-mode-bar {
     align-items: center;
-    background: #000000 !important;
-    border-bottom: 2px solid var(--ethereal-cyan) !important;
+    background:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.98), rgba(15, 6, 28, 0.96)),
+        #000000 !important;
+    border-bottom: 1px solid rgba(0, 245, 255, 0.64) !important;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.48);
     display: grid;
     gap: 18px;
     grid-template-columns: auto minmax(0, 1fr) auto auto;
@@ -6135,8 +6143,8 @@ body.operator-simple-mode .operator-mode-bar {
     line-height: 1;
     text-decoration: none;
     text-shadow:
-        0 0 12px rgba(255, 43, 214, 0.82),
-        0 0 18px rgba(0, 245, 255, 0.46);
+        0 0 10px rgba(255, 43, 214, 0.82),
+        0 0 20px rgba(0, 245, 255, 0.44);
 }
 
 .operator-dapp-wordmark::first-letter {
@@ -6145,7 +6153,8 @@ body.operator-simple-mode .operator-mode-bar {
 
 .operator-dapp-safety-strip {
     align-items: center;
-    border: 1px solid rgba(0, 245, 255, 0.42);
+    background: rgba(0, 245, 255, 0.045);
+    border: 1px solid rgba(0, 245, 255, 0.46);
     display: flex;
     gap: 8px;
     justify-content: center;
@@ -6186,11 +6195,12 @@ body.operator-simple-mode .operator-training-menu > button,
 body.operator-simple-mode .operator-secondary-action,
 body.operator-simple-mode .operator-logout-action,
 body.operator-advanced-mode .operator-logout-action {
-    background: linear-gradient(135deg, rgba(255, 43, 214, 0.88), rgba(0, 245, 255, 0.88)) !important;
-    border: 0 !important;
+    background: linear-gradient(135deg, rgba(255, 43, 214, 0.86), rgba(0, 245, 255, 0.86)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 2px !important;
     color: #020204 !important;
     font-weight: 900;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
 }
 
@@ -6292,13 +6302,31 @@ body.operator-simple-mode .artifact-stat,
 body.operator-simple-mode .token-logo-studio,
 body.operator-simple-mode .logo-creation-showcase {
     background:
-        linear-gradient(180deg, rgba(14, 10, 22, 0.96), rgba(4, 3, 7, 0.98)) !important;
-    border: 1px solid rgba(0, 245, 255, 0.42) !important;
+        linear-gradient(180deg, rgba(18, 11, 30, 0.97), rgba(4, 3, 8, 0.99)) !important;
+    border: 1px solid rgba(0, 245, 255, 0.36) !important;
     border-radius: 2px !important;
     box-shadow:
-        0 0 0 1px rgba(255, 43, 214, 0.13),
-        0 20px 54px rgba(0, 0, 0, 0.48) !important;
+        0 0 0 1px rgba(255, 43, 214, 0.10),
+        0 24px 74px rgba(0, 0, 0, 0.54) !important;
     position: relative;
+}
+
+body.operator-simple-mode .simple-operator-workspace::after {
+    background-image: url("/public/brand/ethereal-real-dark-logo.png");
+    background-position: right 32px top 28px;
+    background-repeat: no-repeat;
+    background-size: min(34vw, 300px);
+    content: "";
+    inset: 0;
+    opacity: 0.055;
+    pointer-events: none;
+    position: absolute;
+    z-index: 0;
+}
+
+body.operator-simple-mode .simple-operator-workspace > * {
+    position: relative;
+    z-index: 1;
 }
 
 body.operator-simple-mode .model-panel::before,
@@ -6321,7 +6349,10 @@ body.operator-simple-mode .simple-operator-workspace {
 
 body.operator-simple-mode .operator-workspace-header {
     align-items: center;
-    border: 1px solid rgba(255, 43, 214, 0.28);
+    background:
+        linear-gradient(135deg, rgba(255, 43, 214, 0.06), transparent 36%),
+        linear-gradient(90deg, rgba(0, 245, 255, 0.055), rgba(124, 60, 255, 0.05));
+    border: 1px solid rgba(255, 43, 214, 0.24);
     display: grid;
     gap: 16px;
     grid-template-columns: minmax(0, 1fr) minmax(360px, 500px);
@@ -6366,8 +6397,97 @@ body.operator-simple-mode .operator-brand-heading {
 
 body.operator-simple-mode .operator-brand-logo {
     border-radius: 2px;
+    box-shadow:
+        0 0 0 1px rgba(0, 245, 255, 0.42),
+        0 0 28px rgba(255, 43, 214, 0.18);
     height: 86px;
     width: 86px;
+}
+
+.operator-identity-band {
+    align-items: center;
+    background:
+        linear-gradient(90deg, rgba(0, 245, 255, 0.075), rgba(255, 43, 214, 0.045)),
+        rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(0, 245, 255, 0.26);
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 14px 16px;
+}
+
+.operator-identity-summary {
+    align-items: center;
+    display: flex;
+    gap: 14px;
+    min-width: 0;
+}
+
+.operator-identity-summary img {
+    border: 1px solid rgba(0, 245, 255, 0.46);
+    box-shadow:
+        0 0 22px rgba(0, 245, 255, 0.14),
+        0 0 24px rgba(255, 43, 214, 0.12);
+    height: 58px;
+    object-fit: cover;
+    width: 58px;
+}
+
+.operator-identity-summary span {
+    color: var(--ethereal-pink) !important;
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.operator-identity-summary strong {
+    display: block;
+    font-size: clamp(1rem, 1.8vw, 1.45rem);
+    line-height: 1.1;
+}
+
+.operator-identity-summary p {
+    font-size: 0.9rem;
+    line-height: 1.45;
+    margin: 6px 0 0;
+    max-width: 780px;
+}
+
+.operator-state-strip {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(3, max-content);
+}
+
+.operator-state-pill {
+    border: 1px solid currentColor;
+    color: var(--ethereal-soft) !important;
+    display: inline-flex;
+    font-size: 0.72rem;
+    font-weight: 900;
+    justify-content: center;
+    min-height: 32px;
+    padding: 8px 10px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.operator-state-safe {
+    background: rgba(49, 240, 129, 0.12);
+    color: var(--ethereal-green) !important;
+}
+
+.operator-state-warning {
+    background: rgba(247, 183, 51, 0.13);
+    color: var(--ethereal-amber) !important;
+}
+
+.operator-state-live {
+    background: rgba(255, 77, 109, 0.10);
+    color: #ff9aad !important;
 }
 
 body.operator-simple-mode .operator-status-grid,
@@ -6382,6 +6502,50 @@ body.operator-simple-mode .operator-task-card,
 body.operator-simple-mode .artifact-stat,
 body.operator-simple-mode .status-card {
     min-height: 104px;
+}
+
+body.operator-simple-mode .operator-status-tile {
+    border-left: 3px solid rgba(0, 245, 255, 0.42) !important;
+}
+
+body.operator-simple-mode .operator-status-safe {
+    background:
+        linear-gradient(180deg, rgba(49, 240, 129, 0.12), rgba(5, 14, 10, 0.72)),
+        rgba(4, 3, 7, 0.96) !important;
+    border-color: rgba(49, 240, 129, 0.38) !important;
+}
+
+body.operator-simple-mode .operator-status-safe::after {
+    border-color: rgba(49, 240, 129, 0.62);
+}
+
+body.operator-simple-mode .operator-status-warning {
+    background:
+        linear-gradient(180deg, rgba(247, 183, 51, 0.12), rgba(18, 12, 4, 0.72)),
+        rgba(4, 3, 7, 0.96) !important;
+    border-color: rgba(247, 183, 51, 0.42) !important;
+}
+
+body.operator-simple-mode .operator-status-warning::after {
+    border-color: rgba(247, 183, 51, 0.68);
+}
+
+body.operator-simple-mode .operator-status-live {
+    background:
+        linear-gradient(180deg, rgba(255, 77, 109, 0.11), rgba(15, 4, 10, 0.78)),
+        rgba(4, 3, 7, 0.96) !important;
+    border-color: rgba(255, 77, 109, 0.42) !important;
+}
+
+body.operator-simple-mode .operator-status-live::after {
+    border-color: rgba(255, 77, 109, 0.72);
+}
+
+body.operator-simple-mode .operator-status-danger {
+    background:
+        linear-gradient(180deg, rgba(255, 77, 109, 0.18), rgba(22, 4, 9, 0.82)),
+        rgba(4, 3, 7, 0.96) !important;
+    border-color: rgba(255, 77, 109, 0.66) !important;
 }
 
 body.operator-simple-mode .operator-status-tile::after,
@@ -6551,6 +6715,14 @@ body.operator-simple-mode .checkbox-grid label {
         max-width: none;
         min-width: 0;
         width: 100%;
+    }
+
+    .operator-identity-band {
+        grid-template-columns: 1fr;
+    }
+
+    .operator-state-strip {
+        grid-template-columns: 1fr;
     }
 
     body.operator-simple-mode > nav {

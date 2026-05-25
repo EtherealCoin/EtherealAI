@@ -604,6 +604,26 @@
         `).join('');
     }
 
+    function renderIdentityBand(config = {}) {
+        return `
+            <section class="operator-identity-band" aria-label="EtherealAI operating state">
+                <div class="operator-identity-summary">
+                    <img src="/public/brand/ethereal-real-dark-logo.png" alt="EtherealAI REAL mark">
+                    <div>
+                        <span>Operational systems layer</span>
+                        <strong>From idea chaos to controlled execution.</strong>
+                        <p>${escapeHtml(config.area || 'EtherealAI')} is presented as a simple operator surface. Advanced diagnostics stay available, but the daily workflow stays focused, visible, and safe.</p>
+                    </div>
+                </div>
+                <div class="operator-state-strip" aria-label="Safety state legend">
+                    <span class="operator-state-pill operator-state-safe">Safe: local paper and planning</span>
+                    <span class="operator-state-pill operator-state-warning">Warning: owner review needed</span>
+                    <span class="operator-state-pill operator-state-live">Live: locked until approval</span>
+                </div>
+            </section>
+        `;
+    }
+
     function actionMarkup(action = {}) {
         if (action.kind === 'next') {
             return '<button type="button" class="operator-primary-action" data-operator-next data-operator-recommended-action>What should I do next?</button>';
@@ -777,8 +797,22 @@
             ['Security', securityValue, `${security?.summary?.failCount ?? 0} fix-now item(s).`]
         ];
 
+        function statusTone(label, value) {
+            const normalized = `${label} ${value}`.toLowerCase();
+            if (normalized.includes('unsafe') || normalized.includes('fix now') || normalized.includes('danger')) {
+                return 'operator-status-danger';
+            }
+            if (label === 'Live E2E') {
+                return value === 'Locked' ? 'operator-status-live' : 'operator-status-danger';
+            }
+            if (normalized.includes('optional') || normalized.includes('review') || normalized.includes('locked')) {
+                return 'operator-status-warning';
+            }
+            return 'operator-status-safe';
+        }
+
         return statuses.map(([label, value, note]) => `
-            <article class="operator-status-tile">
+            <article class="operator-status-tile ${statusTone(label, value)}">
                 <span>${escapeHtml(label)}</span>
                 <strong>${escapeHtml(value)}</strong>
                 <small>${escapeHtml(note)}</small>
@@ -825,8 +859,9 @@
                     <button type="button" class="operator-secondary-action" data-operator-mode="advanced">Advanced Developer Mode</button>
                 </div>
             </div>
+            ${renderIdentityBand(config)}
             <div id="operator-simple-status" class="operator-status-grid">
-                <article class="operator-status-tile"><span>Status</span><strong>Loading</strong><small>Checking local system.</small></article>
+                <article class="operator-status-tile operator-status-warning"><span>Status</span><strong>Loading</strong><small>Checking local system.</small></article>
             </div>
             ${renderCommunityShowcase(config)}
             <div id="operator-simple-answers">${renderReadiness(null, config)}</div>
