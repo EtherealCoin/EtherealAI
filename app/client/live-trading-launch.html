@@ -956,6 +956,9 @@
                     <input id="kraken-live-api-secret" type="password" autocomplete="off" placeholder="Paste Kraken Private Key">
                 </label>
                 <button id="kraken-live-save-key" type="button">Save Key Safely</button>
+                <button id="kraken-live-replace-key" type="button" class="secondary-button">Replace Existing Key</button>
+                <button id="kraken-live-delete-key" type="button" class="secondary-button">Delete Saved Credentials</button>
+                <button id="kraken-live-clear-cache" type="button" class="secondary-button">Clear Cached Auth State</button>
                 <button id="kraken-live-verify" type="button">Verify Connection</button>
                 <button id="kraken-live-dry-run" type="button">Dry-Run Proof</button>
                 <button id="kraken-live-preview" type="button">Tiny Live Eligibility</button>
@@ -979,12 +982,19 @@
                     </div>
                     <div class="button-row">
                         <button id="kraken-auth-test-balance" type="button">Test Raw Kraken Balance Endpoint</button>
+                        <button id="kraken-auth-readback" type="button" class="secondary-button">Read Vault Fingerprints</button>
+                        <button id="kraken-auth-clear-cache" type="button" class="secondary-button">Clear Cached Auth State</button>
+                        <button id="kraken-auth-delete-key" type="button" class="secondary-button">Delete Saved Credentials</button>
                         <button id="kraken-auth-debug-show" type="button" class="secondary-button">Show Auth Debug</button>
                     </div>
                 </div>
                 <div class="kraken-auth-diagnostic-grid">
                     <article><span>API key exists</span><strong id="kraken-auth-key-exists">Not checked</strong><small id="kraken-auth-key-fingerprint">Fingerprint hidden until test.</small></article>
                     <article><span>Secret exists</span><strong id="kraken-auth-secret-exists">Not checked</strong><small id="kraken-auth-secret-fingerprint">Fingerprint hidden until test.</small></article>
+                    <article><span>Saved API key fingerprint</span><strong id="kraken-vault-key-fingerprint">Not checked</strong><small>Read directly from encrypted vault.</small></article>
+                    <article><span>Saved secret fingerprint</span><strong id="kraken-vault-secret-fingerprint">Not checked</strong><small>Read directly from encrypted vault.</small></article>
+                    <article><span>Vault saved at</span><strong id="kraken-vault-saved-at">Not checked</strong><small id="kraken-vault-source-note">Vault source pending.</small></article>
+                    <article><span>Verify source</span><strong id="kraken-verify-source">Not checked</strong><small id="kraken-verify-source-note">Verification source pending.</small></article>
                     <article><span>Nonce generation</span><strong id="kraken-auth-nonce-status">Not checked</strong><small>Local self-test before Kraken call.</small></article>
                     <article><span>Signature generation</span><strong id="kraken-auth-signature-status">Not checked</strong><small id="kraken-auth-signature-fingerprint">No full signature displayed.</small></article>
                     <article><span>Request reached Kraken</span><strong id="kraken-auth-reached-status">Not checked</strong><small id="kraken-auth-response-code">HTTP code pending.</small></article>
@@ -993,6 +1003,7 @@
                     <article><span>Vault round trip</span><strong id="kraken-auth-vault-status">Not checked</strong><small id="kraken-auth-vault-note">Checks encrypted save/decrypt metadata.</small></article>
                 </div>
                 <div id="kraken-auth-response-body" class="kraken-auth-response-body">Exact Kraken response body will appear here after the raw Balance test.</div>
+                <pre id="kraken-vault-operation-log" class="kraken-vault-operation-log">Vault operation log will show save, overwrite, delete, clear, readback, and verify source events. Full keys and full secrets are never shown.</pre>
                 <pre id="kraken-auth-debug-log" class="kraken-auth-debug-log" hidden>Click Test Raw Kraken Balance Endpoint first. Full keys and full secrets are never shown.</pre>
             </section>
         </section>
@@ -1088,7 +1099,10 @@
                 </div>
                 <div class="button-row">
                     <button id="phase6e-save-key" type="button" onclick="savePhase6EKrakenKey()">Save Kraken Key To Vault</button>
-                    <button id="phase6e-delete-key" type="button" class="secondary-button" onclick="deletePhase6EKrakenKey()">Delete / Rotate Kraken Key</button>
+                    <button id="phase6e-replace-key" type="button" class="secondary-button" onclick="replacePhase6EKrakenKey()">Replace Existing Key</button>
+                    <button id="phase6e-delete-key" type="button" class="secondary-button" onclick="deletePhase6EKrakenKey()">Delete Saved Credentials</button>
+                    <button id="phase6e-clear-cache" type="button" class="secondary-button" onclick="clearKrakenAuthState()">Clear Cached Auth State</button>
+                    <button id="phase6e-readback-key" type="button" class="secondary-button" onclick="readKrakenVaultFingerprints()">Read Vault Fingerprints</button>
                 </div>
                 <div id="phase6e-key-result" class="phase3-results">No Kraken key has been saved from this walkthrough yet.</div>
             </div>
@@ -1473,6 +1487,7 @@
         let latestPhase6FReadiness = null;
         let latestPhase6FPreview = null;
         let latestKrakenAuthDiagnostics = null;
+        let latestKrakenVaultReadback = null;
         let krakenAuthDebugVisible = false;
         let latestPhase6Center = null;
         let latestPhase6PreviewId = null;
@@ -2885,6 +2900,7 @@
             if (defaultOrder.symbol) document.getElementById('phase6e-symbol').value = defaultOrder.symbol;
             if (defaultOrder.notionalUsd) document.getElementById('phase6e-notional').value = defaultOrder.notionalUsd;
             if (defaultOrder.maxOrderUsd) document.getElementById('phase6e-max-order').value = defaultOrder.maxOrderUsd;
+            renderKrakenVaultReadback(wizard.vaultReadback || null, wizard.latestCredentialSource || null);
             renderKrakenLiveSetupStatus();
         }
 
@@ -2944,9 +2960,12 @@
             };
         }
 
-        async function savePhase6EKrakenKey() {
+        async function savePhase6EKrakenKey(options = {}) {
+            const replaceExisting = Boolean(options.replaceExisting);
             const output = document.getElementById('phase6e-key-result');
-            output.textContent = 'Saving Kraken key to the encrypted local vault. Secret values will be cleared and not displayed again.';
+            output.textContent = replaceExisting
+                ? 'Replacing the existing Kraken key in the encrypted local vault. Old verification state will be cleared.'
+                : 'Saving Kraken key to the encrypted local vault. Secret values will be cleared and not displayed again.';
             await ensureProductionConnector('kraken');
             const response = await fetch('/api/v1/live-trading-launch/phase6e/save-kraken-key', {
                 method: 'POST',
@@ -2954,6 +2973,7 @@
                 body: JSON.stringify({
                     apiKey: document.getElementById('phase6e-api-key').value,
                     apiSecret: document.getElementById('phase6e-api-secret').value,
+                    replaceExisting,
                     permissionsChecklist: phase6EPermissionsChecklist()
                 })
             });
@@ -2975,14 +2995,26 @@
 
             output.innerHTML = `
                 <article class="phase6e-check-item status-success">
-                    <strong>Kraken key saved to encrypted vault</strong>
-                    <p>Fingerprint ${escapeHtml(data.saved?.apiKeyFingerprint || 'saved')}. Secret values were not returned to the browser.</p>
-                    <small>Next: Verify Kraken Key. Live trading remains locked.</small>
+                    <strong>${data.saved?.replacedExistingKey ? 'Existing Kraken key replaced' : 'Kraken key saved to encrypted vault'}</strong>
+                    <p>Saved API key fingerprint ${escapeHtml(data.saved?.apiKeySha256Fingerprint || data.saved?.apiKeyFingerprint || 'saved')}.</p>
+                    <p>Saved secret fingerprint ${escapeHtml(data.saved?.apiSecretSha256Fingerprint || 'saved')}.</p>
+                    <small>Overwrite verified: ${escapeHtml(yesNo(data.saved?.vaultOverwriteVerified))}. Next: Verify Kraken Key. Live trading remains locked.</small>
                 </article>
             `;
+            appendKrakenVaultLog(data.saved?.replacedExistingKey ? 'Kraken key replaced' : 'Kraken key saved', {
+                ...(data.saved || {}),
+                ...(data.saved?.vaultReadback || {}),
+                source: 'save_route'
+            });
+            renderKrakenVaultReadback(data.saved?.vaultReadback || data.vaultReadback || null, data.saved?.latestCredentialSource || null);
             renderPhase6EWalkthrough(data);
+            await loadKrakenAuthDiagnosticStatus();
             await loadPhase6Status();
             await loadPhase6DFramework();
+        }
+
+        async function replacePhase6EKrakenKey() {
+            await savePhase6EKrakenKey({ replaceExisting: true });
         }
 
         async function deletePhase6EKrakenKey() {
@@ -2993,14 +3025,57 @@
 
             output.innerHTML = `
                 <article class="phase6e-check-item ${response.ok ? 'status-success' : 'status-warning'}">
-                    <strong>${response.ok ? 'Kraken key deleted/rotated' : 'Delete needs review'}</strong>
+                    <strong>${response.ok ? 'Saved Kraken credentials deleted' : 'Delete needs review'}</strong>
                     <p>${escapeHtml(data.nextClick || data.error || 'Kraken vault entry reviewed.')}</p>
                     <small>Endpoint called: No · live trading locked.</small>
                 </article>
             `;
+            appendKrakenVaultLog(response.ok ? 'Saved Kraken credentials deleted' : 'Credential delete failed', {
+                operation: 'delete',
+                ...(data.previousVaultReadback || {}),
+                source: 'delete_route'
+            });
+            renderKrakenVaultReadback({
+                exists: false,
+                vaultDecodeSucceeded: false,
+                apiKeySha256Fingerprint: '',
+                apiSecretSha256Fingerprint: '',
+                timestampSaved: '',
+                secretValuesReturned: false
+            }, { source: 'deleted', cacheBypassed: true });
             if (data.wizard) renderPhase6EWalkthrough(data);
+            await loadKrakenAuthDiagnosticStatus();
             await loadPhase6Status();
             await loadPhase6DFramework();
+        }
+
+        async function readKrakenVaultFingerprints() {
+            appendKrakenVaultLog('Reading current Kraken vault fingerprints', { operation: 'readback', source: 'readback_route' });
+            const response = await fetch('/api/v1/live-trading-launch/phase6e/kraken-key/readback');
+            const data = await response.json();
+            renderKrakenVaultReadback(data.vaultReadback || null, data.verifySource || null);
+            appendKrakenVaultLog(response.ok ? 'Vault readback complete' : 'Vault readback failed', {
+                ...(data.vaultReadback || {}),
+                ...(data.verifySource || {}),
+                operation: 'readback'
+            });
+            return data;
+        }
+
+        async function clearKrakenAuthState() {
+            appendKrakenVaultLog('Clearing Kraken cached auth state', { operation: 'clear-cache', source: 'clear_cache_route' });
+            const response = await fetch('/api/v1/live-trading-launch/phase6e/clear-auth-cache', { method: 'POST' });
+            const data = await response.json();
+            renderKrakenVaultReadback(data.vaultReadback || null, { source: 'cache_cleared', cacheBypassed: true });
+            appendKrakenVaultLog(response.ok ? 'Cached auth state cleared' : 'Cache clear failed', {
+                ...(data.vaultReadback || {}),
+                operation: 'clear-cache',
+                source: 'clear_cache_route'
+            });
+            if (data.wizard) renderPhase6EWalkthrough(data);
+            await loadKrakenAuthDiagnosticStatus();
+            await loadPhase6Status();
+            return data;
         }
 
         async function verifyPhase6EKrakenKey() {
@@ -3013,6 +3088,12 @@
             });
             const data = await response.json();
             latestPhase6EReadiness = data.krakenReadiness || latestPhase6EReadiness;
+            renderKrakenVaultReadback(data.vaultReadback || null, data.verifySource || null);
+            appendKrakenVaultLog(response.ok ? 'Verify Connection loaded current vault values' : 'Verify Connection blocked after current vault load', {
+                ...(data.vaultReadback || {}),
+                ...(data.verifySource || {}),
+                operation: 'verify'
+            });
 
             if (!response.ok && !data.wizard) {
                 document.getElementById('phase6e-verify-result').innerHTML = `
@@ -3207,9 +3288,53 @@
             return 'Unknown';
         }
 
+        function appendKrakenVaultLog(label, detail = {}) {
+            const log = document.getElementById('kraken-vault-operation-log');
+            if (!log) return;
+            const timestamp = new Date().toLocaleTimeString();
+            const lines = [
+                `[${timestamp}] ${label}`,
+                detail.operation ? `operation=${detail.operation}` : '',
+                detail.referenceName ? `reference=${detail.referenceName}` : '',
+                detail.apiKeySha256Fingerprint ? `api_key=${detail.apiKeySha256Fingerprint}` : '',
+                detail.apiSecretSha256Fingerprint ? `secret=${detail.apiSecretSha256Fingerprint}` : '',
+                detail.previousApiKeySha256Fingerprint ? `previous_api_key=${detail.previousApiKeySha256Fingerprint}` : '',
+                detail.previousApiSecretSha256Fingerprint ? `previous_secret=${detail.previousApiSecretSha256Fingerprint}` : '',
+                detail.apiKeyFingerprintChanged !== undefined && detail.apiKeyFingerprintChanged !== null ? `api_key_changed=${yesNo(detail.apiKeyFingerprintChanged)}` : '',
+                detail.apiSecretFingerprintChanged !== undefined && detail.apiSecretFingerprintChanged !== null ? `secret_changed=${yesNo(detail.apiSecretFingerprintChanged)}` : '',
+                detail.vaultOverwriteVerified !== undefined && detail.vaultOverwriteVerified !== null ? `overwrite_verified=${yesNo(detail.vaultOverwriteVerified)}` : '',
+                detail.timestampSaved ? `saved_at=${detail.timestampSaved}` : '',
+                detail.source ? `source=${detail.source}` : '',
+                detail.cacheBypassed !== undefined ? `cache_bypassed=${yesNo(detail.cacheBypassed)}` : '',
+                'secret_values_returned=no'
+            ].filter(Boolean);
+            const current = log.textContent && !log.textContent.startsWith('Vault operation log will show')
+                ? log.textContent
+                : '';
+            log.textContent = `${lines.join('\n')}${current ? `\n\n${current}` : ''}`;
+        }
+
+        function renderKrakenVaultReadback(readback = null, verifySource = null) {
+            latestKrakenVaultReadback = readback || latestKrakenVaultReadback;
+            const effective = readback || latestKrakenVaultReadback || {};
+            const source = verifySource || {};
+
+            setKrakenAuthDiagnosticText('kraken-vault-key-fingerprint', effective.apiKeySha256Fingerprint || 'No saved key fingerprint.');
+            setKrakenAuthDiagnosticText('kraken-vault-secret-fingerprint', effective.apiSecretSha256Fingerprint || 'No saved secret fingerprint.');
+            setKrakenAuthDiagnosticText('kraken-vault-saved-at', effective.timestampSaved || effective.rotatedAt || 'Not saved');
+            setKrakenAuthDiagnosticText('kraken-vault-source-note', effective.vaultLoadSource
+                ? `${effective.vaultLoadSource} · decode ${yesNo(effective.vaultDecodeSucceeded)} · metadata match ${effective.readbackMatchesMetadata === null ? 'Unknown' : yesNo(effective.readbackMatchesMetadata)}`
+                : 'Vault readback pending.');
+            setKrakenAuthDiagnosticText('kraken-verify-source', source.source || effective.vaultLoadSource || 'Not checked');
+            setKrakenAuthDiagnosticText('kraken-verify-source-note', source.referenceName
+                ? `Reference ${source.referenceName} · cache bypassed ${yesNo(source.cacheBypassed)}`
+                : 'Verification source pending.');
+        }
+
         function renderKrakenAuthDiagnostics(data = {}) {
             const diagnostics = data.diagnostics || data;
             latestKrakenAuthDiagnostics = diagnostics;
+            renderKrakenVaultReadback(diagnostics.vaultReadback || data.vaultReadback || null, diagnostics.verifySource || data.verifySource || null);
             const credential = diagnostics.credentialDiagnostics || {};
             const selfTest = diagnostics.localSelfTest || {};
             const failure = diagnostics.failureClassification || {};
@@ -3265,6 +3390,8 @@
             const credential = diagnostics.credentialDiagnostics || {};
             const selfTest = diagnostics.localSelfTest || {};
             const failure = diagnostics.failureClassification || {};
+            const vaultReadback = diagnostics.vaultReadback || latestKrakenVaultReadback || {};
+            const verifySource = diagnostics.verifySource || {};
             const lines = [
                 'Kraken auth debug - redacted',
                 `Endpoint: ${diagnostics.endpoint || '/0/private/Balance'}`,
@@ -3272,6 +3399,11 @@
                 `Secret exists: ${yesNo(diagnostics.apiSecretExists ?? credential.apiSecretExists)}`,
                 `API key fingerprint: ${credential.apiKeySha256Fingerprint || 'missing'}`,
                 `Secret fingerprint: ${credential.apiSecretSha256Fingerprint || 'missing'}`,
+                `Vault readback key fingerprint: ${vaultReadback.apiKeySha256Fingerprint || 'missing'}`,
+                `Vault readback secret fingerprint: ${vaultReadback.apiSecretSha256Fingerprint || 'missing'}`,
+                `Vault readback saved at: ${vaultReadback.timestampSaved || vaultReadback.rotatedAt || 'missing'}`,
+                `Verify source: ${verifySource.source || vaultReadback.vaultLoadSource || 'missing'}`,
+                `Verify cache bypassed: ${yesNo(verifySource.cacheBypassed)}`,
                 `API key and secret fingerprints match: ${yesNo(credential.apiKeyAndSecretFingerprintsMatch)}`,
                 `Vault decode succeeded: ${yesNo(credential.vaultDecodeSucceeded)}`,
                 `Vault round trip verified at save: ${yesNo(credential.vaultRoundTripVerifiedAtSave)}`,
@@ -3317,6 +3449,11 @@
             });
             const data = await response.json();
             renderKrakenAuthDiagnostics(data);
+            appendKrakenVaultLog(response.ok ? 'Raw Kraken Balance diagnostic used current vault values' : 'Raw Kraken Balance diagnostic blocked', {
+                ...(data.diagnostics?.vaultReadback || {}),
+                ...(data.diagnostics?.verifySource || {}),
+                operation: 'raw-balance'
+            });
             document.getElementById('kraken-live-result').innerHTML = `
                 <article class="phase6f-check-item ${response.ok && data.diagnostics?.failureClassification?.id === 'works_safely' ? 'status-success' : 'status-warning'}">
                     <strong>${escapeHtml(data.diagnostics?.failureClassification?.label || 'Kraken diagnostics complete')}</strong>
@@ -3366,8 +3503,9 @@
             document.getElementById('kraken-live-setup-walkthrough').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        async function saveKrakenLiveSetupKey() {
+        async function saveKrakenLiveSetupKey(options = {}) {
             const output = document.getElementById('kraken-live-result');
+            const replaceExisting = Boolean(options.replaceExisting);
             const apiKey = document.getElementById('kraken-live-api-key').value.trim();
             const apiSecret = document.getElementById('kraken-live-api-secret').value.trim();
             const missing = krakenLiveRequiredConfirmations();
@@ -3389,7 +3527,9 @@
             }
 
             syncKrakenLiveChecklistToPhase6E();
-            output.textContent = 'Saving key to encrypted local vault. Secret values will be cleared from the screen.';
+            output.textContent = replaceExisting
+                ? 'Replacing existing key in encrypted local vault. Old verification state will be cleared.'
+                : 'Saving key to encrypted local vault. Secret values will be cleared from the screen.';
             await ensureProductionConnector('kraken');
             const response = await fetch('/api/v1/live-trading-launch/phase6e/save-kraken-key', {
                 method: 'POST',
@@ -3397,6 +3537,7 @@
                 body: JSON.stringify({
                     apiKey,
                     apiSecret,
+                    replaceExisting,
                     permissionsChecklist: phase6EPermissionsChecklist()
                 })
             });
@@ -3420,13 +3561,43 @@
             setKrakenLiveStep(5, 'Key saved. Now verify the Kraken connection.');
             output.innerHTML = `
                 <article class="phase6f-check-item status-success">
-                    <strong>Key saved safely</strong>
-                    <p>Secret values were saved to the encrypted local vault and cleared from the screen.</p>
-                    <small>Next: click Verify Connection. No live order was placed.</small>
+                    <strong>${data.saved?.replacedExistingKey ? 'Existing key replaced safely' : 'Key saved safely'}</strong>
+                    <p>Current saved API key fingerprint: ${escapeHtml(data.saved?.apiKeySha256Fingerprint || 'saved')}.</p>
+                    <p>Current saved secret fingerprint: ${escapeHtml(data.saved?.apiSecretSha256Fingerprint || 'saved')}.</p>
+                    <small>Overwrite verified: ${escapeHtml(yesNo(data.saved?.vaultOverwriteVerified))}. Next: click Verify Connection. No live order was placed.</small>
                 </article>
             `;
+            appendKrakenVaultLog(data.saved?.replacedExistingKey ? 'Kraken setup key replaced' : 'Kraken setup key saved', {
+                ...(data.saved || {}),
+                ...(data.saved?.vaultReadback || {}),
+                source: 'save_route'
+            });
+            renderKrakenVaultReadback(data.saved?.vaultReadback || data.vaultReadback || null, data.saved?.latestCredentialSource || null);
+            await loadKrakenAuthDiagnosticStatus();
             await loadPhase6FStatus();
             await loadPhase6Status();
+        }
+
+        async function replaceKrakenLiveSetupKey() {
+            await saveKrakenLiveSetupKey({ replaceExisting: true });
+        }
+
+        async function deleteSavedKrakenCredentials() {
+            document.getElementById('kraken-live-result').innerHTML = `
+                <article class="phase6f-check-item status-info">
+                    <strong>Deleting saved Kraken credentials</strong>
+                    <p>The encrypted vault entry is being removed. Live trading remains locked.</p>
+                    <small>No order endpoint is called.</small>
+                </article>
+            `;
+            await deletePhase6EKrakenKey();
+            document.getElementById('kraken-live-result').innerHTML = `
+                <article class="phase6f-check-item status-success">
+                    <strong>Saved Kraken credentials deleted</strong>
+                    <p>The next verification must use newly saved vault values.</p>
+                    <small>No live order was placed. No order endpoint was called.</small>
+                </article>
+            `;
         }
 
         async function verifyKrakenLiveSetupConnection() {
@@ -3595,6 +3766,12 @@
             });
             const data = await response.json();
             latestPhase6FReadiness = data.krakenReadiness || latestPhase6FReadiness;
+            renderKrakenVaultReadback(data.vaultReadback || null, data.verifySource || null);
+            appendKrakenVaultLog(response.ok ? 'Phase 6F Verify used current vault values' : 'Phase 6F Verify blocked after current vault load', {
+                ...(data.vaultReadback || {}),
+                ...(data.verifySource || {}),
+                operation: 'phase6f-verify'
+            });
 
             if (!response.ok && !data.phase6F) {
                 document.getElementById('phase6f-operator-results').innerHTML = `
@@ -3674,7 +3851,10 @@
         window.EtherealAIPhase6E = {
             startPhase6EWalkthrough,
             savePhase6EKrakenKey,
+            replacePhase6EKrakenKey,
             deletePhase6EKrakenKey,
+            readKrakenVaultFingerprints,
+            clearKrakenAuthState,
             verifyPhase6EKrakenKey,
             runPhase6EKrakenDryRun,
             loadPhase6EWalkthrough
@@ -3690,9 +3870,13 @@
         window.EtherealAIKrakenLiveSetup = {
             startKrakenLiveSetupWalkthrough,
             saveKrakenLiveSetupKey,
+            replaceKrakenLiveSetupKey,
+            deleteSavedKrakenCredentials,
             verifyKrakenLiveSetupConnection,
             runKrakenLiveSetupDryRun,
             buildKrakenLiveSetupEligibility,
+            readKrakenVaultFingerprints,
+            clearKrakenAuthState,
             loadKrakenAuthDiagnosticStatus,
             testRawKrakenBalanceEndpoint,
             toggleKrakenAuthDebug,
@@ -3701,7 +3885,7 @@
 
         document.addEventListener('click', event => {
             const action = event.target?.closest?.(
-                '#start-kraken-live-setup, #kraken-live-prev-step, #kraken-live-next-step, #kraken-live-save-key, #kraken-live-verify, #kraken-live-dry-run, #kraken-live-preview, #kraken-auth-test-balance, #kraken-auth-debug-show, #phase6e-start, #phase6e-save-key, #phase6e-delete-key, #phase6e-verify-key, #phase6e-dry-run, #phase6f-refresh, #phase6f-verify, #phase6f-preview, #phase6f-enable'
+                '#start-kraken-live-setup, #kraken-live-prev-step, #kraken-live-next-step, #kraken-live-save-key, #kraken-live-replace-key, #kraken-live-delete-key, #kraken-live-clear-cache, #kraken-live-verify, #kraken-live-dry-run, #kraken-live-preview, #kraken-auth-test-balance, #kraken-auth-readback, #kraken-auth-clear-cache, #kraken-auth-delete-key, #kraken-auth-debug-show, #phase6e-start, #phase6e-save-key, #phase6e-replace-key, #phase6e-delete-key, #phase6e-clear-cache, #phase6e-readback-key, #phase6e-verify-key, #phase6e-dry-run, #phase6f-refresh, #phase6f-verify, #phase6f-preview, #phase6f-enable'
             );
             if (!action) return;
 
@@ -3711,14 +3895,23 @@
                 'kraken-live-prev-step': () => setKrakenLiveStep(currentKrakenLiveStep - 1),
                 'kraken-live-next-step': () => setKrakenLiveStep(currentKrakenLiveStep + 1),
                 'kraken-live-save-key': saveKrakenLiveSetupKey,
+                'kraken-live-replace-key': replaceKrakenLiveSetupKey,
+                'kraken-live-delete-key': deleteSavedKrakenCredentials,
+                'kraken-live-clear-cache': clearKrakenAuthState,
                 'kraken-live-verify': verifyKrakenLiveSetupConnection,
                 'kraken-live-dry-run': runKrakenLiveSetupDryRun,
                 'kraken-live-preview': buildKrakenLiveSetupEligibility,
                 'kraken-auth-test-balance': testRawKrakenBalanceEndpoint,
+                'kraken-auth-readback': readKrakenVaultFingerprints,
+                'kraken-auth-clear-cache': clearKrakenAuthState,
+                'kraken-auth-delete-key': deleteSavedKrakenCredentials,
                 'kraken-auth-debug-show': toggleKrakenAuthDebug,
                 'phase6e-start': startPhase6EWalkthrough,
                 'phase6e-save-key': savePhase6EKrakenKey,
+                'phase6e-replace-key': replacePhase6EKrakenKey,
                 'phase6e-delete-key': deletePhase6EKrakenKey,
+                'phase6e-clear-cache': clearKrakenAuthState,
+                'phase6e-readback-key': readKrakenVaultFingerprints,
                 'phase6e-verify-key': verifyPhase6EKrakenKey,
                 'phase6e-dry-run': runPhase6EKrakenDryRun,
                 'phase6f-refresh': loadPhase6FStatus,

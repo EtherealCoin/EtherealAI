@@ -3952,6 +3952,8 @@ function checkExchangeProductionExecutionModule() {
     runKrakenLocalAuthSelfTest,
     classifyKrakenAuthDiagnosticFailure,
     runKrakenAuthDiagnostics,
+    getProductionVaultReadbackDiagnostics,
+    clearKrakenAuthRuntimeState,
     classifyKrakenAuthenticationIssue,
     buildPhase6FTinyLivePreview,
     buildPhase6FOperatorResult,
@@ -4381,6 +4383,7 @@ function checkExchangeProductionExecutionModule() {
     responseBody: '{"error":["EAPI:Invalid key"]}',
     requestReachedKraken: true
   });
+  const krakenRuntimeClear = clearKrakenAuthRuntimeState();
   const boundary = createProductionSafetyBoundary(false);
 
   if (
@@ -4406,6 +4409,7 @@ function checkExchangeProductionExecutionModule() {
     || PHASE6B_ACTIVATION_EXCHANGE_GUIDES.kraken.recommendedFirst !== true
     || KRAKEN_PHASE6E_WALKTHROUGH.displayName !== 'Kraken'
     || !KRAKEN_PHASE6E_WALKTHROUGH.permissionsToDisable.some(item => /Withdraw Funds/.test(item.label))
+    || KRAKEN_PHASE6E_WALKTHROUGH.keyNameSuggestion !== 'EtherealAI Live Test'
     || PHASE6B_ACTIVATION_EXCHANGE_GUIDES.binance.recommendedFirst !== false
     || PHASE6_PRODUCTION_ADAPTERS.binance.adapterStatus !== 'production_route_ready_locked'
     || !PHASE6_PRODUCTION_ADAPTERS.coinbase
@@ -4458,6 +4462,10 @@ function checkExchangeProductionExecutionModule() {
     || phase6FInvalidSignature.label !== 'Kraken rejected the signature'
     || !phase6FInvalidSignature.nextClick.includes('Test Raw Kraken Balance Endpoint')
     || typeof runKrakenAuthDiagnostics !== 'function'
+    || typeof getProductionVaultReadbackDiagnostics !== 'function'
+    || typeof clearKrakenAuthRuntimeState !== 'function'
+    || krakenRuntimeClear.credentialCacheCleared !== true
+    || krakenRuntimeClear.secretValuesReturned !== false
     || krakenCredentialDiagnostics.apiKeyExists !== true
     || krakenCredentialDiagnostics.apiSecretExists !== true
     || krakenCredentialDiagnostics.apiSecretBase64RoundTripValid !== true
@@ -8048,7 +8056,10 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('Phase 6E: Real Kraken API Key Connection Walkthrough')
     || !html.includes('Start Kraken Key Walkthrough')
     || !html.includes('Save Kraken Key To Vault')
-    || !html.includes('Delete / Rotate Kraken Key')
+    || !html.includes('Replace Existing Key')
+    || !html.includes('Delete Saved Credentials')
+    || !html.includes('Clear Cached Auth State')
+    || !html.includes('Read Vault Fingerprints')
     || !html.includes('Verify Kraken Key')
     || !html.includes('Run Kraken Dry-Run Proof')
     || !html.includes('window.EtherealAIPhase6E')
@@ -8113,6 +8124,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('/api/v1/live-trading-launch/phase6e/walkthrough')
     || !html.includes('/api/v1/live-trading-launch/phase6e/save-kraken-key')
     || !html.includes('/api/v1/live-trading-launch/phase6e/kraken-key')
+    || !html.includes('/api/v1/live-trading-launch/phase6e/kraken-key/readback')
+    || !html.includes('/api/v1/live-trading-launch/phase6e/clear-auth-cache')
     || !html.includes('/api/v1/live-trading-launch/phase6e/verify-kraken-key')
     || !html.includes('/api/v1/live-trading-launch/phase6e/dry-run-proof')
     || !html.includes('/api/v1/live-trading-launch/phase6f/status')
@@ -8177,6 +8190,7 @@ function checkLiveTradingLaunchCenterUi() {
     || !styles.includes('.kraken-live-status-grid')
     || !styles.includes('.kraken-auth-diagnostics')
     || !styles.includes('.kraken-auth-diagnostic-grid')
+    || !styles.includes('.kraken-vault-operation-log')
     || !styles.includes('.kraken-auth-debug-log')
     || !styles.includes('.phase6e-wizard')
     || !styles.includes('.phase6e-summary-grid')
@@ -8222,6 +8236,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !routes.includes("app.get('/api/v1/live-trading-launch/phase6e/walkthrough'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase6e/save-kraken-key'")
     || !routes.includes("app.delete('/api/v1/live-trading-launch/phase6e/kraken-key'")
+    || !routes.includes("app.get('/api/v1/live-trading-launch/phase6e/kraken-key/readback'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/phase6e/clear-auth-cache'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase6e/verify-kraken-key'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase6e/dry-run-proof'")
     || !routes.includes("app.get('/api/v1/live-trading-launch/phase6f/status'")
@@ -8282,6 +8298,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !server.includes('buildPhase6FOperatorResult')
     || !server.includes('buildPhase6FTinyLivePreview')
     || !server.includes('runKrakenAuthDiagnostics')
+    || !server.includes('getProductionVaultReadbackDiagnostics')
+    || !server.includes('clearKrakenAuthRuntimeState')
     || !server.includes('runProductionOrderLifecycle')
     || !server.includes('queryProductionOrderStatus')
     || !server.includes('cancelProductionOrder')
@@ -8316,6 +8334,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !routeRegistration.includes('buildPhase6FOperatorResult')
     || !routeRegistration.includes('buildPhase6FTinyLivePreview')
     || !routeRegistration.includes('runKrakenAuthDiagnostics')
+    || !routeRegistration.includes('getProductionVaultReadbackDiagnostics')
+    || !routeRegistration.includes('clearKrakenAuthRuntimeState')
     || !routeRegistration.includes('runProductionOrderLifecycle')
     || !routeRegistration.includes('queryProductionOrderStatus')
     || !routeRegistration.includes('cancelProductionOrder')
@@ -8403,6 +8423,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !phase6Production.includes('classifyKrakenAuthDiagnosticFailure')
     || !phase6Production.includes('runKrakenAuthDiagnostics')
     || !phase6Production.includes('runKrakenLocalAuthSelfTest')
+    || !phase6Production.includes('getProductionVaultReadbackDiagnostics')
+    || !phase6Production.includes('clearKrakenAuthRuntimeState')
     || !phase6Production.includes('buildPhase6FOperatorResult')
     || !phase6Production.includes('buildPhase6FTinyLivePreview')
     || !phase6Production.includes('PHASE6_PRODUCTION_ADAPTERS')

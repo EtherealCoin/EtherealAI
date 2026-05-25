@@ -237,6 +237,15 @@ Coordination runs are saved locally in SQLite. Plan-only mode records agent plan
 
 Hermes Agent is treated as an optional benchmark lane only. It is not installed, launched, or allowed to bypass EtherealAI safety gates without owner approval.
 
+## Kraken Vault Replacement Diagnostics
+
+The Live Trading Launch Center now includes a Kraken vault replacement/debug flow for Phase 6E/6F:
+
+- `Delete Saved Credentials`, `Replace Existing Key`, `Read Vault Fingerprints`, and `Clear Cached Auth State` are visible in the owner UI.
+- Saving a Kraken key clears prior verification, dry-run, Phase 6D/6E/6F readiness, and auth diagnostic state so old fingerprints cannot be reused as current evidence.
+- Vault readback shows only redacted API key and secret fingerprints, saved timestamp, source, and cache-bypass status. Full keys and secrets are never returned to the browser.
+- Verification and raw Balance diagnostics report that they loaded from the encrypted production vault and keep Kraken order endpoints disabled.
+
 ## GitHub Publishing Notes
 
 Before publishing, confirm the target GitHub owner/repository. This workspace is configured for the private GitHub target:

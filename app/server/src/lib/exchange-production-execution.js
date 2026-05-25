@@ -240,7 +240,7 @@ const KRAKEN_PHASE6E_WALKTHROUGH = {
   officialSecurityUrl: 'https://support.kraken.com/articles/api-key-security',
   officialApiKeyInfoUrl: 'https://docs.kraken.com/api/docs/rest-api/get-api-key-info/',
   officialWithdrawUrl: 'https://docs.kraken.com/api/docs/rest-api/withdraw-funds/',
-  keyNameSuggestion: 'EtherealAI MacBook Restricted',
+  keyNameSuggestion: 'EtherealAI Live Test',
   plainEnglishGoal: 'Create one restricted Kraken spot API key, save it to the encrypted local vault, verify account reads, then run a no-order production dry-run proof.',
   walkthroughSteps: [
     {
@@ -250,7 +250,7 @@ const KRAKEN_PHASE6E_WALKTHROUGH = {
     },
     {
       title: 'Name the key clearly',
-      ownerAction: 'Use a name like EtherealAI MacBook Restricted.',
+      ownerAction: 'Use the name EtherealAI Live Test.',
       whyItMatters: 'A clear name makes it easy to delete or rotate the key later.'
     },
     {
@@ -402,7 +402,7 @@ const PHASE6B_ACTIVATION_EXCHANGE_GUIDES = {
     forbiddenPermissions: ['Withdraw funds', 'Deposit funds', 'Margin', 'Futures', 'Leverage'],
     plainEnglishSteps: [
       'Log in to Kraken Pro and open Settings, then API.',
-      'Create a new API key named EtherealAI MacBook.',
+      'Create a new API key named EtherealAI Live Test.',
       'Enable account read permissions. Add order creation only when you are ready to prepare the controlled tiny live test.',
       'Leave Withdraw funds disabled. Do not enable margin, futures, leverage, or funding movement.',
       'Paste the API key and private key into the EtherealAI production vault, save, then click Test This Exchange.'
@@ -623,6 +623,22 @@ async function saveProductionVaultCredentials({ referenceName, connector, exchan
   const key = await getProductionVaultKey();
   const vault = await readProductionVaultFile();
   const now = new Date().toISOString();
+  const previousEntry = vault.entries[referenceName] || null;
+  let previousReadback = null;
+
+  if (previousEntry) {
+    try {
+      previousReadback = await getProductionVaultReadbackDiagnostics(referenceName);
+    } catch (error) {
+      previousReadback = {
+        exists: true,
+        vaultDecodeSucceeded: false,
+        error: error.message,
+        secretValuesReturned: false
+      };
+    }
+  }
+
   const payload = {
     exchangeName: normalizePhase6ExchangeName(exchangeName),
     connectorId: connector.id,
@@ -668,17 +684,34 @@ async function saveProductionVaultCredentials({ referenceName, connector, exchan
 
   await writeProductionVaultFile(vault);
 
+  const vaultReadback = await getProductionVaultReadbackDiagnostics(referenceName);
+  const vaultOverwriteVerified = vaultReadback.exists === true
+    && vaultReadback.vaultDecodeSucceeded === true
+    && vaultReadback.apiKeySha256Fingerprint === apiKeySha256Fingerprint
+    && vaultReadback.apiSecretSha256Fingerprint === apiSecretSha256Fingerprint;
+  const previousApiKeySha256Fingerprint = previousReadback?.apiKeySha256Fingerprint || previousEntry?.metadata?.apiKeySha256Fingerprint || '';
+  const previousApiSecretSha256Fingerprint = previousReadback?.apiSecretSha256Fingerprint || previousEntry?.metadata?.apiSecretSha256Fingerprint || '';
+
   return {
     referenceName,
     exchangeName: payload.exchangeName,
     connectorId: connector.id,
     stored: true,
+    operation: previousEntry ? 'replaced_existing_key' : 'saved_new_key',
+    replacedExistingKey: Boolean(previousEntry),
     apiKeyFingerprint,
     apiKeySha256Fingerprint,
     apiSecretSha256Fingerprint,
+    previousApiKeySha256Fingerprint,
+    previousApiSecretSha256Fingerprint,
+    apiKeyFingerprintChanged: previousApiKeySha256Fingerprint ? previousApiKeySha256Fingerprint !== apiKeySha256Fingerprint : null,
+    apiSecretFingerprintChanged: previousApiSecretSha256Fingerprint ? previousApiSecretSha256Fingerprint !== apiSecretSha256Fingerprint : null,
     vaultRoundTripVerified: roundTripVerified,
+    vaultOverwriteVerified,
+    vaultReadback,
     hasExtraPhrase: Boolean(credentials.passphrase),
     rotatedAt: now,
+    timestampSaved: now,
     secretValuesReturned: false,
     vaultPath: EXCHANGE_PRODUCTION_VAULT_PATH
   };
@@ -729,6 +762,69 @@ async function getProductionVaultStatus(referenceName = null) {
     })),
     secretValuesReturned: false
   };
+}
+
+async function getProductionVaultReadbackDiagnostics(referenceName) {
+  const vaultStatus = await getProductionVaultStatus(referenceName);
+  const entry = vaultStatus.entries?.[0] || null;
+
+  if (!entry) {
+    return {
+      referenceName,
+      exists: false,
+      vaultDecodeSucceeded: false,
+      apiKeySha256Fingerprint: '',
+      apiSecretSha256Fingerprint: '',
+      timestampSaved: '',
+      rotatedAt: '',
+      readbackMatchesMetadata: null,
+      secretValuesReturned: false
+    };
+  }
+
+  try {
+    const credentials = await loadProductionVaultCredentials(referenceName);
+    const credentialDiagnostics = buildKrakenCredentialDiagnostics({
+      credentials,
+      vaultMetadata: entry.metadata || {}
+    });
+
+    return {
+      referenceName,
+      exists: true,
+      exchangeName: entry.exchangeName,
+      connectorId: entry.connectorId,
+      vaultDecodeSucceeded: credentialDiagnostics.vaultDecodeSucceeded,
+      apiKeyFingerprint: credentialDiagnostics.apiKeyFingerprint,
+      apiKeySha256Fingerprint: credentialDiagnostics.apiKeySha256Fingerprint,
+      apiSecretSha256Fingerprint: credentialDiagnostics.apiSecretSha256Fingerprint,
+      apiKeyAndSecretFingerprintsMatch: credentialDiagnostics.apiKeyAndSecretFingerprintsMatch,
+      apiKeyFingerprintMatchesVaultMetadata: credentialDiagnostics.apiKeyFingerprintMatchesVaultMetadata,
+      apiSecretFingerprintMatchesVaultMetadata: credentialDiagnostics.apiSecretFingerprintMatchesVaultMetadata,
+      readbackMatchesMetadata: credentialDiagnostics.savedVaultValuesMatchEncryptedMetadata,
+      vaultRoundTripVerifiedAtSave: credentialDiagnostics.vaultRoundTripVerifiedAtSave,
+      timestampSaved: credentials.savedAt || entry.metadata?.rotatedAt || '',
+      rotatedAt: entry.metadata?.rotatedAt || credentials.savedAt || '',
+      vaultLoadSource: 'encrypted_production_vault_file',
+      secretValuesReturned: false
+    };
+  } catch (error) {
+    return {
+      referenceName,
+      exists: true,
+      exchangeName: entry.exchangeName,
+      connectorId: entry.connectorId,
+      vaultDecodeSucceeded: false,
+      apiKeySha256Fingerprint: entry.metadata?.apiKeySha256Fingerprint || '',
+      apiSecretSha256Fingerprint: entry.metadata?.apiSecretSha256Fingerprint || '',
+      timestampSaved: entry.metadata?.rotatedAt || '',
+      rotatedAt: entry.metadata?.rotatedAt || '',
+      readbackMatchesMetadata: false,
+      vaultLoadSource: 'encrypted_production_vault_file',
+      error: error.message,
+      secretValuesReturned: false
+    };
+  }
 }
 
 function normalizeProductionSymbol(exchangeName, symbol = 'BTC/USDT') {
@@ -1373,6 +1469,22 @@ function createKrakenNonce(seed = Date.now()) {
     : Date.now() * 1000;
   krakenNonceFloor = Math.max(krakenNonceFloor + 1, base);
   return String(krakenNonceFloor);
+}
+
+function clearKrakenAuthRuntimeState() {
+  const previousNonceFloor = krakenNonceFloor;
+  krakenNonceFloor = Math.max(Date.now() * 1000, krakenNonceFloor);
+
+  return {
+    credentialCacheCleared: true,
+    credentialCacheExisted: false,
+    nonceFloorAdvanced: krakenNonceFloor >= previousNonceFloor,
+    previousNonceFloorFingerprint: previousNonceFloor ? fingerprintValue(String(previousNonceFloor)) : '',
+    currentNonceFloorFingerprint: fingerprintValue(String(krakenNonceFloor)),
+    clearedAt: new Date().toISOString(),
+    plainEnglish: 'Kraken credential-derived UI state was cleared. EtherealAI does not keep decrypted Kraken keys in memory between requests; the nonce floor was kept monotonic for Kraken safety.',
+    secretValuesReturned: false
+  };
 }
 
 function createKrakenSignedPayload({ credentials, requestPath, params = {} }) {
@@ -4495,7 +4607,7 @@ function buildPhase6EFinalStatus({ credentialSaved = false, krakenReadiness = nu
       status: 'BLOCKED',
       tone: 'danger',
       plainEnglish: 'The Kraken key appears unsafe for EtherealAI. Delete it on Kraken, rotate it in EtherealAI, and recreate a restricted spot key with withdrawals, transfers, margin, futures, and leverage disabled.',
-      nextClick: 'Delete / Rotate Kraken Key',
+      nextClick: 'Delete Saved Credentials',
       tinyLiveEligible: false
     };
   }
@@ -4641,6 +4753,15 @@ function buildPhase6EWalkthrough({
     walkthrough: KRAKEN_PHASE6E_WALKTHROUGH,
     credentialSaved,
     apiKeyFingerprint: productionConnection.apiKeyFingerprint || null,
+    apiKeySha256Fingerprint: productionConnection.apiKeySha256Fingerprint || null,
+    apiSecretSha256Fingerprint: productionConnection.apiSecretSha256Fingerprint || null,
+    previousApiKeySha256Fingerprint: productionConnection.previousApiKeySha256Fingerprint || null,
+    previousApiSecretSha256Fingerprint: productionConnection.previousApiSecretSha256Fingerprint || null,
+    apiKeyFingerprintChanged: productionConnection.apiKeyFingerprintChanged ?? null,
+    apiSecretFingerprintChanged: productionConnection.apiSecretFingerprintChanged ?? null,
+    vaultOverwriteVerified: productionConnection.vaultOverwriteVerified ?? null,
+    vaultReadback: productionConnection.vaultReadback || null,
+    latestCredentialSource: productionConnection.latestCredentialSource || productionConnection.phase6EVerifySource || null,
     riskProfileReady: Boolean(riskProfile?.id) && riskProfile.status === 'active' && Number(riskProfile.kill_switch_enabled || 0) === 0,
     finalStatus,
     checklist,
@@ -4689,7 +4810,7 @@ function classifyKrakenAuthenticationIssue({ error = null, krakenReadiness = nul
       id: 'unsafe_permission',
       label: 'Unsafe permission detected',
       plainEnglish: 'The Kraken key is not safe for EtherealAI. Delete it, recreate a restricted spot key, and keep withdrawals, transfers, margin, futures, and leverage disabled.',
-      nextClick: 'Delete / Rotate Kraken Key'
+      nextClick: 'Delete Saved Credentials'
     };
   }
 
@@ -4935,7 +5056,7 @@ function buildPhase6FOperatorResult({
       passed: unsafePermissionsDetected !== true,
       statusWhenFalse: 'Unsafe',
       plainEnglish: unsafePermissionsDetected ? 'Unsafe Kraken permission signal detected.' : 'No unsafe permission signal is detected.',
-      nextClick: 'Delete / Rotate Kraken Key'
+      nextClick: 'Delete Saved Credentials'
     }),
     buildPhase6FStatusItem({
       id: 'signature_accepted',
@@ -5092,6 +5213,8 @@ module.exports = {
   loadProductionVaultCredentials,
   deleteProductionVaultCredentials,
   getProductionVaultStatus,
+  getProductionVaultReadbackDiagnostics,
+  clearKrakenAuthRuntimeState,
   normalizeProductionOrderDraft,
   createProductionOrderFingerprint,
   testProductionExchangeConnection,

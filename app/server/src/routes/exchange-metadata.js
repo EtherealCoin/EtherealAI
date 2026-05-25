@@ -130,6 +130,8 @@ function registerExchangeMetadataRoutes(app, {
   loadProductionVaultCredentials,
   deleteProductionVaultCredentials,
   getProductionVaultStatus,
+  getProductionVaultReadbackDiagnostics,
+  clearKrakenAuthRuntimeState,
   normalizeProductionOrderDraft,
   createProductionOrderFingerprint,
   testProductionExchangeConnection,
@@ -2256,6 +2258,10 @@ function registerExchangeMetadataRoutes(app, {
         });
       }
 
+      const referenceName = connector?.settings?.productionConnection?.referenceName || null;
+      const vaultReadbackBeforeVerify = referenceName
+        ? await getProductionVaultReadbackDiagnostics(referenceName)
+        : null;
       const credentials = await loadConnectorProductionCredentialsForUser(connector, req.session.userId);
 
       if (!credentials) {
@@ -3395,6 +3401,8 @@ function registerExchangeMetadataRoutes(app, {
         connectorId: connector.id,
         exchangeName: 'kraken'
       });
+      const previousVaultReadback = await getProductionVaultReadbackDiagnostics(referenceName);
+      const runtimeClear = clearKrakenAuthRuntimeState();
       const reference = await upsertReadOnlyLocalReference({
         userId: req.session.userId,
         existingReferenceId: null,
@@ -3414,17 +3422,50 @@ function registerExchangeMetadataRoutes(app, {
         referenceName,
         localReferenceId: reference.id,
         connectionStatus: 'phase6e_key_saved_locked',
-        plainEnglishStatus: 'Kraken key saved to the encrypted local vault. Verify it before any dry-run proof. Live trading remains locked.',
+        plainEnglishStatus: saved.replacedExistingKey
+          ? 'Existing Kraken key was replaced in the encrypted local vault. Previous verification and diagnostic state was cleared. Verify again before any dry-run proof. Live trading remains locked.'
+          : 'Kraken key saved to the encrypted local vault. Verify it before any dry-run proof. Live trading remains locked.',
         phase6EChecklist: permissionsChecklist.phase6E,
         phase6EKeySavedAt: saved.rotatedAt,
         phase6EStatus: 'key_saved',
+        phase6EReadiness: null,
+        phase6EDryRunProof: null,
+        phase6EPreflight: null,
+        phase6ESimulationPreview: null,
+        phase6EFinalStatus: null,
+        phase6FReadiness: null,
+        phase6FDryRunProof: null,
+        phase6FPreflight: null,
+        phase6FSimulationPreview: null,
+        phase6FModeState: null,
+        phase6DReadiness: null,
+        phase6DDryRunProof: null,
+        phase6DPreflight: null,
+        phase6DSimulationPreview: null,
+        krakenAuthDiagnostics: null,
+        krakenAuthDiagnosticsAt: null,
         lastCredentialRotationAt: saved.rotatedAt,
         rotationNumber: Number(previousConnection.rotationNumber || 0) + 1,
         permissionsChecklist,
         apiKeyFingerprint: saved.apiKeyFingerprint,
         apiKeySha256Fingerprint: saved.apiKeySha256Fingerprint,
         apiSecretSha256Fingerprint: saved.apiSecretSha256Fingerprint,
+        previousApiKeySha256Fingerprint: saved.previousApiKeySha256Fingerprint,
+        previousApiSecretSha256Fingerprint: saved.previousApiSecretSha256Fingerprint,
+        apiKeyFingerprintChanged: saved.apiKeyFingerprintChanged,
+        apiSecretFingerprintChanged: saved.apiSecretFingerprintChanged,
         vaultRoundTripVerified: saved.vaultRoundTripVerified,
+        vaultOverwriteVerified: saved.vaultOverwriteVerified,
+        vaultReadback: saved.vaultReadback,
+        previousVaultReadback,
+        runtimeClear,
+        latestCredentialSource: {
+          source: 'encrypted_production_vault',
+          referenceName,
+          loadedAt: saved.timestampSaved,
+          cacheClearedBeforeSave: true,
+          secretValuesReturned: false
+        },
         adapterStatus: adapter.adapterStatus,
         productionOrderEndpointCalled: false,
         productionOrderEndpointEnabled: false
@@ -3455,7 +3496,14 @@ function registerExchangeMetadataRoutes(app, {
             apiKeyFingerprint: saved.apiKeyFingerprint,
             apiKeySha256Fingerprint: saved.apiKeySha256Fingerprint,
             apiSecretSha256Fingerprint: saved.apiSecretSha256Fingerprint,
+            previousApiKeySha256Fingerprint: saved.previousApiKeySha256Fingerprint,
+            previousApiSecretSha256Fingerprint: saved.previousApiSecretSha256Fingerprint,
+            apiKeyFingerprintChanged: saved.apiKeyFingerprintChanged,
+            apiSecretFingerprintChanged: saved.apiSecretFingerprintChanged,
             vaultRoundTripVerified: saved.vaultRoundTripVerified,
+            vaultOverwriteVerified: saved.vaultOverwriteVerified,
+            vaultReadback: saved.vaultReadback,
+            runtimeClear,
             secretValuesReturnedToUi: false,
             productionOrderEndpointCalled: false,
             productionOrderEndpointEnabled: false,
@@ -3475,10 +3523,21 @@ function registerExchangeMetadataRoutes(app, {
           apiKeyFingerprint: saved.apiKeyFingerprint,
           apiKeySha256Fingerprint: saved.apiKeySha256Fingerprint,
           apiSecretSha256Fingerprint: saved.apiSecretSha256Fingerprint,
+          previousApiKeySha256Fingerprint: saved.previousApiKeySha256Fingerprint,
+          previousApiSecretSha256Fingerprint: saved.previousApiSecretSha256Fingerprint,
+          apiKeyFingerprintChanged: saved.apiKeyFingerprintChanged,
+          apiSecretFingerprintChanged: saved.apiSecretFingerprintChanged,
           vaultRoundTripVerified: saved.vaultRoundTripVerified,
+          vaultOverwriteVerified: saved.vaultOverwriteVerified,
+          vaultReadback: saved.vaultReadback,
+          operation: saved.operation,
+          replacedExistingKey: saved.replacedExistingKey,
+          latestCredentialSource: settings.productionConnection.latestCredentialSource,
           hasPassphrase: saved.hasExtraPhrase,
           secretValuesReturned: false
         },
+        vaultReadback: saved.vaultReadback,
+        runtimeClear,
         wizard: state.wizard,
         nextClick: 'Verify Kraken Key',
         safetyBoundary: createProductionSafetyBoundary(false)
@@ -3498,9 +3557,13 @@ function registerExchangeMetadataRoutes(app, {
     try {
       const connector = await findOrCreateProductionConnector({ exchangeName: 'kraken' });
       const referenceName = connector?.settings?.productionConnection?.referenceName || null;
+      const previousVaultReadback = referenceName
+        ? await getProductionVaultReadbackDiagnostics(referenceName)
+        : null;
       const deletion = referenceName
         ? await deleteProductionVaultCredentials(referenceName)
         : { deleted: false, referenceName: null };
+      const runtimeClear = clearKrakenAuthRuntimeState();
 
       if (referenceName) {
         await dbRun(
@@ -3523,6 +3586,17 @@ function registerExchangeMetadataRoutes(app, {
           connectionStatus: 'not_connected',
           plainEnglishStatus: 'Kraken key deleted. Phase 6E is not ready.',
           apiKeyFingerprint: null,
+          apiKeySha256Fingerprint: null,
+          apiSecretSha256Fingerprint: null,
+          previousApiKeySha256Fingerprint: previousVaultReadback?.apiKeySha256Fingerprint || null,
+          previousApiSecretSha256Fingerprint: previousVaultReadback?.apiSecretSha256Fingerprint || null,
+          vaultRoundTripVerified: null,
+          vaultOverwriteVerified: null,
+          vaultReadback: null,
+          previousVaultReadback,
+          runtimeClear,
+          krakenAuthDiagnostics: null,
+          krakenAuthDiagnosticsAt: null,
           phase6EStatus: 'key_deleted',
           phase6EReadiness: null,
           phase6EDryRunProof: null,
@@ -3551,6 +3625,8 @@ function registerExchangeMetadataRoutes(app, {
           'Phase 6E Kraken key deleted or rotated. Production order endpoint remains locked.',
           JSON.stringify({
             deleted: deletion.deleted,
+            previousVaultReadback,
+            runtimeClear,
             productionOrderEndpointCalled: false,
             productionOrderEndpointEnabled: false
           })
@@ -3561,6 +3637,8 @@ function registerExchangeMetadataRoutes(app, {
 
       res.json({
         deleted: deletion.deleted,
+        previousVaultReadback,
+        runtimeClear,
         wizard: state.wizard,
         nextClick: 'Create a new restricted Kraken key if you want to continue.',
         safetyBoundary: createProductionSafetyBoundary(false)
@@ -3575,10 +3653,135 @@ function registerExchangeMetadataRoutes(app, {
     }
   });
 
+  app.get('/api/v1/live-trading-launch/phase6e/kraken-key/readback', requireAuth, async (req, res) => {
+    try {
+      const connector = await findOrCreateProductionConnector({ exchangeName: 'kraken' });
+      const referenceName = connector?.settings?.productionConnection?.referenceName || null;
+      const vaultReadback = referenceName
+        ? await getProductionVaultReadbackDiagnostics(referenceName)
+        : {
+            exists: false,
+            vaultDecodeSucceeded: false,
+            secretValuesReturned: false
+          };
+
+      res.json({
+        vaultReadback,
+        verifySource: {
+          source: referenceName ? 'encrypted_production_vault' : 'no_saved_vault_reference',
+          referenceName,
+          loadedAt: new Date().toISOString(),
+          cacheBypassed: true,
+          secretValuesReturned: false
+        },
+        productionOrderEndpointCalled: false,
+        productionOrderEndpointEnabled: false,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('Phase 6E Kraken vault readback', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/phase6e/clear-auth-cache', requireAuth, async (req, res) => {
+    try {
+      const connector = await findOrCreateProductionConnector({ exchangeName: 'kraken' });
+      const referenceName = connector?.settings?.productionConnection?.referenceName || null;
+      const runtimeClear = clearKrakenAuthRuntimeState();
+      const vaultReadback = referenceName
+        ? await getProductionVaultReadbackDiagnostics(referenceName)
+        : null;
+
+      if (connector) {
+        const settings = mergeProductionConnectionSettings(connector, {
+          connectionStatus: referenceName ? 'phase6e_key_saved_locked' : 'not_connected',
+          plainEnglishStatus: referenceName
+            ? 'Cached Kraken verification state was cleared. The next verify will reload current encrypted vault values only.'
+            : 'Cached Kraken verification state was cleared. No Kraken key is currently saved.',
+          phase6EStatus: referenceName ? 'key_saved_cache_cleared' : 'not_connected',
+          phase6EReadiness: null,
+          phase6EDryRunProof: null,
+          phase6EPreflight: null,
+          phase6ESimulationPreview: null,
+          phase6EFinalStatus: null,
+          phase6FReadiness: null,
+          phase6FDryRunProof: null,
+          phase6FPreflight: null,
+          phase6FSimulationPreview: null,
+          phase6FModeState: null,
+          phase6DReadiness: null,
+          phase6DDryRunProof: null,
+          phase6DPreflight: null,
+          phase6DSimulationPreview: null,
+          krakenAuthDiagnostics: null,
+          krakenAuthDiagnosticsAt: null,
+          vaultReadback,
+          runtimeClear,
+          productionOrderEndpointCalled: false,
+          productionOrderEndpointEnabled: false
+        });
+
+        await dbRun(
+          `UPDATE exchange_connectors
+           SET status = ?, settings_json = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
+          [referenceName ? 'configured' : 'review_needed', JSON.stringify(settings), connector.id]
+        );
+      }
+
+      await dbRun(
+        `INSERT INTO live_trading_safety_events
+         (user_id, event_type, status, summary, payload_json)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          'phase6e_kraken_auth_cache_cleared',
+          'complete',
+          'Kraken auth verification state cleared. Future verification must reload the encrypted vault.',
+          JSON.stringify({
+            referenceName,
+            vaultReadback,
+            runtimeClear,
+            productionOrderEndpointCalled: false,
+            productionOrderEndpointEnabled: false,
+            secretValuesReturnedToUi: false
+          })
+        ]
+      );
+
+      const state = await loadPhase6EState({ userId: req.session.userId });
+
+      res.json({
+        cleared: true,
+        runtimeClear,
+        vaultReadback,
+        wizard: state.wizard,
+        nextClick: referenceName ? 'Verify Kraken Key' : 'Save Kraken Key To Vault',
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('Phase 6E Kraken auth cache clear', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
   app.post('/api/v1/live-trading-launch/phase6e/verify-kraken-key', requireAuth, async (req, res) => {
     try {
       const connector = await findOrCreateProductionConnector({ exchangeName: 'kraken' });
       const adapter = getProductionAdapter('kraken');
+      const referenceName = connector?.settings?.productionConnection?.referenceName || null;
+      const vaultReadbackBeforeVerify = referenceName
+        ? await getProductionVaultReadbackDiagnostics(referenceName)
+        : null;
       const credentials = await loadConnectorProductionCredentialsForUser(connector, req.session.userId);
 
       if (!credentials) {
@@ -3604,12 +3807,24 @@ function registerExchangeMetadataRoutes(app, {
         },
         policy: req.body?.policy || {}
       });
+      const verifySource = {
+        source: 'encrypted_production_vault',
+        referenceName,
+        loadedAt: new Date().toISOString(),
+        cacheBypassed: true,
+        apiKeySha256Fingerprint: vaultReadbackBeforeVerify?.apiKeySha256Fingerprint || '',
+        apiSecretSha256Fingerprint: vaultReadbackBeforeVerify?.apiSecretSha256Fingerprint || '',
+        vaultDecodeSucceeded: vaultReadbackBeforeVerify?.vaultDecodeSucceeded === true,
+        secretValuesReturned: false
+      };
       const settings = mergeProductionConnectionSettings(connector, {
         connectionStatus: krakenReadiness.credentialVerification?.connectionStatus || krakenReadiness.status,
         plainEnglishStatus: krakenReadiness.plainEnglishStatus,
         phase6EStatus: krakenReadiness.criticalPassed ? 'verified' : 'blocked',
         phase6EReadiness: krakenReadiness,
         phase6EVerifiedAt: new Date().toISOString(),
+        phase6EVerifySource: verifySource,
+        vaultReadback: vaultReadbackBeforeVerify,
         phase6DReadiness: krakenReadiness,
         phase6DReadinessStatus: krakenReadiness.status,
         productionOrderEndpointCalled: false,
@@ -3639,6 +3854,8 @@ function registerExchangeMetadataRoutes(app, {
             status: krakenReadiness.status,
             checksPassed: krakenReadiness.checksPassed,
             checksFailed: krakenReadiness.checksFailed,
+            verifySource,
+            vaultReadback: vaultReadbackBeforeVerify,
             productionOrderEndpointCalled: false,
             productionOrderEndpointEnabled: false,
             secretValuesReturnedToUi: false,
@@ -3656,6 +3873,8 @@ function registerExchangeMetadataRoutes(app, {
 
       res.status(krakenReadiness.criticalPassed ? 200 : 409).json({
         krakenReadiness,
+        vaultReadback: vaultReadbackBeforeVerify,
+        verifySource,
         finalStatus: buildPhase6EFinalStatus({
           credentialSaved: true,
           krakenReadiness
@@ -4032,6 +4251,13 @@ function registerExchangeMetadataRoutes(app, {
         ? await getProductionVaultStatus(referenceName)
         : { entries: [] };
       const vaultMetadata = vaultStatus.entries?.[0]?.metadata || {};
+      const vaultReadback = referenceName
+        ? await getProductionVaultReadbackDiagnostics(referenceName)
+        : {
+            exists: false,
+            vaultDecodeSucceeded: false,
+            secretValuesReturned: false
+          };
       let credentials = null;
       let vaultDecodeError = '';
 
@@ -4070,6 +4296,16 @@ function registerExchangeMetadataRoutes(app, {
           credentialSaved: Boolean(referenceName),
           apiKeyExists: credentialDiagnostics.apiKeyExists,
           apiSecretExists: credentialDiagnostics.apiSecretExists,
+          vaultReadback,
+          verifySource: {
+            source: referenceName ? 'encrypted_production_vault' : 'no_saved_vault_reference',
+            referenceName,
+            loadedAt: new Date().toISOString(),
+            cacheBypassed: true,
+            apiKeySha256Fingerprint: vaultReadback.apiKeySha256Fingerprint || '',
+            apiSecretSha256Fingerprint: vaultReadback.apiSecretSha256Fingerprint || '',
+            secretValuesReturned: false
+          },
           credentialDiagnostics,
           localSelfTest,
           lastDiagnostic: connector?.settings?.productionConnection?.krakenAuthDiagnostics || null,
@@ -4102,6 +4338,13 @@ function registerExchangeMetadataRoutes(app, {
         ? await getProductionVaultStatus(referenceName)
         : { entries: [] };
       const vaultMetadata = vaultStatus.entries?.[0]?.metadata || {};
+      const vaultReadback = referenceName
+        ? await getProductionVaultReadbackDiagnostics(referenceName)
+        : {
+            exists: false,
+            vaultDecodeSucceeded: false,
+            secretValuesReturned: false
+          };
       let credentials = null;
       let vaultDecodeError = '';
 
@@ -4136,6 +4379,14 @@ function registerExchangeMetadataRoutes(app, {
             endpoint: '/0/private/Balance',
             apiKeyExists: false,
             apiSecretExists: false,
+            vaultReadback,
+            verifySource: {
+              source: referenceName ? 'encrypted_production_vault' : 'no_saved_vault_reference',
+              referenceName,
+              loadedAt: new Date().toISOString(),
+              cacheBypassed: true,
+              secretValuesReturned: false
+            },
             credentialDiagnostics,
             localSelfTest,
             requestReachedKraken: false,
@@ -4162,9 +4413,22 @@ function registerExchangeMetadataRoutes(app, {
         vaultMetadata,
         requestPath: '/0/private/Balance'
       });
+      diagnostics.vaultReadback = vaultReadback;
+      diagnostics.verifySource = {
+        source: 'encrypted_production_vault',
+        referenceName,
+        loadedAt: new Date().toISOString(),
+        cacheBypassed: true,
+        apiKeySha256Fingerprint: vaultReadback.apiKeySha256Fingerprint || '',
+        apiSecretSha256Fingerprint: vaultReadback.apiSecretSha256Fingerprint || '',
+        vaultDecodeSucceeded: vaultReadback.vaultDecodeSucceeded === true,
+        secretValuesReturned: false
+      };
       const settings = mergeProductionConnectionSettings(connector, {
         krakenAuthDiagnostics: diagnostics,
         krakenAuthDiagnosticsAt: new Date().toISOString(),
+        vaultReadback,
+        phase6EVerifySource: diagnostics.verifySource,
         productionOrderEndpointCalled: false,
         productionOrderEndpointEnabled: false
       });
@@ -4196,6 +4460,8 @@ function registerExchangeMetadataRoutes(app, {
             failureClassification: diagnostics.failureClassification,
             apiKeyFingerprint: diagnostics.credentialDiagnostics?.apiKeySha256Fingerprint,
             apiSecretFingerprint: diagnostics.credentialDiagnostics?.apiSecretSha256Fingerprint,
+            vaultReadback,
+            verifySource: diagnostics.verifySource,
             nonceGenerationSucceeded: diagnostics.nonceGenerationSucceeded,
             signatureGenerationSucceeded: diagnostics.signatureGenerationSucceeded,
             productionOrderEndpointCalled: false,
@@ -4267,12 +4533,24 @@ function registerExchangeMetadataRoutes(app, {
         orderInput: requestedOrder,
         policy: req.body?.policy || {}
       });
+      const verifySource = {
+        source: 'encrypted_production_vault',
+        referenceName,
+        loadedAt: new Date().toISOString(),
+        cacheBypassed: true,
+        apiKeySha256Fingerprint: vaultReadbackBeforeVerify?.apiKeySha256Fingerprint || '',
+        apiSecretSha256Fingerprint: vaultReadbackBeforeVerify?.apiSecretSha256Fingerprint || '',
+        vaultDecodeSucceeded: vaultReadbackBeforeVerify?.vaultDecodeSucceeded === true,
+        secretValuesReturned: false
+      };
       const settings = mergeProductionConnectionSettings(connector, {
         connectionStatus: krakenReadiness.credentialVerification?.connectionStatus || krakenReadiness.status,
         plainEnglishStatus: krakenReadiness.plainEnglishStatus,
         phase6FStatus: krakenReadiness.criticalPassed ? 'authenticated_readiness_passed' : 'authenticated_readiness_blocked',
         phase6FReadiness: krakenReadiness,
         phase6FAuthenticatedAt: new Date().toISOString(),
+        phase6FVerifySource: verifySource,
+        vaultReadback: vaultReadbackBeforeVerify,
         phase6EReadiness: krakenReadiness,
         phase6DReadiness: krakenReadiness,
         phase6DReadinessStatus: krakenReadiness.status,
@@ -4304,6 +4582,8 @@ function registerExchangeMetadataRoutes(app, {
             status: krakenReadiness.status,
             checksPassed: krakenReadiness.checksPassed,
             checksFailed: krakenReadiness.checksFailed,
+            vaultReadback: vaultReadbackBeforeVerify,
+            verifySource,
             productionOrderEndpointCalled: false,
             productionOrderEndpointEnabled: false,
             secretValuesReturnedToUi: false,
@@ -4325,6 +4605,8 @@ function registerExchangeMetadataRoutes(app, {
 
       res.status(krakenReadiness.criticalPassed ? 200 : 409).json({
         krakenReadiness,
+        vaultReadback: vaultReadbackBeforeVerify,
+        verifySource,
         phase6F: state.result,
         nextClick: state.result.tinyLiveEligibility?.nextClick || krakenReadiness.nextClick,
         safetyBoundary: createProductionSafetyBoundary(false)
