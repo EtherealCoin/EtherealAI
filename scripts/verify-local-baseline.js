@@ -9099,6 +9099,15 @@ function checkSimpleOperatorModeUsabilityRefactor() {
   const header = fs.readFileSync(path.join(projectRoot, 'components/header.html'), 'utf8');
   const login = fs.readFileSync(path.join(projectRoot, 'app/client/login.html'), 'utf8');
   const logoPath = path.join(projectRoot, 'app/client/public/brand/etherealai-logo.png');
+  const brandAssetPaths = [
+    'app/client/public/brand/ethereal-real-dark-logo.png',
+    'app/client/public/brand/ethereal-digital-world.png',
+    'app/client/public/brand/ethereal-logo-generator-example.png',
+    'app/client/public/brand/ethereal-dapp-dashboard-reference.png',
+    'app/client/public/brand/ethereal-dapp-node-reference.png'
+  ].map(filePath => path.join(projectRoot, filePath));
+  const home = fs.readFileSync(path.join(projectRoot, 'app/client/index.html'), 'utf8');
+  const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
   const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
   const manual = fs.readFileSync(path.join(projectRoot, 'app/client/operator-manual.html'), 'utf8');
   const mainPages = [
@@ -9170,6 +9179,15 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !header.includes('EtherealAI logo')
     || !login.includes('login-brand-mark')
     || !fs.existsSync(logoPath)
+    || !brandAssetPaths.every(filePath => fs.existsSync(filePath))
+    || !home.includes('ethereal-world-banner')
+    || !dashboard.includes('ethereal-world-banner')
+    || !home.includes('/public/brand/ethereal-digital-world.png')
+    || !dashboard.includes('/public/brand/ethereal-digital-world.png')
+    || !styles.includes('Ethereal REAL visual identity layer')
+    || !styles.includes('.ethereal-world-banner')
+    || !styles.includes('.token-logo-studio')
+    || !styles.includes('.logo-creation-showcase')
     || !styles.includes('.operator-answer-panel')
     || !styles.includes('.operator-guided-workflow')
     || !styles.includes('.operator-training-menu')
@@ -9441,6 +9459,15 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('Multi-Chain Token Builder')
     || !solidity.includes('Website Creation Center')
     || !solidity.includes('Whitepaper Generator')
+    || !solidity.includes('Logo Creation Center')
+    || !solidity.includes('Logo Maker Art Studio')
+    || !solidity.includes('Apply Logo Brief To Token Plan')
+    || !solidity.includes('token-logo-direction')
+    || !solidity.includes('token-logo-style')
+    || !solidity.includes('token-logo-palette')
+    || !solidity.includes('/public/brand/ethereal-logo-generator-example.png')
+    || !solidity.includes('formatLogoBriefForNotes')
+    || !solidity.includes('logo-blueprint')
     || !solidity.includes('Chain Builder And Node Research')
     || !solidity.includes('Listing Readiness')
     || !solidity.includes('Cross-Chain Arbitrage Design')

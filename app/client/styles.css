@@ -5771,3 +5771,289 @@ footer {
     border-color: var(--border) !important;
     color: var(--text-primary) !important;
 }
+
+/* Ethereal REAL visual identity layer.
+   Uses the original dapp language: black surface, cyan rails, pink/purple neon,
+   compact founder/operator controls, and readable high-contrast panels. */
+body {
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--background) 92%, #000000), var(--background)),
+        var(--background-gradient) !important;
+}
+
+nav,
+.responsive-header,
+.operator-mode-bar {
+    background: color-mix(in srgb, #030006 88%, var(--brand-purple)) !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--brand-blue) 70%, var(--brand-pink)) !important;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
+}
+
+nav a,
+.operator-simple-mode nav a,
+.responsive-header nav a {
+    border: 1px solid transparent !important;
+    color: color-mix(in srgb, var(--text-primary) 82%, var(--brand-blue)) !important;
+    letter-spacing: 0.02em;
+}
+
+nav a:hover,
+.operator-simple-mode nav a:hover,
+.responsive-header nav a:hover {
+    background: color-mix(in srgb, var(--brand-blue) 16%, var(--surface-muted)) !important;
+    border-color: color-mix(in srgb, var(--brand-blue) 70%, var(--border)) !important;
+    color: var(--text-primary) !important;
+}
+
+.ethereal-brand-lockup img,
+.operator-brand-logo,
+.operator-mode-logo,
+.login-brand-mark img {
+    background: #000000 !important;
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 62%, #ffffff) !important;
+    box-shadow:
+        0 0 0 2px color-mix(in srgb, var(--brand-pink) 24%, transparent),
+        0 0 22px color-mix(in srgb, var(--brand-blue) 34%, transparent),
+        0 0 32px color-mix(in srgb, var(--brand-pink) 22%, transparent) !important;
+}
+
+.operator-brand-logo {
+    border-radius: 8px;
+    height: 70px;
+    width: 70px;
+}
+
+.operator-mode-logo,
+.ethereal-brand-lockup img,
+.login-brand-mark img {
+    border-radius: 8px;
+}
+
+.mission-hero,
+.simple-operator-workspace,
+.model-panel,
+.task-card,
+.operator-answer-panel article,
+.operator-status-tile,
+.operator-task-card,
+.operator-guided-workflow,
+.operator-workflow-step,
+.inline-tool-panel,
+.artifact-stat,
+.home-workflow-card,
+.status-card {
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, #000000), var(--surface)) !important;
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 28%, var(--border)) !important;
+    box-shadow:
+        0 18px 54px rgba(0, 0, 0, 0.22),
+        inset 0 0 0 1px color-mix(in srgb, var(--brand-pink) 8%, transparent) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="day"]) .mission-hero,
+    :root:not([data-theme="day"]) .simple-operator-workspace,
+    :root:not([data-theme="day"]) .model-panel,
+    :root:not([data-theme="day"]) .task-card,
+    :root:not([data-theme="day"]) .operator-answer-panel article,
+    :root:not([data-theme="day"]) .operator-status-tile,
+    :root:not([data-theme="day"]) .operator-task-card,
+    :root:not([data-theme="day"]) .operator-guided-workflow,
+    :root:not([data-theme="day"]) .operator-workflow-step,
+    :root:not([data-theme="day"]) .inline-tool-panel,
+    :root:not([data-theme="day"]) .artifact-stat,
+    :root:not([data-theme="day"]) .home-workflow-card,
+    :root:not([data-theme="day"]) .status-card {
+        background:
+            linear-gradient(180deg, rgba(18, 8, 29, 0.96), rgba(7, 2, 12, 0.98)),
+            var(--surface) !important;
+        border-color: color-mix(in srgb, var(--brand-blue) 42%, var(--border)) !important;
+    }
+}
+
+:root[data-theme="night"] .mission-hero,
+:root[data-theme="night"] .simple-operator-workspace,
+:root[data-theme="night"] .model-panel,
+:root[data-theme="night"] .task-card,
+:root[data-theme="night"] .operator-answer-panel article,
+:root[data-theme="night"] .operator-status-tile,
+:root[data-theme="night"] .operator-task-card,
+:root[data-theme="night"] .operator-guided-workflow,
+:root[data-theme="night"] .operator-workflow-step,
+:root[data-theme="night"] .inline-tool-panel,
+:root[data-theme="night"] .artifact-stat,
+:root[data-theme="night"] .home-workflow-card,
+:root[data-theme="night"] .status-card {
+    background:
+        linear-gradient(180deg, rgba(18, 8, 29, 0.96), rgba(7, 2, 12, 0.98)),
+        var(--surface) !important;
+    border-color: color-mix(in srgb, var(--brand-blue) 42%, var(--border)) !important;
+}
+
+.button-row button,
+.button-row .cta-button,
+.operator-primary-action,
+.operator-workflow-step button,
+.operator-workflow-step a,
+.model-test-form button,
+.model-panel > button {
+    background: linear-gradient(135deg, var(--brand-pink), var(--brand-purple-soft) 48%, var(--brand-blue)) !important;
+    box-shadow:
+        0 10px 28px color-mix(in srgb, var(--brand-blue) 22%, transparent),
+        0 0 18px color-mix(in srgb, var(--brand-pink) 18%, transparent) !important;
+    color: #ffffff !important;
+    font-weight: 700;
+}
+
+.button-row button:hover,
+.button-row .cta-button:hover,
+.operator-primary-action:hover,
+.operator-workflow-step button:hover,
+.operator-workflow-step a:hover,
+.model-test-form button:hover,
+.model-panel > button:hover {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--brand-pink) 86%, #ffffff), var(--brand-blue)) !important;
+}
+
+.ethereal-world-banner {
+    align-items: center;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(120px, 220px) 1fr;
+    margin: 0 auto 20px;
+    max-width: 920px;
+    text-align: left;
+}
+
+.ethereal-world-banner img {
+    aspect-ratio: 1;
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 58%, var(--brand-pink));
+    border-radius: 8px;
+    box-shadow:
+        0 0 38px color-mix(in srgb, var(--brand-blue) 24%, transparent),
+        0 0 46px color-mix(in srgb, var(--brand-pink) 18%, transparent);
+    max-width: 220px;
+    object-fit: cover;
+    width: 100%;
+}
+
+.ethereal-world-banner span,
+.token-logo-studio-copy > span {
+    color: var(--brand-pink) !important;
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.ethereal-world-banner h1 {
+    margin-top: 0;
+}
+
+.ethereal-world-banner p {
+    margin-bottom: 0;
+}
+
+.token-logo-studio {
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--surface-muted) 88%, var(--brand-purple)), var(--surface)) !important;
+    border: 1px solid color-mix(in srgb, var(--brand-pink) 45%, var(--brand-blue)) !important;
+    border-radius: 8px;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.75fr);
+    margin: 18px 0;
+    padding: 18px;
+    text-align: left;
+}
+
+.token-logo-studio label,
+.token-logo-studio input,
+.token-logo-studio select,
+.token-logo-studio textarea,
+.token-logo-studio .button-row,
+.token-logo-studio .inline-status {
+    grid-column: 1 / -1;
+}
+
+.token-logo-style-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    margin-top: 12px;
+}
+
+.token-logo-style-grid article {
+    background: color-mix(in srgb, var(--surface-muted) 86%, #000000) !important;
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 34%, var(--border));
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.token-logo-style-grid strong {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.token-logo-style-grid span {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.logo-maker-example {
+    margin: 0;
+}
+
+.logo-maker-example img,
+.logo-creation-showcase img {
+    aspect-ratio: 1;
+    border: 1px solid color-mix(in srgb, var(--brand-pink) 56%, var(--brand-blue));
+    border-radius: 8px;
+    box-shadow:
+        0 0 34px color-mix(in srgb, var(--brand-pink) 24%, transparent),
+        0 0 28px color-mix(in srgb, var(--brand-blue) 18%, transparent);
+    object-fit: cover;
+    width: 100%;
+}
+
+.logo-maker-example figcaption {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-top: 8px;
+}
+
+.logo-creation-showcase {
+    align-items: center;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(120px, 190px) 1fr;
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+.logo-creation-showcase strong,
+.logo-creation-showcase span {
+    display: block;
+}
+
+.logo-creation-showcase span {
+    color: var(--text-secondary);
+    margin-top: 6px;
+}
+
+@media (max-width: 760px) {
+    .ethereal-world-banner,
+    .token-logo-studio,
+    .logo-creation-showcase {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    .ethereal-world-banner img,
+    .logo-creation-showcase img {
+        margin: 0 auto;
+        max-width: 220px;
+    }
+}

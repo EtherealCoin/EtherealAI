@@ -1185,16 +1185,29 @@ function buildWebsiteBlueprint(spec = {}) {
 
 function buildLogoBrief(spec = {}) {
   const tokenName = spec.name || 'Token Project';
+  const source = [
+    spec.features,
+    spec.ecosystemNotes,
+    spec.ecosystem_notes,
+    spec.risk_notes
+  ].filter(Boolean).join('\n');
+  const ownerDirection = source
+    .split('\n')
+    .map(line => line.trim().replace(/^-\s*/, ''))
+    .filter(line => /logo|brand|palette|REAL|world mark|dapp|NFT utility badge/i.test(line))
+    .slice(0, 6)
+    .join(' ');
 
   return {
     title: `${tokenName} Logo Brief`,
     prompts: [
+      ownerDirection ? `Owner visual direction for ${tokenName}: ${ownerDirection}` : `REAL-inspired world mark for ${tokenName}, using dark premium crypto UI, cyan digital-world energy, neon pink accents, dark purple depth, black contrast, and white edge clarity.`,
       `Premium crypto token logo for ${tokenName}, scalable vector-style mark, readable at app-icon size, no text-only lockup.`,
       `Ecosystem token identity for ${tokenName}, symbol-first, modern blockchain utility, trustworthy but distinctive.`,
-      `NFT-compatible emblem for ${tokenName}, works as a token icon, Discord avatar, website favicon, and marketplace collection badge.`
+      `NFT-compatible emblem for ${tokenName}, works as a token icon, Discord avatar, website favicon, marketplace collection badge, dapp mark, and listing icon.`
     ],
-    deliverables: ['square icon', 'transparent PNG', 'dark background variant', 'light background variant', 'favicon', 'social avatar'],
-    checks: ['legible at 32px', 'unique enough for listing pages', 'does not imitate existing coin logos', 'works without tiny text']
+    deliverables: ['square icon', 'transparent PNG', 'dark background variant', 'light background variant', 'favicon', 'social avatar', 'dapp header mark', 'NFT utility badge set', 'CoinMarketCap/CoinGecko listing icon'],
+    checks: ['legible at 32px', 'unique enough for listing pages', 'does not imitate existing coin logos', 'works without tiny text', 'readable on black/neon dapp UI', 'consistent with pink, cyan blue, dark purple, black, and white brand colors']
   };
 }
 

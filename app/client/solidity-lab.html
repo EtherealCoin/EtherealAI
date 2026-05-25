@@ -166,6 +166,56 @@
                     <label for="token-ecosystem-notes">Ecosystem Notes</label>
                     <textarea id="token-ecosystem-notes" rows="2" maxlength="1000" placeholder="Example: passive income token, launch community, website+dapp, CMC/CG evidence, cross-chain rebalance bot."></textarea>
 
+                    <section class="token-logo-studio" aria-label="Logo Maker Art Studio">
+                        <div class="token-logo-studio-copy">
+                            <span>Brand asset planning</span>
+                            <h3>Logo Maker Art Studio</h3>
+                            <p>Create the token identity brief before website, whitepaper, NFT utility, and social launch work. This is local planning only; it does not call an external image generator.</p>
+                            <div class="token-logo-style-grid" aria-label="Logo style starting points">
+                                <article>
+                                    <strong>REAL World Mark</strong>
+                                    <span>R + world identity, digital systems improving the world.</span>
+                                </article>
+                                <article>
+                                    <strong>Neon Token Icon</strong>
+                                    <span>Black field, pink/cyan glow, readable at exchange icon size.</span>
+                                </article>
+                                <article>
+                                    <strong>Dapp UI Kit</strong>
+                                    <span>Dashboard buttons, node cards, charts, and holder modules.</span>
+                                </article>
+                                <article>
+                                    <strong>NFT Utility Badge</strong>
+                                    <span>Upgrade tiers, community access, utility modules, social avatar set.</span>
+                                </article>
+                            </div>
+                        </div>
+                        <figure class="logo-maker-example">
+                            <img src="/public/brand/ethereal-logo-generator-example.png" alt="Example neon AI token logo concept">
+                            <figcaption>Example art direction: neon AI, premium token identity, dark background, cyan and pink accents.</figcaption>
+                        </figure>
+
+                        <label for="token-logo-style">Logo Style</label>
+                        <select id="token-logo-style">
+                            <option value="REAL world mark with black, cyan, pink, dark purple, and white brand system">REAL world mark</option>
+                            <option value="neon AI token icon with dark glass, cyan light, and pink edge glow">Neon AI token icon</option>
+                            <option value="dapp utility logo kit with dashboard buttons, node badges, and holder module icons">Dapp utility kit</option>
+                            <option value="NFT upgrade badge system with token icon, avatar, and marketplace collection mark">NFT utility badge system</option>
+                            <option value="custom owner-directed token identity">Custom owner direction</option>
+                        </select>
+
+                        <label for="token-logo-palette">Color Palette</label>
+                        <input id="token-logo-palette" type="text" value="black, neon pink, cyan blue, dark purple, white">
+
+                        <label for="token-logo-direction">Logo / Brand Direction</label>
+                        <textarea id="token-logo-direction" rows="3" maxlength="1200" placeholder="Example: create an R/world token identity that feels premium, futuristic, readable at icon size, and usable across website, dapp, NFT badges, Discord, X, CoinMarketCap, and CoinGecko."></textarea>
+
+                        <div class="button-row">
+                            <button id="apply-logo-brief" type="button">Apply Logo Brief To Token Plan</button>
+                        </div>
+                        <div id="token-logo-brief-status" class="inline-status">Logo planning stays local. Do not upload private files or exchange credentials here.</div>
+                    </section>
+
                     <div class="button-row">
                         <button id="apply-token-options" type="button">Apply Token Options To Spec</button>
                         <button id="select-chain-neutral-token-options" type="button">Select Chain-Neutral Launch Defaults</button>
@@ -238,6 +288,18 @@
         <section class="model-panel">
             <h2>Whitepaper Generator</h2>
             <div id="whitepaper-blueprint" class="task-list">Select a contract spec and open its ecosystem blueprint.</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Logo Creation Center</h2>
+            <div class="logo-creation-showcase">
+                <img src="/public/brand/ethereal-logo-generator-example.png" alt="Example logo created for token identity planning">
+                <div>
+                    <strong>Token logo, NFT badge, social avatar, and website mark planning</strong>
+                    <span>Use this section to turn the token plan into a visual identity brief before any public launch assets are generated.</span>
+                </div>
+            </div>
+            <div id="logo-blueprint" class="task-list">Select or save a token ecosystem project to generate logo prompts, deliverables, and checks.</div>
         </section>
 
         <section class="model-panel">
@@ -464,6 +526,48 @@
                 : riskSpec;
         }
 
+        function getLogoBriefInputs() {
+            return {
+                style: document.getElementById('token-logo-style').value.trim(),
+                palette: document.getElementById('token-logo-palette').value.trim(),
+                direction: document.getElementById('token-logo-direction').value.trim()
+            };
+        }
+
+        function formatLogoBriefForNotes() {
+            const logo = getLogoBriefInputs();
+            return [
+                'Logo art direction:',
+                `- Style: ${logo.style || 'owner-directed token identity'}`,
+                `- Palette: ${logo.palette || 'black, neon pink, cyan blue, dark purple, white'}`,
+                logo.direction ? `- Owner direction: ${logo.direction}` : '- Owner direction: use the REAL R/world identity as inspiration without cluttering the UI.',
+                '- Required outputs: square token icon, transparent PNG, dark background variant, light background variant, dapp mark, NFT utility badge set, social avatar, favicon, CoinMarketCap/CoinGecko listing icon.',
+                '- Safety: do not imitate existing coin logos; keep text minimal; verify readability at 32px.'
+            ].join('\n');
+        }
+
+        function applyLogoBriefToTokenPlan() {
+            const status = document.getElementById('token-logo-brief-status');
+            const ecosystemNotes = document.getElementById('token-ecosystem-notes');
+            const features = document.getElementById('contract-features');
+            const brief = formatLogoBriefForNotes();
+            const existingNotes = ecosystemNotes.value.trim();
+            const existingFeatures = features.value.trim();
+
+            ecosystemNotes.value = existingNotes
+                ? `${existingNotes}\n${brief}`
+                : brief;
+            features.value = existingFeatures
+                ? `${existingFeatures}\n\n${brief}`
+                : brief;
+            document.querySelectorAll('#token-feature-options input').forEach(input => {
+                if (input.value === 'website, roadmap, logo, and whitepaper generation') {
+                    input.checked = true;
+                }
+            });
+            status.textContent = 'Logo brief added to the token plan. Save the ecosystem project to include it in the local blueprint.';
+        }
+
         function selectLowFeeTokenDefaults() {
             const defaultValues = new Set([
                 'passive income reward model',
@@ -544,7 +648,10 @@
                 contractType: document.getElementById('contract-type').value,
                 featureSelections: getSelectedTokenOptions(),
                 nftUtilityNotes: document.getElementById('nft-utility-notes').value.trim(),
-                ecosystemNotes: document.getElementById('token-ecosystem-notes').value.trim(),
+                ecosystemNotes: [
+                    document.getElementById('token-ecosystem-notes').value.trim(),
+                    formatLogoBriefForNotes()
+                ].filter(Boolean).join('\n\n'),
                 status: 'draft'
             };
         }
@@ -845,6 +952,29 @@
                 }))
             ]);
 
+            document.getElementById('logo-blueprint').innerHTML = renderTaskCards([
+                {
+                    title: logo.title || 'Token Logo Brief',
+                    description: 'Local visual identity planning for token icon, NFT badge, social avatar, favicon, listing icon, dapp mark, and website art direction.',
+                    status: 'logo'
+                },
+                ...(logo.prompts || []).map((prompt, index) => ({
+                    title: `Prompt ${index + 1}`,
+                    description: prompt,
+                    status: 'prompt'
+                })),
+                ...(logo.deliverables || []).map(deliverable => ({
+                    title: deliverable,
+                    description: 'Required logo package output before public launch asset generation.',
+                    status: 'deliverable'
+                })),
+                ...(logo.checks || []).map(check => ({
+                    title: check,
+                    description: 'Review this before using the asset in listings, socials, website, or dapp UI.',
+                    status: 'check'
+                }))
+            ]);
+
             document.getElementById('chain-node-blueprint').innerHTML = renderTaskCards([
                 ...(chainBuilder.options || []),
                 {
@@ -987,6 +1117,7 @@
 
         document.getElementById('load-ecosystem-catalog').addEventListener('click', loadEcosystemCatalog);
         document.getElementById('apply-token-options').addEventListener('click', applyTokenOptionsToSpec);
+        document.getElementById('apply-logo-brief').addEventListener('click', applyLogoBriefToTokenPlan);
         document.getElementById('select-low-fee-token-options').addEventListener('click', selectLowFeeTokenDefaults);
         document.getElementById('select-chain-neutral-token-options').addEventListener('click', selectChainNeutralTokenDefaults);
         document.getElementById('select-polygon-token-options').addEventListener('click', selectPolygonTokenDefaults);
