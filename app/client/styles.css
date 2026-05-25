@@ -4230,25 +4230,33 @@ a:focus-visible {
 
     .operator-mode-actions,
     .operator-workspace-actions {
+        flex-wrap: wrap;
         justify-content: stretch;
     }
 
-    body.operator-simple-mode .operator-workspace-actions {
+    body.operator-simple-mode .operator-workspace-actions,
+    body.operator-simple-mode .hero-action-grid {
         grid-template-columns: 1fr;
     }
 
     .operator-mode-actions button,
+    .operator-top-dropdown,
+    .operator-top-control,
+    .operator-mode-toggle,
     .operator-secondary-action,
+    .hero-button-equal,
     .operator-primary-action {
         width: 100%;
     }
 
     .operator-training-menu,
-    .operator-training-menu-list {
+    .operator-training-menu-list,
+    .operator-top-dropdown-list {
         width: 100%;
     }
 
-    .operator-training-menu-list {
+    .operator-training-menu-list,
+    .operator-top-dropdown-list {
         position: static;
     }
 
@@ -6190,12 +6198,160 @@ body.operator-simple-mode .operator-mode-brand > div span {
 body.operator-simple-mode .operator-mode-actions {
     align-items: center;
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 8px;
     justify-content: flex-end;
 }
 
-body.operator-simple-mode .operator-mode-actions button,
+body.operator-simple-mode .operator-mode-actions,
+body.operator-advanced-mode .operator-mode-actions {
+    min-width: 0;
+}
+
+body.operator-simple-mode .operator-top-dropdown,
+body.operator-advanced-mode .operator-top-dropdown {
+    min-width: 0;
+    position: relative;
+}
+
+body.operator-simple-mode .operator-top-control,
+body.operator-simple-mode .operator-mode-toggle,
+body.operator-advanced-mode .operator-top-control,
+body.operator-advanced-mode .operator-mode-toggle {
+    align-items: center;
+    box-sizing: border-box;
+    display: inline-flex;
+    font-size: 0.76rem;
+    height: 44px;
+    justify-content: center;
+    line-height: 1.1;
+    min-width: 92px;
+    padding: 0 14px;
+    white-space: nowrap;
+}
+
+body.operator-simple-mode .operator-top-training-dropdown .operator-top-control,
+body.operator-advanced-mode .operator-top-training-dropdown .operator-top-control {
+    min-width: 132px;
+}
+
+body.operator-simple-mode .operator-mode-toggle,
+body.operator-advanced-mode .operator-mode-toggle {
+    min-width: 88px;
+}
+
+body.operator-simple-mode .operator-top-dropdown-list,
+body.operator-advanced-mode .operator-top-dropdown-list {
+    background:
+        linear-gradient(180deg, rgba(22, 11, 36, 0.99), rgba(5, 3, 10, 0.99));
+    border: 1px solid rgba(0, 245, 255, 0.45);
+    box-shadow:
+        0 0 0 1px rgba(255, 43, 214, 0.16),
+        0 20px 46px rgba(0, 0, 0, 0.54);
+    display: grid;
+    gap: 6px;
+    min-width: 220px;
+    padding: 8px;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    z-index: 1400;
+}
+
+body.operator-simple-mode .operator-top-dropdown-list[hidden],
+body.operator-advanced-mode .operator-top-dropdown-list[hidden] {
+    display: none !important;
+}
+
+body.operator-simple-mode .operator-top-dropdown-list a,
+body.operator-simple-mode .operator-top-dropdown-list button,
+body.operator-advanced-mode .operator-top-dropdown-list a,
+body.operator-advanced-mode .operator-top-dropdown-list button {
+    align-items: center;
+    background: rgba(0, 245, 255, 0.045) !important;
+    border: 1px solid rgba(0, 245, 255, 0.18) !important;
+    border-radius: 2px !important;
+    color: var(--ethereal-soft) !important;
+    cursor: pointer;
+    display: flex;
+    font: inherit;
+    font-size: 0.78rem;
+    font-weight: 850;
+    justify-content: flex-start;
+    letter-spacing: 0.01em;
+    min-height: 38px;
+    padding: 10px 12px;
+    text-align: left;
+    text-decoration: none;
+    text-transform: none;
+    white-space: nowrap;
+}
+
+body.operator-simple-mode .operator-top-dropdown-list a:hover,
+body.operator-simple-mode .operator-top-dropdown-list button:hover,
+body.operator-simple-mode .operator-top-dropdown-list .operator-active-page,
+body.operator-advanced-mode .operator-top-dropdown-list a:hover,
+body.operator-advanced-mode .operator-top-dropdown-list button:hover,
+body.operator-advanced-mode .operator-top-dropdown-list .operator-active-page {
+    background: rgba(255, 43, 214, 0.12) !important;
+    border-color: rgba(255, 43, 214, 0.45) !important;
+    color: var(--ethereal-cyan) !important;
+}
+
+body.operator-simple-mode .operator-black-hole-logout,
+body.operator-advanced-mode .operator-black-hole-logout {
+    align-items: center;
+    box-sizing: border-box;
+    color: var(--ethereal-muted) !important;
+    display: grid;
+    gap: 2px;
+    height: 44px;
+    justify-items: center;
+    min-width: 54px;
+    padding: 0 4px;
+    text-decoration: none;
+}
+
+body.operator-simple-mode .operator-black-hole-icon,
+body.operator-advanced-mode .operator-black-hole-icon {
+    background:
+        radial-gradient(circle at 50% 50%, #000 0 33%, rgba(11, 2, 18, 0.96) 34% 55%, rgba(0, 245, 255, 0.18) 56% 62%, transparent 63%),
+        conic-gradient(from 35deg, rgba(255, 43, 214, 0.98), rgba(0, 245, 255, 0.86), rgba(124, 60, 255, 0.92), rgba(255, 43, 214, 0.98));
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 50%;
+    box-shadow:
+        0 0 12px rgba(255, 43, 214, 0.34),
+        0 0 18px rgba(0, 245, 255, 0.24),
+        inset 0 0 12px rgba(0, 0, 0, 0.92);
+    display: block;
+    height: 24px;
+    width: 24px;
+}
+
+body.operator-simple-mode .operator-black-hole-label,
+body.operator-advanced-mode .operator-black-hole-label {
+    color: color-mix(in srgb, var(--ethereal-soft) 70%, var(--ethereal-muted)) !important;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+body.operator-simple-mode .operator-black-hole-logout:hover .operator-black-hole-icon,
+body.operator-advanced-mode .operator-black-hole-logout:hover .operator-black-hole-icon {
+    box-shadow:
+        0 0 16px rgba(255, 43, 214, 0.54),
+        0 0 24px rgba(0, 245, 255, 0.42),
+        inset 0 0 12px rgba(0, 0, 0, 0.92);
+}
+
+body.operator-simple-mode .operator-mode-actions > button,
+body.operator-simple-mode .operator-top-control,
+body.operator-simple-mode .operator-mode-toggle,
+body.operator-advanced-mode .operator-top-control,
+body.operator-advanced-mode .operator-mode-toggle,
 body.operator-simple-mode .operator-training-menu > button,
 body.operator-simple-mode .operator-secondary-action,
 body.operator-simple-mode .operator-logout-action,
@@ -6253,6 +6409,15 @@ body.operator-simple-mode > nav a:hover {
     background: rgba(0, 245, 255, 0.08) !important;
     border-color: rgba(0, 245, 255, 0.48) !important;
     color: var(--ethereal-cyan) !important;
+}
+
+body.operator-simple-mode > nav a.operator-active-page,
+body.operator-advanced-mode > nav a.operator-active-page {
+    background:
+        linear-gradient(90deg, rgba(255, 43, 214, 0.18), rgba(0, 245, 255, 0.08)) !important;
+    border-color: rgba(255, 43, 214, 0.48) !important;
+    color: var(--ethereal-soft) !important;
+    box-shadow: inset 2px 0 0 var(--ethereal-cyan);
 }
 
 body.operator-simple-mode > nav a[href="/logout"],
@@ -6364,7 +6529,8 @@ body.operator-simple-mode .operator-workspace-header {
     padding: 18px;
 }
 
-body.operator-simple-mode .operator-workspace-actions {
+body.operator-simple-mode .operator-workspace-actions,
+body.operator-simple-mode .hero-action-grid {
     align-items: stretch;
     display: grid;
     gap: 8px;
@@ -6375,24 +6541,38 @@ body.operator-simple-mode .operator-workspace-actions {
     width: min(42vw, 500px);
 }
 
+body.operator-simple-mode .hero-button-primary-wide,
 body.operator-simple-mode .operator-workspace-actions .operator-primary-action {
+    align-items: center;
+    display: inline-flex;
     font-size: 0.82rem;
     grid-column: 1 / -1;
+    justify-content: center;
+    line-height: 1.12;
     min-height: 42px;
     padding: 10px 14px;
+    text-align: center;
     width: 100%;
 }
 
+body.operator-simple-mode .hero-button-equal,
 body.operator-simple-mode .operator-workspace-actions .operator-training-menu,
 body.operator-simple-mode .operator-workspace-actions .operator-secondary-action {
     min-width: 0;
     width: 100%;
 }
 
+body.operator-simple-mode .hero-button-equal-button,
 body.operator-simple-mode .operator-workspace-actions .operator-training-menu > button,
 body.operator-simple-mode .operator-workspace-actions .operator-secondary-action {
+    align-items: center;
+    display: inline-flex;
+    font-size: 0.75rem;
+    justify-content: center;
+    line-height: 1.08;
     min-height: 40px;
     padding: 10px 12px;
+    text-align: center;
     width: 100%;
 }
 

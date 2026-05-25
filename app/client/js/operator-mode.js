@@ -628,14 +628,14 @@
 
     function actionMarkup(action = {}) {
         if (action.kind === 'next') {
-            return '<button type="button" class="operator-primary-action" data-operator-next data-operator-recommended-action>What should I do next?</button>';
+            return '<button type="button" class="operator-primary-action hero-button-primary-wide" data-operator-next data-operator-recommended-action>What should I do next?</button>';
         }
 
         if (action.href) {
-            return `<a class="operator-primary-action" href="${escapeHtml(action.href)}" data-operator-recommended-action>${escapeHtml(action.label)}</a>`;
+            return `<a class="operator-primary-action hero-button-primary-wide" href="${escapeHtml(action.href)}" data-operator-recommended-action>${escapeHtml(action.label)}</a>`;
         }
 
-        return `<button type="button" class="operator-primary-action" data-operator-click="${escapeHtml(action.selector || '')}" data-operator-recommended-action>${escapeHtml(action.label || 'Continue')}</button>`;
+        return `<button type="button" class="operator-primary-action hero-button-primary-wide" data-operator-click="${escapeHtml(action.selector || '')}" data-operator-recommended-action>${escapeHtml(action.label || 'Continue')}</button>`;
     }
 
     function stepActionMarkup(action = {}) {
@@ -652,14 +652,79 @@
 
     function trainingDropdownMarkup(extraClass = '') {
         return `
-            <div class="operator-training-menu ${escapeHtml(extraClass)}">
-                <button type="button" class="operator-secondary-action" data-operator-training-toggle aria-haspopup="true" aria-expanded="false">Show me how</button>
+            <div class="operator-training-menu hero-button-equal ${escapeHtml(extraClass)}">
+                <button type="button" class="operator-secondary-action hero-button-equal-button" data-operator-training-toggle aria-haspopup="true" aria-expanded="false">Show Me How</button>
                 <div class="operator-training-menu-list" hidden>
-                    <button type="button" data-operator-training-choice="text">Show me in text</button>
-                    <button type="button" data-operator-training-choice="video">Show me in video</button>
+                    <button type="button" data-operator-training-choice="text">Show Me In Text</button>
+                    <button type="button" data-operator-training-choice="video">Show Me In Video</button>
                 </div>
             </div>
         `;
+    }
+
+    function topNavDropdownMarkup(label, items = [], extraClass = '') {
+        return `
+            <div class="operator-top-dropdown ${escapeHtml(extraClass)}">
+                <button type="button" class="operator-top-control" data-operator-nav-toggle aria-haspopup="true" aria-expanded="false">${escapeHtml(label)}</button>
+                <div class="operator-top-dropdown-list" hidden>
+                    ${items.map(item => `
+                        <a href="${escapeHtml(item.href)}">${escapeHtml(item.label)}</a>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function topTrainingDropdownMarkup() {
+        return `
+            <div class="operator-top-dropdown operator-top-training-dropdown">
+                <button type="button" class="operator-top-control" data-operator-nav-toggle aria-haspopup="true" aria-expanded="false">Show Me How</button>
+                <div class="operator-top-dropdown-list" hidden>
+                    <button type="button" data-operator-training-choice="text">Text Explanation</button>
+                    <button type="button" data-operator-training-choice="video">Video Explanation</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function closeTopDropdowns(except = null) {
+        document.querySelectorAll('.operator-top-dropdown-list').forEach(list => {
+            if (list !== except) {
+                list.setAttribute('hidden', '');
+                list.closest('.operator-top-dropdown')?.querySelector('[data-operator-nav-toggle]')?.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
+    function markActiveNavigation() {
+        const path = pagePath();
+        const sidebar = document.querySelector('body > nav');
+        const existingCurrentLink = sidebar?.querySelector('[data-operator-current-page-link]');
+        if (existingCurrentLink && existingCurrentLink.getAttribute('href') !== path) {
+            existingCurrentLink.remove();
+        }
+
+        document.querySelectorAll('body > nav a, .operator-top-dropdown-list a').forEach(link => {
+            const href = link.getAttribute('href') || '';
+            const linkPath = href.startsWith('http') ? new URL(href).pathname : href.split('#')[0];
+            const isActive = linkPath === path || (path === '/' && linkPath === '/dashboard');
+            link.classList.toggle('operator-active-page', isActive);
+            if (isActive) {
+                link.setAttribute('aria-current', 'page');
+            } else {
+                link.removeAttribute('aria-current');
+            }
+        });
+
+        if (sidebar && !sidebar.querySelector('.operator-active-page')) {
+            const currentLink = document.createElement('a');
+            currentLink.href = path;
+            currentLink.textContent = currentConfig().area || 'Current Page';
+            currentLink.dataset.operatorCurrentPageLink = 'true';
+            currentLink.className = 'operator-active-page';
+            currentLink.setAttribute('aria-current', 'page');
+            sidebar.prepend(currentLink);
+        }
     }
 
     function renderWorkflow(steps = []) {
@@ -855,10 +920,10 @@
                         <p>${escapeHtml(config.summary)}</p>
                     </div>
                 </div>
-                <div class="operator-workspace-actions">
+                <div class="operator-workspace-actions hero-action-grid">
                     ${actionMarkup(config.primaryAction)}
                     ${trainingDropdownMarkup('operator-workspace-training-menu')}
-                    <button type="button" class="operator-secondary-action" data-operator-mode="advanced">Advanced Developer Mode</button>
+                    <button type="button" class="operator-secondary-action hero-button-equal hero-button-equal-button" data-operator-mode="advanced">Advanced Developer Mode</button>
                 </div>
             </div>
             ${renderIdentityBand(config)}
@@ -893,6 +958,21 @@
         const bar = document.createElement('div');
         bar.id = 'operator-mode-bar';
         bar.className = 'operator-mode-bar';
+        const pageNavItems = [
+            { label: 'MVP Test Pass', href: '/mvp-test-pass' },
+            { label: 'Proof Packet', href: '/owner-proof-packet' },
+            { label: 'Wallet & Funding', href: '/operator-control' },
+            { label: 'Setup Wizard', href: '/owner-setup' },
+            { label: 'Security', href: '/security-lockdown' }
+        ];
+        const systemNavItems = [
+            { label: 'Mission Control', href: '/dashboard' },
+            { label: 'Creator Agent', href: '/creator' },
+            { label: 'Live Trading Launch', href: '/live-trading-launch' },
+            { label: 'Solidity Lab', href: '/solidity-lab' },
+            { label: 'Social Ops', href: '/social-ops' }
+        ];
+
         bar.innerHTML = `
             <a class="operator-dapp-wordmark" href="/dashboard" data-operator-home-base aria-label="Open EtherealAI Mission Control home base">ETHEREAL</a>
             <div class="operator-mode-brand">
@@ -907,10 +987,15 @@
                 <strong>LIVE LOCKED</strong>
             </div>
             <div class="operator-mode-actions">
-                ${trainingDropdownMarkup('operator-mode-training-menu')}
-                <button type="button" data-operator-mode="simple">Simple Mode</button>
-                <button type="button" data-operator-mode="advanced">Advanced Mode</button>
-                <a class="operator-logout-action" href="/logout">Logout</a>
+                ${topNavDropdownMarkup('Pages', pageNavItems, 'operator-pages-dropdown')}
+                ${topNavDropdownMarkup('Systems', systemNavItems, 'operator-systems-dropdown')}
+                ${topTrainingDropdownMarkup()}
+                <button type="button" class="operator-mode-toggle" data-operator-mode="simple">Simple</button>
+                <button type="button" class="operator-mode-toggle" data-operator-mode="advanced">Advanced</button>
+                <a class="operator-black-hole-logout" href="/logout" aria-label="Log out">
+                    <span class="operator-black-hole-icon" aria-hidden="true"></span>
+                    <span class="operator-black-hole-label">Log out</span>
+                </a>
             </div>
         `;
 
@@ -920,6 +1005,8 @@
         } else {
             document.body.prepend(bar);
         }
+
+        markActiveNavigation();
     }
 
     function applyMode() {
@@ -1025,6 +1112,20 @@
             const modeButton = event.target.closest('[data-operator-mode]');
             if (modeButton) {
                 setMode(modeButton.dataset.operatorMode);
+                closeTopDropdowns();
+                return;
+            }
+
+            const navToggle = event.target.closest('[data-operator-nav-toggle]');
+            if (navToggle) {
+                const menu = navToggle.closest('.operator-top-dropdown');
+                const list = menu?.querySelector('.operator-top-dropdown-list');
+                const shouldOpen = Boolean(list?.hidden);
+                closeTopDropdowns(list);
+                if (list) {
+                    list.hidden = !shouldOpen;
+                    navToggle.setAttribute('aria-expanded', String(shouldOpen));
+                }
                 return;
             }
 
@@ -1048,6 +1149,8 @@
             if (trainingChoice) {
                 trainingChoice.closest('.operator-training-menu-list')?.setAttribute('hidden', '');
                 trainingChoice.closest('.operator-training-menu')?.querySelector('[data-operator-training-toggle]')?.setAttribute('aria-expanded', 'false');
+                trainingChoice.closest('.operator-top-dropdown-list')?.setAttribute('hidden', '');
+                trainingChoice.closest('.operator-top-dropdown')?.querySelector('[data-operator-nav-toggle]')?.setAttribute('aria-expanded', 'false');
                 if (window.EtherealTraining?.open) {
                     window.EtherealTraining.open(trainingChoice.dataset.operatorTrainingChoice, pagePath());
                 } else {
@@ -1077,6 +1180,10 @@
                     item.hidden = true;
                     item.closest('.operator-training-menu')?.querySelector('[data-operator-training-toggle]')?.setAttribute('aria-expanded', 'false');
                 });
+            }
+
+            if (!event.target.closest('.operator-top-dropdown')) {
+                closeTopDropdowns();
             }
         });
     }
