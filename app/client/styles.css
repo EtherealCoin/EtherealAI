@@ -4746,6 +4746,7 @@ footer {
 .phase6f-controls,
 .phase6f-proof-grid,
 .phase6f-enable-panel,
+.kraken-tiny-journal-list,
 .phase5-controls,
 .phase6-controls,
 .phase6-vault,
@@ -4884,6 +4885,10 @@ footer {
 .phase6f-proof-grid {
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     margin: 18px 0;
+}
+
+.kraken-tiny-journal-list {
+    grid-template-columns: 1fr;
 }
 
 .phase6b-controls,

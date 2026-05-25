@@ -1431,6 +1431,128 @@ function registerExchangeMetadataRoutes(app, {
     return rows.map(parseProductionOrderExecution).filter(isKrakenTinyLiveExecution);
   }
 
+  function parseProductionOrderEvent(row) {
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      executionId: row.production_order_execution_id,
+      userId: row.user_id,
+      status: row.status,
+      summary: row.summary,
+      payload: JSON.parse(row.payload_json || '{}'),
+      createdAt: row.created_at
+    };
+  }
+
+  async function getKrakenTinyLiveExecutionJournal({ userId, executionId, limit = 12 } = {}) {
+    if (!executionId) return [];
+
+    const rows = await dbAll(
+      `SELECT *
+       FROM production_order_events
+       WHERE user_id = ?
+         AND production_order_execution_id = ?
+       ORDER BY created_at DESC, id DESC
+       LIMIT ?`,
+      [userId, executionId, limit]
+    );
+
+    return rows.map(parseProductionOrderEvent).filter(Boolean);
+  }
+
+  function summarizeKrakenBalanceDelta(reconciliation = {}) {
+    const before = new Map((reconciliation.beforeBalances || []).map(item => [item.asset, Number(item.free || 0)]));
+    const after = new Map((reconciliation.afterBalances || []).map(item => [item.asset, Number(item.free || 0)]));
+    const assets = new Set([...before.keys(), ...after.keys()]);
+    const deltas = [...assets].map(asset => ({
+      asset,
+      before: before.get(asset) || 0,
+      after: after.get(asset) || 0,
+      delta: Number(((after.get(asset) || 0) - (before.get(asset) || 0)).toFixed(10))
+    })).filter(item => item.delta !== 0);
+
+    return {
+      status: reconciliation.status || (deltas.length ? 'balances_changed' : 'balance_delta_not_available'),
+      deltas,
+      plainEnglish: deltas.length
+        ? deltas.map(item => `${item.asset}: ${item.delta > 0 ? '+' : ''}${item.delta}`).join(' · ')
+        : 'No balance delta is available yet. Track the order after placement to refresh reconciliation.'
+    };
+  }
+
+  function buildKrakenTinyLiveAuditState({ execution = null, gate = null, journal = [] } = {}) {
+    const endpointCalled = Boolean(
+      execution?.production_order_endpoint_called
+        || execution?.preview?.productionOrderEndpointCalled
+        || execution?.result?.safetyBoundary?.productionOrderEndpointCalled
+    );
+    const liveExecutionOccurred = endpointCalled === true;
+    const stateLabel = liveExecutionOccurred
+      ? 'LIVE EXECUTION OCCURRED'
+      : 'ENDPOINT CALLED: NO';
+
+    return {
+      stateLabel,
+      endpointCalled,
+      liveExecutionOccurred,
+      oneOrderOnly: true,
+      maxLiveTestUsd: krakenTinyLiveMaxUsd,
+      productionOrderEndpointEnabled: Boolean(execution?.production_order_endpoint_enabled),
+      orderAccepted: Boolean(execution?.exchange_order_id),
+      orderId: execution?.exchange_order_id || '',
+      fillStatus: execution?.status || 'not_submitted',
+      exactRemainingOperatorAction: liveExecutionOccurred
+        ? 'Track the tiny order. If it remains open, use Cancel Tiny Test Order or Emergency Stop. Do not run another tiny live order from this milestone.'
+        : gate?.canPreview
+          ? 'Review the exact order preview, type the confirmation phrase, check both boxes, then click Place Tiny Live Test Order once.'
+          : gate?.nextClick || 'Fix the visible blocked gate before continuing.',
+      safetyLocks: [
+        'No autonomous loops',
+        'No repeated execution',
+        'No withdrawals',
+        'No wallet signing',
+        'No leverage, margin, or futures',
+        '$1 max tiny live size'
+      ],
+      journal: (journal || []).map(event => ({
+        id: event.id,
+        status: event.status,
+        summary: event.summary,
+        createdAt: event.createdAt
+      }))
+    };
+  }
+
+  function buildKrakenTinyLivePostTradeVerification({ execution = null, lifecycle = null } = {}) {
+    const resultScreen = lifecycle?.resultScreen || execution?.result?.resultScreen || execution?.result || {};
+    const reconciliation = lifecycle?.reconciliation || execution?.result?.reconciliation || resultScreen.reconciliation || {};
+    const balanceDelta = summarizeKrakenBalanceDelta(reconciliation);
+    const orderAccepted = Boolean(
+      resultScreen.exchangeOrderId
+        || execution?.exchange_order_id
+        || lifecycle?.exchangeOrderId
+    );
+
+    return {
+      title: 'Post-Trade Verification',
+      orderAccepted,
+      orderId: resultScreen.exchangeOrderId || execution?.exchange_order_id || lifecycle?.exchangeOrderId || '',
+      fillStatus: resultScreen.fillStatus || execution?.status || lifecycle?.status || 'not_submitted',
+      fees: resultScreen.fees ?? lifecycle?.resultScreen?.fees ?? Number((Number(execution?.notional_usd || 0) * 0.001).toFixed(8)),
+      balanceDelta,
+      rollbackGuidance: resultScreen.cancelRecoveryPlan
+        || execution?.result?.cancelRecoveryPlan
+        || 'If the order is open, click Cancel Tiny Test Order. If it filled and you want to close exposure, use the exchange UI manually or request a separate owner-approved sell-close workflow.',
+      safetyBoundary: {
+        noAutonomousTrading: true,
+        noWithdrawals: true,
+        noWalletSigning: true,
+        oneOrderOnly: true
+      }
+    };
+  }
+
   async function buildKrakenTinyLiveGate({
     userId,
     body = {},
@@ -1602,6 +1724,10 @@ function registerExchangeMetadataRoutes(app, {
       policy
     });
     const actualOrders = await getLatestKrakenTinyLiveExecutions(userId, 50);
+    const priorLiveEndpointCall = actualOrders.find(order => (
+      Number(order.id) !== Number(ignoreExecutionId || 0)
+        && order.production_order_endpoint_called
+    ));
     const openTinyOrders = actualOrders.filter(order => (
       Number(order.id) !== Number(ignoreExecutionId || 0)
         && order.production_order_endpoint_called
@@ -1655,7 +1781,7 @@ function registerExchangeMetadataRoutes(app, {
       }),
       buildKrakenTinyLiveStatusItem({
         id: 'dry_run_preview_passed',
-        label: 'Dry-run preview passed',
+        label: 'No-order dry-run proof',
         passed: dryRunProof.passed === true,
         plainEnglish: dryRunProof.plainEnglishStatus || 'The no-order dry-run proof must pass first.',
         nextClick: dryRunProof.nextClick || 'Build Tiny Live Preview.'
@@ -1734,6 +1860,16 @@ function registerExchangeMetadataRoutes(app, {
         passed: openTinyOrders.length === 0,
         plainEnglish: openTinyOrders.length ? 'An existing Kraken tiny test order may still be open.' : 'No open Kraken tiny test order is tracked.',
         nextClick: 'Cancel the open tiny test order or use Emergency Stop.'
+      }),
+      buildKrakenTinyLiveStatusItem({
+        id: 'one_live_order_unused',
+        label: 'One-order limit has not been used',
+        passed: !priorLiveEndpointCall,
+        plainEnglish: priorLiveEndpointCall
+          ? 'A Kraken tiny live endpoint call already occurred for this owner-gated milestone. Repeated execution stays blocked.'
+          : 'No Kraken tiny live endpoint call has occurred yet. This path can submit one manually approved order only.',
+        nextClick: 'Do not place another tiny live order from this milestone. Track, cancel, or reconcile the existing order instead.',
+        statusWhenFalse: 'LOCKED'
       })
     ];
 
@@ -1784,6 +1920,9 @@ function registerExchangeMetadataRoutes(app, {
       checks: finalChecks,
       missing,
       nextClick: missing[0]?.nextClick || (canPlace ? 'Click Place Tiny Live Test Order.' : 'Type the final phrase and check both boxes.'),
+      exactRemainingOperatorAction: missing[0]?.nextClick || (canPlace ? 'Click Place Tiny Live Test Order once.' : 'Type the final phrase and check both boxes.'),
+      finalApprovalChecklist: finalChecks,
+      blockedGates: missing,
       connector,
       adapter,
       credentials,
@@ -5533,6 +5672,12 @@ function registerExchangeMetadataRoutes(app, {
         buildKrakenTinyLiveGate({ userId: req.session.userId }),
         getLatestKrakenTinyLiveExecutions(req.session.userId, 10)
       ]);
+      const auditExecution = latestOrders.find(order => order.production_order_endpoint_called) || latestOrders[0] || null;
+      const journal = await getKrakenTinyLiveExecutionJournal({
+        userId: req.session.userId,
+        executionId: auditExecution?.id
+      });
+      const auditState = buildKrakenTinyLiveAuditState({ execution: auditExecution, gate, journal });
 
       res.json({
         title: 'Run $1 Kraken Tiny Live Test',
@@ -5543,11 +5688,20 @@ function registerExchangeMetadataRoutes(app, {
           plainEnglish: gate.plainEnglish,
           checks: gate.checks,
           missing: gate.missing,
+          finalApprovalChecklist: gate.finalApprovalChecklist || gate.checks,
+          blockedGates: gate.blockedGates || gate.missing,
           nextClick: gate.nextClick,
+          exactRemainingOperatorAction: gate.exactRemainingOperatorAction || auditState.exactRemainingOperatorAction,
           exactOrderPreview: gate.exactOrderPreview,
-          confirmationPhrase: krakenTinyLiveOrderConfirmationPhrase
+          confirmationPhrase: krakenTinyLiveOrderConfirmationPhrase,
+          auditState
         },
         latestOrders,
+        auditState,
+        executionJournal: auditState.journal,
+        postTradeVerification: auditExecution?.production_order_endpoint_called
+          ? buildKrakenTinyLivePostTradeVerification({ execution: auditExecution })
+          : null,
         safetyBoundary: gate.safetyBoundary
       });
     } catch (error) {
@@ -5579,9 +5733,13 @@ function registerExchangeMetadataRoutes(app, {
             plainEnglish: gate.plainEnglish,
             checks: gate.checks,
             missing: gate.missing,
+            finalApprovalChecklist: gate.finalApprovalChecklist || gate.checks,
+            blockedGates: gate.blockedGates || gate.missing,
             nextClick: gate.nextClick,
+            exactRemainingOperatorAction: gate.exactRemainingOperatorAction || gate.nextClick,
             confirmationPhrase: krakenTinyLiveOrderConfirmationPhrase
           },
+          auditState: buildKrakenTinyLiveAuditState({ gate }),
           nextClick: gate.nextClick,
           safetyBoundary: gate.safetyBoundary
         });
@@ -5655,6 +5813,13 @@ function registerExchangeMetadataRoutes(app, {
         }
       });
 
+      const execution = parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [insert.lastID, req.session.userId]));
+      const journal = await getKrakenTinyLiveExecutionJournal({
+        userId: req.session.userId,
+        executionId: insert.lastID
+      });
+      const auditState = buildKrakenTinyLiveAuditState({ execution, gate, journal });
+
       res.status(gate.canPreview ? 201 : 409).json({
         previewId: insert.lastID,
         gate: {
@@ -5664,11 +5829,17 @@ function registerExchangeMetadataRoutes(app, {
           plainEnglish: gate.plainEnglish,
           checks: gate.checks,
           missing: gate.missing,
+          finalApprovalChecklist: gate.finalApprovalChecklist || gate.checks,
+          blockedGates: gate.blockedGates || gate.missing,
           nextClick: gate.canPreview ? 'Type the final phrase, check both approval boxes, then click Place Tiny Live Test Order.' : gate.nextClick,
+          exactRemainingOperatorAction: gate.canPreview ? 'Review the exact order preview, type the final phrase, check both approval boxes, then click Place Tiny Live Test Order once.' : gate.nextClick,
           exactOrderPreview: gate.exactOrderPreview,
-          confirmationPhrase: krakenTinyLiveOrderConfirmationPhrase
+          confirmationPhrase: krakenTinyLiveOrderConfirmationPhrase,
+          auditState
         },
-        execution: parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [insert.lastID, req.session.userId])),
+        execution,
+        auditState,
+        executionJournal: auditState.journal,
         nextClick: gate.canPreview ? 'Review the exact order preview. No order was placed.' : gate.nextClick,
         safetyBoundary: gate.safetyBoundary
       });
@@ -5704,6 +5875,24 @@ function registerExchangeMetadataRoutes(app, {
         return res.status(400).json({
           error: 'This preview is not a Kraken tiny-live test preview. No order was placed.',
           nextClick: 'Click Preview $1 Kraken Tiny Live Test.',
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      if (existing.production_order_endpoint_called) {
+        const journal = await getKrakenTinyLiveExecutionJournal({
+          userId: req.session.userId,
+          executionId: existing.id
+        });
+        const auditState = buildKrakenTinyLiveAuditState({ execution: existing, journal });
+
+        return res.status(409).json({
+          error: 'This Kraken tiny-live preview already used its one live endpoint call. Repeated execution is blocked.',
+          execution: existing,
+          auditState,
+          executionJournal: auditState.journal,
+          postTradeVerification: buildKrakenTinyLivePostTradeVerification({ execution: existing }),
+          nextClick: auditState.exactRemainingOperatorAction,
           safetyBoundary: createProductionSafetyBoundary(false)
         });
       }
@@ -5776,9 +5965,15 @@ function registerExchangeMetadataRoutes(app, {
             productionOrderEndpointCalled: false
           }
         });
+        const blockedExecution = parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [existing.id, req.session.userId]));
+        const blockedJournal = await getKrakenTinyLiveExecutionJournal({
+          userId: req.session.userId,
+          executionId: existing.id
+        });
+        const blockedAuditState = buildKrakenTinyLiveAuditState({ execution: blockedExecution, gate, journal: blockedJournal });
 
         return res.status(409).json({
-          execution: parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [existing.id, req.session.userId])),
+          execution: blockedExecution,
           gate: {
             canPreview: gate.canPreview,
             canPlace: false,
@@ -5786,10 +5981,16 @@ function registerExchangeMetadataRoutes(app, {
             plainEnglish: gate.plainEnglish,
             checks: gate.checks,
             missing: gate.missing,
+            finalApprovalChecklist: gate.finalApprovalChecklist || gate.checks,
+            blockedGates: gate.blockedGates || gate.missing,
             nextClick: gate.nextClick,
+            exactRemainingOperatorAction: gate.exactRemainingOperatorAction || gate.nextClick,
             exactOrderPreview: gate.exactOrderPreview,
-            confirmationPhrase: krakenTinyLiveOrderConfirmationPhrase
+            confirmationPhrase: krakenTinyLiveOrderConfirmationPhrase,
+            auditState: blockedAuditState
           },
+          auditState: blockedAuditState,
+          executionJournal: blockedAuditState.journal,
           nextClick: gate.nextClick,
           safetyBoundary: gate.safetyBoundary
         });
@@ -5797,19 +5998,21 @@ function registerExchangeMetadataRoutes(app, {
 
       await dbRun(
         `UPDATE production_order_executions
-         SET status = ?, production_order_endpoint_enabled = ?, updated_at = CURRENT_TIMESTAMP
+         SET status = ?, production_order_endpoint_enabled = ?, production_order_endpoint_called = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ? AND user_id = ?`,
-        ['approved', 1, existing.id, req.session.userId]
+        ['submitting', 1, 1, existing.id, req.session.userId]
       );
       await recordProductionOrderEvent({
         executionId: existing.id,
         userId: req.session.userId,
-        status: 'approved',
-        summary: 'Owner approved one Kraken $1 tiny live spot order. Autonomous trading remains disabled.',
+        status: 'live_execution_endpoint_call_started',
+        summary: 'LIVE EXECUTION OCCURRED: owner approved one Kraken $1 tiny live spot order and the AddOrder endpoint call started. Autonomous trading remains disabled.',
         payload: {
           exactOrderPreview: gate.exactOrderPreview,
           safetyBoundary: gate.safetyBoundary,
-          oneOrderOnly: true
+          oneOrderOnly: true,
+          maxLiveTestUsd: krakenTinyLiveMaxUsd,
+          productionOrderEndpointCalled: true
         }
       });
 
@@ -5830,9 +6033,13 @@ function registerExchangeMetadataRoutes(app, {
             ...lifecycle,
             phase6GKrakenTinyLiveTest: true,
             exactOrderPreview: gate.exactOrderPreview,
-            cancelRecoveryPlan: gate.exactOrderPreview?.cancelRecoveryPlan
+            cancelRecoveryPlan: gate.exactOrderPreview?.cancelRecoveryPlan,
+            resultScreen: {
+              ...(lifecycle.resultScreen || {}),
+              cancelRecoveryPlan: gate.exactOrderPreview?.cancelRecoveryPlan
+            }
           }),
-          lifecycle.safetyBoundary?.productionOrderEndpointCalled ? 1 : 0,
+          1,
           existing.id,
           req.session.userId
         ]
@@ -5850,22 +6057,37 @@ function registerExchangeMetadataRoutes(app, {
         }
       });
 
+      const execution = parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [existing.id, req.session.userId]));
+      const journal = await getKrakenTinyLiveExecutionJournal({
+        userId: req.session.userId,
+        executionId: existing.id
+      });
+      const auditState = buildKrakenTinyLiveAuditState({ execution, gate, journal });
+      const postTradeVerification = buildKrakenTinyLivePostTradeVerification({ execution, lifecycle });
+
       res.json({
-        execution: parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [existing.id, req.session.userId])),
+        execution,
         gate: {
           canPreview: true,
           canPlace: true,
           label: gate.label,
           plainEnglish: gate.plainEnglish,
           checks: gate.checks,
+          finalApprovalChecklist: gate.finalApprovalChecklist || gate.checks,
+          blockedGates: [],
           exactOrderPreview: gate.exactOrderPreview,
-          confirmationPhrase: krakenTinyLiveOrderConfirmationPhrase
+          confirmationPhrase: krakenTinyLiveOrderConfirmationPhrase,
+          exactRemainingOperatorAction: auditState.exactRemainingOperatorAction,
+          auditState
         },
         resultScreen: {
           ...(lifecycle.resultScreen || {}),
           cancelRecoveryPlan: gate.exactOrderPreview?.cancelRecoveryPlan,
           reconciliation: lifecycle.reconciliation
         },
+        postTradeVerification,
+        auditState,
+        executionJournal: auditState.journal,
         lifecycle,
         nextClick: 'Track the tiny order status. If it is still open, you can cancel it or use Emergency Stop.',
         safetyBoundary: {
@@ -5881,6 +6103,8 @@ function registerExchangeMetadataRoutes(app, {
       });
     } catch (error) {
       if (previewId) {
+        const current = parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [previewId, req.session.userId]));
+        const endpointCalled = Boolean(current?.production_order_endpoint_called);
         await dbRun(
           `UPDATE production_order_executions
            SET status = ?, result_json = ?, updated_at = CURRENT_TIMESTAMP
@@ -5896,22 +6120,61 @@ function registerExchangeMetadataRoutes(app, {
                   : error.message
               },
               rawError: error?.body || null,
-              safetyBoundary: createProductionSafetyBoundary(false)
+              productionOrderEndpointCalled: endpointCalled,
+              safetyBoundary: {
+                ...createProductionSafetyBoundary(endpointCalled),
+                productionOrderEndpointCalled: endpointCalled,
+                automatedLiveTradingEnabled: false,
+                unrestrictedAutonomousTradingEnabled: false,
+                walletSigningEnabled: false,
+                withdrawalsEnabled: false,
+                marginEnabled: false,
+                futuresEnabled: false,
+                leverageEnabled: false
+              }
             }),
             previewId,
             req.session.userId
           ]
         );
+        await recordProductionOrderEvent({
+          executionId: previewId,
+          userId: req.session.userId,
+          status: endpointCalled ? 'live_execution_endpoint_error' : 'kraken_tiny_live_place_error',
+          summary: endpointCalled
+            ? 'Kraken tiny live endpoint path errored after the one live endpoint call was marked. Repeated execution remains blocked.'
+            : 'Kraken tiny live order failed before any production order endpoint call was marked.',
+          payload: {
+            error: createPlainEnglishProductionError
+              ? createPlainEnglishProductionError('Kraken tiny live order', error)
+              : error.message,
+            productionOrderEndpointCalled: endpointCalled
+          }
+        });
       }
+
+      const execution = previewId
+        ? parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [previewId, req.session.userId]))
+        : null;
+      const journal = execution
+        ? await getKrakenTinyLiveExecutionJournal({ userId: req.session.userId, executionId: execution.id })
+        : [];
+      const auditState = buildKrakenTinyLiveAuditState({ execution, journal });
 
       res.status(error.status || 500).json({
         error: createPlainEnglishProductionError
           ? createPlainEnglishProductionError('Kraken tiny live order', error)
           : error.message,
-        execution: previewId
-          ? parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [previewId, req.session.userId]))
+        execution,
+        auditState,
+        executionJournal: auditState.journal,
+        postTradeVerification: execution?.production_order_endpoint_called
+          ? buildKrakenTinyLivePostTradeVerification({ execution })
           : null,
-        safetyBoundary: createProductionSafetyBoundary(false)
+        safetyBoundary: {
+          ...createProductionSafetyBoundary(Boolean(execution?.production_order_endpoint_called)),
+          productionOrderEndpointCalled: Boolean(execution?.production_order_endpoint_called)
+        }
       });
     }
   });
@@ -5931,10 +6194,17 @@ function registerExchangeMetadataRoutes(app, {
       }
 
       if (!execution.exchange_order_id) {
+        const journal = await getKrakenTinyLiveExecutionJournal({ userId: req.session.userId, executionId: execution.id });
+        const auditState = buildKrakenTinyLiveAuditState({ execution, journal });
         return res.json({
           execution,
           status: execution.status,
           resultScreen: execution.result?.resultScreen || execution.preview,
+          auditState,
+          executionJournal: auditState.journal,
+          postTradeVerification: execution.production_order_endpoint_called
+            ? buildKrakenTinyLivePostTradeVerification({ execution })
+            : null,
           safetyBoundary: createProductionSafetyBoundary(false)
         });
       }
@@ -5991,9 +6261,16 @@ function registerExchangeMetadataRoutes(app, {
         payload: status
       });
 
+      const updatedExecution = parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [execution.id, req.session.userId]));
+      const journal = await getKrakenTinyLiveExecutionJournal({ userId: req.session.userId, executionId: execution.id });
+      const auditState = buildKrakenTinyLiveAuditState({ execution: updatedExecution, journal });
+
       res.json({
-        execution: parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [execution.id, req.session.userId])),
+        execution: updatedExecution,
         status,
+        auditState,
+        executionJournal: auditState.journal,
+        postTradeVerification: buildKrakenTinyLivePostTradeVerification({ execution: updatedExecution }),
         safetyBoundary: createProductionSafetyBoundary(false)
       });
     } catch (error) {
@@ -6044,6 +6321,8 @@ function registerExchangeMetadataRoutes(app, {
             exchangeOrderId: '',
             rejectionReason: ''
           },
+          auditState: buildKrakenTinyLiveAuditState({ execution }),
+          postTradeVerification: buildKrakenTinyLivePostTradeVerification({ execution }),
           safetyBoundary: createProductionSafetyBoundary(false)
         });
       }
@@ -6096,10 +6375,17 @@ function registerExchangeMetadataRoutes(app, {
         payload: canceled
       });
 
+      const updatedExecution = parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [execution.id, req.session.userId]));
+      const journal = await getKrakenTinyLiveExecutionJournal({ userId: req.session.userId, executionId: execution.id });
+      const auditState = buildKrakenTinyLiveAuditState({ execution: updatedExecution, journal });
+
       res.json({
-        execution: parseProductionOrderExecution(await dbGet('SELECT * FROM production_order_executions WHERE id = ? AND user_id = ?', [execution.id, req.session.userId])),
+        execution: updatedExecution,
         cancellation: canceled,
         resultScreen: canceled.resultScreen,
+        auditState,
+        executionJournal: auditState.journal,
+        postTradeVerification: buildKrakenTinyLivePostTradeVerification({ execution: updatedExecution, lifecycle: canceled }),
         safetyBoundary: canceled.safetyBoundary
       });
     } catch (error) {
