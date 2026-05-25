@@ -617,12 +617,17 @@
         bar.id = 'operator-mode-bar';
         bar.className = 'operator-mode-bar';
         bar.innerHTML = `
+            <a class="operator-dapp-wordmark" href="/dashboard" aria-label="Open EtherealAI Mission Control">ETHEREAL</a>
             <div class="operator-mode-brand">
                 <img src="${BRAND_LOGO_SRC}" alt="EtherealAI logo" class="operator-mode-logo">
                 <div>
                     <strong id="operator-mode-label">Simple Operator Mode</strong>
                     <span>Daily CEO controls are simplified. Advanced diagnostics stay hidden until you choose them.</span>
                 </div>
+            </div>
+            <div class="operator-dapp-safety-strip" aria-label="Execution safety state">
+                <span>LOCAL E2E 100%</span>
+                <strong>LIVE LOCKED</strong>
             </div>
             <div class="operator-mode-actions">
                 ${trainingDropdownMarkup('operator-mode-training-menu')}
