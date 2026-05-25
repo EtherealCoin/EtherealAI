@@ -467,6 +467,12 @@ function redactValue(value = '') {
   return `${text.slice(0, 4)}...${text.slice(-4)}`;
 }
 
+function fingerprintValue(value = '') {
+  const text = String(value || '');
+  if (!text) return '';
+  return `sha256:${crypto.createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 16)}`;
+}
+
 async function ensureProductionVaultStorage() {
   await fs.mkdir(OWNER_SECRETS_DIR, { recursive: true, mode: 0o700 });
   await fs.chmod(OWNER_SECRETS_DIR, 0o700).catch(() => {});
@@ -627,14 +633,25 @@ async function saveProductionVaultCredentials({ referenceName, connector, exchan
     permissionsChecklist,
     savedAt: now
   };
+  const encrypted = encryptVaultPayload(referenceName, payload, key);
+  const roundTripPayload = decryptVaultPayload(referenceName, encrypted, key);
+  const roundTripVerified = roundTripPayload.apiKey === payload.apiKey
+    && roundTripPayload.apiSecret === payload.apiSecret
+    && roundTripPayload.exchangeName === payload.exchangeName;
+  const apiKeyFingerprint = redactValue(credentials.apiKey || credentials.bearerToken);
+  const apiKeySha256Fingerprint = fingerprintValue(credentials.apiKey || credentials.bearerToken);
+  const apiSecretSha256Fingerprint = fingerprintValue(credentials.apiSecret);
 
   vault.entries[referenceName] = {
     referenceName,
     exchangeName: payload.exchangeName,
     connectorId: connector.id,
-    encrypted: encryptVaultPayload(referenceName, payload, key),
+    encrypted,
     metadata: {
-      apiKeyFingerprint: redactValue(credentials.apiKey || credentials.bearerToken),
+      apiKeyFingerprint,
+      apiKeySha256Fingerprint,
+      apiSecretSha256Fingerprint,
+      vaultRoundTripVerified: roundTripVerified,
       hasExtraPhrase: Boolean(credentials.passphrase),
       permissionsChecklist,
       rotatedAt: now,
@@ -656,7 +673,10 @@ async function saveProductionVaultCredentials({ referenceName, connector, exchan
     exchangeName: payload.exchangeName,
     connectorId: connector.id,
     stored: true,
-    apiKeyFingerprint: redactValue(credentials.apiKey || credentials.bearerToken),
+    apiKeyFingerprint,
+    apiKeySha256Fingerprint,
+    apiSecretSha256Fingerprint,
+    vaultRoundTripVerified: roundTripVerified,
     hasExtraPhrase: Boolean(credentials.passphrase),
     rotatedAt: now,
     secretValuesReturned: false,
@@ -1344,23 +1364,417 @@ function signBybitHeaders({ credentials, body = '', query = '' }) {
   };
 }
 
-function signKrakenRequest({ credentials, requestPath, params }) {
-  const postData = new URLSearchParams(params).toString();
-  const nonce = String(params.nonce);
+let krakenNonceFloor = 0;
+
+function createKrakenNonce(seed = Date.now()) {
+  const numericSeed = Number(seed);
+  const base = Number.isFinite(numericSeed)
+    ? Math.floor(numericSeed < 10_000_000_000_000 ? numericSeed * 1000 : numericSeed)
+    : Date.now() * 1000;
+  krakenNonceFloor = Math.max(krakenNonceFloor + 1, base);
+  return String(krakenNonceFloor);
+}
+
+function createKrakenSignedPayload({ credentials, requestPath, params = {} }) {
+  const effectiveParams = {
+    ...params,
+    nonce: createKrakenNonce(params.nonce)
+  };
+  const postData = new URLSearchParams(effectiveParams).toString();
+  const nonce = String(effectiveParams.nonce);
   const secret = Buffer.from(credentials.apiSecret, 'base64');
   const hash = crypto.createHash('sha256').update(nonce + postData).digest();
   const hmac = crypto.createHmac('sha512', secret);
   hmac.update(requestPath);
   hmac.update(hash);
+  const apiSign = hmac.digest('base64');
 
   return {
     body: postData,
+    nonce,
+    apiSign,
+    apiSignFingerprint: fingerprintValue(apiSign),
+    bodyFingerprint: fingerprintValue(postData),
+    decodedSecretBytes: secret.length
+  };
+}
+
+function signKrakenRequest({ credentials, requestPath, params }) {
+  const signed = createKrakenSignedPayload({ credentials, requestPath, params });
+
+  return {
+    body: signed.body,
     headers: {
       'API-Key': credentials.apiKey,
-      'API-Sign': hmac.digest('base64'),
+      'API-Sign': signed.apiSign,
       'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    diagnostics: {
+      nonce: signed.nonce,
+      apiSignFingerprint: signed.apiSignFingerprint,
+      bodyFingerprint: signed.bodyFingerprint,
+      decodedSecretBytes: signed.decodedSecretBytes
     }
   };
+}
+
+function normalizeBase64ForDiagnostics(value = '') {
+  return String(value || '').trim().replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+}
+
+function validateBase64SecretShape(value = '') {
+  const compact = normalizeBase64ForDiagnostics(value);
+  const result = {
+    base64Like: false,
+    base64RoundTripValid: false,
+    decodedBytes: 0,
+    malformedBase64Secret: false,
+    error: ''
+  };
+
+  if (!compact) {
+    result.error = 'secret is empty';
+    result.malformedBase64Secret = true;
+    return result;
+  }
+
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(compact)) {
+    result.error = 'secret contains characters outside normal base64';
+    result.malformedBase64Secret = true;
+    return result;
+  }
+
+  try {
+    const decoded = Buffer.from(compact, 'base64');
+    const reencoded = decoded.toString('base64').replace(/=+$/g, '');
+    const normalized = compact.replace(/=+$/g, '');
+    result.base64Like = true;
+    result.decodedBytes = decoded.length;
+    result.base64RoundTripValid = decoded.length > 0 && reencoded === normalized;
+    result.malformedBase64Secret = !result.base64RoundTripValid;
+    if (!result.base64RoundTripValid) {
+      result.error = 'secret did not pass base64 decode/re-encode check';
+    }
+  } catch (error) {
+    result.error = error.message;
+    result.malformedBase64Secret = true;
+  }
+
+  return result;
+}
+
+function buildKrakenCredentialDiagnostics({ credentials = {}, vaultMetadata = {} } = {}) {
+  const apiKey = String(credentials.apiKey || '');
+  const apiSecret = String(credentials.apiSecret || '');
+  const secretShape = validateBase64SecretShape(apiSecret);
+  const apiKeySha256Fingerprint = fingerprintValue(apiKey);
+  const apiSecretSha256Fingerprint = fingerprintValue(apiSecret);
+  const storedKeyFingerprint = vaultMetadata.apiKeySha256Fingerprint || '';
+  const storedSecretFingerprint = vaultMetadata.apiSecretSha256Fingerprint || '';
+
+  return {
+    apiKeyExists: apiKey.length > 0,
+    apiSecretExists: apiSecret.length > 0,
+    apiKeyFingerprint: redactValue(apiKey),
+    apiKeySha256Fingerprint,
+    apiSecretSha256Fingerprint,
+    apiKeyAndSecretFingerprintsMatch: Boolean(apiKeySha256Fingerprint && apiSecretSha256Fingerprint && apiKeySha256Fingerprint === apiSecretSha256Fingerprint),
+    apiKeyLength: apiKey.length,
+    apiSecretLength: apiSecret.length,
+    apiKeyHasLeadingOrTrailingWhitespace: apiKey !== apiKey.trim(),
+    apiSecretHasLeadingOrTrailingWhitespace: apiSecret !== apiSecret.trim(),
+    apiKeyHasHiddenNewlineChars: /[\r\n]/.test(apiKey),
+    apiSecretHasHiddenNewlineChars: /[\r\n]/.test(apiSecret),
+    apiKeyHasTabChars: /\t/.test(apiKey),
+    apiSecretHasTabChars: /\t/.test(apiSecret),
+    apiSecretBase64Like: secretShape.base64Like,
+    apiSecretBase64RoundTripValid: secretShape.base64RoundTripValid,
+    apiSecretDecodedBytes: secretShape.decodedBytes,
+    malformedBase64Secret: secretShape.malformedBase64Secret,
+    base64DecodeError: secretShape.error,
+    vaultDecodeSucceeded: Boolean(credentials.apiKey || credentials.apiSecret),
+    vaultRoundTripVerifiedAtSave: vaultMetadata.vaultRoundTripVerified === true,
+    apiKeyFingerprintMatchesVaultMetadata: storedKeyFingerprint ? storedKeyFingerprint === apiKeySha256Fingerprint : null,
+    apiSecretFingerprintMatchesVaultMetadata: storedSecretFingerprint ? storedSecretFingerprint === apiSecretSha256Fingerprint : null,
+    savedVaultMetadataHasSecretFingerprint: Boolean(storedSecretFingerprint),
+    savedVaultValuesMatchEncryptedMetadata: storedKeyFingerprint || storedSecretFingerprint
+      ? (storedKeyFingerprint ? storedKeyFingerprint === apiKeySha256Fingerprint : true)
+        && (storedSecretFingerprint ? storedSecretFingerprint === apiSecretSha256Fingerprint : true)
+      : null,
+    secretValuesReturnedToUi: false
+  };
+}
+
+function runKrakenLocalAuthSelfTest({ credentials = {}, requestPath = '/0/private/Balance', params = {} } = {}) {
+  const diagnostics = buildKrakenCredentialDiagnostics({ credentials });
+  const result = {
+    requestPath,
+    nonceGenerationSucceeded: false,
+    signatureGenerationSucceeded: false,
+    nonce: '',
+    apiSignFingerprint: '',
+    requestBodyFingerprint: '',
+    decodedSecretBytes: diagnostics.apiSecretDecodedBytes,
+    localSelfTestPassed: false,
+    failure: '',
+    secretValuesReturnedToUi: false
+  };
+
+  try {
+    if (!diagnostics.apiKeyExists) {
+      throw new Error('Kraken API key is missing from the decrypted vault payload.');
+    }
+    if (!diagnostics.apiSecretExists) {
+      throw new Error('Kraken private/secret key is missing from the decrypted vault payload.');
+    }
+    if (diagnostics.malformedBase64Secret) {
+      throw new Error(diagnostics.base64DecodeError || 'Kraken private/secret key is not valid base64.');
+    }
+
+    const signed = createKrakenSignedPayload({
+      credentials,
+      requestPath,
+      params
+    });
+    result.nonceGenerationSucceeded = Boolean(signed.nonce);
+    result.signatureGenerationSucceeded = Boolean(signed.apiSign);
+    result.nonce = signed.nonce;
+    result.apiSignFingerprint = signed.apiSignFingerprint;
+    result.requestBodyFingerprint = signed.bodyFingerprint;
+    result.decodedSecretBytes = signed.decodedSecretBytes;
+    result.localSelfTestPassed = result.nonceGenerationSucceeded && result.signatureGenerationSucceeded;
+  } catch (error) {
+    result.failure = error.message;
+  }
+
+  return result;
+}
+
+function classifyKrakenAuthDiagnosticFailure({ credentialDiagnostics = {}, localSelfTest = {}, responseCode = null, responseBody = '', requestReachedKraken = false, requestError = '' } = {}) {
+  const body = String(responseBody || '');
+  const raw = `${body} ${requestError || ''} ${localSelfTest.failure || ''}`.toLowerCase();
+
+  if (!credentialDiagnostics.vaultDecodeSucceeded || /decrypt|vault/.test(raw)) {
+    return {
+      id: 'vault_decode_issue',
+      label: 'Vault decode issue',
+      conclusive: true,
+      plainEnglish: 'The encrypted vault could not provide usable Kraken credentials to the verifier.'
+    };
+  }
+
+  if (
+    credentialDiagnostics.apiKeyHasLeadingOrTrailingWhitespace
+    || credentialDiagnostics.apiSecretHasLeadingOrTrailingWhitespace
+    || credentialDiagnostics.apiKeyHasHiddenNewlineChars
+    || credentialDiagnostics.apiSecretHasHiddenNewlineChars
+    || credentialDiagnostics.apiKeyHasTabChars
+    || credentialDiagnostics.apiSecretHasTabChars
+    || credentialDiagnostics.malformedBase64Secret
+  ) {
+    return {
+      id: 'newline_encoding_issue',
+      label: 'Newline or encoding issue',
+      conclusive: credentialDiagnostics.malformedBase64Secret === true,
+      plainEnglish: credentialDiagnostics.malformedBase64Secret
+        ? 'The saved Kraken private/secret key does not pass local base64 validation.'
+        : 'The saved Kraken values contain whitespace, tabs, or newline characters that should be reviewed.'
+    };
+  }
+
+  if (!localSelfTest.localSelfTestPassed) {
+    return {
+      id: 'malformed_payload',
+      label: 'Local auth self-test failed',
+      conclusive: true,
+      plainEnglish: localSelfTest.failure || 'EtherealAI could not generate the Kraken nonce/signature payload locally.'
+    };
+  }
+
+  if (!requestReachedKraken) {
+    return {
+      id: 'request_not_reached',
+      label: 'Request did not reach Kraken',
+      conclusive: false,
+      plainEnglish: requestError || 'No HTTP response was received from Kraken.'
+    };
+  }
+
+  if (/eapi:invalid nonce|invalid nonce|nonce/.test(raw)) {
+    return {
+      id: 'nonce_issue',
+      label: 'Nonce issue',
+      conclusive: true,
+      plainEnglish: 'Kraken received the request but rejected the nonce. EtherealAI now uses a monotonic nonce generator for Kraken auth.'
+    };
+  }
+
+  if (/clock|timestamp|time drift|time-drift/.test(raw)) {
+    return {
+      id: 'clock_drift',
+      label: 'Clock drift',
+      conclusive: true,
+      plainEnglish: 'The exchange response suggests a local clock or timestamp issue.'
+    };
+  }
+
+  if (/eapi:invalid signature|invalid signature|api-sign/.test(raw)) {
+    return {
+      id: 'invalid_signature',
+      label: 'Invalid signature',
+      conclusive: true,
+      plainEnglish: 'Kraken reached the auth verifier and rejected the generated API signature.'
+    };
+  }
+
+  if (/eapi:invalid key|invalid key|unknown key/.test(raw)) {
+    return {
+      id: 'invalid_key',
+      label: 'Invalid key',
+      conclusive: true,
+      plainEnglish: 'Kraken conclusively rejected the API key itself.'
+    };
+  }
+
+  if (/permission|denied|not allowed|eapi:permission/.test(raw)) {
+    return {
+      id: 'permission_issue',
+      label: 'Permission issue',
+      conclusive: true,
+      plainEnglish: 'Kraken accepted the key/signature but rejected the requested account-read permission.'
+    };
+  }
+
+  if (responseCode && responseCode >= 400) {
+    return {
+      id: 'malformed_payload',
+      label: 'Malformed payload or HTTP error',
+      conclusive: false,
+      plainEnglish: `Kraken returned HTTP ${responseCode}. Review the raw response body below.`
+    };
+  }
+
+  if (/"error"\s*:\s*\[\s*\]/.test(body) || /"result"\s*:/.test(body)) {
+    return {
+      id: 'works_safely',
+      label: 'Raw Balance auth works',
+      conclusive: true,
+      plainEnglish: 'Kraken accepted the Balance endpoint request. Authentication works for this read-only diagnostic.'
+    };
+  }
+
+  return {
+    id: 'unknown_auth_failure',
+    label: 'Unclassified Kraken auth response',
+    conclusive: false,
+    plainEnglish: 'The diagnostic completed, but the response did not match a known Kraken auth failure pattern.'
+  };
+}
+
+async function runKrakenAuthDiagnostics({ credentials, adapter = PHASE6_PRODUCTION_ADAPTERS.kraken, vaultMetadata = {}, requestPath = '/0/private/Balance' } = {}) {
+  const startedAt = new Date().toISOString();
+  const credentialDiagnostics = buildKrakenCredentialDiagnostics({ credentials, vaultMetadata });
+  const localSelfTest = runKrakenLocalAuthSelfTest({ credentials, requestPath });
+  const base = {
+    title: 'Kraken Authentication Diagnostics',
+    exchangeName: 'kraken',
+    displayName: 'Kraken',
+    endpoint: requestPath,
+    startedAt,
+    finishedAt: '',
+    apiKeyExists: credentialDiagnostics.apiKeyExists,
+    apiSecretExists: credentialDiagnostics.apiSecretExists,
+    credentialDiagnostics,
+    localSelfTest,
+    nonceGenerationSucceeded: localSelfTest.nonceGenerationSucceeded,
+    signatureGenerationSucceeded: localSelfTest.signatureGenerationSucceeded,
+    requestReachedKraken: false,
+    responseCode: null,
+    responseBody: '',
+    responseBodyParsed: null,
+    responseBodyExact: '',
+    requestError: '',
+    failureClassification: null,
+    safeRedactedLogs: [],
+    productionOrderEndpointCalled: false,
+    productionOrderEndpointEnabled: false,
+    liveTradingEnabled: false,
+    withdrawalsEnabled: false,
+    walletSigningEnabled: false,
+    secretValuesReturnedToUi: false,
+    safetyBoundary: createProductionSafetyBoundary(false)
+  };
+
+  base.safeRedactedLogs.push(`API key fingerprint: ${credentialDiagnostics.apiKeySha256Fingerprint || 'missing'}`);
+  base.safeRedactedLogs.push(`Secret fingerprint: ${credentialDiagnostics.apiSecretSha256Fingerprint || 'missing'}`);
+  base.safeRedactedLogs.push(`API key and secret fingerprints match: ${credentialDiagnostics.apiKeyAndSecretFingerprintsMatch ? 'yes' : 'no'}`);
+  base.safeRedactedLogs.push(`Vault decode succeeded: ${credentialDiagnostics.vaultDecodeSucceeded ? 'yes' : 'no'}`);
+  base.safeRedactedLogs.push(`Saved vault values match metadata: ${credentialDiagnostics.savedVaultValuesMatchEncryptedMetadata === null ? 'metadata not available' : credentialDiagnostics.savedVaultValuesMatchEncryptedMetadata ? 'yes' : 'no'}`);
+  base.safeRedactedLogs.push(`Nonce generated: ${localSelfTest.nonceGenerationSucceeded ? 'yes' : 'no'}`);
+  base.safeRedactedLogs.push(`Signature generated: ${localSelfTest.signatureGenerationSucceeded ? 'yes' : 'no'}${localSelfTest.apiSignFingerprint ? ` (${localSelfTest.apiSignFingerprint})` : ''}`);
+
+  if (!localSelfTest.localSelfTestPassed) {
+    base.failureClassification = classifyKrakenAuthDiagnosticFailure({
+      credentialDiagnostics,
+      localSelfTest,
+      requestReachedKraken: false
+    });
+    base.finishedAt = new Date().toISOString();
+    return base;
+  }
+
+  try {
+    const signed = signKrakenRequest({
+      credentials,
+      requestPath,
+      params: {}
+    });
+    const started = Date.now();
+    const response = await fetch(`${adapter.baseUrl}${requestPath}`, {
+      method: 'POST',
+      headers: signed.headers,
+      body: signed.body,
+      signal: AbortSignal.timeout(12000)
+    });
+    const text = await response.text();
+    let parsed = null;
+
+    try {
+      parsed = text ? JSON.parse(text) : null;
+    } catch (error) {
+      parsed = null;
+    }
+
+    base.requestReachedKraken = true;
+    base.responseCode = response.status;
+    base.responseBody = text;
+    base.responseBodyExact = text;
+    base.responseBodyParsed = parsed;
+    base.elapsedMs = Date.now() - started;
+    base.safeRedactedLogs.push(`Raw Kraken Balance HTTP code: ${response.status}`);
+    base.safeRedactedLogs.push(`Raw Kraken Balance response bytes: ${Buffer.byteLength(text, 'utf8')}`);
+    base.safeRedactedLogs.push(`Diagnostic request body fingerprint: ${signed.diagnostics?.bodyFingerprint || 'unavailable'}`);
+    base.safeRedactedLogs.push(`Diagnostic signature fingerprint: ${signed.diagnostics?.apiSignFingerprint || 'unavailable'}`);
+    base.failureClassification = classifyKrakenAuthDiagnosticFailure({
+      credentialDiagnostics,
+      localSelfTest,
+      responseCode: response.status,
+      responseBody: text,
+      requestReachedKraken: true
+    });
+  } catch (error) {
+    base.requestError = error.message;
+    base.safeRedactedLogs.push(`Kraken request error: ${error.message}`);
+    base.failureClassification = classifyKrakenAuthDiagnosticFailure({
+      credentialDiagnostics,
+      localSelfTest,
+      requestReachedKraken: false,
+      requestError: error.message
+    });
+  }
+
+  base.finishedAt = new Date().toISOString();
+  return base;
 }
 
 function base64Url(input) {
@@ -4283,8 +4697,8 @@ function classifyKrakenAuthenticationIssue({ error = null, krakenReadiness = nul
     return {
       id: 'invalid_signature',
       label: 'Kraken rejected the signature',
-      plainEnglish: 'Kraken rejected the key signature. This usually means the Private Key was copied incorrectly, was not the Kraken Private Key, or does not match the API Key.',
-      nextClick: 'Delete / Rotate Kraken Key, then paste the matching Kraken API Key and Private Key.'
+      plainEnglish: 'Kraken rejected the generated signature. Run Kraken Authentication Diagnostics before changing keys so EtherealAI can prove whether this is signature math, nonce, encoding, IP, permission, or vault decode.',
+      nextClick: 'Click Test Raw Kraken Balance Endpoint, then review Show Auth Debug.'
     };
   }
 
@@ -4301,8 +4715,8 @@ function classifyKrakenAuthenticationIssue({ error = null, krakenReadiness = nul
     return {
       id: 'invalid_key',
       label: 'Kraken rejected the key',
-      plainEnglish: 'Kraken did not accept this API key. Recreate a restricted Kraken Pro API key and paste the new values into the encrypted vault.',
-      nextClick: 'Delete / Rotate Kraken Key'
+      plainEnglish: 'Kraken may have rejected the API key. Do not recreate it yet; run Kraken Authentication Diagnostics so the raw Kraken response can confirm whether the key itself is invalid.',
+      nextClick: 'Click Test Raw Kraken Balance Endpoint, then review Show Auth Debug.'
     };
   }
 
@@ -4700,6 +5114,10 @@ module.exports = {
   buildPhase6DWizard,
   buildPhase6EFinalStatus,
   buildPhase6EWalkthrough,
+  buildKrakenCredentialDiagnostics,
+  runKrakenLocalAuthSelfTest,
+  classifyKrakenAuthDiagnosticFailure,
+  runKrakenAuthDiagnostics,
   classifyKrakenAuthenticationIssue,
   buildPhase6FTinyLivePreview,
   buildPhase6FOperatorResult,

@@ -3948,6 +3948,10 @@ function checkExchangeProductionExecutionModule() {
     buildPhase6DWizard,
     buildPhase6EFinalStatus,
     buildPhase6EWalkthrough,
+    buildKrakenCredentialDiagnostics,
+    runKrakenLocalAuthSelfTest,
+    classifyKrakenAuthDiagnosticFailure,
+    runKrakenAuthDiagnostics,
     classifyKrakenAuthenticationIssue,
     buildPhase6FTinyLivePreview,
     buildPhase6FOperatorResult,
@@ -4344,6 +4348,39 @@ function checkExchangeProductionExecutionModule() {
   const phase6FInvalidSignature = classifyKrakenAuthenticationIssue({
     error: new Error('EAPI:Invalid signature')
   });
+  const krakenDiagnosticCredentials = {
+    apiKey: 'fixture-kraken-key',
+    apiSecret: Buffer.from('fixture-kraken-private-key-material').toString('base64')
+  };
+  const krakenDiagnosticSeed = buildKrakenCredentialDiagnostics({
+    credentials: krakenDiagnosticCredentials
+  });
+  const krakenCredentialDiagnostics = buildKrakenCredentialDiagnostics({
+    credentials: krakenDiagnosticCredentials,
+    vaultMetadata: {
+      apiKeySha256Fingerprint: krakenDiagnosticSeed.apiKeySha256Fingerprint,
+      apiSecretSha256Fingerprint: krakenDiagnosticSeed.apiSecretSha256Fingerprint,
+      vaultRoundTripVerified: true
+    }
+  });
+  const krakenLocalSelfTest = runKrakenLocalAuthSelfTest({
+    credentials: krakenDiagnosticCredentials,
+    requestPath: '/0/private/Balance'
+  });
+  const krakenRawInvalidSignature = classifyKrakenAuthDiagnosticFailure({
+    credentialDiagnostics: krakenCredentialDiagnostics,
+    localSelfTest: krakenLocalSelfTest,
+    responseCode: 200,
+    responseBody: '{"error":["EAPI:Invalid signature"]}',
+    requestReachedKraken: true
+  });
+  const krakenRawInvalidKey = classifyKrakenAuthDiagnosticFailure({
+    credentialDiagnostics: krakenCredentialDiagnostics,
+    localSelfTest: krakenLocalSelfTest,
+    responseCode: 200,
+    responseBody: '{"error":["EAPI:Invalid key"]}',
+    requestReachedKraken: true
+  });
   const boundary = createProductionSafetyBoundary(false);
 
   if (
@@ -4419,6 +4456,20 @@ function checkExchangeProductionExecutionModule() {
     || phase6EWalkthrough.safetyBoundary.productionOrderEndpointCalled !== false
     || phase6EWalkthrough.safetyBoundary.phase6ECanPlaceOrder !== false
     || phase6FInvalidSignature.label !== 'Kraken rejected the signature'
+    || !phase6FInvalidSignature.nextClick.includes('Test Raw Kraken Balance Endpoint')
+    || typeof runKrakenAuthDiagnostics !== 'function'
+    || krakenCredentialDiagnostics.apiKeyExists !== true
+    || krakenCredentialDiagnostics.apiSecretExists !== true
+    || krakenCredentialDiagnostics.apiSecretBase64RoundTripValid !== true
+    || krakenCredentialDiagnostics.apiKeyAndSecretFingerprintsMatch !== false
+    || krakenCredentialDiagnostics.vaultRoundTripVerifiedAtSave !== true
+    || krakenCredentialDiagnostics.savedVaultValuesMatchEncryptedMetadata !== true
+    || krakenLocalSelfTest.nonceGenerationSucceeded !== true
+    || krakenLocalSelfTest.signatureGenerationSucceeded !== true
+    || krakenRawInvalidSignature.id !== 'invalid_signature'
+    || krakenRawInvalidSignature.conclusive !== true
+    || krakenRawInvalidKey.id !== 'invalid_key'
+    || krakenRawInvalidKey.conclusive !== true
     || phase6FTinyLivePreview.noLiveOrderWillBePlacedYet !== true
     || phase6FTinyLivePreview.productionOrderEndpointEnabled !== false
     || phase6FOperatorResult.title !== 'Phase 6F: First Authenticated Kraken Connection And Tiny Live Eligibility'
@@ -7987,8 +8038,13 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('Save Key Safely')
     || !html.includes('Dry-Run Proof')
     || !html.includes('Tiny Live Eligibility')
+    || !html.includes('Kraken Authentication Diagnostics')
+    || !html.includes('Test Raw Kraken Balance Endpoint')
+    || !html.includes('Show Auth Debug')
+    || !html.includes('Exact Kraken response body')
     || !html.includes('window.EtherealAIKrakenLiveSetup')
     || !html.includes("'kraken-live-save-key': saveKrakenLiveSetupKey")
+    || !html.includes("'kraken-auth-test-balance': testRawKrakenBalanceEndpoint")
     || !html.includes('Phase 6E: Real Kraken API Key Connection Walkthrough')
     || !html.includes('Start Kraken Key Walkthrough')
     || !html.includes('Save Kraken Key To Vault')
@@ -8063,6 +8119,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('/api/v1/live-trading-launch/phase6f/authenticated-readiness')
     || !html.includes('/api/v1/live-trading-launch/phase6f/tiny-live-preview')
     || !html.includes('/api/v1/live-trading-launch/phase6f/enable-tiny-live-test-mode')
+    || !html.includes('/api/v1/live-trading-launch/kraken-auth-diagnostics/status')
+    || !html.includes('/api/v1/live-trading-launch/kraken-auth-diagnostics/raw-balance')
     || !html.includes('/api/v1/live-trading-launch/phase6/status')
     || !html.includes('/api/v1/live-trading-launch/phase6/approval')
     || !html.includes('/api/v1/live-trading-launch/phase6/preview')
@@ -8117,6 +8175,9 @@ function checkLiveTradingLaunchCenterUi() {
     || !styles.includes('.kraken-live-stepper')
     || !styles.includes('.kraken-live-save-panel')
     || !styles.includes('.kraken-live-status-grid')
+    || !styles.includes('.kraken-auth-diagnostics')
+    || !styles.includes('.kraken-auth-diagnostic-grid')
+    || !styles.includes('.kraken-auth-debug-log')
     || !styles.includes('.phase6e-wizard')
     || !styles.includes('.phase6e-summary-grid')
     || !styles.includes('.phase6e-guide-grid')
@@ -8167,6 +8228,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase6f/authenticated-readiness'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase6f/tiny-live-preview'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase6f/enable-tiny-live-test-mode'")
+    || !routes.includes("app.get('/api/v1/live-trading-launch/kraken-auth-diagnostics/status'")
+    || !routes.includes("app.post('/api/v1/live-trading-launch/kraken-auth-diagnostics/raw-balance'")
     || !routes.includes("app.get('/api/v1/live-trading-launch/phase6/status'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase6/approval'")
     || !routes.includes("app.post('/api/v1/live-trading-launch/phase6/preview'")
@@ -8218,6 +8281,7 @@ function checkLiveTradingLaunchCenterUi() {
     || !server.includes('PHASE6F_ENABLE_CONFIRMATION_PHRASE')
     || !server.includes('buildPhase6FOperatorResult')
     || !server.includes('buildPhase6FTinyLivePreview')
+    || !server.includes('runKrakenAuthDiagnostics')
     || !server.includes('runProductionOrderLifecycle')
     || !server.includes('queryProductionOrderStatus')
     || !server.includes('cancelProductionOrder')
@@ -8251,6 +8315,7 @@ function checkLiveTradingLaunchCenterUi() {
     || !routeRegistration.includes('phase6FEnableConfirmationPhrase')
     || !routeRegistration.includes('buildPhase6FOperatorResult')
     || !routeRegistration.includes('buildPhase6FTinyLivePreview')
+    || !routeRegistration.includes('runKrakenAuthDiagnostics')
     || !routeRegistration.includes('runProductionOrderLifecycle')
     || !routeRegistration.includes('queryProductionOrderStatus')
     || !routeRegistration.includes('cancelProductionOrder')
@@ -8335,6 +8400,9 @@ function checkLiveTradingLaunchCenterUi() {
     || !phase6Production.includes('PHASE6F_RECOMMENDED_FIRST_EXCHANGE')
     || !phase6Production.includes('PHASE6F_ENABLE_CONFIRMATION_PHRASE')
     || !phase6Production.includes('classifyKrakenAuthenticationIssue')
+    || !phase6Production.includes('classifyKrakenAuthDiagnosticFailure')
+    || !phase6Production.includes('runKrakenAuthDiagnostics')
+    || !phase6Production.includes('runKrakenLocalAuthSelfTest')
     || !phase6Production.includes('buildPhase6FOperatorResult')
     || !phase6Production.includes('buildPhase6FTinyLivePreview')
     || !phase6Production.includes('PHASE6_PRODUCTION_ADAPTERS')
@@ -8355,6 +8423,7 @@ function checkLiveTradingLaunchCenterUi() {
     || !operatorMode.includes('Start Live Setup Safely Without Unlocking Autonomy')
     || !operatorMode.includes('kraken-live-setup-walkthrough')
     || !operatorMode.includes('Start Kraken Live Setup Walkthrough')
+    || !operatorMode.includes('Test Raw Kraken Balance Endpoint')
     || !operatorMode.includes('Save Key Safely')
     || !operatorMode.includes('Tiny Live Eligibility')
     || !operatorMode.includes('No leverage, margin, futures, withdrawals, wallet signing, unrestricted live orders, or autonomous scaling.')

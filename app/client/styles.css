@@ -4705,6 +4705,7 @@ footer {
 .kraken-live-confirmations,
 .kraken-live-save-panel,
 .kraken-live-status-grid,
+.kraken-auth-diagnostic-grid,
 .live-sandbox-safety-grid,
 .live-sandbox-controls,
 .live-tiny-safety-grid,
@@ -4848,6 +4849,7 @@ footer {
 .kraken-live-stepper,
 .kraken-live-permission-grid,
 .kraken-live-status-grid,
+.kraken-auth-diagnostic-grid,
 .phase6c-step-grid,
 .phase6c-report-grid,
 .phase6c-proof-grid,
@@ -4936,6 +4938,10 @@ footer {
 .kraken-live-permission-grid div,
 .kraken-live-save-panel,
 .kraken-live-status-grid article,
+.kraken-auth-diagnostics,
+.kraken-auth-diagnostic-grid article,
+.kraken-auth-response-body,
+.kraken-auth-debug-log,
 .phase6b-summary-grid article,
 .phase6b-instructions,
 .phase6b-checklist-panel,
@@ -4970,6 +4976,7 @@ footer {
 .phase6b-status-grid article span,
 .kraken-live-step span,
 .kraken-live-status-grid article span,
+.kraken-auth-diagnostic-grid article span,
 .phase6b-check-item span,
 .phase6c-summary-grid article span,
 .phase6c-step-grid article span,
@@ -4997,6 +5004,7 @@ footer {
 .kraken-live-permission-grid div strong,
 .kraken-live-save-panel h3,
 .kraken-live-status-grid article strong,
+.kraken-auth-diagnostic-grid article strong,
 .phase6b-summary-grid h3,
 .phase6b-instructions h3,
 .phase6b-checklist-panel h3,
@@ -5130,6 +5138,47 @@ footer {
 .kraken-live-save-panel label {
     color: var(--text-primary);
     font-weight: 800;
+}
+
+.kraken-auth-diagnostics {
+    display: grid;
+    gap: 14px;
+    margin: 18px 0 0;
+}
+
+.kraken-auth-diagnostics-header {
+    align-items: center;
+    display: flex;
+    gap: 14px;
+    justify-content: space-between;
+}
+
+.kraken-auth-diagnostic-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.kraken-auth-diagnostic-grid article {
+    display: grid;
+    gap: 6px;
+}
+
+.kraken-auth-response-body,
+.kraken-auth-debug-log {
+    border-radius: 8px;
+    color: var(--text-primary);
+    overflow-x: auto;
+    white-space: pre-wrap;
+}
+
+.kraken-auth-response-body pre,
+.kraken-auth-debug-log {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
+.kraken-auth-response-body pre {
+    margin: 10px 0 0;
 }
 
 .kraken-live-save-panel {
@@ -5532,6 +5581,10 @@ footer {
 :root[data-theme="night"] .kraken-live-permission-grid div,
 :root[data-theme="night"] .kraken-live-save-panel,
 :root[data-theme="night"] .kraken-live-status-grid article,
+:root[data-theme="night"] .kraken-auth-diagnostics,
+:root[data-theme="night"] .kraken-auth-diagnostic-grid article,
+:root[data-theme="night"] .kraken-auth-response-body,
+:root[data-theme="night"] .kraken-auth-debug-log,
 :root[data-theme="night"] .live-sandbox-safety-grid article,
 :root[data-theme="night"] .live-tiny-safety-grid article,
 :root[data-theme="night"] .tiny-confirmation-box,
@@ -5575,6 +5628,10 @@ footer {
 :root:not([data-theme="day"]) .kraken-live-permission-grid div,
 :root:not([data-theme="day"]) .kraken-live-save-panel,
 :root:not([data-theme="day"]) .kraken-live-status-grid article,
+:root:not([data-theme="day"]) .kraken-auth-diagnostics,
+:root:not([data-theme="day"]) .kraken-auth-diagnostic-grid article,
+:root:not([data-theme="day"]) .kraken-auth-response-body,
+:root:not([data-theme="day"]) .kraken-auth-debug-log,
 :root:not([data-theme="day"]) .live-sandbox-safety-grid article,
 :root:not([data-theme="day"]) .live-tiny-safety-grid article,
 :root:not([data-theme="day"]) .tiny-confirmation-box,

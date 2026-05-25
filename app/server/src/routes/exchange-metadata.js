@@ -152,6 +152,10 @@ function registerExchangeMetadataRoutes(app, {
   buildPhase6DWizard,
   buildPhase6EFinalStatus,
   buildPhase6EWalkthrough,
+  buildKrakenCredentialDiagnostics,
+  runKrakenLocalAuthSelfTest,
+  classifyKrakenAuthDiagnosticFailure,
+  runKrakenAuthDiagnostics,
   classifyKrakenAuthenticationIssue,
   buildPhase6FTinyLivePreview,
   buildPhase6FOperatorResult,
@@ -3418,6 +3422,9 @@ function registerExchangeMetadataRoutes(app, {
         rotationNumber: Number(previousConnection.rotationNumber || 0) + 1,
         permissionsChecklist,
         apiKeyFingerprint: saved.apiKeyFingerprint,
+        apiKeySha256Fingerprint: saved.apiKeySha256Fingerprint,
+        apiSecretSha256Fingerprint: saved.apiSecretSha256Fingerprint,
+        vaultRoundTripVerified: saved.vaultRoundTripVerified,
         adapterStatus: adapter.adapterStatus,
         productionOrderEndpointCalled: false,
         productionOrderEndpointEnabled: false
@@ -3446,6 +3453,9 @@ function registerExchangeMetadataRoutes(app, {
           JSON.stringify({
             exchangeName: 'kraken',
             apiKeyFingerprint: saved.apiKeyFingerprint,
+            apiKeySha256Fingerprint: saved.apiKeySha256Fingerprint,
+            apiSecretSha256Fingerprint: saved.apiSecretSha256Fingerprint,
+            vaultRoundTripVerified: saved.vaultRoundTripVerified,
             secretValuesReturnedToUi: false,
             productionOrderEndpointCalled: false,
             productionOrderEndpointEnabled: false,
@@ -3463,6 +3473,9 @@ function registerExchangeMetadataRoutes(app, {
           stored: true,
           referenceName: saved.referenceName,
           apiKeyFingerprint: saved.apiKeyFingerprint,
+          apiKeySha256Fingerprint: saved.apiKeySha256Fingerprint,
+          apiSecretSha256Fingerprint: saved.apiSecretSha256Fingerprint,
+          vaultRoundTripVerified: saved.vaultRoundTripVerified,
           hasPassphrase: saved.hasExtraPhrase,
           secretValuesReturned: false
         },
@@ -4005,6 +4018,207 @@ function registerExchangeMetadataRoutes(app, {
       res.status(500).json({
         error: createPlainEnglishProductionError
           ? createPlainEnglishProductionError('Phase 6F Kraken eligibility status', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.get('/api/v1/live-trading-launch/kraken-auth-diagnostics/status', requireAuth, async (req, res) => {
+    try {
+      const connector = await findOrCreateProductionConnector({ exchangeName: 'kraken' });
+      const referenceName = connector?.settings?.productionConnection?.referenceName || null;
+      const vaultStatus = referenceName
+        ? await getProductionVaultStatus(referenceName)
+        : { entries: [] };
+      const vaultMetadata = vaultStatus.entries?.[0]?.metadata || {};
+      let credentials = null;
+      let vaultDecodeError = '';
+
+      try {
+        credentials = connector
+          ? await loadConnectorProductionCredentialsForUser(connector, req.session.userId)
+          : null;
+      } catch (error) {
+        vaultDecodeError = error.message;
+      }
+
+      const credentialDiagnostics = credentials
+        ? buildKrakenCredentialDiagnostics({ credentials, vaultMetadata })
+        : {
+            apiKeyExists: false,
+            apiSecretExists: false,
+            vaultDecodeSucceeded: false,
+            vaultDecodeError,
+            secretValuesReturnedToUi: false
+          };
+      const localSelfTest = credentials
+        ? runKrakenLocalAuthSelfTest({ credentials, requestPath: '/0/private/Balance' })
+        : {
+            nonceGenerationSucceeded: false,
+            signatureGenerationSucceeded: false,
+            localSelfTestPassed: false,
+            failure: vaultDecodeError || 'No restricted Kraken API key is saved in the encrypted production vault.',
+            secretValuesReturnedToUi: false
+          };
+
+      res.json({
+        diagnostics: {
+          title: 'Kraken Authentication Diagnostics',
+          exchangeName: 'kraken',
+          endpoint: '/0/private/Balance',
+          credentialSaved: Boolean(referenceName),
+          apiKeyExists: credentialDiagnostics.apiKeyExists,
+          apiSecretExists: credentialDiagnostics.apiSecretExists,
+          credentialDiagnostics,
+          localSelfTest,
+          lastDiagnostic: connector?.settings?.productionConnection?.krakenAuthDiagnostics || null,
+          productionOrderEndpointCalled: false,
+          productionOrderEndpointEnabled: false,
+          liveTradingEnabled: false,
+          withdrawalsEnabled: false,
+          walletSigningEnabled: false,
+          secretValuesReturnedToUi: false
+        },
+        nextClick: referenceName ? 'Test Raw Kraken Balance Endpoint' : 'Save Kraken Key Safely',
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('Kraken auth diagnostics status', error)
+          : error.message,
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    }
+  });
+
+  app.post('/api/v1/live-trading-launch/kraken-auth-diagnostics/raw-balance', requireAuth, async (req, res) => {
+    try {
+      const connector = await findOrCreateProductionConnector({ exchangeName: 'kraken' });
+      const adapter = getProductionAdapter('kraken');
+      const referenceName = connector?.settings?.productionConnection?.referenceName || null;
+      const vaultStatus = referenceName
+        ? await getProductionVaultStatus(referenceName)
+        : { entries: [] };
+      const vaultMetadata = vaultStatus.entries?.[0]?.metadata || {};
+      let credentials = null;
+      let vaultDecodeError = '';
+
+      try {
+        credentials = connector
+          ? await loadConnectorProductionCredentialsForUser(connector, req.session.userId)
+          : null;
+      } catch (error) {
+        vaultDecodeError = error.message;
+      }
+
+      if (!credentials) {
+        const credentialDiagnostics = {
+          apiKeyExists: false,
+          apiSecretExists: false,
+          vaultDecodeSucceeded: false,
+          vaultDecodeError,
+          secretValuesReturnedToUi: false
+        };
+        const localSelfTest = {
+          nonceGenerationSucceeded: false,
+          signatureGenerationSucceeded: false,
+          localSelfTestPassed: false,
+          failure: vaultDecodeError || 'No restricted Kraken API key is saved in the encrypted production vault.',
+          secretValuesReturnedToUi: false
+        };
+
+        return res.status(409).json({
+          diagnostics: {
+            title: 'Kraken Authentication Diagnostics',
+            exchangeName: 'kraken',
+            endpoint: '/0/private/Balance',
+            apiKeyExists: false,
+            apiSecretExists: false,
+            credentialDiagnostics,
+            localSelfTest,
+            requestReachedKraken: false,
+            responseCode: null,
+            responseBodyExact: '',
+            failureClassification: classifyKrakenAuthDiagnosticFailure({
+              credentialDiagnostics,
+              localSelfTest,
+              requestReachedKraken: false,
+              requestError: vaultDecodeError
+            }),
+            productionOrderEndpointCalled: false,
+            productionOrderEndpointEnabled: false,
+            secretValuesReturnedToUi: false
+          },
+          nextClick: 'Save Kraken Key Safely',
+          safetyBoundary: createProductionSafetyBoundary(false)
+        });
+      }
+
+      const diagnostics = await runKrakenAuthDiagnostics({
+        credentials,
+        adapter,
+        vaultMetadata,
+        requestPath: '/0/private/Balance'
+      });
+      const settings = mergeProductionConnectionSettings(connector, {
+        krakenAuthDiagnostics: diagnostics,
+        krakenAuthDiagnosticsAt: new Date().toISOString(),
+        productionOrderEndpointCalled: false,
+        productionOrderEndpointEnabled: false
+      });
+
+      await dbRun(
+        `UPDATE exchange_connectors
+         SET status = ?, settings_json = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [
+          diagnostics.failureClassification?.id === 'works_safely' ? 'configured' : 'review_needed',
+          JSON.stringify(settings),
+          connector.id
+        ]
+      );
+      await dbRun(
+        `INSERT INTO live_trading_safety_events
+         (user_id, event_type, status, summary, payload_json)
+         VALUES (?, ?, ?, ?, ?)`,
+        [
+          req.session.userId,
+          'kraken_auth_diagnostics_raw_balance',
+          diagnostics.failureClassification?.id === 'works_safely' ? 'complete' : 'review_needed',
+          diagnostics.failureClassification?.plainEnglish || 'Kraken auth diagnostic completed.',
+          JSON.stringify({
+            exchangeName: 'kraken',
+            endpoint: diagnostics.endpoint,
+            responseCode: diagnostics.responseCode,
+            requestReachedKraken: diagnostics.requestReachedKraken,
+            failureClassification: diagnostics.failureClassification,
+            apiKeyFingerprint: diagnostics.credentialDiagnostics?.apiKeySha256Fingerprint,
+            apiSecretFingerprint: diagnostics.credentialDiagnostics?.apiSecretSha256Fingerprint,
+            nonceGenerationSucceeded: diagnostics.nonceGenerationSucceeded,
+            signatureGenerationSucceeded: diagnostics.signatureGenerationSucceeded,
+            productionOrderEndpointCalled: false,
+            productionOrderEndpointEnabled: false,
+            secretValuesReturnedToUi: false,
+            withdrawalsEnabled: false,
+            transfersEnabled: false,
+            walletSigningEnabled: false
+          })
+        ]
+      );
+
+      res.json({
+        diagnostics,
+        nextClick: diagnostics.failureClassification?.id === 'works_safely'
+          ? 'Verify Kraken Connection'
+          : 'Open Show Auth Debug and review the exact Kraken response.',
+        safetyBoundary: createProductionSafetyBoundary(false)
+      });
+    } catch (error) {
+      res.status(error.status || 500).json({
+        error: createPlainEnglishProductionError
+          ? createPlainEnglishProductionError('Kraken auth diagnostics raw Balance endpoint', error)
           : error.message,
         safetyBoundary: createProductionSafetyBoundary(false)
       });

@@ -969,6 +969,32 @@
             </div>
 
             <div id="kraken-live-result" class="phase3-results">Click Start Kraken Live Setup Walkthrough. This setup cannot place a live order.</div>
+
+            <section class="kraken-auth-diagnostics" id="kraken-auth-diagnostics">
+                <div class="kraken-auth-diagnostics-header">
+                    <div>
+                        <span class="mode-pill">Diagnostics mode</span>
+                        <h3>Kraken Authentication Diagnostics</h3>
+                        <p class="workflow-helper-text">Use this when Verify Connection fails. It tests only Kraken Balance, shows redacted fingerprints, and confirms whether the request reached Kraken. No order endpoint is called.</p>
+                    </div>
+                    <div class="button-row">
+                        <button id="kraken-auth-test-balance" type="button">Test Raw Kraken Balance Endpoint</button>
+                        <button id="kraken-auth-debug-show" type="button" class="secondary-button">Show Auth Debug</button>
+                    </div>
+                </div>
+                <div class="kraken-auth-diagnostic-grid">
+                    <article><span>API key exists</span><strong id="kraken-auth-key-exists">Not checked</strong><small id="kraken-auth-key-fingerprint">Fingerprint hidden until test.</small></article>
+                    <article><span>Secret exists</span><strong id="kraken-auth-secret-exists">Not checked</strong><small id="kraken-auth-secret-fingerprint">Fingerprint hidden until test.</small></article>
+                    <article><span>Nonce generation</span><strong id="kraken-auth-nonce-status">Not checked</strong><small>Local self-test before Kraken call.</small></article>
+                    <article><span>Signature generation</span><strong id="kraken-auth-signature-status">Not checked</strong><small id="kraken-auth-signature-fingerprint">No full signature displayed.</small></article>
+                    <article><span>Request reached Kraken</span><strong id="kraken-auth-reached-status">Not checked</strong><small id="kraken-auth-response-code">HTTP code pending.</small></article>
+                    <article><span>Failure type</span><strong id="kraken-auth-failure-type">Not checked</strong><small id="kraken-auth-failure-note">Run the raw Balance test for deterministic evidence.</small></article>
+                    <article><span>Encoding checks</span><strong id="kraken-auth-encoding-status">Not checked</strong><small id="kraken-auth-encoding-note">Whitespace, newline, tab, and base64 checks.</small></article>
+                    <article><span>Vault round trip</span><strong id="kraken-auth-vault-status">Not checked</strong><small id="kraken-auth-vault-note">Checks encrypted save/decrypt metadata.</small></article>
+                </div>
+                <div id="kraken-auth-response-body" class="kraken-auth-response-body">Exact Kraken response body will appear here after the raw Balance test.</div>
+                <pre id="kraken-auth-debug-log" class="kraken-auth-debug-log" hidden>Click Test Raw Kraken Balance Endpoint first. Full keys and full secrets are never shown.</pre>
+            </section>
         </section>
 
         <section class="model-panel phase6e-wizard" id="kraken-api-key-walkthrough">
@@ -1446,6 +1472,8 @@
         let latestPhase6F = null;
         let latestPhase6FReadiness = null;
         let latestPhase6FPreview = null;
+        let latestKrakenAuthDiagnostics = null;
+        let krakenAuthDebugVisible = false;
         let latestPhase6Center = null;
         let latestPhase6PreviewId = null;
         let latestPhase6OrderId = null;
@@ -3168,6 +3196,143 @@
             setChecked('phase6e-check-no-order');
         }
 
+        function setKrakenAuthDiagnosticText(id, value) {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
+        }
+
+        function yesNo(value) {
+            if (value === true) return 'Yes';
+            if (value === false) return 'No';
+            return 'Unknown';
+        }
+
+        function renderKrakenAuthDiagnostics(data = {}) {
+            const diagnostics = data.diagnostics || data;
+            latestKrakenAuthDiagnostics = diagnostics;
+            const credential = diagnostics.credentialDiagnostics || {};
+            const selfTest = diagnostics.localSelfTest || {};
+            const failure = diagnostics.failureClassification || {};
+            const encodingProblem = credential.apiKeyHasLeadingOrTrailingWhitespace
+                || credential.apiSecretHasLeadingOrTrailingWhitespace
+                || credential.apiKeyHasHiddenNewlineChars
+                || credential.apiSecretHasHiddenNewlineChars
+                || credential.apiKeyHasTabChars
+                || credential.apiSecretHasTabChars
+                || credential.malformedBase64Secret;
+            const vaultMatch = credential.savedVaultValuesMatchEncryptedMetadata;
+
+            setKrakenAuthDiagnosticText('kraken-auth-key-exists', yesNo(diagnostics.apiKeyExists ?? credential.apiKeyExists));
+            setKrakenAuthDiagnosticText('kraken-auth-key-fingerprint', credential.apiKeySha256Fingerprint ? `Fingerprint ${credential.apiKeySha256Fingerprint}` : 'No key fingerprint available.');
+            setKrakenAuthDiagnosticText('kraken-auth-secret-exists', yesNo(diagnostics.apiSecretExists ?? credential.apiSecretExists));
+            setKrakenAuthDiagnosticText('kraken-auth-secret-fingerprint', credential.apiSecretSha256Fingerprint ? `Fingerprint ${credential.apiSecretSha256Fingerprint}` : 'No secret fingerprint available.');
+            setKrakenAuthDiagnosticText('kraken-auth-nonce-status', yesNo(diagnostics.nonceGenerationSucceeded ?? selfTest.nonceGenerationSucceeded));
+            setKrakenAuthDiagnosticText('kraken-auth-signature-status', yesNo(diagnostics.signatureGenerationSucceeded ?? selfTest.signatureGenerationSucceeded));
+            setKrakenAuthDiagnosticText('kraken-auth-signature-fingerprint', selfTest.apiSignFingerprint ? `Signature fingerprint ${selfTest.apiSignFingerprint}` : 'No full signature displayed.');
+            setKrakenAuthDiagnosticText('kraken-auth-reached-status', yesNo(diagnostics.requestReachedKraken));
+            setKrakenAuthDiagnosticText('kraken-auth-response-code', diagnostics.responseCode ? `HTTP ${diagnostics.responseCode}` : 'No HTTP response code yet.');
+            setKrakenAuthDiagnosticText('kraken-auth-failure-type', failure.label || 'Not checked');
+            setKrakenAuthDiagnosticText('kraken-auth-failure-note', failure.plainEnglish || 'Run the raw Balance test for deterministic evidence.');
+            setKrakenAuthDiagnosticText('kraken-auth-encoding-status', encodingProblem ? 'Review needed' : (credential.apiSecretBase64RoundTripValid ? 'Looks clean' : 'Not checked'));
+            setKrakenAuthDiagnosticText('kraken-auth-encoding-note', [
+                credential.apiSecretHasLeadingOrTrailingWhitespace ? 'secret has leading/trailing whitespace' : '',
+                credential.apiSecretHasHiddenNewlineChars ? 'secret has newline characters' : '',
+                credential.apiSecretHasTabChars ? 'secret has tab characters' : '',
+                credential.malformedBase64Secret ? (credential.base64DecodeError || 'secret base64 check failed') : '',
+                credential.apiKeyAndSecretFingerprintsMatch ? 'API key and secret decrypt to the same fingerprint' : '',
+                credential.apiSecretBase64RoundTripValid ? `secret base64 decode passed (${credential.apiSecretDecodedBytes || 0} bytes)` : ''
+            ].filter(Boolean).join(' · ') || 'Whitespace/newline/base64 checks pending.');
+            setKrakenAuthDiagnosticText('kraken-auth-vault-status', credential.vaultDecodeSucceeded ? 'Decoded' : 'Not decoded');
+            setKrakenAuthDiagnosticText('kraken-auth-vault-note', vaultMatch === true
+                ? 'Saved vault fingerprints match decrypted values.'
+                : vaultMatch === false
+                    ? 'Saved vault fingerprints do not match decrypted values.'
+                    : credential.savedVaultMetadataHasSecretFingerprint === false
+                        ? 'This key was saved before secret fingerprint metadata existed; decode still ran.'
+                        : 'Vault metadata not available yet.');
+
+            const responseBody = diagnostics.responseBodyExact || diagnostics.responseBody || '';
+            document.getElementById('kraken-auth-response-body').innerHTML = responseBody
+                ? `<strong>Exact Kraken response body:</strong><pre>${escapeHtml(responseBody)}</pre>`
+                : 'Exact Kraken response body will appear here after the raw Balance test.';
+            renderKrakenAuthDebugLog();
+        }
+
+        function renderKrakenAuthDebugLog() {
+            const log = document.getElementById('kraken-auth-debug-log');
+            if (!log) return;
+            const diagnostics = latestKrakenAuthDiagnostics || {};
+            const credential = diagnostics.credentialDiagnostics || {};
+            const selfTest = diagnostics.localSelfTest || {};
+            const failure = diagnostics.failureClassification || {};
+            const lines = [
+                'Kraken auth debug - redacted',
+                `Endpoint: ${diagnostics.endpoint || '/0/private/Balance'}`,
+                `API key exists: ${yesNo(diagnostics.apiKeyExists ?? credential.apiKeyExists)}`,
+                `Secret exists: ${yesNo(diagnostics.apiSecretExists ?? credential.apiSecretExists)}`,
+                `API key fingerprint: ${credential.apiKeySha256Fingerprint || 'missing'}`,
+                `Secret fingerprint: ${credential.apiSecretSha256Fingerprint || 'missing'}`,
+                `API key and secret fingerprints match: ${yesNo(credential.apiKeyAndSecretFingerprintsMatch)}`,
+                `Vault decode succeeded: ${yesNo(credential.vaultDecodeSucceeded)}`,
+                `Vault round trip verified at save: ${yesNo(credential.vaultRoundTripVerifiedAtSave)}`,
+                `Vault values match decrypted metadata: ${credential.savedVaultValuesMatchEncryptedMetadata === null ? 'metadata not available' : yesNo(credential.savedVaultValuesMatchEncryptedMetadata)}`,
+                `Secret base64 round trip valid: ${yesNo(credential.apiSecretBase64RoundTripValid)}`,
+                `Secret decoded bytes: ${credential.apiSecretDecodedBytes || 0}`,
+                `Whitespace/newline/key tabs: key-leading=${yesNo(credential.apiKeyHasLeadingOrTrailingWhitespace)} key-newline=${yesNo(credential.apiKeyHasHiddenNewlineChars)} key-tab=${yesNo(credential.apiKeyHasTabChars)}`,
+                `Whitespace/newline/secret tabs: secret-leading=${yesNo(credential.apiSecretHasLeadingOrTrailingWhitespace)} secret-newline=${yesNo(credential.apiSecretHasHiddenNewlineChars)} secret-tab=${yesNo(credential.apiSecretHasTabChars)}`,
+                `Nonce generation: ${yesNo(diagnostics.nonceGenerationSucceeded ?? selfTest.nonceGenerationSucceeded)} nonce=${selfTest.nonce || 'hidden until test'}`,
+                `Signature generation: ${yesNo(diagnostics.signatureGenerationSucceeded ?? selfTest.signatureGenerationSucceeded)} fingerprint=${selfTest.apiSignFingerprint || 'missing'}`,
+                `Request reached Kraken: ${yesNo(diagnostics.requestReachedKraken)}`,
+                `Exact response code: ${diagnostics.responseCode ?? 'none'}`,
+                `Failure classification: ${failure.id || 'none'} - ${failure.label || 'not checked'}`,
+                `Classification is conclusive: ${yesNo(failure.conclusive)}`,
+                `Order endpoint called: ${yesNo(diagnostics.productionOrderEndpointCalled === true)}`,
+                `Order endpoint enabled: ${yesNo(diagnostics.productionOrderEndpointEnabled === true)}`,
+                '',
+                'Safe redacted log:',
+                ...(diagnostics.safeRedactedLogs || []),
+                '',
+                'Exact Kraken response body:',
+                diagnostics.responseBodyExact || diagnostics.responseBody || '(none)'
+            ];
+            log.textContent = lines.join('\n');
+            log.hidden = !krakenAuthDebugVisible;
+        }
+
+        async function loadKrakenAuthDiagnosticStatus() {
+            const response = await fetch('/api/v1/live-trading-launch/kraken-auth-diagnostics/status');
+            const data = await response.json();
+            if (response.ok) {
+                renderKrakenAuthDiagnostics(data);
+            }
+            return data;
+        }
+
+        async function testRawKrakenBalanceEndpoint() {
+            document.getElementById('kraken-auth-response-body').textContent = 'Testing Kraken Balance endpoint. This is account-read only. No order endpoint is called.';
+            const response = await fetch('/api/v1/live-trading-launch/kraken-auth-diagnostics/raw-balance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await response.json();
+            renderKrakenAuthDiagnostics(data);
+            document.getElementById('kraken-live-result').innerHTML = `
+                <article class="phase6f-check-item ${response.ok && data.diagnostics?.failureClassification?.id === 'works_safely' ? 'status-success' : 'status-warning'}">
+                    <strong>${escapeHtml(data.diagnostics?.failureClassification?.label || 'Kraken diagnostics complete')}</strong>
+                    <p>${escapeHtml(data.diagnostics?.failureClassification?.plainEnglish || data.error || 'Review the diagnostics panel.')}</p>
+                    <small>${escapeHtml(data.nextClick || 'Open Show Auth Debug.')} No live order was placed. No order endpoint was called.</small>
+                </article>
+            `;
+        }
+
+        function toggleKrakenAuthDebug() {
+            krakenAuthDebugVisible = !krakenAuthDebugVisible;
+            const button = document.getElementById('kraken-auth-debug-show');
+            if (button) button.textContent = krakenAuthDebugVisible ? 'Hide Auth Debug' : 'Show Auth Debug';
+            renderKrakenAuthDebugLog();
+        }
+
         function renderKrakenLiveSetupStatus() {
             const finalStatus = latestPhase6EWizard?.finalStatus || {};
             const phase6F = latestPhase6F || {};
@@ -3197,6 +3362,7 @@
             await ensureProductionConnector('kraken');
             await loadPhase6EWalkthrough();
             await loadPhase6FStatus();
+            await loadKrakenAuthDiagnosticStatus();
             document.getElementById('kraken-live-setup-walkthrough').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
@@ -3527,12 +3693,15 @@
             verifyKrakenLiveSetupConnection,
             runKrakenLiveSetupDryRun,
             buildKrakenLiveSetupEligibility,
+            loadKrakenAuthDiagnosticStatus,
+            testRawKrakenBalanceEndpoint,
+            toggleKrakenAuthDebug,
             setKrakenLiveStep
         };
 
         document.addEventListener('click', event => {
             const action = event.target?.closest?.(
-                '#start-kraken-live-setup, #kraken-live-prev-step, #kraken-live-next-step, #kraken-live-save-key, #kraken-live-verify, #kraken-live-dry-run, #kraken-live-preview, #phase6e-start, #phase6e-save-key, #phase6e-delete-key, #phase6e-verify-key, #phase6e-dry-run, #phase6f-refresh, #phase6f-verify, #phase6f-preview, #phase6f-enable'
+                '#start-kraken-live-setup, #kraken-live-prev-step, #kraken-live-next-step, #kraken-live-save-key, #kraken-live-verify, #kraken-live-dry-run, #kraken-live-preview, #kraken-auth-test-balance, #kraken-auth-debug-show, #phase6e-start, #phase6e-save-key, #phase6e-delete-key, #phase6e-verify-key, #phase6e-dry-run, #phase6f-refresh, #phase6f-verify, #phase6f-preview, #phase6f-enable'
             );
             if (!action) return;
 
@@ -3545,6 +3714,8 @@
                 'kraken-live-verify': verifyKrakenLiveSetupConnection,
                 'kraken-live-dry-run': runKrakenLiveSetupDryRun,
                 'kraken-live-preview': buildKrakenLiveSetupEligibility,
+                'kraken-auth-test-balance': testRawKrakenBalanceEndpoint,
+                'kraken-auth-debug-show': toggleKrakenAuthDebug,
                 'phase6e-start': startPhase6EWalkthrough,
                 'phase6e-save-key': savePhase6EKrakenKey,
                 'phase6e-delete-key': deletePhase6EKrakenKey,

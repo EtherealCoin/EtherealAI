@@ -90,8 +90,8 @@
             title: 'Start Live Setup Safely Without Unlocking Autonomy',
             summary: 'Use one Kraken setup walkthrough to create a restricted spot key, save it safely, verify it, run dry-run proof, and check tiny live eligibility while keeping trading locked.',
             primaryAction: { label: 'Start Kraken Live Setup Walkthrough', selector: '#start-kraken-live-setup' },
-            keepIds: ['kraken-live-setup-walkthrough', 'live-trading-activation-wizard', 'real-credential-dry-run-proof', 'kraken-tiny-live-framework', 'live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center'],
-            keepHeadings: ['What Should I Do Next?', 'Kraken Live Setup Walkthrough', 'Live Trading Activation Wizard', 'Exchange Verification Checklist', 'Read-Only Arbitrage Scanner', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center', 'Phase 6: Production Trading Command Center'],
+            keepIds: ['kraken-live-setup-walkthrough', 'kraken-auth-diagnostics', 'live-trading-activation-wizard', 'real-credential-dry-run-proof', 'kraken-tiny-live-framework', 'live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center'],
+            keepHeadings: ['What Should I Do Next?', 'Kraken Live Setup Walkthrough', 'Kraken Authentication Diagnostics', 'Live Trading Activation Wizard', 'Exchange Verification Checklist', 'Read-Only Arbitrage Scanner', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center', 'Phase 6: Production Trading Command Center'],
             readyLabel: 'Live Trading Launch Locked Safely',
             nextText: 'Click Start Kraken Live Setup Walkthrough. It shows exactly what to click in Kraken, what permissions must stay off, where to paste the key, and what to verify next.',
             cards: [
@@ -107,10 +107,11 @@
                 ['2. Start Kraken walkthrough', 'Follow the single owner flow for key creation, safe permissions, vault save, verification, dry-run proof, and eligibility.', { label: 'Start Kraken Live Setup Walkthrough', selector: '#start-kraken-live-setup' }],
                 ['3. Save restricted Kraken key', 'Paste the Kraken API key and private key into encrypted local vault fields only.', { label: 'Save Key Safely', selector: '#kraken-live-save-key' }],
                 ['4. Verify Kraken connection', 'Read balances, account status, fees, symbol rules, and unsafe permission signals.', { label: 'Verify Connection', selector: '#kraken-live-verify' }],
-                ['5. Run dry-run proof', 'Simulate the exact tiny setup without calling the order endpoint.', { label: 'Dry-Run Proof', selector: '#kraken-live-dry-run' }],
-                ['6. Check tiny live eligibility', 'Estimate tiny size, fees, slippage, minimum order rules, exposure, and blockers without placing an order.', { label: 'Tiny Live Eligibility', selector: '#kraken-live-preview' }],
-                ['7. Prepare tiny live mode only if eligible', 'Typed confirmation can prepare locked tiny live test mode. Execution remains blocked.', { label: 'Enable Tiny Live Test Mode', selector: '#phase6f-enable' }],
-                ['8. Emergency stop', 'Disable production approvals and live connector flags if anything looks unsafe.', { label: 'Emergency Stop Production', selector: '#phase6d-emergency-stop' }]
+                ['5. Run Kraken auth diagnostics if verify fails', 'Test the raw Kraken Balance endpoint, local nonce, signature generation, vault decode, and exact Kraken response without placing orders.', { label: 'Test Raw Kraken Balance Endpoint', selector: '#kraken-auth-test-balance' }],
+                ['6. Run dry-run proof', 'Simulate the exact tiny setup without calling the order endpoint.', { label: 'Dry-Run Proof', selector: '#kraken-live-dry-run' }],
+                ['7. Check tiny live eligibility', 'Estimate tiny size, fees, slippage, minimum order rules, exposure, and blockers without placing an order.', { label: 'Tiny Live Eligibility', selector: '#kraken-live-preview' }],
+                ['8. Prepare tiny live mode only if eligible', 'Typed confirmation can prepare locked tiny live test mode. Execution remains blocked.', { label: 'Enable Tiny Live Test Mode', selector: '#phase6f-enable' }],
+                ['9. Emergency stop', 'Disable production approvals and live connector flags if anything looks unsafe.', { label: 'Emergency Stop Production', selector: '#phase6d-emergency-stop' }]
             ]
         },
         '/operator-control': {
