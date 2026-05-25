@@ -1200,6 +1200,7 @@
                         <option value="BTC/USDT">BTC/USDT</option>
                         <option value="ETH/USD">ETH/USD</option>
                         <option value="ETH/USDT">ETH/USDT</option>
+                        <option value="SOL/USD">SOL/USD</option>
                     </select>
                 </label>
                 <label for="phase6f-notional">
@@ -1253,6 +1254,112 @@
             </div>
 
             <div id="phase6f-result" class="phase3-results">Phase 6F is ready to load. No real orders will be placed from this phase.</div>
+        </section>
+
+        <section class="model-panel kraken-tiny-live-flow" id="kraken-tiny-live-test">
+            <div class="phase6f-hero">
+                <div>
+                    <span class="mode-pill">Owner-gated · one order only</span>
+                    <h2>Run $1 Kraken Tiny Live Test</h2>
+                    <p class="inline-status">This is the final manual Kraken test path. It can place one tiny spot order only after Kraken is verified, the no-order preview passes, unsafe permissions are absent, the amount is at or below $1, and you type the final confirmation phrase.</p>
+                </div>
+                <button id="kraken-tiny-refresh" type="button" class="primary-action-button">Refresh Tiny Test Gate</button>
+            </div>
+
+            <div class="phase6f-summary-grid">
+                <article>
+                    <span>Order Size</span>
+                    <strong>$1 max</strong>
+                    <small>Owner can lower this limit, not raise it in this milestone.</small>
+                </article>
+                <article>
+                    <span>Automation</span>
+                    <strong>Disabled</strong>
+                    <small>No loops, retries, scaling, or autonomous trading.</small>
+                </article>
+                <article>
+                    <span>Unsafe Features</span>
+                    <strong>Blocked</strong>
+                    <small>No withdrawals, transfers, leverage, margin, futures, or wallet signing.</small>
+                </article>
+                <article>
+                    <span>Final Order</span>
+                    <strong>Manual Only</strong>
+                    <small>Requires typed confirmation and a final click.</small>
+                </article>
+            </div>
+
+            <div class="phase6f-controls">
+                <label for="kraken-tiny-symbol">
+                    Symbol
+                    <select id="kraken-tiny-symbol">
+                        <option value="BTC/USD">BTC/USD</option>
+                        <option value="ETH/USD">ETH/USD</option>
+                        <option value="SOL/USD">SOL/USD</option>
+                        <option value="BTC/USDT">BTC/USDT</option>
+                        <option value="ETH/USDT">ETH/USDT</option>
+                    </select>
+                </label>
+                <label for="kraken-tiny-side">
+                    Side
+                    <select id="kraken-tiny-side">
+                        <option value="buy">Buy</option>
+                        <option value="sell">Sell</option>
+                    </select>
+                </label>
+                <label for="kraken-tiny-notional">
+                    Tiny amount USD
+                    <input id="kraken-tiny-notional" type="number" min="0.01" max="1" step="0.01" value="1">
+                </label>
+                <label for="kraken-tiny-limit">
+                    Owner tiny limit USD
+                    <input id="kraken-tiny-limit" type="number" min="0.01" max="1" step="0.01" value="1">
+                </label>
+                <label for="kraken-tiny-price">
+                    Limit price optional
+                    <input id="kraken-tiny-price" type="number" min="0" step="0.01" value="0">
+                </label>
+                <button id="kraken-tiny-preview" type="button">Preview $1 Kraken Tiny Live Test</button>
+            </div>
+
+            <div class="phase6f-proof-grid">
+                <article class="phase6f-proof-panel">
+                    <h3>Gate Status</h3>
+                    <div id="kraken-tiny-gate-result">Refresh or preview the tiny test gate. No live order will be placed by these buttons.</div>
+                </article>
+                <article class="phase6f-proof-panel">
+                    <h3>Exact Order Preview</h3>
+                    <div id="kraken-tiny-preview-result">No exact preview has been built yet.</div>
+                </article>
+                <article class="phase6f-proof-panel">
+                    <h3>Order Tracking</h3>
+                    <div id="kraken-tiny-order-result">No Kraken tiny live order has been placed.</div>
+                </article>
+                <article class="phase6f-proof-panel">
+                    <h3>Emergency Controls</h3>
+                    <div class="button-row">
+                        <button id="kraken-tiny-track" type="button">Track Tiny Test Order</button>
+                        <button id="kraken-tiny-cancel" type="button">Cancel Tiny Test Order</button>
+                        <button id="kraken-tiny-emergency" type="button" class="danger-action">Emergency Stop Tiny Test</button>
+                    </div>
+                    <p class="workflow-helper-text">Emergency Stop cancels any tracked open Kraken tiny test order and keeps automation disabled.</p>
+                </article>
+            </div>
+
+            <div class="phase6f-enable-panel kraken-tiny-final-gate">
+                <div>
+                    <h3>Final Owner Approval</h3>
+                    <p class="workflow-helper-text">The final button stays locked until preview passes, the phrase is exact, both boxes are checked, and the backend re-checks every safety gate.</p>
+                </div>
+                <label for="kraken-tiny-confirmation">
+                    Type the exact confirmation phrase
+                    <input id="kraken-tiny-confirmation" type="text" autocomplete="off" placeholder="I APPROVE THIS $1 KRAKEN TINY LIVE TEST">
+                </label>
+                <label class="checkbox-line"><input id="kraken-tiny-owner-approval" type="checkbox"> I understand this can place one real Kraken spot order at or below $1.</label>
+                <label class="checkbox-line"><input id="kraken-tiny-emergency-armed" type="checkbox"> Emergency Stop is armed.</label>
+                <button id="kraken-tiny-place" type="button" disabled>Place Tiny Live Test Order</button>
+                <div id="kraken-tiny-place-result" class="phase3-results">Locked. Build a passing preview first. No live order has been placed.</div>
+            </div>
         </section>
 
         <section class="model-panel" id="production-trading-command-center">
@@ -1490,6 +1597,9 @@
         let latestPhase6F = null;
         let latestPhase6FReadiness = null;
         let latestPhase6FPreview = null;
+        let latestKrakenTinyLiveGate = null;
+        let latestKrakenTinyLivePreviewId = null;
+        let latestKrakenTinyLiveOrderId = null;
         let latestKrakenAuthDiagnostics = null;
         let latestKrakenVaultReadback = null;
         let krakenAuthDebugVisible = false;
@@ -3863,6 +3973,247 @@
             await loadPhase6Status();
         }
 
+        function krakenTinyPayload() {
+            return {
+                exchangeName: 'kraken',
+                symbol: document.getElementById('kraken-tiny-symbol').value || 'BTC/USD',
+                side: document.getElementById('kraken-tiny-side').value || 'buy',
+                orderType: 'limit',
+                quantity: 0,
+                limitPrice: Number(document.getElementById('kraken-tiny-price').value || 0),
+                notionalUsd: Number(document.getElementById('kraken-tiny-notional').value || 1),
+                ownerTinyLimitUsd: Number(document.getElementById('kraken-tiny-limit').value || 1),
+                maxOrderUsd: Number(document.getElementById('kraken-tiny-limit').value || 1)
+            };
+        }
+
+        function renderKrakenTinyChecks(checks = []) {
+            return checks.map(check => `
+                <article class="phase6f-check-item ${phase6CStatusClass(check.status)}">
+                    <span>${escapeHtml(check.status || (check.passed ? 'SAFE' : 'BLOCKED'))}</span>
+                    <strong>${escapeHtml(check.label || '')}</strong>
+                    <p>${escapeHtml(check.plainEnglish || '')}</p>
+                    <small>${escapeHtml(check.nextClick || 'No action needed.')}</small>
+                </article>
+            `).join('') || '<p class="workflow-helper-text">No tiny live checks loaded yet.</p>';
+        }
+
+        function renderKrakenTinyPreview(preview = {}) {
+            if (!preview || !preview.symbol) {
+                document.getElementById('kraken-tiny-preview-result').textContent = 'No exact preview has been built yet.';
+                return;
+            }
+
+            document.getElementById('kraken-tiny-preview-result').innerHTML = `
+                <article class="phase6f-check-item status-info">
+                    <span>Endpoint called: ${preview.endpointCalled ? 'Yes' : 'No'}</span>
+                    <strong>${escapeHtml(preview.exchange || 'Kraken')} ${escapeHtml(preview.side || 'buy')} ${escapeHtml(preview.symbol || '')}</strong>
+                    <div class="read-only-spread-summary">
+                        <article><span>Quantity</span><strong>${Number(preview.quantity || 0).toFixed(8)}</strong><small>Base units</small></article>
+                        <article><span>Estimated price</span><strong>${formatUsd(preview.estimatedPrice || 0)}</strong><small>Refreshed on preview</small></article>
+                        <article><span>Estimated fees</span><strong>${formatUsd(preview.estimatedFeesUsd || 0)}</strong><small>${Number(preview.feePercent || 0).toFixed(4)}%</small></article>
+                        <article><span>Worst-case spend</span><strong>${formatUsd(preview.worstCaseSpend || 0)}</strong><small>Fee + slippage estimate</small></article>
+                    </div>
+                    <p>${escapeHtml(preview.cancelRecoveryPlan || 'Cancel and Emergency Stop remain available after placement.')}</p>
+                    <small>Live order placement requires the final confirmation phrase, approval checkbox, Emergency Stop checkbox, and the final manual button.</small>
+                </article>
+            `;
+        }
+
+        function updateKrakenTinyPlaceButton() {
+            const gate = latestKrakenTinyLiveGate || {};
+            const phrase = gate.confirmationPhrase || 'I APPROVE THIS $1 KRAKEN TINY LIVE TEST';
+            const phraseTyped = document.getElementById('kraken-tiny-confirmation').value.trim() === phrase;
+            const ownerApproved = document.getElementById('kraken-tiny-owner-approval').checked;
+            const emergencyArmed = document.getElementById('kraken-tiny-emergency-armed').checked;
+
+            document.getElementById('kraken-tiny-place').disabled = !(gate.canPreview && phraseTyped && ownerApproved && emergencyArmed);
+        }
+
+        function renderKrakenTinyGate(data = {}) {
+            const gate = data.gate || data || {};
+            latestKrakenTinyLiveGate = gate;
+            latestKrakenTinyLivePreviewId = data.previewId || latestKrakenTinyLivePreviewId;
+
+            if (data.execution?.id) {
+                latestKrakenTinyLiveOrderId = data.execution.id;
+            }
+
+            document.getElementById('kraken-tiny-gate-result').innerHTML = `
+                <article class="phase6f-ready-card ${gate.canPreview ? 'status-success' : 'status-warning'}">
+                    <span>${gate.canPlace ? 'READY TO PLACE' : gate.canPreview ? 'READY FOR FINAL CONFIRMATION' : 'NOT READY'}</span>
+                    <strong>${escapeHtml(gate.label || 'Kraken tiny live gate')}</strong>
+                    <p>${escapeHtml(gate.plainEnglish || 'Review the visible gate checks.')}</p>
+                    <small>${escapeHtml(gate.nextClick || 'Preview the tiny test.')} · Endpoint called: No.</small>
+                </article>
+                <div class="phase6f-proof-grid">${renderKrakenTinyChecks(gate.checks || [])}</div>
+            `;
+            renderKrakenTinyPreview(gate.exactOrderPreview || {});
+
+            document.getElementById('kraken-tiny-confirmation').placeholder = gate.confirmationPhrase || 'I APPROVE THIS $1 KRAKEN TINY LIVE TEST';
+            updateKrakenTinyPlaceButton();
+        }
+
+        function renderKrakenTinyOrderResult(data = {}) {
+            const execution = data.execution || {};
+            const resultScreen = data.resultScreen || execution.result?.resultScreen || execution.preview || {};
+            latestKrakenTinyLiveOrderId = execution.id || latestKrakenTinyLiveOrderId;
+
+            document.getElementById('kraken-tiny-order-result').innerHTML = `
+                <article class="phase6f-check-item ${phase6CardClass(execution.status || resultScreen.fillStatus || data.status)}">
+                    <span>${escapeHtml(execution.status || resultScreen.fillStatus || data.status || 'review')}</span>
+                    <strong>${escapeHtml(resultScreen.exchange || execution.exchange_name || 'Kraken')} ${escapeHtml(resultScreen.symbol || execution.symbol || '')}</strong>
+                    <p>${escapeHtml(data.error || resultScreen.rejectionReason || data.nextClick || 'Tiny live order status recorded.')}</p>
+                    <small>Order id: ${escapeHtml(execution.exchange_order_id || resultScreen.exchangeOrderId || 'not assigned yet')} · Wallet signing disabled · withdrawals disabled · automation disabled.</small>
+                </article>
+                ${resultScreen.reconciliation ? `
+                    <article class="phase6f-check-item status-info">
+                        <strong>Balance reconciliation</strong>
+                        <p>${escapeHtml(resultScreen.reconciliation.status || 'Balance reconciliation recorded.')}</p>
+                    </article>
+                ` : ''}
+            `;
+        }
+
+        async function loadKrakenTinyLiveStatus() {
+            const response = await fetch('/api/v1/live-trading-launch/kraken-tiny-live-test/status');
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('kraken-tiny-gate-result').textContent = data.error || 'Unable to load Kraken tiny live gate.';
+                return null;
+            }
+
+            renderKrakenTinyGate(data);
+            if (data.latestOrders?.[0]?.id) {
+                latestKrakenTinyLiveOrderId = data.latestOrders[0].id;
+            }
+            return data.gate;
+        }
+
+        async function previewKrakenTinyLiveTest() {
+            document.getElementById('kraken-tiny-preview-result').textContent = 'Building the exact Kraken tiny-live preview. No order endpoint is called.';
+            await ensureProductionConnector('kraken');
+            const response = await fetch('/api/v1/live-trading-launch/kraken-tiny-live-test/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(krakenTinyPayload())
+            });
+            const data = await response.json();
+            renderKrakenTinyGate(data);
+
+            if (!response.ok) {
+                document.getElementById('kraken-tiny-place-result').innerHTML = `
+                    <article class="phase6f-check-item status-warning">
+                        <strong>Preview blocked</strong>
+                        <p>${escapeHtml(data.error || data.gate?.plainEnglish || 'The tiny live preview is not ready.')}</p>
+                        <small>${escapeHtml(data.nextClick || data.gate?.nextClick || 'Fix the visible blocker.')} · No order was placed.</small>
+                    </article>
+                `;
+                return;
+            }
+
+            document.getElementById('kraken-tiny-place-result').innerHTML = `
+                <article class="phase6f-check-item status-success">
+                    <strong>Preview ready</strong>
+                    <p>Review the exact order preview. The final order still requires typed confirmation, owner approval, Emergency Stop armed, and a manual click.</p>
+                    <small>Endpoint called: No.</small>
+                </article>
+            `;
+            await loadPhase6Status();
+        }
+
+        async function placeKrakenTinyLiveTest() {
+            const output = document.getElementById('kraken-tiny-place-result');
+
+            if (!latestKrakenTinyLivePreviewId) {
+                output.textContent = 'Build the $1 Kraken Tiny Live Test preview first. No order was placed.';
+                return;
+            }
+
+            output.textContent = 'Re-checking every gate before placement. This request can place one tiny Kraken spot order only if all gates pass.';
+            const response = await fetch('/api/v1/live-trading-launch/kraken-tiny-live-test/place', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    previewId: latestKrakenTinyLivePreviewId,
+                    ...krakenTinyPayload(),
+                    ownerConfirmation: document.getElementById('kraken-tiny-confirmation').value,
+                    ownerApprovalAccepted: document.getElementById('kraken-tiny-owner-approval').checked,
+                    emergencyStopArmed: document.getElementById('kraken-tiny-emergency-armed').checked
+                })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                renderKrakenTinyGate(data);
+                output.innerHTML = `
+                    <article class="phase6f-check-item status-warning">
+                        <strong>Tiny live order blocked</strong>
+                        <p>${escapeHtml(data.error || data.gate?.plainEnglish || 'A required final gate did not pass.')}</p>
+                        <small>${escapeHtml(data.nextClick || data.gate?.nextClick || 'Fix the visible blocker.')} · No order was placed unless the exchange order id appears in Order Tracking.</small>
+                    </article>
+                `;
+                return;
+            }
+
+            renderKrakenTinyGate(data);
+            renderKrakenTinyOrderResult(data);
+            output.innerHTML = `
+                <article class="phase6f-check-item status-success">
+                    <strong>Tiny live order submitted for tracking</strong>
+                    <p>${escapeHtml(data.nextClick || 'Track order status or cancel if still open.')}</p>
+                    <small>Autonomous trading remains disabled. Withdrawals and wallet signing remain disabled.</small>
+                </article>
+            `;
+            await loadPhase6Status();
+        }
+
+        async function trackKrakenTinyLiveOrder() {
+            const output = document.getElementById('kraken-tiny-order-result');
+
+            if (!latestKrakenTinyLiveOrderId) {
+                output.textContent = 'No Kraken tiny live order is tracked yet. Preview first.';
+                return;
+            }
+
+            output.textContent = 'Refreshing Kraken tiny order status.';
+            const response = await fetch(`/api/v1/live-trading-launch/kraken-tiny-live-test/orders/${latestKrakenTinyLiveOrderId}/status`);
+            const data = await response.json();
+            renderKrakenTinyOrderResult(data);
+        }
+
+        async function cancelKrakenTinyLiveOrder() {
+            const output = document.getElementById('kraken-tiny-order-result');
+
+            if (!latestKrakenTinyLiveOrderId) {
+                output.textContent = 'No Kraken tiny live order is tracked yet.';
+                return;
+            }
+
+            output.textContent = 'Sending cancel request for the tracked Kraken tiny order if it is open.';
+            const response = await fetch(`/api/v1/live-trading-launch/kraken-tiny-live-test/orders/${latestKrakenTinyLiveOrderId}/cancel`, { method: 'POST' });
+            const data = await response.json();
+            renderKrakenTinyOrderResult(data);
+        }
+
+        async function emergencyStopKrakenTinyLiveTest() {
+            const output = document.getElementById('kraken-tiny-order-result');
+            output.textContent = 'Running Kraken tiny-live Emergency Stop.';
+            const response = await fetch('/api/v1/live-trading-launch/kraken-tiny-live-test/emergency-stop', { method: 'POST' });
+            const data = await response.json();
+
+            output.innerHTML = `
+                <article class="phase6f-check-item ${response.ok ? 'status-success' : 'status-warning'}">
+                    <strong>${escapeHtml(data.status || 'Emergency Stop')}</strong>
+                    <p>${escapeHtml(data.summary || data.error || 'Emergency Stop completed.')}</p>
+                    <small>Cancel attempts: ${escapeHtml((data.canceled || []).length)} · automation disabled · withdrawals disabled.</small>
+                </article>
+            `;
+            await loadKrakenTinyLiveStatus();
+            await loadPhase6Status();
+        }
+
         window.EtherealAIPhase6E = {
             startPhase6EWalkthrough,
             savePhase6EKrakenKey,
@@ -3880,6 +4231,15 @@
             phase6FVerifyKraken,
             phase6FBuildPreview,
             phase6FEnableTinyLiveMode
+        };
+
+        window.EtherealAIKrakenTinyLiveTest = {
+            loadKrakenTinyLiveStatus,
+            previewKrakenTinyLiveTest,
+            placeKrakenTinyLiveTest,
+            trackKrakenTinyLiveOrder,
+            cancelKrakenTinyLiveOrder,
+            emergencyStopKrakenTinyLiveTest
         };
 
         window.EtherealAIKrakenLiveSetup = {
@@ -3900,7 +4260,7 @@
 
         document.addEventListener('click', event => {
             const action = event.target?.closest?.(
-                '#start-kraken-live-setup, #kraken-live-prev-step, #kraken-live-next-step, #kraken-live-save-key, #kraken-live-replace-key, #kraken-live-delete-key, #kraken-live-clear-cache, #kraken-live-verify, #kraken-live-dry-run, #kraken-live-preview, #kraken-auth-test-balance, #kraken-auth-readback, #kraken-auth-clear-cache, #kraken-auth-delete-key, #kraken-auth-debug-show, #phase6e-start, #phase6e-save-key, #phase6e-replace-key, #phase6e-delete-key, #phase6e-clear-cache, #phase6e-readback-key, #phase6e-verify-key, #phase6e-dry-run, #phase6f-refresh, #phase6f-verify, #phase6f-preview, #phase6f-enable'
+                '#start-kraken-live-setup, #kraken-live-prev-step, #kraken-live-next-step, #kraken-live-save-key, #kraken-live-replace-key, #kraken-live-delete-key, #kraken-live-clear-cache, #kraken-live-verify, #kraken-live-dry-run, #kraken-live-preview, #kraken-auth-test-balance, #kraken-auth-readback, #kraken-auth-clear-cache, #kraken-auth-delete-key, #kraken-auth-debug-show, #phase6e-start, #phase6e-save-key, #phase6e-replace-key, #phase6e-delete-key, #phase6e-clear-cache, #phase6e-readback-key, #phase6e-verify-key, #phase6e-dry-run, #phase6f-refresh, #phase6f-verify, #phase6f-preview, #phase6f-enable, #kraken-tiny-refresh, #kraken-tiny-preview, #kraken-tiny-place, #kraken-tiny-track, #kraken-tiny-cancel, #kraken-tiny-emergency'
             );
             if (!action) return;
 
@@ -3932,7 +4292,13 @@
                 'phase6f-refresh': loadPhase6FStatus,
                 'phase6f-verify': phase6FVerifyKraken,
                 'phase6f-preview': phase6FBuildPreview,
-                'phase6f-enable': phase6FEnableTinyLiveMode
+                'phase6f-enable': phase6FEnableTinyLiveMode,
+                'kraken-tiny-refresh': loadKrakenTinyLiveStatus,
+                'kraken-tiny-preview': previewKrakenTinyLiveTest,
+                'kraken-tiny-place': placeKrakenTinyLiveTest,
+                'kraken-tiny-track': trackKrakenTinyLiveOrder,
+                'kraken-tiny-cancel': cancelKrakenTinyLiveOrder,
+                'kraken-tiny-emergency': emergencyStopKrakenTinyLiveTest
             };
             actions[action.id]?.();
         });
@@ -5338,6 +5704,9 @@
         document.getElementById('track-phase6-order').addEventListener('click', trackLatestPhase6Order);
         document.getElementById('cancel-phase6-order').addEventListener('click', cancelLatestPhase6Order);
         document.getElementById('phase6-emergency-stop').addEventListener('click', phase6EmergencyStop);
+        document.getElementById('kraken-tiny-confirmation').addEventListener('input', updateKrakenTinyPlaceButton);
+        document.getElementById('kraken-tiny-owner-approval').addEventListener('change', updateKrakenTinyPlaceButton);
+        document.getElementById('kraken-tiny-emergency-armed').addEventListener('change', updateKrakenTinyPlaceButton);
 
         loadRoadmap();
         loadPhase3Status();
@@ -5350,6 +5719,7 @@
         loadPhase6DFramework();
         loadPhase6EWalkthrough();
         loadPhase6FStatus();
+        loadKrakenTinyLiveStatus();
         loadPhase6Status();
         scanPhase3AReadiness();
     </script>

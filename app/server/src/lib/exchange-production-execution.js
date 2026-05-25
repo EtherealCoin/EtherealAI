@@ -2095,6 +2095,41 @@ async function getBinanceBalances({ credentials, adapter }) {
     .map(item => ({ asset: item.asset, free: Number(item.free || 0), locked: Number(item.locked || 0) }));
 }
 
+async function getKrakenBalances({ credentials, adapter }) {
+  const requestPath = '/0/private/Balance';
+  const signed = signKrakenRequest({
+    credentials,
+    requestPath,
+    params: { nonce: Date.now() }
+  });
+  const account = await fetchJson(`${adapter.baseUrl}${requestPath}`, {
+    method: 'POST',
+    headers: signed.headers,
+    body: signed.body
+  });
+  const result = throwIfKrakenError(account, 'Kraken balance');
+
+  return Object.entries(result || {})
+    .map(([asset, value]) => {
+      const normalizedAsset = String(asset || '')
+        .replace(/^ZUSD$/i, 'USD')
+        .replace(/^ZUSDT$/i, 'USDT')
+        .replace(/^XXBT$/i, 'BTC')
+        .replace(/^XETH$/i, 'ETH')
+        .replace(/^XXRP$/i, 'XRP')
+        .replace(/^X/, '')
+        .replace(/^Z/, '');
+
+      return {
+        asset: normalizedAsset,
+        free: Number(value || 0),
+        locked: 0
+      };
+    })
+    .filter(item => Number(item.free || 0) > 0 || Number(item.locked || 0) > 0)
+    .slice(0, 25);
+}
+
 async function submitBinanceProductionOrder({ order, credentials, adapter }) {
   const mapped = mapBinanceOrderType(order);
   const params = {
@@ -2190,6 +2225,7 @@ async function submitKrakenProductionOrder({ order, credentials, adapter }) {
     ...(order.orderType === 'post_only' ? { oflags: 'post' } : {}),
     ...(order.orderType === 'ioc' ? { timeinforce: 'IOC' } : {})
   };
+  const beforeBalances = await getKrakenBalances({ credentials, adapter }).catch(() => []);
   const signed = signKrakenRequest({ credentials, requestPath, params });
   const placed = await fetchJson(`${adapter.baseUrl}${requestPath}`, {
     method: 'POST',
@@ -2205,8 +2241,9 @@ async function submitKrakenProductionOrder({ order, credentials, adapter }) {
   const status = exchangeOrderId
     ? await queryProductionOrderStatus({ order, credentials, adapter, exchangeOrderId })
     : placed;
+  const afterBalances = await getKrakenBalances({ credentials, adapter }).catch(() => []);
 
-  return normalizeProductionLifecycleResult({ order, adapter, placed, status, exchangeOrderId });
+  return normalizeProductionLifecycleResult({ order, adapter, placed, status, exchangeOrderId, beforeBalances, afterBalances });
 }
 
 async function submitCoinbaseProductionOrder({ order, credentials, adapter }) {

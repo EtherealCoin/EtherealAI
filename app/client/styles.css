@@ -4845,6 +4845,16 @@ footer {
     border-color: color-mix(in srgb, var(--brand-blue) 42%, var(--brand-pink));
 }
 
+.kraken-tiny-live-flow {
+    border-color: color-mix(in srgb, var(--status-warning) 48%, var(--brand-pink));
+}
+
+.danger-action {
+    background: var(--status-danger);
+    border-color: color-mix(in srgb, var(--status-danger) 75%, black);
+    color: #fff;
+}
+
 .phase6c-summary-grid,
 .kraken-live-stepper,
 .kraken-live-permission-grid,
