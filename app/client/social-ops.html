@@ -46,6 +46,44 @@
             </div>
         </section>
 
+        <section class="model-panel community-showcase-panel" id="community-progress-art-pack">
+            <h2>Community Progress Art Pack</h2>
+            <p class="inline-status">Use these local brand assets for founder updates. External posting remains disabled; drafts stay local until owner review.</p>
+            <div class="community-showcase-hero">
+                <img src="/public/brand/ethereal-community-strategic-pillars.png" alt="Ethereal strategic pillars community artwork">
+                <div>
+                    <span>Launch narrative</span>
+                    <strong>Automation · Sustainability · Risk Control · Scalability</strong>
+                    <p>Frame EtherealAI progress as a disciplined build: local-first AI, controlled trading gates, chain-neutral token planning, social operations, and proof-backed updates.</p>
+                    <div class="button-row">
+                        <button id="apply-community-art-brief" type="button">Apply Art Brief To Draft Generator</button>
+                    </div>
+                </div>
+            </div>
+            <div class="community-art-grid">
+                <article>
+                    <img src="/public/brand/ethereal-community-orbital-core.png" alt="Orbital core neon identity artwork">
+                    <strong>Core System</strong>
+                    <span>Good for build milestone posts and AI operating system updates.</span>
+                </article>
+                <article>
+                    <img src="/public/brand/ethereal-community-we-math-vertical.png" alt="Vertical We Math Better campaign artwork">
+                    <strong>We Math Better</strong>
+                    <span>Good for strategy, math, tokenomics, and trading research updates.</span>
+                </article>
+                <article>
+                    <img src="/public/brand/ethereal-community-particle-globe-framed.png" alt="Particle globe framed artwork">
+                    <strong>Digital World</strong>
+                    <span>Good for ecosystem, cross-chain, website, and public roadmap updates.</span>
+                </article>
+                <article>
+                    <img src="/public/brand/ethereal-community-get-real-mission.png" alt="Get REAL mission artwork">
+                    <strong>Get REAL</strong>
+                    <span>Good for mission posts, launch decks, and community trust updates.</span>
+                </article>
+            </div>
+        </section>
+
         <section class="model-panel">
             <h2>AI Draft Generator</h2>
             <form id="social-generate-form" class="model-test-form">
@@ -221,6 +259,20 @@
                 .map(input => input.value);
         }
 
+        function applyCommunityArtBrief() {
+            const brief = [
+                'Community update art direction:',
+                '- Use EtherealAI / REAL visual identity: black background, dark purple depth, cyan digital-world glow, neon pink accents, white readable mission text.',
+                '- Tell the community this is a local AI operating system build with visible owner control, safety gates, paper trading, token ecosystem planning, social ops, and future live-trading approval boundaries.',
+                '- Suggested campaign pillars: Automation, Sustainability, Risk Control, Scalability, We Math Better, Get REAL, and proof-backed progress.',
+                '- Keep the tone confident, technical enough to show progress, and clear that live execution remains locked until owner approval.'
+            ].join('\n');
+            document.getElementById('generate-platform').value = 'x';
+            document.getElementById('generate-voice').value = 'confident founder update, premium crypto brand, clear progress, no hype claims';
+            document.getElementById('campaign-brief').value = brief;
+            document.getElementById('campaign-brief').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
         async function loadSocialPosts() {
             const response = await fetch('/api/v1/social-posts');
             const data = await response.json();
@@ -311,6 +363,8 @@
             ].join('\n');
             await loadSocialPosts();
         });
+
+        document.getElementById('apply-community-art-brief').addEventListener('click', applyCommunityArtBrief);
 
         document.getElementById('listing-campaign-form').addEventListener('submit', async event => {
             event.preventDefault();

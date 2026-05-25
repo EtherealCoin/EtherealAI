@@ -6662,3 +6662,190 @@ body.operator-advanced-mode textarea {
     background-size: 42px 42px, 42px 42px, auto, auto !important;
     color: var(--ethereal-soft) !important;
 }
+
+/* Community presentation art system.
+   These sections package the uploaded Ethereal art into reusable founder-update,
+   social, website, and token-launch presentation surfaces. */
+.operator-community-showcase,
+.community-showcase-panel,
+.community-showcase-band,
+.community-art-grid article,
+.logo-community-art-grid article {
+    background:
+        linear-gradient(180deg, rgba(18, 9, 28, 0.96), rgba(3, 2, 6, 0.98)) !important;
+    border: 1px solid rgba(0, 245, 255, 0.34) !important;
+    border-radius: 2px !important;
+    box-shadow:
+        0 0 0 1px rgba(255, 43, 214, 0.13),
+        0 22px 64px rgba(0, 0, 0, 0.42) !important;
+    color: var(--ethereal-soft) !important;
+}
+
+.operator-community-showcase,
+.community-showcase-panel,
+.community-showcase-band {
+    overflow: hidden;
+    padding: 18px !important;
+    position: relative;
+}
+
+.operator-community-showcase::before,
+.community-showcase-panel::before,
+.community-showcase-band::before {
+    background: linear-gradient(90deg, var(--ethereal-pink), var(--ethereal-cyan));
+    content: "";
+    height: 2px;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+.operator-community-showcase::after,
+.community-showcase-panel::after,
+.community-showcase-band::after {
+    background:
+        radial-gradient(circle at 20% 20%, rgba(255, 43, 214, 0.24), transparent 12rem),
+        radial-gradient(circle at 80% 72%, rgba(0, 245, 255, 0.18), transparent 14rem);
+    bottom: -20%;
+    content: "";
+    opacity: 0.64;
+    pointer-events: none;
+    position: absolute;
+    right: -10%;
+    top: -20%;
+    width: min(46vw, 520px);
+}
+
+.operator-community-hero,
+.community-showcase-hero {
+    align-items: center;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.1fr);
+    position: relative;
+    text-align: left;
+    z-index: 1;
+}
+
+.operator-community-hero img,
+.community-showcase-hero img {
+    aspect-ratio: 16 / 7;
+    border: 1px solid rgba(255, 43, 214, 0.46);
+    border-radius: 2px;
+    box-shadow:
+        0 0 38px rgba(0, 245, 255, 0.17),
+        0 0 42px rgba(255, 43, 214, 0.13);
+    height: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    object-position: center;
+    width: 100%;
+}
+
+.operator-community-hero span,
+.community-showcase-hero span {
+    color: var(--ethereal-pink) !important;
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.operator-community-hero strong,
+.community-showcase-hero strong,
+.community-showcase-hero h2 {
+    color: var(--ethereal-soft) !important;
+    display: block;
+    font-size: clamp(1.45rem, 3vw, 2.9rem);
+    line-height: 1.04;
+    margin: 0 0 10px;
+    text-shadow: 0 0 20px rgba(0, 245, 255, 0.16);
+}
+
+.operator-community-hero p,
+.community-showcase-hero p {
+    color: color-mix(in srgb, var(--ethereal-soft) 74%, var(--ethereal-muted)) !important;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.operator-community-art-grid,
+.community-art-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    margin-top: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.operator-community-art-grid article,
+.community-art-grid article {
+    display: grid;
+    gap: 8px;
+    min-height: 100%;
+    padding: 10px;
+}
+
+.operator-community-art-grid img,
+.community-art-grid img {
+    aspect-ratio: 1.35;
+    border: 1px solid rgba(0, 245, 255, 0.34);
+    border-radius: 2px;
+    object-fit: cover;
+    object-position: center;
+    width: 100%;
+}
+
+.operator-community-art-grid strong,
+.community-art-grid strong {
+    color: var(--ethereal-soft) !important;
+    font-size: 0.98rem;
+}
+
+.operator-community-art-grid span,
+.community-art-grid span {
+    color: color-mix(in srgb, var(--ethereal-soft) 68%, var(--ethereal-muted)) !important;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.logo-community-art-grid {
+    margin-bottom: 16px;
+}
+
+.logo-community-art-grid img {
+    aspect-ratio: 1;
+}
+
+.community-showcase-band {
+    background:
+        linear-gradient(180deg, rgba(18, 9, 28, 0.96), rgba(3, 2, 6, 0.98)) !important;
+}
+
+body.operator-simple-mode .operator-community-showcase,
+body.operator-simple-mode .community-showcase-panel,
+body.operator-simple-mode .community-showcase-band,
+body.operator-simple-mode .community-art-grid article,
+body.operator-simple-mode .logo-community-art-grid article,
+body.operator-advanced-mode .community-showcase-panel,
+body.operator-advanced-mode .community-art-grid article {
+    background:
+        linear-gradient(180deg, rgba(18, 9, 28, 0.96), rgba(3, 2, 6, 0.98)) !important;
+    border-color: rgba(0, 245, 255, 0.38) !important;
+}
+
+@media (max-width: 860px) {
+    .operator-community-hero,
+    .community-showcase-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .operator-community-hero img,
+    .community-showcase-hero img {
+        max-height: 260px;
+    }
+}

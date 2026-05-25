@@ -179,7 +179,7 @@
             title: 'Create Community Content Locally',
             summary: 'Draft posts, launch updates, community manager plans, and listing evidence content without public posting.',
             primaryAction: { label: 'Generate Local Draft', selector: '#social-generate-form button[type="submit"]' },
-            keepHeadings: ['Local-Only Safety', 'AI Draft Generator'],
+            keepHeadings: ['Local-Only Safety', 'Community Progress Art Pack', 'AI Draft Generator'],
             readyLabel: 'Local Drafting Ready',
             nextText: 'Generate a local draft, review it, then post manually later. Public posting remains disabled.',
             cards: [
@@ -189,6 +189,7 @@
                 ['4. Owner posts manually', 'External posting remains disabled.']
             ],
             workflow: [
+                ['Choose presentation style', 'Use the local Ethereal art pack for founder updates, video headers, X banners, Medium covers, and Discord announcements.', { label: 'Open Art Pack', selector: '#community-progress-art-pack' }],
                 ['Choose content type', 'Pick the purpose and channel for a local draft.', { label: 'Open Draft Generator', selector: '#social-generate-form' }],
                 ['Generate draft', 'Create local-only social copy.', { label: 'Generate Local Draft', selector: '#social-generate-form button[type="submit"]' }],
                 ['Review queue', 'Open saved local drafts.', { label: 'Review Drafts', selector: '#social-post-list' }]
@@ -469,6 +470,43 @@
         `;
     }
 
+    function renderCommunityShowcase() {
+        return `
+            <section class="operator-community-showcase" aria-label="Community progress art showcase">
+                <div class="operator-community-hero">
+                    <img src="/public/brand/ethereal-community-strategic-pillars.png" alt="Ethereal strategic pillars community artwork">
+                    <div>
+                        <span>Community progress presentation</span>
+                        <strong>EtherealAI is being built as a local AI operating system.</strong>
+                        <p>Use this art direction for founder updates, launch decks, Medium articles, X banners, Discord announcements, YouTube chapters, and token ecosystem pages.</p>
+                    </div>
+                </div>
+                <div class="operator-community-art-grid">
+                    <article>
+                        <img src="/public/brand/ethereal-community-orbital-core.png" alt="Orbital core neon identity artwork">
+                        <strong>Core System</strong>
+                        <span>AI engine, safety gates, local automation, and owner control.</span>
+                    </article>
+                    <article>
+                        <img src="/public/brand/ethereal-community-globe-real.png" alt="Digital globe network artwork">
+                        <strong>Global Network</strong>
+                        <span>Chain-neutral infrastructure, market intelligence, and community growth.</span>
+                    </article>
+                    <article>
+                        <img src="/public/brand/ethereal-community-purple-math-horizontal.png" alt="We Math Better campaign artwork">
+                        <strong>We Math Better</strong>
+                        <span>Trading logic, tokenomics, strategy research, and proof-driven progress.</span>
+                    </article>
+                    <article>
+                        <img src="/public/brand/ethereal-community-get-real-mission.png" alt="Get REAL mission artwork">
+                        <strong>Get REAL</strong>
+                        <span>Mission, ecosystem story, strategic pillars, and public launch narrative.</span>
+                    </article>
+                </div>
+            </section>
+        `;
+    }
+
     function renderReadiness(summary = null, config = {}) {
         const owner = summary?.owner?.wizard;
         const security = summary?.security?.audit;
@@ -589,6 +627,7 @@
             <div id="operator-simple-status" class="operator-status-grid">
                 <article class="operator-status-tile"><span>Status</span><strong>Loading</strong><small>Checking local system.</small></article>
             </div>
+            ${renderCommunityShowcase()}
             <div id="operator-simple-answers">${renderReadiness(null, config)}</div>
             ${renderWorkflow(config.workflow || [])}
             <div class="operator-task-grid">
