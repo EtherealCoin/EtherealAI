@@ -437,7 +437,7 @@
     function trainingDropdownMarkup(extraClass = '') {
         return `
             <div class="operator-training-menu ${escapeHtml(extraClass)}">
-                <button type="button" class="operator-secondary-action" data-operator-training-toggle aria-expanded="false">Show me how</button>
+                <button type="button" class="operator-secondary-action" data-operator-training-toggle aria-haspopup="true" aria-expanded="false">Show me how</button>
                 <div class="operator-training-menu-list" hidden>
                     <button type="button" data-operator-training-choice="text">Show me in text</button>
                     <button type="button" data-operator-training-choice="video">Show me in video</button>
@@ -656,7 +656,7 @@
         bar.id = 'operator-mode-bar';
         bar.className = 'operator-mode-bar';
         bar.innerHTML = `
-            <a class="operator-dapp-wordmark" href="/dashboard" aria-label="Open EtherealAI Mission Control">ETHEREAL</a>
+            <a class="operator-dapp-wordmark" href="/dashboard" data-operator-home-base aria-label="Open EtherealAI Mission Control home base">ETHEREAL</a>
             <div class="operator-mode-brand">
                 <img src="${BRAND_LOGO_SRC}" alt="EtherealAI logo" class="operator-mode-logo">
                 <div>
@@ -672,6 +672,7 @@
                 ${trainingDropdownMarkup('operator-mode-training-menu')}
                 <button type="button" data-operator-mode="simple">Simple Mode</button>
                 <button type="button" data-operator-mode="advanced">Advanced Mode</button>
+                <a class="operator-logout-action" href="/logout">Logout</a>
             </div>
         `;
 

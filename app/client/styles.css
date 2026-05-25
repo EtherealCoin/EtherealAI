@@ -3382,7 +3382,8 @@ a:focus-visible {
 }
 
 .operator-mode-actions button,
-.operator-secondary-action {
+.operator-secondary-action,
+.operator-logout-action {
     background: #ffffff;
     border: 1px solid #d1d5db;
     border-radius: 8px;
@@ -3391,6 +3392,7 @@ a:focus-visible {
     font: inherit;
     font-weight: 700;
     padding: 10px 14px;
+    text-decoration: none;
 }
 
 .operator-training-menu {
@@ -3410,6 +3412,10 @@ a:focus-visible {
     right: 0;
     top: calc(100% + 8px);
     z-index: 1200;
+}
+
+.operator-training-menu-list[hidden] {
+    display: none !important;
 }
 
 .operator-training-menu-list button {
@@ -6173,13 +6179,23 @@ body.operator-simple-mode .operator-mode-actions {
 
 body.operator-simple-mode .operator-mode-actions button,
 body.operator-simple-mode .operator-training-menu > button,
-body.operator-simple-mode .operator-secondary-action {
+body.operator-simple-mode .operator-secondary-action,
+body.operator-simple-mode .operator-logout-action,
+body.operator-advanced-mode .operator-logout-action {
     background: linear-gradient(135deg, rgba(255, 43, 214, 0.88), rgba(0, 245, 255, 0.88)) !important;
     border: 0 !important;
     border-radius: 2px !important;
     color: #020204 !important;
     font-weight: 900;
     text-transform: uppercase;
+}
+
+body.operator-simple-mode .operator-logout-action,
+body.operator-advanced-mode .operator-logout-action {
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+    min-height: 38px;
 }
 
 body.operator-simple-mode > nav {
@@ -6218,6 +6234,11 @@ body.operator-simple-mode > nav a:hover {
     background: rgba(0, 245, 255, 0.08) !important;
     border-color: rgba(0, 245, 255, 0.48) !important;
     color: var(--ethereal-cyan) !important;
+}
+
+body.operator-simple-mode > nav a[href="/logout"],
+body.operator-advanced-mode > nav a[href="/logout"] {
+    display: none !important;
 }
 
 body.operator-simple-mode h1,
