@@ -1,5 +1,6 @@
 (function () {
     const MODE_KEY = 'etherealai.operatorMode';
+    const THEME_KEY = 'etherealai.themeMode';
     const BRAND_LOGO_SRC = '/public/brand/etherealai-logo.png';
 
     const pageConfigs = {
@@ -549,8 +550,42 @@
     }
 
     function setMode(mode) {
+        if (!['simple', 'advanced'].includes(mode)) {
+            return;
+        }
+
         localStorage.setItem(MODE_KEY, mode);
         applyMode();
+    }
+
+    function getThemePreference() {
+        const saved = localStorage.getItem(THEME_KEY);
+        return ['auto', 'day', 'night'].includes(saved) ? saved : 'auto';
+    }
+
+    function setThemePreference(theme) {
+        if (!['auto', 'day', 'night'].includes(theme)) {
+            return;
+        }
+
+        localStorage.setItem(THEME_KEY, theme);
+        applyTheme();
+    }
+
+    function applyTheme() {
+        const theme = getThemePreference();
+        if (theme === 'auto') {
+            document.documentElement.removeAttribute('data-theme');
+        } else {
+            document.documentElement.dataset.theme = theme;
+        }
+        document.documentElement.dataset.themePreference = theme;
+
+        document.querySelectorAll('[data-operator-theme]').forEach(button => {
+            const isActive = button.dataset.operatorTheme === theme;
+            button.classList.toggle('operator-theme-active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
     }
 
     function panelHeading(panel) {
@@ -682,6 +717,19 @@
                 <div class="operator-top-dropdown-list" hidden>
                     <button type="button" data-operator-training-choice="text">Text Explanation</button>
                     <button type="button" data-operator-training-choice="video">Video Explanation</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function topThemeDropdownMarkup() {
+        return `
+            <div class="operator-top-dropdown operator-theme-dropdown">
+                <button type="button" class="operator-top-control" data-operator-nav-toggle aria-haspopup="true" aria-expanded="false">Theme</button>
+                <div class="operator-top-dropdown-list" hidden>
+                    <button type="button" data-operator-theme="auto">Auto Mode</button>
+                    <button type="button" data-operator-theme="day">Light Mode</button>
+                    <button type="button" data-operator-theme="night">Dark Mode</button>
                 </div>
             </div>
         `;
@@ -990,6 +1038,7 @@
                 ${topNavDropdownMarkup('Pages', pageNavItems, 'operator-pages-dropdown')}
                 ${topNavDropdownMarkup('Systems', systemNavItems, 'operator-systems-dropdown')}
                 ${topTrainingDropdownMarkup()}
+                ${topThemeDropdownMarkup()}
                 <button type="button" class="operator-mode-toggle" data-operator-mode="simple">Simple</button>
                 <button type="button" class="operator-mode-toggle" data-operator-mode="advanced">Advanced</button>
                 <a class="operator-black-hole-logout" href="/logout" aria-label="Log out">
@@ -1016,6 +1065,11 @@
         document.getElementById('operator-mode-label')?.replaceChildren(document.createTextNode(
             mode === 'simple' ? 'Simple Operator Mode' : 'Advanced Developer Mode'
         ));
+        document.querySelectorAll('[data-operator-mode]').forEach(button => {
+            const isActive = button.dataset.operatorMode === mode;
+            button.classList.toggle('operator-mode-active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
     }
 
     function runAction(selector) {
@@ -1116,6 +1170,13 @@
                 return;
             }
 
+            const themeButton = event.target.closest('[data-operator-theme]');
+            if (themeButton) {
+                setThemePreference(themeButton.dataset.operatorTheme);
+                closeTopDropdowns();
+                return;
+            }
+
             const navToggle = event.target.closest('[data-operator-nav-toggle]');
             if (navToggle) {
                 const menu = navToggle.closest('.operator-top-dropdown');
@@ -1189,12 +1250,14 @@
     }
 
     async function boot() {
+        applyTheme();
         renderModeBar();
         classifyPagePanels();
         applyMode();
         bindGlobalActions();
         await renderWorkspace();
         applyMode();
+        applyTheme();
     }
 
     if (document.readyState === 'loading') {

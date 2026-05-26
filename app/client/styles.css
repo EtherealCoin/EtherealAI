@@ -6230,6 +6230,11 @@ body.operator-advanced-mode .operator-mode-toggle {
     white-space: nowrap;
 }
 
+body.operator-simple-mode .operator-theme-dropdown .operator-top-control,
+body.operator-advanced-mode .operator-theme-dropdown .operator-top-control {
+    min-width: 96px;
+}
+
 body.operator-simple-mode .operator-top-training-dropdown .operator-top-control,
 body.operator-advanced-mode .operator-top-training-dropdown .operator-top-control {
     min-width: 132px;
@@ -7272,4 +7277,857 @@ body.operator-advanced-mode .community-art-grid article {
     .community-showcase-hero img {
         max-height: 260px;
     }
+}
+
+/* True day/night operator theme architecture.
+   This final layer owns the readable theme tokens used by Simple and Advanced
+   operator shells. It intentionally overrides older hard-coded dark styles. */
+:root,
+:root[data-theme="day"] {
+    color-scheme: light;
+    --theme-background: #f7f8fc;
+    --theme-background-gradient:
+        linear-gradient(90deg, rgba(15, 23, 42, 0.045) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(15, 23, 42, 0.035) 1px, transparent 1px),
+        radial-gradient(circle at 18% 12%, rgba(255, 43, 214, 0.11), transparent 26rem),
+        radial-gradient(circle at 86% 8%, rgba(0, 166, 214, 0.12), transparent 28rem),
+        #f7f8fc;
+    --theme-panel-background: rgba(255, 255, 255, 0.96);
+    --theme-card-background: #ffffff;
+    --theme-card-background-muted: #f1f5fb;
+    --theme-primary-text: #10101a;
+    --theme-secondary-text: #2b3548;
+    --theme-muted-text: #536178;
+    --theme-border: #cbd5e1;
+    --theme-border-strong: #8797b2;
+    --theme-glow: 0 20px 58px rgba(15, 23, 42, 0.14);
+    --theme-cyan: #008eaa;
+    --theme-pink: #b918a2;
+    --theme-purple: #5b21b6;
+    --theme-blue: #155bd8;
+    --theme-button-background: linear-gradient(135deg, #151323 0%, #5b21b6 48%, #087ea4 100%);
+    --theme-button-hover: linear-gradient(135deg, #0b1020 0%, #6d28d9 45%, #0369a1 100%);
+    --theme-button-text: #ffffff;
+    --theme-danger: #c21f3a;
+    --theme-danger-bg: #fff1f4;
+    --theme-danger-text: #831328;
+    --theme-success: #137a3d;
+    --theme-success-bg: #e8f8ef;
+    --theme-success-text: #0d4f2a;
+    --theme-warning: #af6500;
+    --theme-warning-bg: #fff6df;
+    --theme-warning-text: #734000;
+    --theme-info: #155bd8;
+    --theme-info-bg: #edf5ff;
+    --theme-info-text: #103a87;
+    --theme-input-background: #ffffff;
+    --theme-input-text: #10101a;
+    --theme-code-background: #111827;
+    --theme-code-text: #f8fafc;
+    --theme-logo-filter: none;
+    --background: var(--theme-background);
+    --background-gradient: var(--theme-background-gradient);
+    --surface: var(--theme-panel-background);
+    --surface-strong: var(--theme-card-background);
+    --surface-muted: var(--theme-card-background-muted);
+    --surface-tint: #f5eefb;
+    --text-primary: var(--theme-primary-text);
+    --text-secondary: var(--theme-secondary-text);
+    --text-muted: var(--theme-muted-text);
+    --text-inverse: #ffffff;
+    --border: var(--theme-border);
+    --border-strong: var(--theme-border-strong);
+    --brand-pink: var(--theme-pink);
+    --brand-purple: var(--theme-purple);
+    --brand-purple-soft: #7c3cff;
+    --brand-blue: var(--theme-blue);
+    --brand-blue-soft: #dbeafe;
+    --status-success: var(--theme-success);
+    --status-success-bg: var(--theme-success-bg);
+    --status-success-text: var(--theme-success-text);
+    --status-warning: var(--theme-warning);
+    --status-warning-bg: var(--theme-warning-bg);
+    --status-warning-text: var(--theme-warning-text);
+    --status-danger: var(--theme-danger);
+    --status-danger-bg: var(--theme-danger-bg);
+    --status-danger-text: var(--theme-danger-text);
+    --status-info: var(--theme-info);
+    --status-info-bg: var(--theme-info-bg);
+    --status-info-text: var(--theme-info-text);
+    --button-primary: var(--theme-button-background);
+    --button-primary-hover: var(--theme-button-hover);
+    --button-success: var(--theme-success);
+    --button-warning: #d97706;
+    --button-danger: var(--theme-danger);
+    --focus-ring: rgba(185, 24, 162, 0.32);
+    --shadow-soft: var(--theme-glow);
+    --shadow-panel: var(--theme-glow);
+    --input-background: var(--theme-input-background);
+    --input-text: var(--theme-input-text);
+    --code-background: var(--theme-code-background);
+    --code-text: var(--theme-code-text);
+    --ethereal-black: var(--theme-background);
+    --ethereal-ink: #ffffff;
+    --ethereal-panel: var(--theme-panel-background);
+    --ethereal-panel-2: var(--theme-card-background);
+    --ethereal-panel-3: var(--theme-card-background-muted);
+    --ethereal-cyan: var(--theme-cyan);
+    --ethereal-pink: var(--theme-pink);
+    --ethereal-purple: var(--theme-purple);
+    --ethereal-amber: var(--theme-warning);
+    --ethereal-green: var(--theme-success);
+    --ethereal-red: var(--theme-danger);
+    --ethereal-soft: var(--theme-primary-text);
+    --ethereal-muted: var(--theme-muted-text);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        color-scheme: dark;
+        --theme-background: #020204;
+        --theme-background-gradient:
+            linear-gradient(90deg, rgba(255, 43, 214, 0.075) 1px, transparent 1px),
+            linear-gradient(0deg, rgba(0, 245, 255, 0.055) 1px, transparent 1px),
+            radial-gradient(circle at 82% 0%, rgba(0, 245, 255, 0.14), transparent 25rem),
+            radial-gradient(circle at 18% 80%, rgba(255, 43, 214, 0.13), transparent 30rem),
+            linear-gradient(135deg, rgba(16, 8, 28, 0.74), rgba(0, 0, 0, 0.94));
+        --theme-panel-background: rgba(14, 8, 22, 0.97);
+        --theme-card-background: rgba(18, 11, 30, 0.97);
+        --theme-card-background-muted: rgba(27, 16, 42, 0.97);
+        --theme-primary-text: #fbf7ff;
+        --theme-secondary-text: #e6ddf2;
+        --theme-muted-text: #b7aec8;
+        --theme-border: rgba(0, 245, 255, 0.34);
+        --theme-border-strong: rgba(255, 43, 214, 0.48);
+        --theme-glow: 0 24px 74px rgba(0, 0, 0, 0.58);
+        --theme-cyan: #00f5ff;
+        --theme-pink: #ff4be1;
+        --theme-purple: #9b5cff;
+        --theme-blue: #7cc8ff;
+        --theme-button-background: linear-gradient(135deg, rgba(255, 43, 214, 0.9), rgba(124, 60, 255, 0.92) 48%, rgba(0, 245, 255, 0.9));
+        --theme-button-hover: linear-gradient(135deg, #ff69e8, #a873ff 48%, #6df9ff);
+        --theme-button-text: #020204;
+        --theme-danger: #ff5c78;
+        --theme-danger-bg: rgba(255, 77, 109, 0.14);
+        --theme-danger-text: #ffd3dc;
+        --theme-success: #31f081;
+        --theme-success-bg: rgba(49, 240, 129, 0.14);
+        --theme-success-text: #d6ffe7;
+        --theme-warning: #f7b733;
+        --theme-warning-bg: rgba(247, 183, 51, 0.14);
+        --theme-warning-text: #ffe7a6;
+        --theme-info: #7cc8ff;
+        --theme-info-bg: rgba(0, 245, 255, 0.10);
+        --theme-info-text: #d8f7ff;
+        --theme-input-background: rgba(2, 2, 4, 0.94);
+        --theme-input-text: #fbf7ff;
+        --theme-code-background: #06030a;
+        --theme-code-text: #fbf7ff;
+        --theme-logo-filter: none;
+        --background: var(--theme-background);
+        --background-gradient: var(--theme-background-gradient);
+        --surface: var(--theme-panel-background);
+        --surface-strong: var(--theme-card-background);
+        --surface-muted: var(--theme-card-background-muted);
+        --surface-tint: rgba(37, 21, 56, 0.96);
+        --text-primary: var(--theme-primary-text);
+        --text-secondary: var(--theme-secondary-text);
+        --text-muted: var(--theme-muted-text);
+        --text-inverse: #ffffff;
+        --border: var(--theme-border);
+        --border-strong: var(--theme-border-strong);
+        --brand-pink: var(--theme-pink);
+        --brand-purple: var(--theme-purple);
+        --brand-purple-soft: #a855f7;
+        --brand-blue: var(--theme-blue);
+        --brand-blue-soft: #172554;
+        --status-success: var(--theme-success);
+        --status-success-bg: var(--theme-success-bg);
+        --status-success-text: var(--theme-success-text);
+        --status-warning: var(--theme-warning);
+        --status-warning-bg: var(--theme-warning-bg);
+        --status-warning-text: var(--theme-warning-text);
+        --status-danger: var(--theme-danger);
+        --status-danger-bg: var(--theme-danger-bg);
+        --status-danger-text: var(--theme-danger-text);
+        --status-info: var(--theme-info);
+        --status-info-bg: var(--theme-info-bg);
+        --status-info-text: var(--theme-info-text);
+        --button-primary: var(--theme-button-background);
+        --button-primary-hover: var(--theme-button-hover);
+        --button-success: var(--theme-success);
+        --button-warning: #f59e0b;
+        --button-danger: var(--theme-danger);
+        --focus-ring: rgba(255, 43, 214, 0.34);
+        --shadow-soft: var(--theme-glow);
+        --shadow-panel: var(--theme-glow);
+        --input-background: var(--theme-input-background);
+        --input-text: var(--theme-input-text);
+        --code-background: var(--theme-code-background);
+        --code-text: var(--theme-code-text);
+        --ethereal-black: var(--theme-background);
+        --ethereal-ink: #06030a;
+        --ethereal-panel: var(--theme-panel-background);
+        --ethereal-panel-2: var(--theme-card-background);
+        --ethereal-panel-3: var(--theme-card-background-muted);
+        --ethereal-cyan: var(--theme-cyan);
+        --ethereal-pink: var(--theme-pink);
+        --ethereal-purple: var(--theme-purple);
+        --ethereal-amber: var(--theme-warning);
+        --ethereal-green: var(--theme-success);
+        --ethereal-red: var(--theme-danger);
+        --ethereal-soft: var(--theme-primary-text);
+        --ethereal-muted: var(--theme-muted-text);
+    }
+}
+
+:root[data-theme="night"] {
+    color-scheme: dark;
+    --theme-background: #020204;
+    --theme-background-gradient:
+        linear-gradient(90deg, rgba(255, 43, 214, 0.075) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(0, 245, 255, 0.055) 1px, transparent 1px),
+        radial-gradient(circle at 82% 0%, rgba(0, 245, 255, 0.14), transparent 25rem),
+        radial-gradient(circle at 18% 80%, rgba(255, 43, 214, 0.13), transparent 30rem),
+        linear-gradient(135deg, rgba(16, 8, 28, 0.74), rgba(0, 0, 0, 0.94));
+    --theme-panel-background: rgba(14, 8, 22, 0.97);
+    --theme-card-background: rgba(18, 11, 30, 0.97);
+    --theme-card-background-muted: rgba(27, 16, 42, 0.97);
+    --theme-primary-text: #fbf7ff;
+    --theme-secondary-text: #e6ddf2;
+    --theme-muted-text: #b7aec8;
+    --theme-border: rgba(0, 245, 255, 0.34);
+    --theme-border-strong: rgba(255, 43, 214, 0.48);
+    --theme-glow: 0 24px 74px rgba(0, 0, 0, 0.58);
+    --theme-cyan: #00f5ff;
+    --theme-pink: #ff4be1;
+    --theme-purple: #9b5cff;
+    --theme-blue: #7cc8ff;
+    --theme-button-background: linear-gradient(135deg, rgba(255, 43, 214, 0.9), rgba(124, 60, 255, 0.92) 48%, rgba(0, 245, 255, 0.9));
+    --theme-button-hover: linear-gradient(135deg, #ff69e8, #a873ff 48%, #6df9ff);
+    --theme-button-text: #020204;
+    --theme-danger: #ff5c78;
+    --theme-danger-bg: rgba(255, 77, 109, 0.14);
+    --theme-danger-text: #ffd3dc;
+    --theme-success: #31f081;
+    --theme-success-bg: rgba(49, 240, 129, 0.14);
+    --theme-success-text: #d6ffe7;
+    --theme-warning: #f7b733;
+    --theme-warning-bg: rgba(247, 183, 51, 0.14);
+    --theme-warning-text: #ffe7a6;
+    --theme-info: #7cc8ff;
+    --theme-info-bg: rgba(0, 245, 255, 0.10);
+    --theme-info-text: #d8f7ff;
+    --theme-input-background: rgba(2, 2, 4, 0.94);
+    --theme-input-text: #fbf7ff;
+    --theme-code-background: #06030a;
+    --theme-code-text: #fbf7ff;
+    --theme-logo-filter: none;
+    --background: var(--theme-background);
+    --background-gradient: var(--theme-background-gradient);
+    --surface: var(--theme-panel-background);
+    --surface-strong: var(--theme-card-background);
+    --surface-muted: var(--theme-card-background-muted);
+    --surface-tint: rgba(37, 21, 56, 0.96);
+    --text-primary: var(--theme-primary-text);
+    --text-secondary: var(--theme-secondary-text);
+    --text-muted: var(--theme-muted-text);
+    --text-inverse: #ffffff;
+    --border: var(--theme-border);
+    --border-strong: var(--theme-border-strong);
+    --brand-pink: var(--theme-pink);
+    --brand-purple: var(--theme-purple);
+    --brand-purple-soft: #a855f7;
+    --brand-blue: var(--theme-blue);
+    --brand-blue-soft: #172554;
+    --status-success: var(--theme-success);
+    --status-success-bg: var(--theme-success-bg);
+    --status-success-text: var(--theme-success-text);
+    --status-warning: var(--theme-warning);
+    --status-warning-bg: var(--theme-warning-bg);
+    --status-warning-text: var(--theme-warning-text);
+    --status-danger: var(--theme-danger);
+    --status-danger-bg: var(--theme-danger-bg);
+    --status-danger-text: var(--theme-danger-text);
+    --status-info: var(--theme-info);
+    --status-info-bg: var(--theme-info-bg);
+    --status-info-text: var(--theme-info-text);
+    --button-primary: var(--theme-button-background);
+    --button-primary-hover: var(--theme-button-hover);
+    --button-success: var(--theme-success);
+    --button-warning: #f59e0b;
+    --button-danger: var(--theme-danger);
+    --focus-ring: rgba(255, 43, 214, 0.34);
+    --shadow-soft: var(--theme-glow);
+    --shadow-panel: var(--theme-glow);
+    --input-background: var(--theme-input-background);
+    --input-text: var(--theme-input-text);
+    --code-background: var(--theme-code-background);
+    --code-text: var(--theme-code-text);
+    --ethereal-black: var(--theme-background);
+    --ethereal-ink: #06030a;
+    --ethereal-panel: var(--theme-panel-background);
+    --ethereal-panel-2: var(--theme-card-background);
+    --ethereal-panel-3: var(--theme-card-background-muted);
+    --ethereal-cyan: var(--theme-cyan);
+    --ethereal-pink: var(--theme-pink);
+    --ethereal-purple: var(--theme-purple);
+    --ethereal-amber: var(--theme-warning);
+    --ethereal-green: var(--theme-success);
+    --ethereal-red: var(--theme-danger);
+    --ethereal-soft: var(--theme-primary-text);
+    --ethereal-muted: var(--theme-muted-text);
+}
+
+body.operator-simple-mode,
+body.operator-advanced-mode {
+    background-color: var(--theme-background) !important;
+    background-image: var(--theme-background-gradient) !important;
+    color: var(--theme-primary-text) !important;
+}
+
+body.operator-simple-mode::before,
+body.operator-advanced-mode::before {
+    background:
+        linear-gradient(135deg, transparent 0 48%, color-mix(in srgb, var(--theme-cyan) 18%, transparent) 49%, transparent 50%),
+        linear-gradient(45deg, transparent 0 48%, color-mix(in srgb, var(--theme-pink) 12%, transparent) 49%, transparent 50%) !important;
+}
+
+body.operator-simple-mode .operator-mode-bar,
+body.operator-advanced-mode .operator-mode-bar {
+    align-items: center !important;
+    background: var(--theme-panel-background) !important;
+    border-bottom: 1px solid var(--theme-border-strong) !important;
+    box-shadow: var(--theme-glow) !important;
+    color: var(--theme-primary-text) !important;
+    gap: 12px !important;
+    grid-template-columns: auto minmax(164px, 190px) auto minmax(0, auto) !important;
+    min-height: 64px !important;
+    padding: 8px 14px !important;
+}
+
+body.operator-simple-mode .operator-dapp-wordmark,
+body.operator-advanced-mode .operator-dapp-wordmark {
+    color: var(--theme-primary-text) !important;
+    font-size: 0.9rem !important;
+    letter-spacing: 0.56em !important;
+    text-shadow:
+        0 0 12px color-mix(in srgb, var(--theme-pink) 45%, transparent),
+        0 0 20px color-mix(in srgb, var(--theme-cyan) 30%, transparent) !important;
+}
+
+body.operator-simple-mode .operator-mode-brand,
+body.operator-advanced-mode .operator-mode-brand {
+    gap: 10px !important;
+    min-width: 164px !important;
+}
+
+body.operator-simple-mode .operator-mode-brand strong,
+body.operator-advanced-mode .operator-mode-brand strong {
+    color: var(--theme-primary-text) !important;
+    display: block;
+    font-size: 0.84rem !important;
+    line-height: 1.1 !important;
+    max-width: 130px;
+}
+
+body.operator-simple-mode .operator-mode-brand > div span,
+body.operator-advanced-mode .operator-mode-brand > div span {
+    display: none !important;
+}
+
+body.operator-simple-mode .operator-mode-logo,
+body.operator-advanced-mode .operator-mode-logo,
+body.operator-simple-mode .operator-brand-logo,
+body.operator-advanced-mode .operator-brand-logo,
+body.operator-simple-mode .login-brand-mark img,
+body.operator-advanced-mode .login-brand-mark img {
+    background: color-mix(in srgb, var(--theme-card-background) 82%, transparent) !important;
+    border-color: var(--theme-border-strong) !important;
+    filter: var(--theme-logo-filter);
+}
+
+body.operator-simple-mode .operator-mode-logo,
+body.operator-advanced-mode .operator-mode-logo {
+    height: 34px !important;
+    width: 34px !important;
+}
+
+body.operator-simple-mode .operator-dapp-safety-strip,
+body.operator-advanced-mode .operator-dapp-safety-strip {
+    background: var(--theme-info-bg) !important;
+    border-color: var(--theme-border-strong) !important;
+    gap: 5px !important;
+    min-width: 132px !important;
+    padding: 7px 8px !important;
+    white-space: nowrap;
+}
+
+body.operator-simple-mode .operator-dapp-safety-strip span,
+body.operator-simple-mode .operator-dapp-safety-strip strong,
+body.operator-advanced-mode .operator-dapp-safety-strip span,
+body.operator-advanced-mode .operator-dapp-safety-strip strong {
+    color: var(--theme-primary-text) !important;
+}
+
+body.operator-simple-mode .operator-dapp-safety-strip strong,
+body.operator-advanced-mode .operator-dapp-safety-strip strong {
+    color: var(--theme-info-text) !important;
+}
+
+body.operator-simple-mode .operator-top-control,
+body.operator-simple-mode .operator-mode-toggle,
+body.operator-advanced-mode .operator-top-control,
+body.operator-advanced-mode .operator-mode-toggle {
+    align-items: center;
+    background: var(--theme-button-background) !important;
+    border: 1px solid color-mix(in srgb, var(--theme-cyan) 24%, var(--theme-border)) !important;
+    border-radius: 3px !important;
+    box-sizing: border-box;
+    color: var(--theme-button-text) !important;
+    display: inline-flex;
+    font-size: 0.76rem;
+    font-weight: 900;
+    height: 40px;
+    justify-content: center;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+    min-width: 82px;
+    padding: 0 10px;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+body.operator-simple-mode .operator-theme-dropdown .operator-top-control,
+body.operator-advanced-mode .operator-theme-dropdown .operator-top-control {
+    min-width: 84px;
+}
+
+body.operator-simple-mode .operator-top-training-dropdown .operator-top-control,
+body.operator-advanced-mode .operator-top-training-dropdown .operator-top-control {
+    min-width: 116px;
+}
+
+body.operator-simple-mode .operator-mode-toggle,
+body.operator-advanced-mode .operator-mode-toggle {
+    min-width: 82px;
+}
+
+body.operator-simple-mode .operator-top-control:hover,
+body.operator-simple-mode .operator-mode-toggle:hover,
+body.operator-advanced-mode .operator-top-control:hover,
+body.operator-advanced-mode .operator-mode-toggle:hover {
+    background: var(--theme-button-hover) !important;
+}
+
+body.operator-simple-mode .operator-mode-active,
+body.operator-simple-mode .operator-theme-active,
+body.operator-advanced-mode .operator-mode-active,
+body.operator-advanced-mode .operator-theme-active {
+    outline: 2px solid color-mix(in srgb, var(--theme-warning) 70%, transparent) !important;
+    outline-offset: 2px;
+}
+
+body.operator-simple-mode .operator-top-dropdown-list,
+body.operator-advanced-mode .operator-top-dropdown-list {
+    background: var(--theme-panel-background) !important;
+    border-color: var(--theme-border-strong) !important;
+    box-shadow: var(--theme-glow) !important;
+}
+
+body.operator-simple-mode .operator-top-dropdown-list a,
+body.operator-simple-mode .operator-top-dropdown-list button,
+body.operator-advanced-mode .operator-top-dropdown-list a,
+body.operator-advanced-mode .operator-top-dropdown-list button {
+    background: var(--theme-card-background-muted) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-primary-text) !important;
+}
+
+body.operator-simple-mode .operator-top-dropdown-list a:hover,
+body.operator-simple-mode .operator-top-dropdown-list button:hover,
+body.operator-simple-mode .operator-top-dropdown-list .operator-active-page,
+body.operator-advanced-mode .operator-top-dropdown-list a:hover,
+body.operator-advanced-mode .operator-top-dropdown-list button:hover,
+body.operator-advanced-mode .operator-top-dropdown-list .operator-active-page {
+    background: var(--theme-info-bg) !important;
+    border-color: var(--theme-border-strong) !important;
+    color: var(--theme-info-text) !important;
+}
+
+body.operator-simple-mode > nav,
+body.operator-advanced-mode > nav {
+    background: color-mix(in srgb, var(--theme-panel-background) 96%, var(--theme-background)) !important;
+    border-right: 1px solid var(--theme-border) !important;
+    box-shadow: var(--theme-glow) !important;
+}
+
+body.operator-simple-mode > nav a,
+body.operator-advanced-mode > nav a {
+    color: var(--theme-secondary-text) !important;
+}
+
+body.operator-simple-mode > nav a::before,
+body.operator-advanced-mode > nav a::before {
+    background: linear-gradient(135deg, var(--theme-cyan), var(--theme-pink)) !important;
+    border-color: var(--theme-border-strong) !important;
+}
+
+body.operator-simple-mode > nav a:hover,
+body.operator-simple-mode > nav a.operator-active-page,
+body.operator-advanced-mode > nav a:hover,
+body.operator-advanced-mode > nav a.operator-active-page {
+    background: var(--theme-info-bg) !important;
+    border-color: var(--theme-border-strong) !important;
+    color: var(--theme-primary-text) !important;
+}
+
+body.operator-simple-mode h1,
+body.operator-simple-mode h2,
+body.operator-simple-mode h3,
+body.operator-simple-mode h4,
+body.operator-simple-mode strong,
+body.operator-simple-mode label,
+body.operator-advanced-mode h1,
+body.operator-advanced-mode h2,
+body.operator-advanced-mode h3,
+body.operator-advanced-mode h4,
+body.operator-advanced-mode strong,
+body.operator-advanced-mode label {
+    color: var(--theme-primary-text) !important;
+}
+
+body.operator-simple-mode p,
+body.operator-simple-mode li,
+body.operator-simple-mode small,
+body.operator-simple-mode span,
+body.operator-simple-mode figcaption,
+body.operator-advanced-mode p,
+body.operator-advanced-mode li,
+body.operator-advanced-mode small,
+body.operator-advanced-mode span,
+body.operator-advanced-mode figcaption {
+    color: var(--theme-secondary-text) !important;
+}
+
+body.operator-simple-mode .operator-page-label,
+body.operator-simple-mode .operator-area,
+body.operator-simple-mode .ethereal-world-banner span,
+body.operator-simple-mode .token-logo-studio-copy > span,
+body.operator-advanced-mode .operator-page-label,
+body.operator-advanced-mode .operator-area,
+body.operator-advanced-mode .ethereal-world-banner span,
+body.operator-advanced-mode .token-logo-studio-copy > span {
+    color: var(--theme-pink) !important;
+}
+
+body.operator-simple-mode .simple-operator-workspace,
+body.operator-simple-mode .mission-hero,
+body.operator-simple-mode .model-panel,
+body.operator-simple-mode .status-card,
+body.operator-simple-mode .ceo-workflow-map,
+body.operator-simple-mode .task-card,
+body.operator-simple-mode .home-workflow-card,
+body.operator-simple-mode .operator-answer-panel article,
+body.operator-simple-mode .operator-guided-workflow,
+body.operator-simple-mode .operator-workflow-step,
+body.operator-simple-mode .operator-status-tile,
+body.operator-simple-mode .operator-task-card,
+body.operator-simple-mode .inline-tool-panel,
+body.operator-simple-mode .artifact-stat,
+body.operator-simple-mode .token-logo-studio,
+body.operator-simple-mode .logo-creation-showcase,
+body.operator-simple-mode .operator-community-showcase,
+body.operator-simple-mode .community-showcase-panel,
+body.operator-simple-mode .community-showcase-band,
+body.operator-simple-mode .community-art-grid article,
+body.operator-simple-mode .logo-community-art-grid article,
+body.operator-simple-mode .safe-paper-result-card,
+body.operator-simple-mode .safe-paper-table-card,
+body.operator-simple-mode .safe-paper-status-card,
+body.operator-simple-mode .safe-paper-warning-card,
+body.operator-simple-mode .operator-progress-checklist article,
+body.operator-simple-mode .phase3-dashboard-grid > article,
+body.operator-simple-mode .phase6-dashboard-grid > article,
+body.operator-simple-mode .phase5-dashboard-grid > article,
+body.operator-simple-mode .phase4-dashboard-grid > article,
+body.operator-simple-mode .phase6-panel,
+body.operator-simple-mode .phase5-panel,
+body.operator-simple-mode .phase4-panel,
+body.operator-simple-mode .phase6-mini-card,
+body.operator-simple-mode .phase5-mini-card,
+body.operator-simple-mode .phase4-mini-card,
+body.operator-simple-mode .phase3-panel,
+body.operator-simple-mode .phase3-results,
+body.operator-simple-mode .phase3-mini-card,
+body.operator-simple-mode .phase3-account-card,
+body.operator-simple-mode .phase3a-checklist article,
+body.operator-simple-mode .phase3a-exchange-grid > article,
+body.operator-simple-mode .phase6b-tiny-live-panel,
+body.operator-simple-mode .phase6f-summary-grid article,
+body.operator-simple-mode .phase6f-proof-panel,
+body.operator-simple-mode .phase6f-check-item,
+body.operator-simple-mode .phase6f-ready-card,
+body.operator-simple-mode .phase6f-enable-panel,
+body.operator-simple-mode .kraken-tiny-live-flow,
+body.operator-simple-mode .kraken-tiny-journal-list,
+body.operator-advanced-mode .model-panel,
+body.operator-advanced-mode .task-card,
+body.operator-advanced-mode .status-card,
+body.operator-advanced-mode .operator-community-showcase,
+body.operator-advanced-mode .community-showcase-panel,
+body.operator-advanced-mode .community-showcase-band,
+body.operator-advanced-mode .community-art-grid article,
+body.operator-advanced-mode .phase6-panel,
+body.operator-advanced-mode .phase6-mini-card,
+body.operator-advanced-mode .phase6f-proof-panel,
+body.operator-advanced-mode .phase6f-check-item,
+body.operator-advanced-mode .phase6f-ready-card {
+    background: var(--theme-card-background) !important;
+    border: 1px solid var(--theme-border) !important;
+    box-shadow: var(--theme-glow) !important;
+    color: var(--theme-primary-text) !important;
+}
+
+body.operator-simple-mode .operator-workspace-header,
+body.operator-advanced-mode .operator-workspace-header,
+body.operator-simple-mode .operator-identity-band,
+body.operator-advanced-mode .operator-identity-band,
+body.operator-simple-mode .ethereal-world-banner,
+body.operator-advanced-mode .ethereal-world-banner {
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--theme-pink) 10%, transparent), transparent 40%),
+        var(--theme-card-background-muted) !important;
+    border: 1px solid var(--theme-border-strong) !important;
+    color: var(--theme-primary-text) !important;
+}
+
+body.operator-simple-mode .model-panel::before,
+body.operator-simple-mode .simple-operator-workspace::before,
+body.operator-simple-mode .mission-hero::before,
+body.operator-simple-mode .operator-guided-workflow::before,
+body.operator-simple-mode .inline-tool-panel::before,
+body.operator-simple-mode .operator-community-showcase::before,
+body.operator-simple-mode .community-showcase-panel::before,
+body.operator-simple-mode .community-showcase-band::before {
+    background: linear-gradient(90deg, var(--theme-pink), var(--theme-cyan)) !important;
+}
+
+body.operator-simple-mode .operator-status-safe,
+body.operator-advanced-mode .operator-status-safe,
+body.operator-simple-mode .safe-paper-status-card,
+body.operator-simple-mode .operator-progress-checklist article.operator-check-pass,
+body.operator-simple-mode .operator-check-pass,
+body.operator-simple-mode .status-success,
+body.operator-advanced-mode .safe-paper-status-card,
+body.operator-advanced-mode .operator-progress-checklist article.operator-check-pass,
+body.operator-advanced-mode .operator-check-pass,
+body.operator-advanced-mode .status-success {
+    background: var(--theme-success-bg) !important;
+    border-color: color-mix(in srgb, var(--theme-success) 72%, var(--theme-border)) !important;
+    color: var(--theme-success-text) !important;
+}
+
+body.operator-simple-mode .operator-status-warning,
+body.operator-advanced-mode .operator-status-warning,
+body.operator-simple-mode .status-warning,
+body.operator-advanced-mode .status-warning {
+    background: var(--theme-warning-bg) !important;
+    border-color: color-mix(in srgb, var(--theme-warning) 72%, var(--theme-border)) !important;
+    color: var(--theme-warning-text) !important;
+}
+
+body.operator-simple-mode .operator-status-live,
+body.operator-advanced-mode .operator-status-live,
+body.operator-simple-mode .operator-status-danger,
+body.operator-advanced-mode .operator-status-danger,
+body.operator-simple-mode .safe-paper-warning-card,
+body.operator-simple-mode .operator-progress-checklist article.operator-check-blocked,
+body.operator-simple-mode .operator-check-blocked,
+body.operator-simple-mode .status-danger,
+body.operator-advanced-mode .safe-paper-warning-card,
+body.operator-advanced-mode .operator-progress-checklist article.operator-check-blocked,
+body.operator-advanced-mode .operator-check-blocked,
+body.operator-advanced-mode .status-danger {
+    background: var(--theme-danger-bg) !important;
+    border-color: color-mix(in srgb, var(--theme-danger) 72%, var(--theme-border)) !important;
+    color: var(--theme-danger-text) !important;
+}
+
+body.operator-simple-mode .operator-status-safe *,
+body.operator-simple-mode .safe-paper-status-card *,
+body.operator-simple-mode .operator-check-pass *,
+body.operator-simple-mode .status-success *,
+body.operator-advanced-mode .operator-status-safe *,
+body.operator-advanced-mode .safe-paper-status-card *,
+body.operator-advanced-mode .operator-check-pass *,
+body.operator-advanced-mode .status-success * {
+    color: var(--theme-success-text) !important;
+}
+
+body.operator-simple-mode .operator-status-warning *,
+body.operator-simple-mode .status-warning *,
+body.operator-advanced-mode .operator-status-warning *,
+body.operator-advanced-mode .status-warning * {
+    color: var(--theme-warning-text) !important;
+}
+
+body.operator-simple-mode .operator-status-live *,
+body.operator-simple-mode .operator-status-danger *,
+body.operator-simple-mode .safe-paper-warning-card *,
+body.operator-simple-mode .operator-check-blocked *,
+body.operator-simple-mode .status-danger *,
+body.operator-advanced-mode .operator-status-live *,
+body.operator-advanced-mode .operator-status-danger *,
+body.operator-advanced-mode .safe-paper-warning-card *,
+body.operator-advanced-mode .operator-check-blocked *,
+body.operator-advanced-mode .status-danger * {
+    color: var(--theme-danger-text) !important;
+}
+
+body.operator-simple-mode .operator-primary-action,
+body.operator-simple-mode .operator-secondary-action,
+body.operator-simple-mode .operator-training-menu > button,
+body.operator-simple-mode .button-row button,
+body.operator-simple-mode .button-row .cta-button,
+body.operator-simple-mode .operator-workflow-step button,
+body.operator-simple-mode .operator-workflow-step a,
+body.operator-simple-mode .model-test-form button,
+body.operator-simple-mode .model-panel > button,
+body.operator-simple-mode .task-card button,
+body.operator-advanced-mode .button-row button,
+body.operator-advanced-mode .button-row .cta-button,
+body.operator-advanced-mode .model-test-form button,
+body.operator-advanced-mode .model-panel > button,
+body.operator-advanced-mode .task-card button {
+    background: var(--theme-button-background) !important;
+    border: 1px solid color-mix(in srgb, var(--theme-cyan) 28%, var(--theme-border)) !important;
+    color: var(--theme-button-text) !important;
+}
+
+body.operator-simple-mode .operator-primary-action:hover,
+body.operator-simple-mode .operator-secondary-action:hover,
+body.operator-simple-mode .operator-training-menu > button:hover,
+body.operator-simple-mode .button-row button:hover,
+body.operator-simple-mode .button-row .cta-button:hover,
+body.operator-simple-mode .operator-workflow-step button:hover,
+body.operator-simple-mode .operator-workflow-step a:hover,
+body.operator-simple-mode .model-test-form button:hover,
+body.operator-simple-mode .model-panel > button:hover,
+body.operator-simple-mode .task-card button:hover,
+body.operator-advanced-mode .button-row button:hover,
+body.operator-advanced-mode .button-row .cta-button:hover,
+body.operator-advanced-mode .model-test-form button:hover,
+body.operator-advanced-mode .model-panel > button:hover,
+body.operator-advanced-mode .task-card button:hover {
+    background: var(--theme-button-hover) !important;
+}
+
+body.operator-simple-mode button:disabled,
+body.operator-simple-mode [disabled],
+body.operator-advanced-mode button:disabled,
+body.operator-advanced-mode [disabled] {
+    color: var(--theme-muted-text) !important;
+    cursor: not-allowed;
+    opacity: 0.72;
+}
+
+body.operator-simple-mode input,
+body.operator-simple-mode select,
+body.operator-simple-mode textarea,
+body.operator-advanced-mode input,
+body.operator-advanced-mode select,
+body.operator-advanced-mode textarea {
+    background: var(--theme-input-background) !important;
+    border: 1px solid var(--theme-border) !important;
+    color: var(--theme-input-text) !important;
+}
+
+body.operator-simple-mode input::placeholder,
+body.operator-simple-mode textarea::placeholder,
+body.operator-advanced-mode input::placeholder,
+body.operator-advanced-mode textarea::placeholder {
+    color: var(--theme-muted-text) !important;
+    opacity: 1;
+}
+
+body.operator-simple-mode pre,
+body.operator-simple-mode code,
+body.operator-simple-mode .model-output,
+body.operator-simple-mode .owner-proof-command,
+body.operator-simple-mode .operator-simple-readable,
+body.operator-advanced-mode pre,
+body.operator-advanced-mode code,
+body.operator-advanced-mode .model-output,
+body.operator-advanced-mode .owner-proof-command,
+body.operator-advanced-mode .operator-simple-readable {
+    background: var(--theme-code-background) !important;
+    border: 1px solid var(--theme-border) !important;
+    color: var(--theme-code-text) !important;
+}
+
+body.operator-simple-mode table,
+body.operator-advanced-mode table {
+    background: var(--theme-panel-background) !important;
+    color: var(--theme-primary-text) !important;
+}
+
+body.operator-simple-mode table th,
+body.operator-simple-mode table td,
+body.operator-advanced-mode table th,
+body.operator-advanced-mode table td {
+    background: var(--theme-card-background) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-primary-text) !important;
+}
+
+body.operator-simple-mode .checkbox-grid label,
+body.operator-advanced-mode .checkbox-grid label {
+    background: var(--theme-card-background-muted) !important;
+    border: 1px solid var(--theme-border) !important;
+    color: var(--theme-primary-text) !important;
+}
+
+body.operator-simple-mode .operator-training-menu-list,
+body.operator-advanced-mode .operator-training-menu-list {
+    background: var(--theme-panel-background) !important;
+    border-color: var(--theme-border-strong) !important;
+    box-shadow: var(--theme-glow) !important;
+}
+
+body.operator-simple-mode .operator-training-menu-list button,
+body.operator-advanced-mode .operator-training-menu-list button {
+    background: var(--theme-card-background-muted) !important;
+    border-color: var(--theme-border) !important;
+    color: var(--theme-primary-text) !important;
+}
+
+body.operator-simple-mode .operator-black-hole-label,
+body.operator-advanced-mode .operator-black-hole-label {
+    color: var(--theme-secondary-text) !important;
+}
+
+body.operator-simple-mode .community-showcase-hero strong,
+body.operator-simple-mode .operator-community-hero strong,
+body.operator-simple-mode .community-showcase-hero h2,
+body.operator-simple-mode .operator-community-art-grid strong,
+body.operator-simple-mode .community-art-grid strong,
+body.operator-advanced-mode .community-showcase-hero strong,
+body.operator-advanced-mode .operator-community-hero strong,
+body.operator-advanced-mode .community-showcase-hero h2,
+body.operator-advanced-mode .operator-community-art-grid strong,
+body.operator-advanced-mode .community-art-grid strong {
+    color: var(--theme-primary-text) !important;
+}
+
+body.operator-simple-mode .community-showcase-hero p,
+body.operator-simple-mode .operator-community-hero p,
+body.operator-simple-mode .operator-community-art-grid span,
+body.operator-simple-mode .community-art-grid span,
+body.operator-advanced-mode .community-showcase-hero p,
+body.operator-advanced-mode .operator-community-hero p,
+body.operator-advanced-mode .operator-community-art-grid span,
+body.operator-advanced-mode .community-art-grid span {
+    color: var(--theme-secondary-text) !important;
 }
