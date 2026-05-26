@@ -1619,6 +1619,7 @@
         let latestPhase6FPreview = null;
         let latestKrakenTinyLiveGate = null;
         let latestKrakenTinyLivePreviewId = null;
+        let latestKrakenTinyLiveReadyPreview = null;
         let latestKrakenTinyLiveOrderId = null;
         let latestKrakenAuthDiagnostics = null;
         let latestKrakenVaultReadback = null;
@@ -4015,6 +4016,47 @@
             };
         }
 
+        function isKrakenTinyLiveReadyPreview(execution = {}) {
+            return Boolean(
+                execution?.id
+                    && /kraken_tiny_live_preview_ready/i.test(String(execution.status || ''))
+                    && !execution.production_order_endpoint_called
+            );
+        }
+
+        function deriveKrakenTinyLiveReadyPreview(data = {}) {
+            if (data.previewId && data.gate?.canPreview) {
+                return {
+                    id: data.previewId,
+                    source: 'preview-response',
+                    status: data.execution?.status || 'kraken_tiny_live_preview_ready'
+                };
+            }
+
+            const directExecution = data.execution || data.gate?.execution;
+            if (isKrakenTinyLiveReadyPreview(directExecution)) {
+                return {
+                    id: directExecution.id,
+                    source: 'execution',
+                    status: directExecution.status
+                };
+            }
+
+            const latestPreview = (data.latestOrders || [])[0];
+
+            return isKrakenTinyLiveReadyPreview(latestPreview)
+                ? {
+                    id: latestPreview.id,
+                    source: 'latest-orders',
+                    status: latestPreview.status
+                }
+                : null;
+        }
+
+        function deriveKrakenTinyLivePreviewId(data = {}) {
+            return deriveKrakenTinyLiveReadyPreview(data)?.id || null;
+        }
+
         function renderKrakenTinyChecks(checks = []) {
             return checks.map(check => `
                 <article class="phase6f-check-item ${phase6CStatusClass(check.status)}">
@@ -4138,7 +4180,7 @@
             `;
         }
 
-        function updateKrakenTinyPlaceButton() {
+        function collectKrakenTinyFinalApprovalState() {
             const gate = latestKrakenTinyLiveGate || {};
             const auditState = gate.auditState || {};
             const phrase = gate.confirmationPhrase || 'I APPROVE THIS $1 KRAKEN TINY LIVE TEST';
@@ -4146,16 +4188,78 @@
             const ownerApproved = document.getElementById('kraken-tiny-owner-approval').checked;
             const emergencyArmed = document.getElementById('kraken-tiny-emergency-armed').checked;
             const hasPreview = Boolean(latestKrakenTinyLivePreviewId);
-            const finalSubmitReady = gate.canPreview && hasPreview && !auditState.liveExecutionOccurred && phraseTyped && ownerApproved && emergencyArmed;
+            const hasReadyPreview = hasPreview && Boolean(latestKrakenTinyLiveReadyPreview?.id);
+            const previewGateReady = gate.canPreview === true || hasReadyPreview;
+            const missing = [];
 
-            document.getElementById('kraken-tiny-place').disabled = !finalSubmitReady;
+            if (!previewGateReady) missing.push('Preview gate is not ready.');
+            if (!hasPreview) missing.push('Build or refresh a ready preview first.');
+            if (auditState.liveExecutionOccurred) missing.push('The one allowed live endpoint call already occurred.');
+            if (!phraseTyped) missing.push('Type the exact confirmation phrase.');
+            if (!ownerApproved) missing.push('Check owner approval.');
+            if (!emergencyArmed) missing.push('Check Emergency Stop armed.');
+
+            return {
+                gate,
+                auditState,
+                phraseTyped,
+                ownerApproved,
+                emergencyArmed,
+                hasPreview,
+                hasReadyPreview,
+                previewGateReady,
+                readyPreview: latestKrakenTinyLiveReadyPreview,
+                missing,
+                finalApprovalEnabled: missing.length === 0
+            };
+        }
+
+        function updateKrakenTinyPlaceButton() {
+            const state = collectKrakenTinyFinalApprovalState();
+            const button = document.getElementById('kraken-tiny-place');
+            const result = document.getElementById('kraken-tiny-place-result');
+
+            button.disabled = !state.finalApprovalEnabled;
+            button.setAttribute('data-final-approval-enabled', String(state.finalApprovalEnabled));
+            button.setAttribute('data-kraken-tiny-disable-reason', state.missing.join(' | '));
+            button.setAttribute('aria-disabled', String(!state.finalApprovalEnabled));
+            button.title = state.finalApprovalEnabled
+                ? 'Ready. Clicking this can place one Kraken tiny live order after backend re-checks every gate.'
+                : `Locked: ${state.missing.join(' ') || 'Complete the visible final approval gate.'}`;
+
+            if (!result) return;
+
+            if (state.finalApprovalEnabled) {
+                result.innerHTML = `
+                    <article class="phase6f-check-item status-success">
+                        <strong>Final manual order button is unlocked</strong>
+                        <p>All visible final approval checks pass. Clicking Place Tiny Live Test Order will still trigger backend re-checks before any live endpoint call.</p>
+                        <small>One order only · $1 maximum · no loops · no withdrawals · no wallet signing · no leverage.</small>
+                    </article>
+                `;
+            } else {
+                result.innerHTML = `
+                    <article class="phase6f-check-item status-warning">
+                        <strong>Final manual order button is locked</strong>
+                        <p>${escapeHtml(state.missing[0] || 'Complete the visible final approval gate.')}</p>
+                        <small>${escapeHtml(state.missing.join(' · ') || 'No live order has been placed.')}</small>
+                    </article>
+                `;
+            }
         }
 
         function renderKrakenTinyGate(data = {}) {
             const gate = data.gate || data || {};
             const auditState = data.auditState || gate.auditState || {};
+            const readyPreview = deriveKrakenTinyLiveReadyPreview(data);
             latestKrakenTinyLiveGate = gate;
-            latestKrakenTinyLivePreviewId = data.previewId || latestKrakenTinyLivePreviewId;
+            if (readyPreview?.id) {
+                latestKrakenTinyLiveReadyPreview = readyPreview;
+                latestKrakenTinyLivePreviewId = readyPreview.id;
+            } else if (data.previewId && gate.canPreview === false) {
+                latestKrakenTinyLiveReadyPreview = null;
+                latestKrakenTinyLivePreviewId = null;
+            }
 
             if (data.execution?.id) {
                 latestKrakenTinyLiveOrderId = data.execution.id;
@@ -4371,7 +4475,10 @@
             placeKrakenTinyLiveTest,
             trackKrakenTinyLiveOrder,
             cancelKrakenTinyLiveOrder,
-            emergencyStopKrakenTinyLiveTest
+            emergencyStopKrakenTinyLiveTest,
+            getFinalApprovalState: collectKrakenTinyFinalApprovalState,
+            updateFinalApprovalButton: updateKrakenTinyPlaceButton,
+            getLatestReadyPreview: () => latestKrakenTinyLiveReadyPreview
         };
 
         window.EtherealAIKrakenLiveSetup = {
@@ -5837,8 +5944,12 @@
         document.getElementById('cancel-phase6-order').addEventListener('click', cancelLatestPhase6Order);
         document.getElementById('phase6-emergency-stop').addEventListener('click', phase6EmergencyStop);
         document.getElementById('kraken-tiny-confirmation').addEventListener('input', updateKrakenTinyPlaceButton);
+        document.getElementById('kraken-tiny-confirmation').addEventListener('keyup', updateKrakenTinyPlaceButton);
+        document.getElementById('kraken-tiny-confirmation').addEventListener('change', updateKrakenTinyPlaceButton);
         document.getElementById('kraken-tiny-owner-approval').addEventListener('change', updateKrakenTinyPlaceButton);
+        document.getElementById('kraken-tiny-owner-approval').addEventListener('click', updateKrakenTinyPlaceButton);
         document.getElementById('kraken-tiny-emergency-armed').addEventListener('change', updateKrakenTinyPlaceButton);
+        document.getElementById('kraken-tiny-emergency-armed').addEventListener('click', updateKrakenTinyPlaceButton);
 
         loadRoadmap();
         loadPhase3Status();
