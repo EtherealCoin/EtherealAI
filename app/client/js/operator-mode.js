@@ -191,12 +191,12 @@
             cards: [
                 ['1. Pick category', 'Use-case token, meme token, or hybrid meme + utility token.'],
                 ['2. Choose chain', 'Base, Polygon, Solana, BNB, Avalanche, Arbitrum, Optimism, Ethereum, Move, Cosmos, NEAR, TRON, Bitcoin L2, or custom.'],
-                ['3. Build package', 'Tokenomics, use case, contract plan, logo, website, whitepaper, roadmap, and dapp options.'],
+                ['3. Build package', 'Supply, release model, allocations, fees, rewards, use case, contract plan, logo, website, whitepaper, roadmap, and dapp options.'],
                 ['4. Save locally', 'No blockchain broadcast, wallet signing, liquidity, public posting, or listing submission happens here.']
             ],
             workflow: [
                 ['1. Start pipeline', 'Open the CEO token launch panel and review the two gates.', { label: 'Start Token Launch Pipeline', selector: '#token-launch-operator-pipeline' }],
-                ['2. Fill draft', 'Use the safe draft example or enter your own token category, chain, ticker, community, and dapp plan.', { label: 'Use Safe Draft Example', selector: '#token-launch-two-gate' }],
+                ['2. Fill draft', 'Use the safe draft example or enter token category, chain, ticker, community, supply, allocations, release model, and dapp plan.', { label: 'Use Safe Draft Example', selector: '#token-launch-two-gate' }],
                 ['3. Preview package', 'Review blockers in one list before saving.', { label: 'Preview Local Package', selector: '#token-launch-preview' }],
                 ['4. Advanced raw form', 'Open detailed contract, logo, website, whitepaper, and ecosystem controls only when needed.', { label: 'Open Contract Spec Form', selector: '#contract-form' }]
             ]

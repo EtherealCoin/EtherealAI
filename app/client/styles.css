@@ -8467,13 +8467,26 @@ body.operator-advanced-mode .community-art-grid span {
     aspect-ratio: 1 / 1;
 }
 
-.token-launch-operator-grid {
+.token-launch-operator-grid,
+.token-launch-detail-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
 }
 
-.token-launch-operator-grid label {
+.token-launch-detail-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.token-launch-wide-controls {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.token-launch-operator-grid label,
+.token-launch-detail-grid label,
+.token-launch-wide-controls label {
     background: var(--theme-card-background-muted);
     border: 1px solid var(--theme-border);
     color: var(--theme-primary-text);
@@ -8485,7 +8498,10 @@ body.operator-advanced-mode .community-art-grid span {
 }
 
 .token-launch-operator-grid input,
-.token-launch-operator-grid select {
+.token-launch-operator-grid select,
+.token-launch-detail-grid input,
+.token-launch-detail-grid select,
+.token-launch-wide-controls textarea {
     min-height: 42px;
 }
 
@@ -8501,7 +8517,9 @@ body.operator-simple-mode .api-connection-shell .advanced-operator-tools:not([op
     .api-status-grid,
     .api-lane-grid,
     .operator-two-gate-grid,
-    .token-launch-operator-grid {
+    .token-launch-operator-grid,
+    .token-launch-detail-grid,
+    .token-launch-wide-controls {
         grid-template-columns: 1fr;
     }
 

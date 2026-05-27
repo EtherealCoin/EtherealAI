@@ -62,6 +62,90 @@
                     </select>
                 </label>
             </div>
+            <div class="token-launch-detail-grid" aria-label="Tokenomics and release controls">
+                <label for="token-launch-total-supply">
+                    Total supply
+                    <input id="token-launch-total-supply" type="text" placeholder="1,000,000,000">
+                </label>
+                <label for="token-launch-initial-supply">
+                    Initial minted supply
+                    <input id="token-launch-initial-supply" type="text" placeholder="100,000,000">
+                </label>
+                <label for="token-launch-supply-model">
+                    Supply model
+                    <select id="token-launch-supply-model">
+                        <option value="fixed supply">Fixed supply</option>
+                        <option value="mintable with capped owner-approved release">Mintable with capped owner-approved release</option>
+                        <option value="mintable with DAO-approved release">Mintable with DAO-approved release</option>
+                        <option value="non-mining scheduled release">Non-mining scheduled release</option>
+                        <option value="mining or node reward release">Mining or node reward release</option>
+                    </select>
+                </label>
+                <label for="token-launch-admin-model">
+                    Admin model
+                    <select id="token-launch-admin-model">
+                        <option value="minimal admin, owner review required">Minimal admin, owner review required</option>
+                        <option value="ownable with transfer plan">Ownable with transfer plan</option>
+                        <option value="multisig treasury admin">Multisig treasury admin</option>
+                        <option value="DAO-administered after launch">DAO-administered after launch</option>
+                        <option value="renounced ownership after setup">Renounced ownership after setup</option>
+                    </select>
+                </label>
+                <label for="token-launch-burn">
+                    Burn function
+                    <select id="token-launch-burn">
+                        <option value="burn disabled">Burn disabled</option>
+                        <option value="holder burn enabled">Holder burn enabled</option>
+                        <option value="treasury burn enabled with owner approval">Treasury burn enabled with owner approval</option>
+                    </select>
+                </label>
+                <label for="token-launch-pausable">
+                    Pause function
+                    <select id="token-launch-pausable">
+                        <option value="pausable disabled">Pausable disabled</option>
+                        <option value="emergency pause enabled">Emergency pause enabled</option>
+                        <option value="module-level pause controls">Module-level pause controls</option>
+                    </select>
+                </label>
+                <label for="token-launch-transfer-fee">
+                    Transfer fee / tax
+                    <input id="token-launch-transfer-fee" type="text" placeholder="0% or explain fee routing">
+                </label>
+                <label for="token-launch-staking-rewards">
+                    Staking / rewards
+                    <input id="token-launch-staking-rewards" type="text" placeholder="none, staking vault, rewards routing">
+                </label>
+                <label for="token-launch-treasury-allocation">
+                    Treasury allocation
+                    <input id="token-launch-treasury-allocation" type="text" placeholder="10%">
+                </label>
+                <label for="token-launch-liquidity-allocation">
+                    Liquidity allocation
+                    <input id="token-launch-liquidity-allocation" type="text" placeholder="20%">
+                </label>
+                <label for="token-launch-team-allocation">
+                    Team allocation
+                    <input id="token-launch-team-allocation" type="text" placeholder="10%">
+                </label>
+                <label for="token-launch-community-allocation">
+                    Community / airdrop allocation
+                    <input id="token-launch-community-allocation" type="text" placeholder="60%">
+                </label>
+            </div>
+            <div class="token-launch-wide-controls" aria-label="Token use case, release, and dapp module controls">
+                <label for="token-launch-release-plan">
+                    Vesting / release schedule
+                    <textarea id="token-launch-release-plan" rows="3" placeholder="Explain vesting, future release, airdrop timing, non-mining supply release, or node/mining reward rules."></textarea>
+                </label>
+                <label for="token-launch-use-case">
+                    Use-case detail
+                    <textarea id="token-launch-use-case" rows="3" placeholder="Describe the token utility, user roles, dapp role, permission model, and what makes it different."></textarea>
+                </label>
+                <label for="token-launch-dapp-modules">
+                    Dapp module descriptions
+                    <textarea id="token-launch-dapp-modules" rows="3" placeholder="Optional: describe one, two, or three dapp modules. Include user action, token role, wallet requirement, admin requirement, data/API requirement, contract requirement, and frontend requirement."></textarea>
+                </label>
+            </div>
             <div id="token-launch-two-gate" class="operator-guided-focus">
                 Loading Token Launch Factory two-gate flow...
             </div>
@@ -421,6 +505,21 @@
                 ticker: document.getElementById('token-launch-ticker')?.value.trim().toUpperCase() || '',
                 community: document.getElementById('token-launch-community')?.value.trim() || '',
                 dappMode: document.getElementById('token-launch-dapp-mode')?.value || 'add dapp later',
+                totalSupply: document.getElementById('token-launch-total-supply')?.value.trim() || '',
+                initialSupply: document.getElementById('token-launch-initial-supply')?.value.trim() || '',
+                supplyModel: document.getElementById('token-launch-supply-model')?.value || '',
+                adminModel: document.getElementById('token-launch-admin-model')?.value || '',
+                burnModel: document.getElementById('token-launch-burn')?.value || '',
+                pauseModel: document.getElementById('token-launch-pausable')?.value || '',
+                transferFee: document.getElementById('token-launch-transfer-fee')?.value.trim() || '',
+                stakingRewards: document.getElementById('token-launch-staking-rewards')?.value.trim() || '',
+                treasuryAllocation: document.getElementById('token-launch-treasury-allocation')?.value.trim() || '',
+                liquidityAllocation: document.getElementById('token-launch-liquidity-allocation')?.value.trim() || '',
+                teamAllocation: document.getElementById('token-launch-team-allocation')?.value.trim() || '',
+                communityAllocation: document.getElementById('token-launch-community-allocation')?.value.trim() || '',
+                releasePlan: document.getElementById('token-launch-release-plan')?.value.trim() || '',
+                detailedUseCase: document.getElementById('token-launch-use-case')?.value.trim() || '',
+                dappModules: document.getElementById('token-launch-dapp-modules')?.value.trim() || '',
                 name: document.getElementById('contract-name')?.value.trim() || '',
                 chain: document.getElementById('contract-network')?.value.trim() || '',
                 contractType: document.getElementById('contract-type')?.value || '',
@@ -455,6 +554,13 @@
                 });
             }
 
+            if (!input.totalSupply) {
+                blockers.push({
+                    title: 'Total supply is missing',
+                    detail: 'Enter total supply so tokenomics, website, and whitepaper can be generated from real numbers.'
+                });
+            }
+
             if (!input.featureSelections.length) {
                 blockers.push({
                     title: 'Token features are not selected',
@@ -473,6 +579,18 @@
                 input.ticker ? `- Ticker: ${input.ticker}` : '- Ticker: not set yet',
                 input.community ? `- Target community: ${input.community}` : '- Target community: not set yet',
                 `- Dapp plan: ${input.dappMode}`,
+                `- Total supply: ${input.totalSupply || 'not set yet'}`,
+                `- Initial minted supply: ${input.initialSupply || 'not set yet'}`,
+                `- Supply model: ${input.supplyModel || 'not set yet'}`,
+                `- Admin model: ${input.adminModel || 'not set yet'}`,
+                `- Burn: ${input.burnModel || 'not set yet'}`,
+                `- Pause: ${input.pauseModel || 'not set yet'}`,
+                `- Transfer fee / tax: ${input.transferFee || 'not set yet'}`,
+                `- Staking / rewards: ${input.stakingRewards || 'not set yet'}`,
+                `- Allocations: treasury ${input.treasuryAllocation || 'not set'}, liquidity ${input.liquidityAllocation || 'not set'}, team ${input.teamAllocation || 'not set'}, community/airdrop ${input.communityAllocation || 'not set'}`,
+                input.releasePlan ? `- Vesting / release schedule: ${input.releasePlan}` : '- Vesting / release schedule: not set yet',
+                input.detailedUseCase ? `- Use-case detail: ${input.detailedUseCase}` : '- Use-case detail: use Ecosystem Notes until expanded.',
+                input.dappModules ? `- Dapp modules: ${input.dappModules}` : '- Dapp modules: none described yet',
                 `- Target blockchain: ${input.chain || 'not selected yet'}`,
                 `- Contract type: ${input.contractType || 'not selected yet'}`,
                 '- Pipeline order: token category, target blockchain, identity, tokenomics, use case, local code proposal, logo, website, whitepaper, roadmap, dapp modules, launch package.',
@@ -504,6 +622,21 @@
             }
             document.getElementById('token-launch-category').value = 'hybrid meme + utility token';
             document.getElementById('token-launch-dapp-mode').value = 'add dapp later';
+            document.getElementById('token-launch-total-supply').value = '1,000,000,000';
+            document.getElementById('token-launch-initial-supply').value = '100,000,000';
+            document.getElementById('token-launch-supply-model').value = 'mintable with capped owner-approved release';
+            document.getElementById('token-launch-admin-model').value = 'multisig treasury admin';
+            document.getElementById('token-launch-burn').value = 'holder burn enabled';
+            document.getElementById('token-launch-pausable').value = 'emergency pause enabled';
+            document.getElementById('token-launch-transfer-fee').value = '0% by default; owner can model routing later';
+            document.getElementById('token-launch-staking-rewards').value = 'staking/reward module optional; cap rewards before launch';
+            document.getElementById('token-launch-treasury-allocation').value = '10%';
+            document.getElementById('token-launch-liquidity-allocation').value = '20%';
+            document.getElementById('token-launch-team-allocation').value = '10% with vesting';
+            document.getElementById('token-launch-community-allocation').value = '60% community, launch, airdrop, ecosystem';
+            document.getElementById('token-launch-release-plan').value = 'Draft release plan: keep initial launch small, vest team allocation, use owner-approved future releases, and document non-mining token release rules before public launch.';
+            document.getElementById('token-launch-use-case').value = 'Draft use case: local AI operating system token planning for automation, strategy research, dapp access, community utility, and future owner-approved launch modules.';
+            document.getElementById('token-launch-dapp-modules').value = 'Module 1: token dashboard. Module 2: NFT utility upgrades. Module 3: community/listing evidence dashboard. All modules remain local plans until deployment approval.';
             selectChainNeutralTokenDefaults();
             applyTokenLaunchBriefToSpec();
             previewTokenLaunchPackage();
@@ -519,7 +652,7 @@
                         <span>Local package preview</span>
                         <strong>${escapeHtml(input.name || 'Token name needed')}</strong>
                     </div>
-                    <p>${escapeHtml(input.category)} · ${escapeHtml(input.chain || 'chain needed')} · ${escapeHtml(input.contractType || 'contract type needed')} · ${input.featureSelections.length} feature option(s)</p>
+                    <p>${escapeHtml(input.category)} · ${escapeHtml(input.chain || 'chain needed')} · ${escapeHtml(input.contractType || 'contract type needed')} · ${escapeHtml(input.totalSupply || 'supply needed')} total supply · ${input.featureSelections.length} feature option(s)</p>
                     <small>${blockers.length ? 'Fix the blocker list before saving.' : 'Ready to save as a local project. No external action will run.'}</small>
                 </article>
             `;
@@ -1401,7 +1534,7 @@
                 handleTokenLaunchGateAction(action);
             }
         });
-        ['token-launch-category', 'token-launch-ticker', 'token-launch-community', 'token-launch-dapp-mode', 'contract-name', 'contract-network', 'contract-type', 'token-ecosystem-notes', 'nft-utility-notes'].forEach(id => {
+        ['token-launch-category', 'token-launch-ticker', 'token-launch-community', 'token-launch-dapp-mode', 'token-launch-total-supply', 'token-launch-initial-supply', 'token-launch-supply-model', 'token-launch-admin-model', 'token-launch-burn', 'token-launch-pausable', 'token-launch-transfer-fee', 'token-launch-staking-rewards', 'token-launch-treasury-allocation', 'token-launch-liquidity-allocation', 'token-launch-team-allocation', 'token-launch-community-allocation', 'token-launch-release-plan', 'token-launch-use-case', 'token-launch-dapp-modules', 'contract-name', 'contract-network', 'contract-type', 'token-ecosystem-notes', 'nft-utility-notes'].forEach(id => {
             document.getElementById(id)?.addEventListener('input', renderTokenLaunchTwoGate);
             document.getElementById(id)?.addEventListener('change', renderTokenLaunchTwoGate);
         });
