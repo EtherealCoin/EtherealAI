@@ -4751,6 +4751,7 @@ footer {
 .phase6e-controls,
 .phase6e-proof-grid,
 .phase6f-summary-grid,
+.kraken-tiny-simple-flow,
 .phase6f-controls,
 .phase6f-proof-grid,
 .phase6f-enable-panel,
@@ -4890,9 +4891,14 @@ footer {
 .phase6e-guide-grid,
 .phase6e-proof-grid,
 .phase6f-summary-grid,
+.kraken-tiny-simple-flow,
 .phase6f-proof-grid {
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     margin: 18px 0;
+}
+
+.kraken-tiny-simple-flow {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .kraken-tiny-journal-list {
@@ -4934,6 +4940,94 @@ footer {
 .phase6f-enable-panel {
     grid-template-columns: minmax(260px, 2fr) repeat(auto-fit, minmax(220px, 1fr));
     margin: 18px 0;
+}
+
+.kraken-tiny-final-gate {
+    align-items: stretch;
+}
+
+.kraken-tiny-confirmation-panel {
+    display: grid;
+    gap: 10px;
+    min-width: min(100%, 520px);
+}
+
+.kraken-tiny-confirmation-panel input {
+    font-size: 1rem;
+    min-height: 48px;
+    width: 100%;
+}
+
+.kraken-tiny-expected-phrase {
+    color: var(--text-primary);
+    font-weight: 800;
+    margin: 0;
+}
+
+.kraken-tiny-expected-phrase code {
+    display: block;
+    margin-top: 6px;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.kraken-tiny-phrase-status {
+    border-radius: 8px;
+    font-weight: 900;
+    padding: 10px 12px;
+}
+
+.kraken-tiny-advanced-gates {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 18px 0;
+    padding: 12px;
+}
+
+.kraken-tiny-advanced-gates summary {
+    color: var(--text-primary);
+    cursor: pointer;
+    font-weight: 900;
+}
+
+.kraken-tiny-step-card {
+    display: grid;
+    gap: 10px;
+}
+
+.kraken-tiny-step-card button,
+.kraken-warning-button,
+#kraken-tiny-place,
+#kraken-tiny-place-simple {
+    border-radius: 8px;
+    font-weight: 950;
+    min-height: 48px;
+    padding: 12px 14px;
+    text-align: center;
+}
+
+.kraken-warning-button {
+    background: var(--status-warning);
+    border: 1px solid color-mix(in srgb, var(--status-warning) 70%, black);
+    color: #111827;
+}
+
+.kraken-ready-go {
+    background: var(--status-success) !important;
+    border: 1px solid color-mix(in srgb, var(--status-success) 70%, black) !important;
+    color: #052e16 !important;
+    box-shadow: 0 0 22px color-mix(in srgb, var(--status-success) 40%, transparent);
+}
+
+.kraken-locked-button,
+.kraken-tiny-step-card button:disabled,
+#kraken-tiny-place:disabled,
+#kraken-tiny-place-simple:disabled {
+    background: color-mix(in srgb, var(--surface-muted) 82%, #6b7280) !important;
+    border: 1px solid color-mix(in srgb, var(--border) 65%, #6b7280) !important;
+    color: var(--text-secondary) !important;
+    cursor: not-allowed;
+    opacity: 0.82;
 }
 
 .phase6f-ready-card {
@@ -5003,6 +5097,7 @@ footer {
 .phase6e-proof-panel,
 .phase6e-check-item,
 .phase6f-summary-grid article,
+.kraken-tiny-step-card,
 .phase6f-proof-panel,
 .phase6f-check-item,
 .phase6f-ready-card,
@@ -5684,6 +5779,8 @@ footer {
 :root[data-theme="night"] .phase6e-proof-panel,
 :root[data-theme="night"] .phase6e-check-item,
 :root[data-theme="night"] .phase6f-summary-grid article,
+:root[data-theme="night"] .kraken-tiny-step-card,
+:root[data-theme="night"] .kraken-tiny-advanced-gates,
 :root[data-theme="night"] .phase6f-proof-panel,
 :root[data-theme="night"] .phase6f-check-item,
 :root[data-theme="night"] .phase6f-ready-card,
@@ -5732,6 +5829,8 @@ footer {
 :root:not([data-theme="day"]) .phase6e-proof-panel,
 :root:not([data-theme="day"]) .phase6e-check-item,
 :root:not([data-theme="day"]) .phase6f-summary-grid article,
+:root:not([data-theme="day"]) .kraken-tiny-step-card,
+:root:not([data-theme="day"]) .kraken-tiny-advanced-gates,
 :root:not([data-theme="day"]) .phase6f-proof-panel,
 :root:not([data-theme="day"]) .phase6f-check-item,
 :root:not([data-theme="day"]) .phase6f-ready-card,

@@ -177,8 +177,8 @@ function registerExchangeMetadataRoutes(app, {
     exchangeAdapterContractEvent: exchangeAdapterContractEventSelect
   } = selects;
   const normalizeExchangeId = value => String(value || '').trim().toLowerCase().replace(/_/g, '-');
-  const krakenTinyLiveOrderConfirmationPhrase = 'I APPROVE THIS $1 KRAKEN TINY LIVE TEST';
-  const krakenTinyLiveMaxUsd = 1;
+  const krakenTinyLiveOrderConfirmationPhrase = 'I APPROVE THIS KRAKEN TINY LIVE TEST';
+  const krakenTinyLiveMaxUsd = 10;
   const krakenTinyLiveOpenStatuses = new Set(['approved', 'submitted', 'accepted', 'partially_filled', 'pending', 'open']);
   const krakenTinyLiveIgnoredPhase6ApprovalChecks = new Set([
     'sandbox_validation',
@@ -1505,7 +1505,7 @@ function registerExchangeMetadataRoutes(app, {
       exactRemainingOperatorAction: liveExecutionOccurred
         ? 'Track the tiny order. If it remains open, use Cancel Tiny Test Order or Emergency Stop. Do not run another tiny live order from this milestone.'
         : gate?.canPreview
-          ? 'Review the exact order preview, type the confirmation phrase, check both boxes, then click Place Tiny Live Test Order once.'
+          ? 'Review the exact order preview, copy the confirmation phrase, check both boxes, then click PLACE ONE TINY LIVE KRAKEN ORDER once.'
           : gate?.nextClick || 'Fix the visible blocked gate before continuing.',
       safetyLocks: [
         'No autonomous loops',
@@ -1513,7 +1513,7 @@ function registerExchangeMetadataRoutes(app, {
         'No withdrawals',
         'No wallet signing',
         'No leverage, margin, or futures',
-        '$1 max tiny live size'
+        '$10 max tiny live size'
       ],
       journal: (journal || []).map(event => ({
         id: event.id,
@@ -1788,10 +1788,10 @@ function registerExchangeMetadataRoutes(app, {
       }),
       buildKrakenTinyLiveStatusItem({
         id: 'tiny_order_limit',
-        label: 'Order is within the one-dollar tiny limit',
+        label: 'Order is within the tiny live limit',
         passed: orderNotional > 0 && orderNotional <= ownerTinyLimitUsd && ownerTinyLimitUsd > 0 && ownerTinyLimitUsd <= krakenTinyLiveMaxUsd,
         plainEnglish: `This test is about $${orderNotional.toFixed(2)}. The owner tiny limit for this milestone is $${ownerTinyLimitUsd.toFixed(2)}.`,
-        nextClick: 'Lower the amount to $1.00 or less.'
+        nextClick: `Lower the amount to $${krakenTinyLiveMaxUsd.toFixed(2)} or less.`
       }),
       buildKrakenTinyLiveStatusItem({
         id: 'withdrawals_disabled',
@@ -1919,8 +1919,8 @@ function registerExchangeMetadataRoutes(app, {
           : 'The tiny live test remains blocked until the visible items are fixed.',
       checks: finalChecks,
       missing,
-      nextClick: missing[0]?.nextClick || (canPlace ? 'Click Place Tiny Live Test Order.' : 'Type the final phrase and check both boxes.'),
-      exactRemainingOperatorAction: missing[0]?.nextClick || (canPlace ? 'Click Place Tiny Live Test Order once.' : 'Type the final phrase and check both boxes.'),
+      nextClick: missing[0]?.nextClick || (canPlace ? 'Click PLACE ONE TINY LIVE KRAKEN ORDER.' : 'Copy the phrase and check both boxes.'),
+      exactRemainingOperatorAction: missing[0]?.nextClick || (canPlace ? 'Click PLACE ONE TINY LIVE KRAKEN ORDER once.' : 'Copy the phrase and check both boxes.'),
       finalApprovalChecklist: finalChecks,
       blockedGates: missing,
       connector,
@@ -5680,7 +5680,7 @@ function registerExchangeMetadataRoutes(app, {
       const auditState = buildKrakenTinyLiveAuditState({ execution: auditExecution, gate, journal });
 
       res.json({
-        title: 'Run $1 Kraken Tiny Live Test',
+        title: 'Run Kraken Tiny Live Test',
         gate: {
           canPreview: gate.canPreview,
           canPlace: false,
@@ -5804,8 +5804,8 @@ function registerExchangeMetadataRoutes(app, {
         userId: req.session.userId,
         status,
         summary: gate.canPreview
-          ? 'Kraken $1 tiny live preview is ready. No order endpoint was called.'
-          : 'Kraken $1 tiny live preview is blocked. No order endpoint was called.',
+          ? 'Kraken tiny live preview is ready. No order endpoint was called.'
+          : 'Kraken tiny live preview is blocked. No order endpoint was called.',
         payload: {
           checks: gate.checks,
           exactOrderPreview: gate.exactOrderPreview,
@@ -5831,8 +5831,8 @@ function registerExchangeMetadataRoutes(app, {
           missing: gate.missing,
           finalApprovalChecklist: gate.finalApprovalChecklist || gate.checks,
           blockedGates: gate.blockedGates || gate.missing,
-          nextClick: gate.canPreview ? 'Type the final phrase, check both approval boxes, then click Place Tiny Live Test Order.' : gate.nextClick,
-          exactRemainingOperatorAction: gate.canPreview ? 'Review the exact order preview, type the final phrase, check both approval boxes, then click Place Tiny Live Test Order once.' : gate.nextClick,
+          nextClick: gate.canPreview ? 'Copy the final phrase, check both approval boxes, then click PLACE ONE TINY LIVE KRAKEN ORDER.' : gate.nextClick,
+          exactRemainingOperatorAction: gate.canPreview ? 'Review the exact order preview, copy the final phrase, check both approval boxes, then click PLACE ONE TINY LIVE KRAKEN ORDER once.' : gate.nextClick,
           exactOrderPreview: gate.exactOrderPreview,
           confirmationPhrase: krakenTinyLiveOrderConfirmationPhrase,
           auditState
@@ -5863,8 +5863,8 @@ function registerExchangeMetadataRoutes(app, {
 
       if (!row) {
         return res.status(404).json({
-          error: 'Build the $1 Kraken Tiny Live Test preview first. No order was placed.',
-          nextClick: 'Click Preview $1 Kraken Tiny Live Test.',
+          error: 'Build the Kraken Tiny Live Test preview first. No order was placed.',
+          nextClick: 'Click Preview Kraken Tiny Live Test.',
           safetyBoundary: createProductionSafetyBoundary(false)
         });
       }
@@ -5874,7 +5874,7 @@ function registerExchangeMetadataRoutes(app, {
       if (!isKrakenTinyLiveExecution(existing)) {
         return res.status(400).json({
           error: 'This preview is not a Kraken tiny-live test preview. No order was placed.',
-          nextClick: 'Click Preview $1 Kraken Tiny Live Test.',
+          nextClick: 'Click Preview Kraken Tiny Live Test.',
           safetyBoundary: createProductionSafetyBoundary(false)
         });
       }
@@ -5900,7 +5900,9 @@ function registerExchangeMetadataRoutes(app, {
       const gate = await buildKrakenTinyLiveGate({
         userId: req.session.userId,
         body: {
-          ...(req.body || {}),
+          ownerTinyLimitUsd: existing.max_order_usd,
+          maxOrderUsd: existing.max_order_usd,
+          notionalUsd: existing.notional_usd,
           order: {
             exchangeName: existing.exchange_name,
             symbol: existing.symbol,
@@ -6006,7 +6008,7 @@ function registerExchangeMetadataRoutes(app, {
         executionId: existing.id,
         userId: req.session.userId,
         status: 'live_execution_endpoint_call_started',
-        summary: 'LIVE EXECUTION OCCURRED: owner approved one Kraken $1 tiny live spot order and the AddOrder endpoint call started. Autonomous trading remains disabled.',
+        summary: 'LIVE EXECUTION OCCURRED: owner approved one Kraken tiny live spot order and the AddOrder endpoint call started. Autonomous trading remains disabled.',
         payload: {
           exactOrderPreview: gate.exactOrderPreview,
           safetyBoundary: gate.safetyBoundary,
