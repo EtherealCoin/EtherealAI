@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EtherealAI API Connection Center</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav>
+        <a href="/dashboard">Mission Control</a>
+        <a href="/api-connection-center">API Connection Center</a>
+        <a href="/strategy-lab">Trading Center</a>
+        <a href="/live-trading-launch">Live Trading Launch</a>
+        <a href="/solidity-lab">Token Launch Factory</a>
+        <a href="/operator-control">Wallet & Funding</a>
+        <a href="/security-lockdown">Security</a>
+        <a href="/logout">Logout</a>
+    </nav>
+
+    <main class="container api-connection-shell">
+        <section class="mission-hero api-connection-hero">
+            <div class="ethereal-world-banner">
+                <img src="/public/brand/ethereal-community-orbital-core.png" alt="EtherealAI API connection core artwork">
+                <div>
+                    <span>CEO Operator API Center</span>
+                    <h1>API Connection Center</h1>
+                    <p>Connect exchanges and market-data APIs through guided owner flows. Kraken stays first. Coinbase comes next. DEX lanes stay quote-only until a future wallet-signing approval phase.</p>
+                </div>
+            </div>
+            <div class="button-row">
+                <button id="api-refresh-status" type="button">Refresh API Status</button>
+                <a class="cta-button" href="/live-trading-launch#kraken-live-setup-walkthrough">Open Kraken Setup</a>
+                <a class="cta-button" href="/live-trading-launch#kraken-tiny-live-test">Open Kraken Final Approval</a>
+                <a class="cta-button" href="/strategy-lab#exchange-connector-manager">Open Advanced Connector Manager</a>
+            </div>
+        </section>
+
+        <section class="api-status-grid" aria-label="API connection status">
+            <article class="status-success">
+                <span>Kraken</span>
+                <strong id="api-kraken-status">Checking</strong>
+                <small id="api-kraken-note">Reading local verification state.</small>
+            </article>
+            <article class="status-warning">
+                <span>Coinbase Advanced</span>
+                <strong>Next</strong>
+                <small>Build after Kraken tiny-live succeeds.</small>
+            </article>
+            <article class="status-info">
+                <span>DEX Quote-Only</span>
+                <strong>Quote-Only</strong>
+                <small>0x, 1inch, ParaSwap, Li.Fi, Rango, Jupiter later.</small>
+            </article>
+            <article class="status-success">
+                <span>Live Safety</span>
+                <strong>Locked</strong>
+                <small>No hidden order calls from this page.</small>
+            </article>
+        </section>
+
+        <section id="api-kraken-two-gate" class="model-panel operator-guided-focus">
+            Loading Kraken two-gate API flow...
+        </section>
+
+        <section class="model-panel api-readonly-lanes">
+            <h2>Read-Only Market Data Lanes</h2>
+            <p class="inline-status">These can compare public prices and spreads without trading permissions, wallet signing, withdrawals, or swaps.</p>
+            <div class="api-lane-grid">
+                <article>
+                    <strong>Recommended first CEX data</strong>
+                    <span id="api-recommended-cex">Loading...</span>
+                </article>
+                <article>
+                    <strong>Quote-only DEX lanes</strong>
+                    <span id="api-quote-only-dex">Loading...</span>
+                </article>
+                <article>
+                    <strong>Safety model</strong>
+                    <span>No browser secret storage. No order endpoint. No wallet signing.</span>
+                </article>
+            </div>
+            <div class="button-row">
+                <button id="api-run-price-compare" type="button">Run Read-Only BTC/USDT Price Compare</button>
+                <a class="cta-button" href="/strategy-lab#read-only-price-compare">Open Full Price Compare</a>
+            </div>
+            <div id="api-price-compare-result" class="phase3-results">No read-only price comparison has run from this page yet.</div>
+        </section>
+
+        <section class="model-panel">
+            <h2>Next Connection Order</h2>
+            <div class="operator-two-gate-grid">
+                <article class="operator-two-gate-card operator-two-gate-safe">
+                    <div class="operator-two-gate-card-header">
+                        <span>Now</span>
+                        <strong>Kraken</strong>
+                    </div>
+                    <p>Finish the existing Kraken path and the first manually approved tiny live test before adding more CEX execution surfaces.</p>
+                </article>
+                <article class="operator-two-gate-card operator-two-gate-warning">
+                    <div class="operator-two-gate-card-header">
+                        <span>Next</span>
+                        <strong>Coinbase Advanced</strong>
+                    </div>
+                    <p>Build a Coinbase setup wizard after Kraken succeeds: safe key instructions, encrypted vault save, account read, dry-run, no live order.</p>
+                </article>
+                <article class="operator-two-gate-card operator-two-gate-live">
+                    <div class="operator-two-gate-card-header">
+                        <span>Later</span>
+                        <strong>DEX Aggregators</strong>
+                    </div>
+                    <p>Quote-only first. No swaps, approvals, seed phrases, or wallet signing until a separate owner-approved execution phase.</p>
+                </article>
+            </div>
+        </section>
+
+        <details class="compact-details advanced-operator-tools">
+            <summary>Advanced API Diagnostics</summary>
+            <p class="inline-status">Raw status is here for debugging. Simple Mode should use the two-gate panels above.</p>
+            <pre id="api-raw-status" class="model-output operator-simple-readable">No raw status loaded yet.</pre>
+        </details>
+    </main>
+
+    <script src="/js/operator-gates.js"></script>
+    <script>
+        const apiState = {
+            setupGuides: null,
+            readOnlyStatus: null,
+            krakenDiagnostics: null,
+            krakenTiny: null
+        };
+
+        function apiEscape(value) {
+            if (window.EtherealOperatorGates?.escapeHtml) {
+                return window.EtherealOperatorGates.escapeHtml(value);
+            }
+
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.error || `Request failed: ${response.status}`);
+            }
+            return data;
+        }
+
+        function hasSavedKrakenKey() {
+            const diagnostics = apiState.krakenDiagnostics || {};
+            const vault = diagnostics.vaultStatus || diagnostics.vault || diagnostics.diagnostics?.vaultStatus || {};
+            const keyExists = diagnostics.apiKeyExists
+                || diagnostics.keyExists
+                || diagnostics.credentials?.apiKeyExists
+                || diagnostics.diagnostics?.apiKeyExists
+                || vault.apiKeyExists
+                || vault.keyFingerprint
+                || vault.key_fingerprint;
+            const secretExists = diagnostics.secretExists
+                || diagnostics.apiSecretExists
+                || diagnostics.credentials?.secretExists
+                || diagnostics.diagnostics?.secretExists
+                || vault.secretExists
+                || vault.secretFingerprint
+                || vault.secret_fingerprint;
+            return Boolean(keyExists && secretExists);
+        }
+
+        function krakenPreviewReady() {
+            const gate = apiState.krakenTiny?.gate || {};
+            const latest = apiState.krakenTiny?.latestReadyPreview || apiState.krakenTiny?.readyPreview;
+            const latestOrders = apiState.krakenTiny?.latestOrders || [];
+            return Boolean(gate.canPreview || latest || latestOrders.some(order => {
+                const status = String(order.status || '').toLowerCase();
+                return status.includes('preview_ready') || status.includes('ready');
+            }));
+        }
+
+        function krakenEndpointCalled() {
+            const audit = apiState.krakenTiny?.auditState || {};
+            const latestOrders = apiState.krakenTiny?.latestOrders || [];
+            return Boolean(audit.endpointCalled || latestOrders.some(order => order.production_order_endpoint_called || order.endpointCalled));
+        }
+
+        function krakenBlockers() {
+            const blockers = [];
+            if (!hasSavedKrakenKey()) {
+                blockers.push({
+                    title: 'Kraken key status needs review',
+                    detail: 'Open Kraken Setup to save or verify the restricted spot key in the encrypted vault.'
+                });
+            }
+            if (!krakenPreviewReady()) {
+                blockers.push({
+                    title: 'Tiny live preview is not ready',
+                    detail: 'Run the Kraken dry-run and preview from Live Trading Launch. This should call no order endpoint.'
+                });
+            }
+            if (krakenEndpointCalled()) {
+                blockers.push({
+                    title: 'A live endpoint call already exists',
+                    detail: 'Track and reconcile the existing order before preparing another live test.'
+                });
+            }
+            return blockers;
+        }
+
+        function renderKrakenTwoGate() {
+            const blockers = krakenBlockers();
+            const previewReady = krakenPreviewReady();
+            const keyReady = hasSavedKrakenKey();
+            const endpointCalled = krakenEndpointCalled();
+            const finalReady = previewReady && keyReady && !endpointCalled;
+
+            document.getElementById('api-kraken-status').textContent = finalReady ? 'Ready' : (keyReady ? 'Review' : 'Needs Key Review');
+            document.getElementById('api-kraken-note').textContent = endpointCalled
+                ? 'Existing live endpoint event needs tracking.'
+                : (finalReady ? 'Final owner approval can happen from the Kraken panel.' : 'Open Kraken Setup or Preview to finish the visible blockers.');
+
+            window.EtherealOperatorGates.renderTwoGateFlow('#api-kraken-two-gate', {
+                eyebrow: 'Kraken API path',
+                title: 'Kraken connection uses two owner gates',
+                summary: 'Simple Mode shows one review step and one final approval step. Detailed diagnostics stay in Live Trading Launch.',
+                gateOne: {
+                    title: 'Preview / Review',
+                    status: previewReady ? 'Ready' : 'Needs Review',
+                    summary: 'Verify the saved restricted Kraken key, dry-run proof, exact order preview, fees, minimums, and endpoint-called state. No live order is placed here.',
+                    blockers,
+                    actions: [
+                        { label: 'Refresh API Status', action: 'refresh', primary: true },
+                        { label: 'Open Kraken Setup', href: '/live-trading-launch#kraken-live-setup-walkthrough' },
+                        { label: 'Open Kraken Preview', href: '/live-trading-launch#kraken-tiny-live-test' }
+                    ]
+                },
+                gateTwo: {
+                    title: 'Final Confirm / Execute',
+                    status: finalReady ? 'Ready For Owner' : 'Locked External Action',
+                    summary: finalReady
+                        ? 'The next live action must happen only from the Kraken final approval panel. It requires owner phrase, checkboxes, Emergency Stop, and one manual click.'
+                        : 'Final execution stays locked until the blocker list is clear. This page cannot place the order.',
+                    blockers: finalReady ? [] : blockers,
+                    actions: [
+                        { label: 'Open Final Kraken Approval', href: '/live-trading-launch#kraken-tiny-live-test', primary: true, warning: true },
+                        { label: 'Track Existing Kraken Order', href: '/live-trading-launch#kraken-tiny-live-test' }
+                    ]
+                },
+                footerTitle: 'Live safety boundary',
+                footer: 'API Connection Center cannot call the Kraken order endpoint. It routes the owner to the existing final approval panel only.'
+            });
+        }
+
+        function renderReadOnlyLanes() {
+            const guides = apiState.setupGuides || {};
+            const recommended = guides.recommendedFirst || [];
+            const quoteOnly = guides.quoteOnlyConnectors || [];
+            document.getElementById('api-recommended-cex').textContent = recommended.length
+                ? recommended.slice(0, 5).join(', ')
+                : 'Binance, Coinbase, Kraken, OKX, Bybit';
+            document.getElementById('api-quote-only-dex').textContent = quoteOnly.length
+                ? quoteOnly.slice(0, 6).join(', ')
+                : 'Uniswap, Jupiter, 1inch, GMX, Hyperliquid';
+        }
+
+        async function refreshApiConnectionCenter() {
+            document.getElementById('api-raw-status').textContent = 'Loading API connection status...';
+            const [setupGuides, readOnlyStatus, krakenDiagnostics, krakenTiny] = await Promise.all([
+                fetchJson('/api/v1/exchange-connectors/read-only/setup-guides').catch(error => ({ error: error.message })),
+                fetchJson('/api/v1/exchange-connectors/read-only/status').catch(error => ({ error: error.message })),
+                fetchJson('/api/v1/live-trading-launch/kraken-auth-diagnostics/status').catch(error => ({ error: error.message })),
+                fetchJson('/api/v1/live-trading-launch/kraken-tiny-live-test/status').catch(error => ({ error: error.message }))
+            ]);
+            apiState.setupGuides = setupGuides;
+            apiState.readOnlyStatus = readOnlyStatus;
+            apiState.krakenDiagnostics = krakenDiagnostics;
+            apiState.krakenTiny = krakenTiny;
+            renderKrakenTwoGate();
+            renderReadOnlyLanes();
+            document.getElementById('api-raw-status').textContent = JSON.stringify({
+                setupGuides,
+                readOnlyStatus,
+                krakenDiagnostics,
+                krakenTiny
+            }, null, 2);
+        }
+
+        async function runReadOnlyPriceCompare() {
+            const output = document.getElementById('api-price-compare-result');
+            output.textContent = 'Running read-only BTC/USDT price comparison. No order endpoint is available here.';
+            try {
+                const data = await fetchJson('/api/v1/exchange-connectors/read-only/price-compare', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol: 'BTC/USDT', connectedOnly: false })
+                });
+                const comparison = data.comparison || {};
+                const venues = comparison.venues || comparison.results || [];
+                output.innerHTML = `
+                    <article class="operator-two-gate-card operator-two-gate-safe">
+                        <div class="operator-two-gate-card-header">
+                            <span>Read-only result</span>
+                            <strong>${apiEscape(comparison.symbol || 'BTC/USDT')}</strong>
+                        </div>
+                        <p>${apiEscape(comparison.summary || comparison.plainEnglish || 'Market data comparison completed without placing orders.')}</p>
+                        <small>Venues checked: ${apiEscape(venues.length || comparison.venueCount || 'review raw output')} · Live trading disabled · wallet signing disabled.</small>
+                    </article>
+                `;
+            } catch (error) {
+                output.innerHTML = `
+                    <article class="operator-two-gate-card operator-two-gate-warning">
+                        <div class="operator-two-gate-card-header">
+                            <span>Read-only result</span>
+                            <strong>Needs Review</strong>
+                        </div>
+                        <p>${apiEscape(error.message)}</p>
+                        <small>No order endpoint was called.</small>
+                    </article>
+                `;
+            }
+        }
+
+        document.addEventListener('click', event => {
+            const action = event.target.closest('[data-two-gate-action]')?.dataset.twoGateAction;
+            if (action === 'refresh') {
+                refreshApiConnectionCenter();
+            }
+        });
+
+        document.getElementById('api-refresh-status').addEventListener('click', refreshApiConnectionCenter);
+        document.getElementById('api-run-price-compare').addEventListener('click', runReadOnlyPriceCompare);
+        refreshApiConnectionCenter().catch(error => {
+            document.getElementById('api-raw-status').textContent = error.message;
+            renderKrakenTwoGate();
+        });
+    </script>
+    <script src="/js/operator-next-action.js"></script>
+    <script src="/js/operator-training.js"></script>
+    <script src="/js/operator-mode.js"></script>
+</body>
+</html>

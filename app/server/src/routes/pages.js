@@ -37,6 +37,10 @@ function registerPageRoutes(app, { clientDir }) {
     res.sendFile(path.join(clientDir, 'operator-control.html'));
   });
 
+  app.get('/api-connection-center', requirePageAuth, (req, res) => {
+    res.sendFile(path.join(clientDir, 'api-connection-center.html'));
+  });
+
   app.get('/owner-setup', requirePageAuth, (req, res) => {
     res.sendFile(path.join(clientDir, 'owner-setup.html'));
   });

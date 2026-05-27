@@ -44,6 +44,28 @@
                 ['Review security', 'Open plain-English security tasks.', { label: 'Open Security Review', href: '/security-lockdown' }]
             ]
         },
+        '/api-connection-center': {
+            area: 'API Connection Center',
+            title: 'Connect APIs Without Developer Workflow',
+            summary: 'Use one CEO-level surface for Kraken first, Coinbase next, and DEX quote-only lanes later. Simple Mode shows preview/review, then final approval. Raw diagnostics stay behind Advanced Mode.',
+            primaryAction: { label: 'Refresh API Status', selector: '#api-refresh-status' },
+            keepIds: ['api-kraken-two-gate'],
+            keepHeadings: ['Read-Only Market Data Lanes', 'Next Connection Order'],
+            readyLabel: 'API Center Ready',
+            nextText: 'Refresh API Status first. Finish Kraken before adding Coinbase or DEX execution paths.',
+            cards: [
+                ['Kraken First', 'Continue from the existing verified Kraken path and tiny-live preview state.'],
+                ['Coinbase Next', 'Coinbase Advanced gets its own safe wizard after the first Kraken test succeeds.'],
+                ['DEX Quote-Only', 'DEX integrations start with prices, pools, routes, and liquidity. No swaps or wallet signing.'],
+                ['Advanced Diagnostics', 'Raw API responses, fingerprints, and route details stay collapsible.']
+            ],
+            workflow: [
+                ['1. Review API state', 'Load saved Kraken status, read-only connector status, and tiny live gate state.', { label: 'Refresh API Status', selector: '#api-refresh-status' }],
+                ['2. Finish Kraken setup', 'Open the existing Kraken walkthrough only if the status says a key or preview needs review.', { label: 'Open Kraken Setup', href: '/live-trading-launch#kraken-live-setup-walkthrough' }],
+                ['3. Review final Kraken approval', 'Go to the final approval panel. This API Center cannot place the order.', { label: 'Open Final Kraken Approval', href: '/live-trading-launch#kraken-tiny-live-test' }],
+                ['4. Compare read-only prices', 'Run public market-data comparison without orders, withdrawals, swaps, or wallet signing.', { label: 'Run Read-Only Price Compare', selector: '#api-run-price-compare' }]
+            ]
+        },
         '/owner-setup': {
             area: 'Setup Wizard',
             title: 'Beginner Owner Setup',
@@ -368,6 +390,18 @@
                 ['Global Network', ART_IMAGES.globe, 'Chain-neutral trading, token, website, and community infrastructure.'],
                 ['Strategy Signal', ART_IMAGES.math, 'Paper results and proof-driven trading progress.'],
                 ['Launch Narrative', ART_IMAGES.getReal, 'Mission, ecosystem story, and public-facing progress copy.']
+            ]
+        },
+        '/api-connection-center': {
+            eyebrow: 'API connection visual system',
+            title: 'Connect exchanges and market data through controlled owner gates.',
+            body: 'This page makes API setup usable from the CEO seat: Kraken first, Coinbase next, DEX quote-only after that. When fully completed, it becomes the safe connector console for exchange accounts, public DEX data, market spreads, and future owner-approved execution lanes.',
+            heroImage: ART_IMAGES.orbitalCore,
+            cards: [
+                ['Kraken Path', ART_IMAGES.strategicPillars, 'Restricted key, verified account reads, dry-run proof, tiny approval, and audit trail.'],
+                ['CEX Expansion', ART_IMAGES.digitalWorld, 'Coinbase Advanced and later exchange accounts follow the same safe pattern.'],
+                ['DEX Quote Layer', ART_IMAGES.globe, 'Pools, routes, liquidity, and prices before any wallet signing or swaps.'],
+                ['Two-Gate Control', ART_IMAGES.getReal, 'Preview everything first, then use one final approval only when needed.']
             ]
         },
         '/owner-setup': {
@@ -1015,6 +1049,7 @@
         ];
         const systemNavItems = [
             { label: 'Mission Control', href: '/dashboard' },
+            { label: 'API Connection Center', href: '/api-connection-center' },
             { label: 'Creator Agent', href: '/creator' },
             { label: 'Live Trading Launch', href: '/live-trading-launch' },
             { label: 'Solidity Lab', href: '/solidity-lab' },

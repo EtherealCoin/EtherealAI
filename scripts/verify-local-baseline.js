@@ -118,6 +118,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/dev-server.js',
     'app/client/js/operator-next-action.js',
     'app/client/js/operator-training.js',
+    'app/client/js/operator-gates.js',
     'app/client/js/operator-mode.js',
     'app/server/src/lib/artifact-rows.js',
     'app/server/src/lib/creator-records.js',
@@ -9126,6 +9127,7 @@ function checkHomeLocalProofUi() {
 function checkSimpleOperatorModeUsabilityRefactor() {
   const operatorMode = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-mode.js'), 'utf8');
   const operatorNext = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-next-action.js'), 'utf8');
+  const operatorGates = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-gates.js'), 'utf8');
   const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
   const header = fs.readFileSync(path.join(projectRoot, 'components/header.html'), 'utf8');
   const login = fs.readFileSync(path.join(projectRoot, 'app/client/login.html'), 'utf8');
@@ -9148,11 +9150,13 @@ function checkSimpleOperatorModeUsabilityRefactor() {
   ].map(filePath => path.join(projectRoot, filePath));
   const home = fs.readFileSync(path.join(projectRoot, 'app/client/index.html'), 'utf8');
   const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
+  const apiConnectionCenter = fs.readFileSync(path.join(projectRoot, 'app/client/api-connection-center.html'), 'utf8');
   const social = fs.readFileSync(path.join(projectRoot, 'app/client/social-ops.html'), 'utf8');
   const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
   const manual = fs.readFileSync(path.join(projectRoot, 'app/client/operator-manual.html'), 'utf8');
   const mainPages = [
     'app/client/dashboard.html',
+    'app/client/api-connection-center.html',
     'app/client/owner-setup.html',
     'app/client/strategy-lab.html',
     'app/client/operator-control.html',
@@ -9171,6 +9175,11 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !operatorMode.includes('data-operator-recommended-action')
     || !operatorMode.includes('Start Here / Operator Manual')
     || !operatorMode.includes('Operator Training Library')
+    || !operatorMode.includes("'/api-connection-center'")
+    || !operatorMode.includes('API Connection Center')
+    || !operatorMode.includes('Connect APIs Without Developer Workflow')
+    || !operatorMode.includes('Coinbase Advanced')
+    || !operatorMode.includes('DEX Quote-Only')
     || !operatorMode.includes('data-operator-training-toggle')
     || !operatorMode.includes('data-operator-training-choice="text"')
     || !operatorMode.includes('data-operator-training-choice="video"')
@@ -9207,6 +9216,7 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !operatorMode.includes('pageArtShowcases')
     || !operatorMode.includes('Mission Control visual system')
     || !operatorMode.includes('Trading intelligence visual system')
+    || !operatorMode.includes('API connection visual system')
     || !operatorMode.includes('Token creation visual system')
     || !operatorMode.includes('Community growth visual system')
     || !operatorMode.includes('When fully completed')
@@ -9224,6 +9234,11 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !operatorMode.includes('Safe Paper Test')
     || !operatorMode.includes('Advanced records')
     || !operatorMode.includes('Review results')
+    || !operatorGates.includes('renderTwoGateFlow')
+    || !operatorGates.includes('Preview / Review')
+    || !operatorGates.includes('Final Confirm / Execute')
+    || !operatorGates.includes('operator-two-gate-blockers')
+    || !operatorGates.includes('window.EtherealOperatorGates')
     || !operatorMode.includes('Select Chain-Neutral Defaults')
     || operatorMode.includes('Select Polygon Defaults')
     || !operatorMode.includes('Working')
@@ -9316,15 +9331,32 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !styles.includes('.logo-creation-showcase')
     || !styles.includes('.operator-answer-panel')
     || !styles.includes('.operator-guided-workflow')
+    || !styles.includes('.operator-two-gate-flow')
+    || !styles.includes('.operator-two-gate-grid')
+    || !styles.includes('.operator-two-gate-action')
+    || !styles.includes('.api-status-grid')
+    || !styles.includes('.api-connection-shell')
     || !styles.includes('.operator-training-menu')
     || !styles.includes('.operator-simple-mode .operator-simple-keep .model-output:not(.owner-action-output)')
     || !styles.includes('.operator-simple-mode .operator-guided-focus')
     || !pages.includes("app.get('/operator-manual', requirePageAuth")
     || !pages.includes("app.get('/operator-training', requirePageAuth")
+    || !pages.includes("app.get('/api-connection-center', requirePageAuth")
     || !manual.includes('Start Here Walkthrough')
     || !manual.includes('Paper trading does not require exchange APIs, live trading, wallet signing, seed phrases, private keys, or terminal commands.')
     || !manual.includes('Optional is not failed')
     || !manual.includes('No terminal commands for normal use')
+    || !apiConnectionCenter.includes('Preview / Review')
+    || !apiConnectionCenter.includes('Final Confirm / Execute')
+    || !apiConnectionCenter.includes('API Connection Center cannot call the Kraken order endpoint')
+    || !apiConnectionCenter.includes('No live order is placed here')
+    || !apiConnectionCenter.includes('Coinbase Advanced')
+    || !apiConnectionCenter.includes('DEX Quote-Only')
+    || !apiConnectionCenter.includes('/js/operator-gates.js')
+    || !apiConnectionCenter.includes('/js/operator-next-action.js')
+    || !apiConnectionCenter.includes('/js/operator-training.js')
+    || !apiConnectionCenter.includes('/js/operator-mode.js')
+    || apiConnectionCenter.includes('/kraken-tiny-live-test/place')
   ) {
     fail('simple operator mode shell did not expose the beginner operator workflow, manual, or nonblocking next-action behavior');
   }
@@ -12709,6 +12741,7 @@ async function main() {
   checkInlineScripts('app/client/index.html');
   checkInlineScripts('app/client/creator.html');
   checkInlineScripts('app/client/dashboard.html');
+  checkInlineScripts('app/client/api-connection-center.html');
   checkInlineScripts('app/client/operator-control.html');
   checkInlineScripts('app/client/live-trading-launch.html');
   checkInlineScripts('app/client/owner-setup.html');

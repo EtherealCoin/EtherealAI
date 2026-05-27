@@ -8230,3 +8230,254 @@ body.operator-advanced-mode .operator-community-art-grid span,
 body.operator-advanced-mode .community-art-grid span {
     color: var(--theme-secondary-text) !important;
 }
+
+/* CEO operator two-gate workflow foundation */
+.api-connection-shell {
+    max-width: 1180px;
+}
+
+.api-connection-hero .ethereal-world-banner {
+    align-items: center;
+}
+
+.api-status-grid,
+.api-lane-grid,
+.operator-two-gate-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
+}
+
+.api-status-grid article,
+.api-lane-grid article,
+.operator-two-gate-card {
+    background: var(--theme-card-background);
+    border: 1px solid var(--theme-border);
+    color: var(--theme-primary-text);
+    box-shadow: var(--theme-glow);
+}
+
+.api-status-grid article,
+.api-lane-grid article {
+    padding: 16px;
+}
+
+.api-status-grid span,
+.api-lane-grid strong,
+.operator-two-gate-card-header span,
+.operator-two-gate-status span {
+    color: var(--theme-secondary-text);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.api-status-grid strong,
+.operator-two-gate-card-header strong,
+.operator-two-gate-status strong {
+    color: var(--theme-primary-text);
+    display: block;
+    font-size: 1.35rem;
+    line-height: 1.15;
+    margin-top: 7px;
+}
+
+.api-status-grid small,
+.api-lane-grid span,
+.operator-two-gate-card p,
+.operator-two-gate-card small,
+.operator-two-gate-footer span {
+    color: var(--theme-secondary-text);
+}
+
+.operator-two-gate-flow {
+    display: grid;
+    gap: 16px;
+}
+
+.operator-two-gate-heading {
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--theme-pink) 12%, transparent), transparent 42%),
+        var(--theme-card-background-muted);
+    border: 1px solid var(--theme-border-strong);
+    color: var(--theme-primary-text);
+    padding: 18px;
+}
+
+.operator-two-gate-heading span {
+    color: var(--theme-pink);
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.operator-two-gate-heading h2 {
+    color: var(--theme-primary-text);
+    margin: 0 0 8px;
+}
+
+.operator-two-gate-heading p {
+    color: var(--theme-secondary-text);
+    margin: 0;
+    max-width: 76ch;
+}
+
+.operator-two-gate-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 100%;
+    padding: 16px;
+}
+
+.operator-two-gate-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.operator-two-gate-status {
+    align-items: center;
+    background: var(--theme-card-background-muted);
+    border: 1px solid var(--theme-border);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+}
+
+.operator-two-gate-blockers {
+    display: grid;
+    gap: 10px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.operator-two-gate-blockers li {
+    background: color-mix(in srgb, var(--theme-danger-bg) 78%, transparent);
+    border: 1px solid color-mix(in srgb, var(--theme-danger) 58%, var(--theme-border));
+    color: var(--theme-danger-text);
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px;
+}
+
+.operator-two-gate-blockers strong,
+.operator-two-gate-blockers span {
+    color: var(--theme-danger-text);
+}
+
+.operator-two-gate-clear {
+    background: var(--theme-success-bg);
+    border: 1px solid color-mix(in srgb, var(--theme-success) 60%, var(--theme-border));
+    color: var(--theme-success-text) !important;
+    margin: 0;
+    padding: 10px 12px;
+}
+
+.operator-two-gate-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: auto;
+}
+
+.operator-two-gate-action {
+    align-items: center;
+    background: var(--theme-button-background);
+    border: 1px solid color-mix(in srgb, var(--theme-cyan) 36%, var(--theme-border));
+    color: var(--theme-button-text);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.82rem;
+    font-weight: 900;
+    justify-content: center;
+    letter-spacing: 0.03em;
+    min-height: 42px;
+    padding: 10px 14px;
+    text-align: center;
+    text-decoration: none;
+    text-transform: uppercase;
+}
+
+.operator-two-gate-action:hover {
+    background: var(--theme-button-hover);
+    color: var(--theme-button-text);
+}
+
+.operator-two-gate-action.operator-two-gate-primary {
+    border-color: color-mix(in srgb, var(--theme-cyan) 68%, var(--theme-border));
+    box-shadow: 0 0 18px color-mix(in srgb, var(--theme-cyan) 28%, transparent);
+}
+
+.operator-two-gate-action.operator-two-gate-warning {
+    border-color: color-mix(in srgb, var(--theme-warning) 70%, var(--theme-border));
+    box-shadow: 0 0 18px color-mix(in srgb, var(--theme-warning) 22%, transparent);
+}
+
+.operator-two-gate-action.operator-two-gate-danger {
+    border-color: color-mix(in srgb, var(--theme-danger) 70%, var(--theme-border));
+    box-shadow: 0 0 18px color-mix(in srgb, var(--theme-danger) 22%, transparent);
+}
+
+.operator-two-gate-card.operator-two-gate-safe {
+    border-color: color-mix(in srgb, var(--theme-success) 60%, var(--theme-border));
+}
+
+.operator-two-gate-card.operator-two-gate-warning {
+    border-color: color-mix(in srgb, var(--theme-warning) 60%, var(--theme-border));
+}
+
+.operator-two-gate-card.operator-two-gate-danger,
+.operator-two-gate-card.operator-two-gate-live {
+    border-color: color-mix(in srgb, var(--theme-danger) 60%, var(--theme-border));
+}
+
+.operator-two-gate-footer {
+    align-items: center;
+    background: var(--theme-card-background-muted);
+    border: 1px solid var(--theme-border);
+    color: var(--theme-primary-text);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    padding: 12px 14px;
+}
+
+.operator-two-gate-footer strong {
+    color: var(--theme-primary-text);
+}
+
+.api-readonly-lanes .phase3-results,
+.api-connection-shell .phase3-results {
+    margin-top: 14px;
+}
+
+body.operator-simple-mode .api-connection-shell .advanced-operator-tools:not([open]) {
+    display: block;
+}
+
+body.operator-simple-mode .api-connection-shell .advanced-operator-tools:not([open]) summary {
+    color: var(--theme-secondary-text);
+}
+
+@media (max-width: 760px) {
+    .api-status-grid,
+    .api-lane-grid,
+    .operator-two-gate-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .operator-two-gate-actions {
+        flex-direction: column;
+    }
+
+    .operator-two-gate-action {
+        width: 100%;
+    }
+}
