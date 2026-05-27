@@ -8458,6 +8458,37 @@ body.operator-advanced-mode .community-art-grid span {
     margin-top: 14px;
 }
 
+.token-launch-operator-pipeline {
+    display: grid;
+    gap: 16px;
+}
+
+.token-launch-hero img {
+    aspect-ratio: 1 / 1;
+}
+
+.token-launch-operator-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.token-launch-operator-grid label {
+    background: var(--theme-card-background-muted);
+    border: 1px solid var(--theme-border);
+    color: var(--theme-primary-text);
+    display: grid;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    padding: 12px;
+}
+
+.token-launch-operator-grid input,
+.token-launch-operator-grid select {
+    min-height: 42px;
+}
+
 body.operator-simple-mode .api-connection-shell .advanced-operator-tools:not([open]) {
     display: block;
 }
@@ -8469,7 +8500,8 @@ body.operator-simple-mode .api-connection-shell .advanced-operator-tools:not([op
 @media (max-width: 760px) {
     .api-status-grid,
     .api-lane-grid,
-    .operator-two-gate-grid {
+    .operator-two-gate-grid,
+    .token-launch-operator-grid {
         grid-template-columns: 1fr;
     }
 

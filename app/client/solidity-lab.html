@@ -25,6 +25,51 @@
             <span>Live execution disabled · <a href="/owner-proof-packet">Proof packet</a> · <a href="/mvp-test-pass">Owner evidence</a> · <a href="/dashboard">Mission Control</a></span>
         </div>
 
+        <section id="token-launch-operator-pipeline" class="model-panel operator-guided-focus token-launch-operator-pipeline">
+            <div class="ethereal-world-banner token-launch-hero">
+                <img src="/public/brand/ethereal-logo-generator-example.png" alt="EtherealAI token launch logo direction">
+                <div>
+                    <span>CEO Token Launch Factory</span>
+                    <h2>Build the token plan first. Deploy later.</h2>
+                    <p>Use this guided pipeline to turn a token idea into a local launch package: category, chain, identity, tokenomics, use case, contract plan, logo, website, whitepaper, roadmap, and dapp options. Deployment, wallet signing, liquidity, public posting, and listing submissions stay locked.</p>
+                </div>
+            </div>
+            <div class="token-launch-operator-grid">
+                <label for="token-launch-category">
+                    Token category
+                    <select id="token-launch-category">
+                        <option value="use-case token">Use-case token</option>
+                        <option value="meme token">Meme token</option>
+                        <option value="hybrid meme + utility token">Hybrid meme + utility token</option>
+                    </select>
+                </label>
+                <label for="token-launch-ticker">
+                    Ticker
+                    <input id="token-launch-ticker" type="text" maxlength="16" placeholder="REAL">
+                </label>
+                <label for="token-launch-community">
+                    Target community
+                    <input id="token-launch-community" type="text" maxlength="160" placeholder="traders, builders, holders, AI users">
+                </label>
+                <label for="token-launch-dapp-mode">
+                    Dapp plan
+                    <select id="token-launch-dapp-mode">
+                        <option value="add dapp later">Add dapp later</option>
+                        <option value="no dapp planned">No dapp planned</option>
+                        <option value="build one dapp now">Build one dapp now</option>
+                        <option value="build two dapp modules now">Build two dapp modules now</option>
+                        <option value="build three dapp modules now">Build three dapp modules now</option>
+                    </select>
+                </label>
+            </div>
+            <div id="token-launch-two-gate" class="operator-guided-focus">
+                Loading Token Launch Factory two-gate flow...
+            </div>
+            <div id="token-launch-preview" class="phase3-results">
+                Preview the local package before saving. This does not deploy, sign, post, list, or call a blockchain.
+            </div>
+        </section>
+
         <section class="model-panel">
             <h2>Deployment Boundary</h2>
             <div class="artifact-grid">
@@ -357,6 +402,7 @@
         </section>
     </main>
 
+    <script src="/js/operator-gates.js"></script>
     <script>
         let selectedTokenEcosystemProjectId = null;
 
@@ -367,6 +413,191 @@
                 .replaceAll('>', '&gt;')
                 .replaceAll('"', '&quot;')
                 .replaceAll("'", '&#039;');
+        }
+
+        function readTokenLaunchPipelineInput() {
+            return {
+                category: document.getElementById('token-launch-category')?.value || 'use-case token',
+                ticker: document.getElementById('token-launch-ticker')?.value.trim().toUpperCase() || '',
+                community: document.getElementById('token-launch-community')?.value.trim() || '',
+                dappMode: document.getElementById('token-launch-dapp-mode')?.value || 'add dapp later',
+                name: document.getElementById('contract-name')?.value.trim() || '',
+                chain: document.getElementById('contract-network')?.value.trim() || '',
+                contractType: document.getElementById('contract-type')?.value || '',
+                useCase: document.getElementById('token-ecosystem-notes')?.value.trim() || '',
+                nftUtility: document.getElementById('nft-utility-notes')?.value.trim() || '',
+                featureSelections: getSelectedTokenOptions()
+            };
+        }
+
+        function tokenLaunchBlockers() {
+            const input = readTokenLaunchPipelineInput();
+            const blockers = [];
+
+            if (!input.name) {
+                blockers.push({
+                    title: 'Token name is missing',
+                    detail: 'Enter the token name in Contract Spec before saving the local launch package.'
+                });
+            }
+
+            if (!input.chain) {
+                blockers.push({
+                    title: 'Target blockchain is missing',
+                    detail: 'Choose the chain for this project. EtherealAI is chain-neutral; the owner chooses per token.'
+                });
+            }
+
+            if (!input.useCase) {
+                blockers.push({
+                    title: 'Use case is missing',
+                    detail: 'Describe what the token does in Ecosystem Notes so the contract plan, website, whitepaper, and roadmap can inherit it.'
+                });
+            }
+
+            if (!input.featureSelections.length) {
+                blockers.push({
+                    title: 'Token features are not selected',
+                    detail: 'Select token creation options or use the chain-neutral launch defaults before saving.'
+                });
+            }
+
+            return blockers;
+        }
+
+        function formatTokenLaunchBrief() {
+            const input = readTokenLaunchPipelineInput();
+            return [
+                'CEO token launch pipeline:',
+                `- Category: ${input.category}`,
+                input.ticker ? `- Ticker: ${input.ticker}` : '- Ticker: not set yet',
+                input.community ? `- Target community: ${input.community}` : '- Target community: not set yet',
+                `- Dapp plan: ${input.dappMode}`,
+                `- Target blockchain: ${input.chain || 'not selected yet'}`,
+                `- Contract type: ${input.contractType || 'not selected yet'}`,
+                '- Pipeline order: token category, target blockchain, identity, tokenomics, use case, local code proposal, logo, website, whitepaper, roadmap, dapp modules, launch package.',
+                '- Locked external actions: deployment, wallet signing, liquidity creation, public posting, Cloudflare/GitHub publishing, CMC/CG submission, paid services, swaps, and live trading.'
+            ].join('\n');
+        }
+
+        function applyTokenLaunchBriefToSpec() {
+            const brief = formatTokenLaunchBrief();
+            const features = document.getElementById('contract-features');
+            const ecosystemNotes = document.getElementById('token-ecosystem-notes');
+            const existingFeatures = features.value.trim();
+            const existingNotes = ecosystemNotes.value.trim();
+
+            features.value = existingFeatures ? `${existingFeatures}\n\n${brief}` : brief;
+            ecosystemNotes.value = existingNotes ? `${existingNotes}\n\n${brief}` : brief;
+            renderTokenLaunchTwoGate();
+        }
+
+        function fillTokenLaunchSafeDraft() {
+            if (!document.getElementById('contract-name').value.trim()) {
+                document.getElementById('contract-name').value = 'EtherealAI Local Token Draft';
+            }
+            if (!document.getElementById('token-launch-ticker').value.trim()) {
+                document.getElementById('token-launch-ticker').value = 'REAL';
+            }
+            if (!document.getElementById('token-launch-community').value.trim()) {
+                document.getElementById('token-launch-community').value = 'traders, builders, token holders, AI automation users, and community operators';
+            }
+            document.getElementById('token-launch-category').value = 'hybrid meme + utility token';
+            document.getElementById('token-launch-dapp-mode').value = 'add dapp later';
+            selectChainNeutralTokenDefaults();
+            applyTokenLaunchBriefToSpec();
+            previewTokenLaunchPackage();
+        }
+
+        function previewTokenLaunchPackage() {
+            const input = readTokenLaunchPipelineInput();
+            const blockers = tokenLaunchBlockers();
+            const output = document.getElementById('token-launch-preview');
+            output.innerHTML = `
+                <article class="operator-two-gate-card ${blockers.length ? 'operator-two-gate-warning' : 'operator-two-gate-safe'}">
+                    <div class="operator-two-gate-card-header">
+                        <span>Local package preview</span>
+                        <strong>${escapeHtml(input.name || 'Token name needed')}</strong>
+                    </div>
+                    <p>${escapeHtml(input.category)} · ${escapeHtml(input.chain || 'chain needed')} · ${escapeHtml(input.contractType || 'contract type needed')} · ${input.featureSelections.length} feature option(s)</p>
+                    <small>${blockers.length ? 'Fix the blocker list before saving.' : 'Ready to save as a local project. No external action will run.'}</small>
+                </article>
+            `;
+            renderTokenLaunchTwoGate();
+        }
+
+        function renderTokenLaunchTwoGate() {
+            const host = document.getElementById('token-launch-two-gate');
+            if (!host || !window.EtherealOperatorGates?.renderTwoGateFlow) {
+                return;
+            }
+
+            const blockers = tokenLaunchBlockers();
+            const ready = blockers.length === 0;
+
+            window.EtherealOperatorGates.renderTwoGateFlow(host, {
+                eyebrow: 'Token Launch Factory',
+                title: 'Token launch uses two owner gates',
+                summary: 'Simple Mode keeps the token launch path readable: preview the local package, then save it as a local project. Deployment and public actions remain locked.',
+                gateOne: {
+                    title: 'Preview / Review',
+                    status: ready ? 'Ready' : 'Needs Review',
+                    summary: 'Review token category, chain, identity, tokenomics, use case, dapp plan, logo direction, website, whitepaper, roadmap, and locked external actions.',
+                    blockers,
+                    actions: [
+                        { label: 'Use Safe Draft Example', action: 'token-fill-draft', primary: true },
+                        { label: 'Preview Local Package', action: 'token-preview' },
+                        { label: 'Open Token Spec Form', action: 'token-open-form' }
+                    ]
+                },
+                gateTwo: {
+                    title: 'Final Confirm / Execute',
+                    status: ready ? 'Ready To Save Locally' : 'Blocked Until Review Is Clear',
+                    summary: ready
+                        ? 'Save the local token ecosystem project. This does not deploy, sign, mint, create liquidity, post publicly, mutate DNS, or submit listings.'
+                        : 'Fix the blocker list first. Saving stays disabled until the local package has the minimum owner inputs.',
+                    blockers: ready ? [] : blockers,
+                    actions: [
+                        { label: 'Save Local Token Project', action: 'token-save-project', primary: true },
+                        { label: 'Open Logo Studio', action: 'token-open-logo' },
+                        { label: 'Open Website / Whitepaper', action: 'token-open-website' }
+                    ]
+                },
+                footerTitle: 'Launch safety boundary',
+                footer: 'This page creates local plans and packages only. Mainnet/testnet/devnet deployment, wallet signing, liquidity, public posting, Cloudflare/GitHub publishing, and listing submissions require separate future owner approval.'
+            });
+        }
+
+        function handleTokenLaunchGateAction(action) {
+            if (action === 'token-fill-draft') {
+                fillTokenLaunchSafeDraft();
+                return;
+            }
+            if (action === 'token-preview') {
+                applyTokenLaunchBriefToSpec();
+                previewTokenLaunchPackage();
+                return;
+            }
+            if (action === 'token-open-form') {
+                document.getElementById('contract-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
+            }
+            if (action === 'token-save-project') {
+                const blockers = tokenLaunchBlockers();
+                if (blockers.length) {
+                    previewTokenLaunchPackage();
+                    return;
+                }
+                saveTokenEcosystemProject();
+                return;
+            }
+            if (action === 'token-open-logo') {
+                document.getElementById('logo-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+            if (action === 'token-open-website') {
+                document.getElementById('website-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
 
         function renderContracts(contracts = []) {
@@ -1164,9 +1395,23 @@
         document.getElementById('update-token-ecosystem-project').addEventListener('click', updateTokenEcosystemProject);
         document.getElementById('clear-token-ecosystem-selection').addEventListener('click', () => setTokenProjectSelection(null));
         document.getElementById('refresh-token-ecosystem-projects').addEventListener('click', loadTokenEcosystemProjects);
+        document.getElementById('token-launch-operator-pipeline').addEventListener('click', event => {
+            const action = event.target.closest('[data-two-gate-action]')?.dataset.twoGateAction;
+            if (action) {
+                handleTokenLaunchGateAction(action);
+            }
+        });
+        ['token-launch-category', 'token-launch-ticker', 'token-launch-community', 'token-launch-dapp-mode', 'contract-name', 'contract-network', 'contract-type', 'token-ecosystem-notes', 'nft-utility-notes'].forEach(id => {
+            document.getElementById(id)?.addEventListener('input', renderTokenLaunchTwoGate);
+            document.getElementById(id)?.addEventListener('change', renderTokenLaunchTwoGate);
+        });
+        document.querySelectorAll('#token-feature-options input').forEach(input => {
+            input.addEventListener('change', renderTokenLaunchTwoGate);
+        });
 
         window.addEventListener('hashchange', openArtifactFromHash);
 
+        renderTokenLaunchTwoGate();
         loadContracts().then(openArtifactFromHash);
         loadEcosystemCatalog();
         loadTokenEcosystemProjects();

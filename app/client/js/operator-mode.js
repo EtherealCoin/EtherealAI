@@ -181,22 +181,24 @@
         },
         '/solidity-lab': {
             area: 'Solidity Lab',
-            title: 'Create A Token Project Without Deploying',
-            summary: 'Draft token specs, website, whitepaper, listing plan, and ecosystem blueprint locally. Deployment remains locked.',
-            primaryAction: { label: 'Select Chain-Neutral Defaults', selector: '#select-chain-neutral-token-options' },
+            title: 'Token Launch Factory',
+            summary: 'Build the local token launch package in order: category, chain, identity, tokenomics, use case, local code plan, logo, website, whitepaper, roadmap, and dapp options. Deployment remains locked.',
+            primaryAction: { label: 'Start Token Launch Pipeline', selector: '#token-launch-operator-pipeline' },
+            keepIds: ['token-launch-operator-pipeline'],
             keepHeadings: ['Deployment Boundary', 'Contract Spec'],
             readyLabel: 'Token Planning Ready',
-            nextText: 'Choose chain and token features, then save a local spec. Deployment remains locked.',
+            nextText: 'Start with the Token Launch Factory panel. It uses Preview / Review, then Save Local Token Project. Deployment remains locked.',
             cards: [
-                ['1. Pick chain', 'Polygon, Base, Solana, BNB, Avalanche, or another supported chain.'],
-                ['2. Choose token features', 'Rewards, staking, NFT utility, website, whitepaper, listing evidence, and more.'],
-                ['3. Save the ecosystem project', 'Create the local planning packet.'],
-                ['4. Review before deployment', 'No blockchain broadcast happens in this mode.']
+                ['1. Pick category', 'Use-case token, meme token, or hybrid meme + utility token.'],
+                ['2. Choose chain', 'Base, Polygon, Solana, BNB, Avalanche, Arbitrum, Optimism, Ethereum, Move, Cosmos, NEAR, TRON, Bitcoin L2, or custom.'],
+                ['3. Build package', 'Tokenomics, use case, contract plan, logo, website, whitepaper, roadmap, and dapp options.'],
+                ['4. Save locally', 'No blockchain broadcast, wallet signing, liquidity, public posting, or listing submission happens here.']
             ],
             workflow: [
-                ['Pick blockchain', 'Choose Polygon, Base, Ethereum, BNB, Avalanche, Solana, or another supported chain per project.', { label: 'Select Chain-Neutral Defaults', selector: '#select-chain-neutral-token-options' }],
-                ['Define token', 'Open the token spec form.', { label: 'Create Token Spec', selector: '#contract-form' }],
-                ['Build ecosystem plan', 'Open website, whitepaper, listing, and social planning.', { label: 'Open Ecosystem Studio', selector: '#load-ecosystem-catalog' }]
+                ['1. Start pipeline', 'Open the CEO token launch panel and review the two gates.', { label: 'Start Token Launch Pipeline', selector: '#token-launch-operator-pipeline' }],
+                ['2. Fill draft', 'Use the safe draft example or enter your own token category, chain, ticker, community, and dapp plan.', { label: 'Use Safe Draft Example', selector: '#token-launch-two-gate' }],
+                ['3. Preview package', 'Review blockers in one list before saving.', { label: 'Preview Local Package', selector: '#token-launch-preview' }],
+                ['4. Advanced raw form', 'Open detailed contract, logo, website, whitepaper, and ecosystem controls only when needed.', { label: 'Open Contract Spec Form', selector: '#contract-form' }]
             ]
         },
         '/social-ops': {
