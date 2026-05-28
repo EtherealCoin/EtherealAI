@@ -100,40 +100,38 @@
                     <p>One local review screen for what is ready, what is draft, what is blocked, and what is externally locked.</p>
                 </article>
             </section>
+            <nav id="token-workbench-subnav" class="token-workbench-subnav" aria-label="Token Launch Workbench subsections">
+                <a class="action-primary" href="#token-launch-operator-pipeline">Token Creation</a>
+                <a class="action-continue" href="#logo-blueprint">Logo Studio</a>
+                <a class="action-safe" href="#website-whitepaper-roadmap-builder">Website Builder</a>
+                <a class="action-safe" href="#token-whitepaper-builder-panel">Whitepaper Builder</a>
+                <a class="action-attention" href="#token-roadmap-builder-panel">Roadmap Builder</a>
+                <a class="action-review" href="#token-dapp-modules-panel">Dapp Modules</a>
+                <a class="action-review" href="#token-wallet-funding-bridge">Wallet & Funding</a>
+                <a class="action-review" href="#token-social-launch-bridge">Social Launch Kit</a>
+                <a class="action-ready" href="#launch-package-review">Launch Package Review</a>
+            </nav>
+            <div class="token-two-gate-summary" aria-label="Two-gate local workflow">
+                <article>
+                    <span>Gate 1</span>
+                    <strong>Preview / Review</strong>
+                    <p>Review the token, logo, website, whitepaper, roadmap, dapp, wallet/funding, social kit, blockers, and locked actions in one place.</p>
+                </article>
+                <article>
+                    <span>Gate 2</span>
+                    <strong>Final Confirm / Execute</strong>
+                    <p>Only local draft saves and local package exports can run here. Deployment, signing, liquidity, posting, listings, and paid services stay locked.</p>
+                </article>
+            </div>
             <div class="button-row">
                 <button id="continue-launch-project" type="button" class="action-continue">Continue Next Step</button>
                 <button id="review-launch-package" type="button" class="action-review">Review Launch Package</button>
                 <button id="refresh-launch-pipeline-state" type="button" class="action-safe">Refresh Pipeline State</button>
             </div>
-            <div class="token-context-bridge-grid">
-                <section id="token-wallet-funding-bridge" class="token-context-bridge">
-                    <span>Token launch cost planning</span>
-                    <h3>Wallet & Funding For This Token</h3>
-                    <p>Add public wallet metadata and funding notes when you are ready to estimate deployment, liquidity, bridge, listing, and website costs. EtherealAI will not request seed phrases, private keys, wallet passwords, signing approvals, or MetaMask transactions in this phase.</p>
-                    <div class="token-context-status-grid">
-                        <article class="status-info"><strong>Public metadata</strong><small>Allowed through Wallet & Funding.</small></article>
-                        <article class="status-warning"><strong>Cost estimate</strong><small>Draft only until chain and launch plan are final.</small></article>
-                        <article class="status-danger"><strong>Signing locked</strong><small>No wallet signing, minting, liquidity, or deployment.</small></article>
-                    </div>
-                    <div class="button-row">
-                        <a class="cta-button action-safe" href="/operator-control">Open Wallet & Funding</a>
-                        <a class="cta-button action-review" href="/api-connection-center">Review API Readiness</a>
-                    </div>
-                </section>
-                <section id="token-social-launch-bridge" class="token-context-bridge">
-                    <span>Token community extension</span>
-                    <h3>Social Launch Kit</h3>
-                    <p>Use the token details, logo direction, website copy, roadmap, and whitepaper draft to create X, Discord, Telegram, YouTube, Medium, docs, and listing evidence content. Public posting and account automation remain locked.</p>
-                    <div class="token-context-status-grid">
-                        <article class="status-success"><strong>Local drafts</strong><small>Safe to create and review.</small></article>
-                        <article class="status-info"><strong>Community plan</strong><small>Uses token use case and roadmap.</small></article>
-                        <article class="status-danger"><strong>Posting locked</strong><small>No social API call or public submission.</small></article>
-                    </div>
-                    <div class="button-row">
-                        <a class="cta-button action-safe" href="/social-ops">Open Social Ops</a>
-                        <button id="token-copy-social-context" type="button" class="action-review">Copy Token Context To Social Plan</button>
-                    </div>
-                </section>
+            <div class="token-workbench-section-heading">
+                <span>01 · Token Creation</span>
+                <h2>Define the token before EtherealAI builds the launch package.</h2>
+                <p>Keep the core business logic, chain, tokenomics, roadmap assumptions, and dapp scope visible here. The downstream logo, website, whitepaper, roadmap, social, and launch review panels inherit these local fields.</p>
             </div>
             <div class="token-launch-operator-grid">
                 <label for="token-launch-category">
@@ -232,6 +230,22 @@
                     Community / airdrop allocation
                     <input id="token-launch-community-allocation" type="text" placeholder="60%">
                 </label>
+                <label for="token-launch-market-supply-notes">
+                    Market / circulating supply notes
+                    <input id="token-launch-market-supply-notes" type="text" placeholder="Explain launch float, circulating supply, unlocks, or supply reporting assumptions.">
+                </label>
+                <label for="token-launch-multi-chain-plan">
+                    Multi-chain plan
+                    <input id="token-launch-multi-chain-plan" type="text" placeholder="Single chain first, multi-chain later, or planned chains and timing.">
+                </label>
+                <label for="token-launch-utility-summary">
+                    Utility summary
+                    <input id="token-launch-utility-summary" type="text" placeholder="One-sentence utility EtherealAI should carry into website, whitepaper, and socials.">
+                </label>
+                <label for="token-launch-brand-personality">
+                    Meme / brand personality
+                    <input id="token-launch-brand-personality" type="text" placeholder="Premium, meme-forward, AI-native, serious utility, community movement, etc.">
+                </label>
             </div>
             <div class="token-launch-wide-controls" aria-label="Token use case, release, and dapp module controls">
                 <label for="token-launch-release-plan">
@@ -247,6 +261,64 @@
                     <textarea id="token-launch-dapp-modules" rows="3" placeholder="Optional: describe one, two, or three dapp modules. Include user action, token role, wallet requirement, admin requirement, data/API requirement, contract requirement, and frontend requirement."></textarea>
                 </label>
             </div>
+            <section id="token-roadmap-inputs-panel" class="token-workbench-subsection">
+                <div class="token-workbench-section-heading">
+                    <span>Roadmap source fields</span>
+                    <h3>Give EtherealAI enough launch context to build a realistic roadmap.</h3>
+                    <p>These fields feed the Roadmap Builder and the whitepaper roadmap section. They are draft-only and do not schedule external actions.</p>
+                </div>
+                <div class="token-launch-detail-grid">
+                    <label for="token-launch-launch-timeline">
+                        Launch timeline
+                        <input id="token-launch-launch-timeline" type="text" placeholder="Example: local package, audit/review, community prep, deployment approval, liquidity, listings.">
+                    </label>
+                    <label for="token-launch-dapp-timeline">
+                        Dapp timeline
+                        <input id="token-launch-dapp-timeline" type="text" placeholder="Example: no dapp now, one module after launch, or three staged modules.">
+                    </label>
+                    <label for="token-launch-community-timeline">
+                        Community timeline
+                        <input id="token-launch-community-timeline" type="text" placeholder="Discord/Telegram/X/YouTube/Medium rollout timing and moderation plan.">
+                    </label>
+                    <label for="token-launch-listing-ambition">
+                        Exchange / listing ambition
+                        <input id="token-launch-listing-ambition" type="text" placeholder="DexScreener first, CoinGecko/CoinMarketCap evidence path, CEX later, etc.">
+                    </label>
+                    <label for="token-launch-utility-rollout">
+                        Utility rollout phases
+                        <input id="token-launch-utility-rollout" type="text" placeholder="What utility ships first, what comes later, and what depends on owner approval.">
+                    </label>
+                    <label for="token-launch-multichain-timeline">
+                        Multi-chain timeline
+                        <input id="token-launch-multichain-timeline" type="text" placeholder="Single-chain launch first, later bridges, or planned chain expansion.">
+                    </label>
+                    <label for="token-launch-marketing-rollout">
+                        Marketing / social rollout
+                        <input id="token-launch-marketing-rollout" type="text" placeholder="Founder updates, launch articles, community growth, proof packets, and content cadence.">
+                    </label>
+                    <label for="token-launch-treasury-liquidity-plan">
+                        Treasury / liquidity plan
+                        <input id="token-launch-treasury-liquidity-plan" type="text" placeholder="Draft funding, liquidity, treasury reserves, and owner-approved spend assumptions.">
+                    </label>
+                </div>
+                <label for="token-launch-owner-roadmap-notes">
+                    Owner roadmap notes
+                    <textarea id="token-launch-owner-roadmap-notes" rows="3" placeholder="Anything EtherealAI must honor when generating the roadmap, website, social launch kit, or whitepaper."></textarea>
+                </label>
+            </section>
+            <section id="token-dapp-modules-panel" class="token-workbench-subsection">
+                <div class="token-workbench-section-heading">
+                    <span>06 · Dapp Modules</span>
+                    <h3>Plan up to three dapp modules without enabling wallet signing.</h3>
+                    <p>Describe each module in plain English. EtherealAI converts the descriptions into local contract, frontend, API, wallet, admin, and safety requirements. Deployment and signing remain future gated actions.</p>
+                </div>
+                <div class="token-context-status-grid">
+                    <article class="status-info"><strong>Module 1</strong><small>User action, token role, wallet need, admin need, data/API need.</small></article>
+                    <article class="status-info"><strong>Module 2</strong><small>Optional extra product module or NFT utility upgrade lane.</small></article>
+                    <article class="status-info"><strong>Module 3</strong><small>Optional advanced dapp module, launch dashboard, or community tool.</small></article>
+                    <article class="status-danger"><strong>Execution locked</strong><small>No deployed dapp, contract call, wallet approval, or live transaction runs here.</small></article>
+                </div>
+            </section>
             <div id="token-launch-two-gate" class="operator-guided-focus">
                 Loading Token Launch Factory two-gate flow...
             </div>
@@ -514,26 +586,26 @@
                             Listing icon preview: square icon, favicon, dapp header mark, social avatar, and dark/light variants are local specs only.
                         </div>
                         <div class="button-row">
-                            <button id="apply-logo-brief" type="button">Apply Logo Brief To Token Plan</button>
-                            <button id="regenerate-logo-specs" type="button">Regenerate 3 Local Logo Specs</button>
-                            <button id="edit-selected-logo-spec" type="button">Edit Selected Logo Spec</button>
-                            <button id="continue-to-website-builder" type="button">Continue To Website Builder</button>
+                            <button id="apply-logo-brief" type="button" class="action-safe">Apply Logo Brief To Token Plan</button>
+                            <button id="regenerate-logo-specs" type="button" class="action-safe">Regenerate 3 Local Logo Specs</button>
+                            <button id="edit-selected-logo-spec" type="button" class="action-review">Edit Selected Logo Spec</button>
+                            <button id="continue-to-website-builder" type="button" class="action-continue">Continue To Website Builder</button>
                         </div>
                         <div id="token-logo-brief-status" class="inline-status">Logo planning stays local. Do not upload private files or exchange credentials here.</div>
                     </section>
 
                     <div class="button-row">
-                        <button id="apply-token-options" type="button">Apply Token Options To Spec</button>
-                        <button id="select-chain-neutral-token-options" type="button">Select Chain-Neutral Launch Defaults</button>
-                        <button id="select-low-fee-token-options" type="button">Select Low-Fee Launch Defaults</button>
-                        <button id="select-polygon-token-options" type="button">Select Polygon As Target Chain</button>
-                        <button id="save-token-ecosystem-project" type="button">Save Ecosystem Project Draft</button>
-                        <button id="update-token-ecosystem-project" type="button">Update Selected Project Draft</button>
-                        <button id="clear-token-ecosystem-selection" type="button">Clear Selection</button>
+                        <button id="apply-token-options" type="button" class="action-safe">Apply Token Options To Spec</button>
+                        <button id="select-chain-neutral-token-options" type="button" class="action-review">Select Chain-Neutral Launch Defaults</button>
+                        <button id="select-low-fee-token-options" type="button" class="action-review">Select Low-Fee Launch Defaults</button>
+                        <button id="select-polygon-token-options" type="button" class="action-review">Select Polygon As Target Chain</button>
+                        <button id="save-token-ecosystem-project" type="button" class="action-continue">Save Ecosystem Project Draft</button>
+                        <button id="update-token-ecosystem-project" type="button" class="action-continue">Update Selected Project Draft</button>
+                        <button id="clear-token-ecosystem-selection" type="button" class="action-advanced">Clear Selection</button>
                     </div>
                 </section>
 
-                <button type="submit">Save Spec</button>
+                <button type="submit" class="action-safe">Save Spec</button>
             </form>
         </section>
 
@@ -628,6 +700,13 @@
         <section id="website-whitepaper-roadmap-builder" class="model-panel website-whitepaper-roadmap-builder">
             <h2>Website / Whitepaper / Roadmap Builder</h2>
             <p class="section-help">Edit the token website, whitepaper, and roadmap in plain English. This stays local; Cloudflare, GitHub, public deployment, DNS changes, and listing submissions remain locked.</p>
+            <section id="token-website-builder-panel" class="token-workbench-subsection token-builder-surface">
+                <div class="token-workbench-section-heading">
+                    <span>03 · Website Builder</span>
+                    <h3>Create the local token website from the token plan and selected logo direction.</h3>
+                    <p>The website builder uses token category, chain, use case, tokenomics, dapp plan, roadmap inputs, logo specs, and selected palette. Preview and export remain local until a future deployment approval phase.</p>
+                </div>
+            </section>
             <div class="token-launch-detail-grid">
                 <label for="token-site-template">
                     Website template
@@ -739,23 +818,39 @@
                     Tokenomics section
                     <textarea id="token-site-tokenomics" rows="4" placeholder="Supply, allocations, fee model, release plan, airdrop, staking/rewards, treasury, liquidity, and owner-controlled safety notes."></textarea>
                 </label>
+            </div>
+            <section id="token-roadmap-builder-panel" class="token-workbench-subsection token-builder-surface">
+                <div class="token-workbench-section-heading">
+                    <span>05 · Roadmap Builder</span>
+                    <h3>Generate realistic launch phases from the token creation fields.</h3>
+                    <p>Use this for meme-token lightweight roadmaps or serious utility-token roadmaps. The roadmap is editable and should separate shipped, planned, gated, and future external actions.</p>
+                </div>
+            </section>
+            <div class="token-launch-wide-controls">
                 <label for="token-site-roadmap">
                     Roadmap milestones
                     <textarea id="token-site-roadmap" rows="4" placeholder="Phase 1: local build. Phase 2: website/whitepaper. Phase 3: community. Phase 4: deployment only after owner approval."></textarea>
                 </label>
+                <label for="token-site-roadmap-inputs">
+                    Roadmap generation inputs
+                    <textarea id="token-site-roadmap-inputs" rows="4" placeholder="Add realistic milestones, dependencies, community growth targets, dapp phases, audits, exchange/listing evidence steps, and what must happen before launch."></textarea>
+                </label>
+            </div>
+            <section id="token-whitepaper-builder-panel" class="token-workbench-subsection token-builder-surface">
+                <div class="token-workbench-section-heading">
+                    <span>04 · Whitepaper Builder</span>
+                    <h3>Draft a premium, honest whitepaper from the full launch package.</h3>
+                    <p>The whitepaper should explain utility, supply, release mechanics, chain plan, dapp modules, ecosystem role, risks, limitations, and demand logic without fake claims.</p>
+                </div>
+            </section>
+            <div class="token-launch-wide-controls">
                 <label for="token-site-whitepaper">
                     Whitepaper notes
                     <textarea id="token-site-whitepaper" rows="4" placeholder="Add technical architecture, utility, dapp plan, risks, limitations, and what should be explained more deeply."></textarea>
                 </label>
-            </div>
-            <div class="token-launch-wide-controls">
                 <label for="token-site-whitepaper-quality">
                     Whitepaper quality direction
                     <textarea id="token-site-whitepaper-quality" rows="4" placeholder="Describe how serious, technical, premium, founder-led, meme-forward, ecosystem-focused, or investor-facing the whitepaper should feel."></textarea>
-                </label>
-                <label for="token-site-roadmap-inputs">
-                    Roadmap generation inputs
-                    <textarea id="token-site-roadmap-inputs" rows="4" placeholder="Add realistic milestones, dependencies, community growth targets, dapp phases, audits, exchange/listing evidence steps, and what must happen before launch."></textarea>
                 </label>
                 <label for="token-site-ecosystem-role">
                     Ecosystem role
@@ -797,14 +892,55 @@
                 </label>
             </div>
             <div class="button-row">
-                <button id="save-website-whitepaper-draft" type="button">Save Website / Whitepaper Draft</button>
-                <button id="refresh-token-site-preview" type="button">Refresh Local Website Preview</button>
-                <button id="open-website-blueprint" type="button">Open Website Blueprint</button>
-                <button id="open-whitepaper-blueprint" type="button">Open Whitepaper Blueprint</button>
+                <button id="apply-token-data-to-site" type="button" class="action-safe">Apply Token Data To Website</button>
+                <button id="generate-premium-whitepaper-draft" type="button" class="action-safe">Generate Premium Whitepaper Draft</button>
+                <button id="generate-realistic-roadmap-draft" type="button" class="action-safe">Generate Realistic Roadmap Draft</button>
+                <button id="save-website-whitepaper-draft" type="button" class="action-continue">Save Website / Whitepaper Draft</button>
+                <button id="refresh-token-site-preview" type="button" class="action-safe">Refresh Local Website Preview</button>
+                <button id="open-website-blueprint" type="button" class="action-review">Open Website Blueprint</button>
+                <button id="open-whitepaper-blueprint" type="button" class="action-review">Open Whitepaper Blueprint</button>
             </div>
             <div id="website-whitepaper-status" class="inline-status">Save a token draft first, then use this builder to persist website, whitepaper, and roadmap edits locally.</div>
             <div id="token-site-local-preview" class="token-site-local-preview">
                 Local preview will render here from the saved token draft. It stays inside EtherealAI and does not deploy publicly.
+            </div>
+        </section>
+
+        <section class="model-panel token-launch-context-panel">
+            <div class="operator-two-gate-heading">
+                <span>07-08 · Context Extensions</span>
+                <h2>Wallet, funding, and social launch context stay connected to this token.</h2>
+                <p>These are planning lanes for the local launch package. They do not connect MetaMask, request signatures, post publicly, create liquidity, submit listings, or mutate external services.</p>
+            </div>
+            <div class="token-context-bridge-grid">
+                <section id="token-wallet-funding-bridge" class="token-context-bridge">
+                    <span>Token launch cost planning</span>
+                    <h3>Wallet & Funding For This Token</h3>
+                    <p>Add public wallet metadata and funding notes when you are ready to estimate deployment, liquidity, bridge, listing, and website costs. EtherealAI will not request seed phrases, private keys, wallet passwords, signing approvals, or MetaMask transactions in this phase.</p>
+                    <div class="token-context-status-grid">
+                        <article class="status-info"><strong>Public metadata</strong><small>Allowed through Wallet & Funding.</small></article>
+                        <article class="status-warning"><strong>Cost estimate</strong><small>Draft only until chain and launch plan are final.</small></article>
+                        <article class="status-danger"><strong>Signing locked</strong><small>No wallet signing, minting, liquidity, or deployment.</small></article>
+                    </div>
+                    <div class="button-row">
+                        <a class="cta-button action-safe" href="/operator-control">Open Wallet & Funding</a>
+                        <a class="cta-button action-review" href="/api-connection-center">Review API Readiness</a>
+                    </div>
+                </section>
+                <section id="token-social-launch-bridge" class="token-context-bridge">
+                    <span>Token community extension</span>
+                    <h3>Social Launch Kit</h3>
+                    <p>Use the token details, logo direction, website copy, roadmap, and whitepaper draft to create X, Discord, Telegram, YouTube, Medium, docs, and listing evidence content. Public posting and account automation remain locked.</p>
+                    <div class="token-context-status-grid">
+                        <article class="status-success"><strong>Local drafts</strong><small>Safe to create and review.</small></article>
+                        <article class="status-info"><strong>Community plan</strong><small>Uses token use case and roadmap.</small></article>
+                        <article class="status-danger"><strong>Posting locked</strong><small>No social API call or public submission.</small></article>
+                    </div>
+                    <div class="button-row">
+                        <a class="cta-button action-safe" href="/social-ops">Open Social Ops</a>
+                        <button id="token-copy-social-context" type="button" class="action-review">Copy Token Context To Social Plan</button>
+                    </div>
+                </section>
             </div>
         </section>
 
@@ -815,12 +951,14 @@
                 <p>Review token identity, chain, tokenomics, contract plan, dapp plan, logo, website, whitepaper, roadmap, API readiness, blockers, and locked external actions in one place. Nothing public happens here.</p>
             </div>
             <div class="button-row">
-                <button id="load-launch-package-review" type="button">Load Launch Package Review</button>
-                <button id="launch-review-edit-token" type="button">Edit Token Details</button>
-                <button id="launch-review-edit-logo" type="button">Edit Logo</button>
-                <button id="launch-review-edit-website" type="button">Edit Website</button>
-                <button id="launch-review-preview-site" type="button">Preview Local Site</button>
-                <button id="launch-review-export-package" type="button">Export Local Package</button>
+                <button id="load-launch-package-review" type="button" class="action-ready">Load Launch Package Review</button>
+                <button id="launch-review-edit-token" type="button" class="action-review">Edit Token Details</button>
+                <button id="launch-review-edit-logo" type="button" class="action-review">Edit Logo</button>
+                <button id="launch-review-edit-website" type="button" class="action-review">Edit Website</button>
+                <button id="launch-review-edit-whitepaper" type="button" class="action-review">Edit Whitepaper</button>
+                <button id="launch-review-edit-roadmap" type="button" class="action-review">Edit Roadmap</button>
+                <button id="launch-review-preview-site" type="button" class="action-safe">Preview Local Site</button>
+                <button id="launch-review-export-package" type="button" class="action-attention">Export Local Package</button>
             </div>
             <div id="launch-package-review-status" class="inline-status">Save or load a token launch project, then open the package review.</div>
             <div id="launch-package-review-content" class="launch-package-review-grid">
@@ -871,9 +1009,22 @@
             liquidityAllocation: 'token-launch-liquidity-allocation',
             teamAllocation: 'token-launch-team-allocation',
             communityAllocation: 'token-launch-community-allocation',
+            marketSupplyNotes: 'token-launch-market-supply-notes',
+            multiChainPlan: 'token-launch-multi-chain-plan',
+            utilitySummary: 'token-launch-utility-summary',
+            brandPersonality: 'token-launch-brand-personality',
             releasePlan: 'token-launch-release-plan',
             detailedUseCase: 'token-launch-use-case',
-            dappModules: 'token-launch-dapp-modules'
+            dappModules: 'token-launch-dapp-modules',
+            launchTimeline: 'token-launch-launch-timeline',
+            dappTimeline: 'token-launch-dapp-timeline',
+            communityTimeline: 'token-launch-community-timeline',
+            listingAmbition: 'token-launch-listing-ambition',
+            utilityRollout: 'token-launch-utility-rollout',
+            multichainTimeline: 'token-launch-multichain-timeline',
+            marketingRollout: 'token-launch-marketing-rollout',
+            treasuryLiquidityPlan: 'token-launch-treasury-liquidity-plan',
+            ownerRoadmapNotes: 'token-launch-owner-roadmap-notes'
         };
         const WEBSITE_DRAFT_FIELD_IDS = {
             websiteTemplate: 'token-site-template',
@@ -932,9 +1083,22 @@
                 liquidityAllocation: document.getElementById('token-launch-liquidity-allocation')?.value.trim() || '',
                 teamAllocation: document.getElementById('token-launch-team-allocation')?.value.trim() || '',
                 communityAllocation: document.getElementById('token-launch-community-allocation')?.value.trim() || '',
+                marketSupplyNotes: document.getElementById('token-launch-market-supply-notes')?.value.trim() || '',
+                multiChainPlan: document.getElementById('token-launch-multi-chain-plan')?.value.trim() || '',
+                utilitySummary: document.getElementById('token-launch-utility-summary')?.value.trim() || '',
+                brandPersonality: document.getElementById('token-launch-brand-personality')?.value.trim() || '',
                 releasePlan: document.getElementById('token-launch-release-plan')?.value.trim() || '',
                 detailedUseCase: document.getElementById('token-launch-use-case')?.value.trim() || '',
                 dappModules: document.getElementById('token-launch-dapp-modules')?.value.trim() || '',
+                launchTimeline: document.getElementById('token-launch-launch-timeline')?.value.trim() || '',
+                dappTimeline: document.getElementById('token-launch-dapp-timeline')?.value.trim() || '',
+                communityTimeline: document.getElementById('token-launch-community-timeline')?.value.trim() || '',
+                listingAmbition: document.getElementById('token-launch-listing-ambition')?.value.trim() || '',
+                utilityRollout: document.getElementById('token-launch-utility-rollout')?.value.trim() || '',
+                multichainTimeline: document.getElementById('token-launch-multichain-timeline')?.value.trim() || '',
+                marketingRollout: document.getElementById('token-launch-marketing-rollout')?.value.trim() || '',
+                treasuryLiquidityPlan: document.getElementById('token-launch-treasury-liquidity-plan')?.value.trim() || '',
+                ownerRoadmapNotes: document.getElementById('token-launch-owner-roadmap-notes')?.value.trim() || '',
                 name: document.getElementById('contract-name')?.value.trim() || '',
                 chain: document.getElementById('contract-network')?.value.trim() || '',
                 contractType: document.getElementById('contract-type')?.value || '',
@@ -1229,9 +1393,22 @@
                 `- Transfer fee / tax: ${input.transferFee || 'not set yet'}`,
                 `- Staking / rewards: ${input.stakingRewards || 'not set yet'}`,
                 `- Allocations: treasury ${input.treasuryAllocation || 'not set'}, liquidity ${input.liquidityAllocation || 'not set'}, team ${input.teamAllocation || 'not set'}, community/airdrop ${input.communityAllocation || 'not set'}`,
+                input.marketSupplyNotes ? `- Market / circulating supply notes: ${input.marketSupplyNotes}` : '- Market / circulating supply notes: not set yet',
+                input.multiChainPlan ? `- Multi-chain plan: ${input.multiChainPlan}` : '- Multi-chain plan: not set yet',
+                input.utilitySummary ? `- Utility summary: ${input.utilitySummary}` : '- Utility summary: not set yet',
+                input.brandPersonality ? `- Meme / brand personality: ${input.brandPersonality}` : '- Meme / brand personality: not set yet',
                 input.releasePlan ? `- Vesting / release schedule: ${input.releasePlan}` : '- Vesting / release schedule: not set yet',
                 input.detailedUseCase ? `- Use-case detail: ${input.detailedUseCase}` : '- Use-case detail: use Ecosystem Notes until expanded.',
                 input.dappModules ? `- Dapp modules: ${input.dappModules}` : '- Dapp modules: none described yet',
+                input.launchTimeline ? `- Launch timeline: ${input.launchTimeline}` : '- Launch timeline: not set yet',
+                input.dappTimeline ? `- Dapp timeline: ${input.dappTimeline}` : '- Dapp timeline: not set yet',
+                input.communityTimeline ? `- Community timeline: ${input.communityTimeline}` : '- Community timeline: not set yet',
+                input.listingAmbition ? `- Exchange/listing ambition: ${input.listingAmbition}` : '- Exchange/listing ambition: not set yet',
+                input.utilityRollout ? `- Utility rollout phases: ${input.utilityRollout}` : '- Utility rollout phases: not set yet',
+                input.multichainTimeline ? `- Multi-chain timeline: ${input.multichainTimeline}` : '- Multi-chain timeline: not set yet',
+                input.marketingRollout ? `- Marketing/social rollout: ${input.marketingRollout}` : '- Marketing/social rollout: not set yet',
+                input.treasuryLiquidityPlan ? `- Treasury/liquidity plan: ${input.treasuryLiquidityPlan}` : '- Treasury/liquidity plan: not set yet',
+                input.ownerRoadmapNotes ? `- Owner roadmap notes: ${input.ownerRoadmapNotes}` : '- Owner roadmap notes: not set yet',
                 `- Target blockchain: ${input.chain || 'not selected yet'}`,
                 `- Contract type: ${input.contractType || 'not selected yet'}`,
                 '- Pipeline order: token category, target blockchain, identity, tokenomics, use case, local code proposal, logo, website, whitepaper, roadmap, dapp modules, launch package.',
@@ -1275,9 +1452,22 @@
             document.getElementById('token-launch-liquidity-allocation').value = '20%';
             document.getElementById('token-launch-team-allocation').value = '10% with vesting';
             document.getElementById('token-launch-community-allocation').value = '60% community, launch, airdrop, ecosystem';
+            document.getElementById('token-launch-market-supply-notes').value = 'Draft circulating supply starts from the initial owner-approved launch supply. Final public reporting needs deployment, liquidity, and listing evidence later.';
+            document.getElementById('token-launch-multi-chain-plan').value = 'Base or another low-fee chain first; Polygon, BNB, Avalanche, Solana, and other chains remain planned options until owner-approved deployment.';
+            document.getElementById('token-launch-utility-summary').value = 'Utility centers on local AI automation, trading research, token launch workflows, dapp access, social operations, and owner-controlled infrastructure.';
+            document.getElementById('token-launch-brand-personality').value = 'Premium AI utility with Ethereal/REAL world identity, neon digital systems, proof-led trading math, and community-progress storytelling.';
             document.getElementById('token-launch-release-plan').value = 'Draft release plan: keep initial launch small, vest team allocation, use owner-approved future releases, and document non-mining token release rules before public launch.';
             document.getElementById('token-launch-use-case').value = 'Draft use case: local AI operating system token planning for automation, strategy research, dapp access, community utility, and future owner-approved launch modules.';
             document.getElementById('token-launch-dapp-modules').value = 'Module 1: token dashboard. Module 2: NFT utility upgrades. Module 3: community/listing evidence dashboard. All modules remain local plans until deployment approval.';
+            document.getElementById('token-launch-launch-timeline').value = 'Local package first, then owner review, security/audit planning, community prep, deployment approval, liquidity approval, listing evidence, and public launch.';
+            document.getElementById('token-launch-dapp-timeline').value = 'Dapp module planning starts in the local package; first usable module ships only after contract and frontend review.';
+            document.getElementById('token-launch-community-timeline').value = 'Prepare X, Discord, Telegram, Medium, YouTube, docs, and moderation drafts before public posting is approved.';
+            document.getElementById('token-launch-listing-ambition').value = 'DexScreener evidence first after deployment/liquidity; CoinGecko and CoinMarketCap application packets only after real public data exists.';
+            document.getElementById('token-launch-utility-rollout').value = 'Phase utility from local AI proof, dashboard access, community tools, NFT utility, dapp modules, and later ecosystem integrations.';
+            document.getElementById('token-launch-multichain-timeline').value = 'Launch on one selected chain first; expand cross-chain only after liquidity, community, security, and owner approval requirements are satisfied.';
+            document.getElementById('token-launch-marketing-rollout').value = 'Founder updates, progress posts, whitepaper release, community onboarding, website preview, and proof-based listing evidence.';
+            document.getElementById('token-launch-treasury-liquidity-plan').value = 'Draft treasury/liquidity plan remains local. Funding, liquidity creation, bridges, and token transfers require a future owner-approved wallet/signing phase.';
+            document.getElementById('token-launch-owner-roadmap-notes').value = 'Keep claims honest, separate built vs planned features, and mark every public/external step as locked until final owner approval.';
             document.getElementById('token-site-template').value = 'AI token operating system site';
             document.getElementById('token-site-hero').value = 'EtherealAI is a local AI operating system for trading, token launches, automation, and owner-controlled digital infrastructure.';
             document.getElementById('token-site-use-case').value = 'The token plan connects local AI automation, strategy research, dapp access, community utility, and future owner-approved launch modules.';
@@ -1833,6 +2023,118 @@
             if (status) {
                 status.textContent = 'Token context prepared for Social Ops. If clipboard access is blocked, open Social Ops and paste the visible token details manually. No public posting happened.';
             }
+        }
+
+        function applyTokenDataToWebsiteDraft() {
+            const token = readTokenLaunchPipelineInput();
+            const tokenName = token.name || 'Token Project';
+            const ticker = token.ticker || 'TICKER';
+
+            if (!document.getElementById('token-site-hero').value.trim()) {
+                document.getElementById('token-site-hero').value = `${tokenName} (${ticker}) is a ${token.category} built around ${token.utilitySummary || token.detailedUseCase || token.useCase || 'a local owner-controlled token use case'}.`;
+            }
+
+            document.getElementById('token-site-use-case').value = [
+                token.utilitySummary,
+                token.detailedUseCase,
+                token.useCase,
+                token.brandPersonality ? `Brand personality: ${token.brandPersonality}` : ''
+            ].filter(Boolean).join('\n\n') || document.getElementById('token-site-use-case').value;
+
+            document.getElementById('token-site-tokenomics').value = [
+                `Total supply: ${token.totalSupply || 'pending'}. Initial minted supply: ${token.initialSupply || 'pending'}.`,
+                `Market/circulating supply notes: ${token.marketSupplyNotes || 'pending owner input'}.`,
+                `Supply model: ${token.supplyModel || 'pending'}. Release plan: ${token.releasePlan || 'pending'}.`,
+                `Allocations: treasury ${token.treasuryAllocation || 'pending'}, liquidity ${token.liquidityAllocation || 'pending'}, team ${token.teamAllocation || 'pending'}, community/airdrop ${token.communityAllocation || 'pending'}.`,
+                `Burn: ${token.burnModel || 'pending'}. Admin: ${token.adminModel || 'pending'}. Transfer fee/tax: ${token.transferFee || 'pending'}. Staking/rewards: ${token.stakingRewards || 'pending'}.`
+            ].join('\n');
+
+            if (!document.getElementById('token-site-ecosystem-role').value.trim()) {
+                document.getElementById('token-site-ecosystem-role').value = token.multiChainPlan || token.multichainTimeline || 'Ecosystem role pending owner input.';
+            }
+
+            if (!document.getElementById('token-site-dapp-preview').value.trim()) {
+                document.getElementById('token-site-dapp-preview').value = token.dappModules || `Dapp mode: ${token.dappMode}. Module detail pending owner input.`;
+            }
+
+            renderTokenLaunchTwoGate();
+            renderTokenSiteLocalPreview();
+            document.getElementById('website-whitepaper-status').textContent = 'Token creation data applied to the local website draft. No public deployment happened.';
+        }
+
+        function generatePremiumWhitepaperDraft() {
+            const token = readTokenLaunchPipelineInput();
+            const website = getWebsiteWhitepaperInputs();
+            const lines = [
+                `${token.name || 'Token Project'} ${token.ticker ? `(${token.ticker})` : ''} Whitepaper Draft`,
+                '',
+                '1. Executive Summary',
+                `${token.name || 'This token'} is planned as a ${token.category} on ${token.chain || 'the selected chain'}. The current package is local draft work only; deployment, minting, wallet signing, liquidity creation, public posting, and listing submissions remain locked until a later owner-approved phase.`,
+                '',
+                '2. Utility And Demand Logic',
+                token.utilitySummary || token.detailedUseCase || token.useCase || 'Utility is pending owner input.',
+                token.brandPersonality ? `Brand/community personality: ${token.brandPersonality}.` : '',
+                '',
+                '3. Supply And Tokenomics',
+                `Total supply: ${token.totalSupply || 'pending'}. Initial minted supply: ${token.initialSupply || 'pending'}. Circulating/market supply notes: ${token.marketSupplyNotes || 'pending'}.`,
+                `Treasury: ${token.treasuryAllocation || 'pending'}. Liquidity: ${token.liquidityAllocation || 'pending'}. Team: ${token.teamAllocation || 'pending'}. Community/airdrop: ${token.communityAllocation || 'pending'}.`,
+                `Supply model: ${token.supplyModel || 'pending'}. Release mechanics: ${token.releasePlan || 'pending'}. Burn: ${token.burnModel || 'pending'}. Transfer fee/tax: ${token.transferFee || 'pending'}. Staking/rewards: ${token.stakingRewards || 'pending'}.`,
+                '',
+                '4. Chain And Multi-Chain Plan',
+                `Primary target: ${token.chain || 'pending'}. Multi-chain plan: ${token.multiChainPlan || token.multichainTimeline || 'pending owner input'}.`,
+                '',
+                '5. Dapp And Ecosystem Modules',
+                token.dappModules || token.dappMode || 'Dapp modules are not defined yet.',
+                `Ecosystem role: ${website.ecosystemRole || token.multiChainPlan || 'pending'}.`,
+                '',
+                '6. Roadmap',
+                buildRoadmapDraftLines(token).join('\n'),
+                '',
+                '7. Risks And Limitations',
+                'This draft must avoid guaranteed-profit language. Smart contracts, tokenomics, dapp modules, liquidity, listings, bridge routes, and public content require audit/review and explicit owner approval before any external action.',
+                '',
+                '8. Locked External Actions',
+                'No deployment, minting, wallet signing, swaps, liquidity creation, withdrawals, Cloudflare/GitHub/DNS mutation, public posting, listing submission, paid service, or live trading is enabled from this builder.'
+            ].filter(line => line !== '').join('\n');
+
+            document.getElementById('token-site-whitepaper').value = lines;
+            if (!document.getElementById('token-site-whitepaper-quality').value.trim()) {
+                document.getElementById('token-site-whitepaper-quality').value = 'Premium investor/community-ready whitepaper, technical where needed, honest about draft/planned/locked states, and grounded in the token creation fields.';
+            }
+            renderTokenLaunchTwoGate();
+            renderTokenSiteLocalPreview();
+            document.getElementById('website-whitepaper-status').textContent = 'Premium local whitepaper draft generated from token creation data. No public publishing happened.';
+        }
+
+        function buildRoadmapDraftLines(token = readTokenLaunchPipelineInput()) {
+            return [
+                `Phase 1 - Local launch package: ${token.launchTimeline || 'complete token plan, logo, website, whitepaper, roadmap, dapp module plan, and local package review.'}`,
+                `Phase 2 - Community preparation: ${token.communityTimeline || token.marketingRollout || 'prepare X, Discord, Telegram, YouTube, Medium, docs, moderation, and announcement drafts.'}`,
+                `Phase 3 - Utility and dapp buildout: ${token.utilityRollout || token.dappTimeline || 'finalize first dapp module plan, contract requirements, frontend requirements, and safety review.'}`,
+                `Phase 4 - Owner-approved deployment readiness: ${token.treasuryLiquidityPlan || 'review wallet/funding, audits, liquidity assumptions, treasury controls, and deployment blockers.'}`,
+                `Phase 5 - Listing evidence path: ${token.listingAmbition || 'prepare DexScreener, CoinGecko, CoinMarketCap, and community evidence only after real public launch data exists.'}`,
+                `Phase 6 - Expansion: ${token.multiChainPlan || token.multichainTimeline || 'evaluate multi-chain expansion only after liquidity, community, security, and owner approval requirements are satisfied.'}`
+            ];
+        }
+
+        function generateRealisticRoadmapDraft() {
+            const token = readTokenLaunchPipelineInput();
+            const lines = buildRoadmapDraftLines(token);
+            document.getElementById('token-site-roadmap').value = lines.join('\n');
+            document.getElementById('token-site-roadmap-inputs').value = [
+                token.launchTimeline,
+                token.dappTimeline,
+                token.communityTimeline,
+                token.listingAmbition,
+                token.utilityRollout,
+                token.multichainTimeline,
+                token.marketingRollout,
+                token.treasuryLiquidityPlan,
+                token.ownerRoadmapNotes
+            ].filter(Boolean).join('\n') || 'Roadmap generated from current token creation fields. Add dates only when the owner provides timing assumptions.';
+            renderTokenLaunchTwoGate();
+            renderTokenSiteLocalPreview();
+            document.getElementById('website-whitepaper-status').textContent = 'Realistic local roadmap draft generated. No schedule, posting, deployment, listing, or external action happened.';
         }
 
         function formatLogoBriefForNotes() {
@@ -2754,6 +3056,9 @@
         document.getElementById('open-website-blueprint').addEventListener('click', () => document.getElementById('website-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' }));
         document.getElementById('open-whitepaper-blueprint').addEventListener('click', () => document.getElementById('whitepaper-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' }));
         document.getElementById('build-market-inspiration-brief').addEventListener('click', renderMarketInspirationBrief);
+        document.getElementById('apply-token-data-to-site').addEventListener('click', applyTokenDataToWebsiteDraft);
+        document.getElementById('generate-premium-whitepaper-draft').addEventListener('click', generatePremiumWhitepaperDraft);
+        document.getElementById('generate-realistic-roadmap-draft').addEventListener('click', generateRealisticRoadmapDraft);
         document.getElementById('token-copy-social-context').addEventListener('click', copyTokenContextToSocialPlan);
         document.getElementById('continue-launch-project').addEventListener('click', continueLaunchProject);
         document.getElementById('review-launch-package').addEventListener('click', loadLaunchPackageReview);
@@ -2762,6 +3067,8 @@
         document.getElementById('launch-review-edit-token').addEventListener('click', () => document.getElementById('token-launch-operator-pipeline').scrollIntoView({ behavior: 'smooth', block: 'start' }));
         document.getElementById('launch-review-edit-logo').addEventListener('click', () => document.getElementById('logo-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' }));
         document.getElementById('launch-review-edit-website').addEventListener('click', () => document.getElementById('website-whitepaper-roadmap-builder').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        document.getElementById('launch-review-edit-whitepaper').addEventListener('click', () => document.getElementById('token-whitepaper-builder-panel').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        document.getElementById('launch-review-edit-roadmap').addEventListener('click', () => document.getElementById('token-roadmap-builder-panel').scrollIntoView({ behavior: 'smooth', block: 'start' }));
         document.getElementById('launch-review-preview-site').addEventListener('click', () => {
             renderTokenSiteLocalPreview();
             document.getElementById('token-site-local-preview').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -2785,7 +3092,7 @@
                 handleTokenLaunchGateAction(action);
             }
         });
-        ['token-launch-category', 'token-launch-ticker', 'token-launch-community', 'token-launch-dapp-mode', 'token-launch-total-supply', 'token-launch-initial-supply', 'token-launch-supply-model', 'token-launch-admin-model', 'token-launch-burn', 'token-launch-pausable', 'token-launch-transfer-fee', 'token-launch-staking-rewards', 'token-launch-treasury-allocation', 'token-launch-liquidity-allocation', 'token-launch-team-allocation', 'token-launch-community-allocation', 'token-launch-release-plan', 'token-launch-use-case', 'token-launch-dapp-modules', 'contract-name', 'contract-network', 'contract-type', 'token-ecosystem-notes', 'nft-utility-notes', 'token-logo-style', 'token-logo-palette', 'token-logo-direction', 'token-logo-existing', 'token-logo-inspiration', 'token-logo-shape', 'token-logo-background', 'token-logo-text-influence', 'token-logo-image-influence', 'token-logo-style-influence', 'token-site-template', 'token-site-hero', 'token-site-use-case', 'token-site-tokenomics', 'token-site-roadmap', 'token-site-whitepaper', 'token-site-dapp-preview', 'token-site-faq', 'token-site-how-to-buy', 'token-site-community-links', 'token-site-disclaimer', 'token-site-market-source', 'token-site-similar-category', 'token-site-structure-style', 'token-site-primary-color', 'token-site-secondary-color', 'token-site-accent-color', 'token-site-use-fourth-color', 'token-site-fourth-color', 'token-site-use-fifth-color', 'token-site-fifth-color', 'token-site-color-system-notes', 'token-site-market-inspiration', 'token-site-whitepaper-quality', 'token-site-roadmap-inputs', 'token-site-ecosystem-role', 'token-site-edit-instructions'].forEach(id => {
+        ['token-launch-category', 'token-launch-ticker', 'token-launch-community', 'token-launch-dapp-mode', 'token-launch-total-supply', 'token-launch-initial-supply', 'token-launch-supply-model', 'token-launch-admin-model', 'token-launch-burn', 'token-launch-pausable', 'token-launch-transfer-fee', 'token-launch-staking-rewards', 'token-launch-treasury-allocation', 'token-launch-liquidity-allocation', 'token-launch-team-allocation', 'token-launch-community-allocation', 'token-launch-market-supply-notes', 'token-launch-multi-chain-plan', 'token-launch-utility-summary', 'token-launch-brand-personality', 'token-launch-release-plan', 'token-launch-use-case', 'token-launch-dapp-modules', 'token-launch-launch-timeline', 'token-launch-dapp-timeline', 'token-launch-community-timeline', 'token-launch-listing-ambition', 'token-launch-utility-rollout', 'token-launch-multichain-timeline', 'token-launch-marketing-rollout', 'token-launch-treasury-liquidity-plan', 'token-launch-owner-roadmap-notes', 'contract-name', 'contract-network', 'contract-type', 'token-ecosystem-notes', 'nft-utility-notes', 'token-logo-style', 'token-logo-palette', 'token-logo-direction', 'token-logo-existing', 'token-logo-inspiration', 'token-logo-shape', 'token-logo-background', 'token-logo-text-influence', 'token-logo-image-influence', 'token-logo-style-influence', 'token-site-template', 'token-site-hero', 'token-site-use-case', 'token-site-tokenomics', 'token-site-roadmap', 'token-site-whitepaper', 'token-site-dapp-preview', 'token-site-faq', 'token-site-how-to-buy', 'token-site-community-links', 'token-site-disclaimer', 'token-site-market-source', 'token-site-similar-category', 'token-site-structure-style', 'token-site-primary-color', 'token-site-secondary-color', 'token-site-accent-color', 'token-site-use-fourth-color', 'token-site-fourth-color', 'token-site-use-fifth-color', 'token-site-fifth-color', 'token-site-color-system-notes', 'token-site-market-inspiration', 'token-site-whitepaper-quality', 'token-site-roadmap-inputs', 'token-site-ecosystem-role', 'token-site-edit-instructions'].forEach(id => {
             document.getElementById(id)?.addEventListener('input', renderTokenLaunchTwoGate);
             document.getElementById(id)?.addEventListener('change', renderTokenLaunchTwoGate);
             document.getElementById(id)?.addEventListener('input', renderTokenSiteLocalPreview);

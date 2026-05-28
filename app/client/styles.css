@@ -9149,6 +9149,97 @@ body.operator-simple-mode .api-connection-shell .advanced-operator-tools:not([op
     box-shadow: 0 0 20px color-mix(in srgb, var(--theme-warning) 16%, transparent);
 }
 
+.token-workbench-subnav {
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--theme-pink) 10%, transparent), transparent 54%),
+        var(--theme-card-background-muted);
+    border: 1px solid var(--theme-border-strong);
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    padding: 14px;
+}
+
+.token-workbench-subnav a {
+    align-items: center;
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 900;
+    justify-content: center;
+    letter-spacing: 0.05em;
+    min-height: 42px;
+    padding: 10px 12px;
+    text-align: center;
+    text-decoration: none;
+    text-transform: uppercase;
+}
+
+.token-two-gate-summary {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.token-two-gate-summary article,
+.token-workbench-subsection,
+.token-builder-surface {
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--theme-purple) 10%, transparent), transparent 56%),
+        var(--theme-card-background-muted);
+    border: 1px solid var(--theme-border);
+    color: var(--theme-primary-text);
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+}
+
+.token-two-gate-summary span,
+.token-workbench-section-heading span {
+    color: var(--theme-cyan);
+    font-size: 0.74rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.token-two-gate-summary strong,
+.token-workbench-section-heading h2,
+.token-workbench-section-heading h3 {
+    color: var(--theme-primary-text);
+    margin: 0;
+}
+
+.token-two-gate-summary p,
+.token-workbench-section-heading p {
+    color: var(--theme-secondary-text);
+    margin: 0;
+}
+
+.token-workbench-section-heading {
+    background:
+        linear-gradient(90deg, color-mix(in srgb, var(--theme-cyan) 12%, transparent), transparent 68%),
+        transparent;
+    border-left: 3px solid color-mix(in srgb, var(--theme-cyan) 72%, var(--theme-border));
+    display: grid;
+    gap: 8px;
+    padding: 12px 0 12px 16px;
+}
+
+.token-workbench-subsection > label {
+    background: var(--theme-card-background-muted);
+    border: 1px solid var(--theme-border);
+    color: var(--theme-primary-text);
+    display: grid;
+    gap: 8px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    padding: 12px;
+}
+
+.token-workbench-subsection textarea {
+    min-height: 92px;
+}
+
 .token-context-bridge-grid {
     display: grid;
     gap: 14px;
@@ -9301,6 +9392,8 @@ body.operator-advanced-mode .button-row .action-advanced,
     .ceo-command-card-grid,
     .ceo-secondary-card-grid,
     .token-workbench-map,
+    .token-workbench-subnav,
+    .token-two-gate-summary,
     .token-context-bridge-grid,
     .token-context-status-grid,
     .token-color-grid {

@@ -197,7 +197,7 @@
             title: 'Token Launch Workbench',
             summary: 'Create the token, logo, website, whitepaper, roadmap, dapp modules, wallet/funding plan, social launch kit, and local launch package review in one grouped operator flow. Deployment remains locked.',
             primaryAction: { label: 'Start Token Launch Pipeline', selector: '#token-launch-operator-pipeline' },
-            keepIds: ['token-launch-operator-pipeline', 'token-workbench-map', 'token-wallet-funding-bridge', 'token-social-launch-bridge', 'website-whitepaper-roadmap-builder', 'token-market-inspiration-panel', 'launch-package-review'],
+            keepIds: ['token-launch-operator-pipeline', 'token-workbench-map', 'token-workbench-subnav', 'token-roadmap-inputs-panel', 'token-dapp-modules-panel', 'token-wallet-funding-bridge', 'token-social-launch-bridge', 'website-whitepaper-roadmap-builder', 'token-website-builder-panel', 'token-whitepaper-builder-panel', 'token-roadmap-builder-panel', 'token-market-inspiration-panel', 'launch-package-review'],
             keepHeadings: ['Deployment Boundary', 'Contract Spec', 'Token Ecosystem Projects', 'Logo Creation Center'],
             readyLabel: 'Token Planning Ready',
             nextText: 'Start or resume a local launch project. The workbench flows through token creation, Logo Studio, website, whitepaper, roadmap, dapp modules, wallet/funding context, social launch kit, and Launch Package Review. Deployment remains locked.',
