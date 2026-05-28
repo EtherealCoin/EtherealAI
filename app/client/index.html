@@ -25,22 +25,55 @@
     </script>
 
     <main class="home-shell">
-        <section class="home-hero mission-hero">
+        <section class="home-hero mission-hero ceo-command-home">
             <div class="container">
                 <div class="ethereal-world-banner">
                     <img src="/public/brand/ethereal-digital-world.png" alt="EtherealAI digital world evolution artwork">
                     <div>
-                        <span>EtherealAI founder/operator software</span>
-                        <h1>Home / Mission Control</h1>
-                        <p>Operate EtherealAI as founder software: see system health, local E2E readiness, live E2E lock status, wallets, security, active bots, and the next safest action.</p>
+                        <span>EtherealAI CEO operator shell</span>
+                        <h1>What do you want EtherealAI to build or run?</h1>
+                        <p>Start from one clean command screen. Token launches, trading bots, local AI builds, socials, APIs, and advanced diagnostics stay organized without turning the app into a developer dashboard.</p>
                     </div>
                 </div>
-                <div class="button-row home-actions">
-                    <a href="/dashboard" class="cta-button">Open Mission Control</a>
-                    <a href="/api-connection-center" class="cta-button secondary-action">Open API Connection Center</a>
-                    <button id="home-next-action" type="button" class="cta-button secondary-action">What do I do next?</button>
-                    <a href="/owner-setup" class="cta-button secondary-action">Open Setup Wizard</a>
-                    <a href="/strategy-lab#bot-automation" class="cta-button secondary-action">Open Paper Trading Center</a>
+                <div class="button-row home-actions ceo-home-action-row">
+                    <button id="home-next-action" type="button" class="cta-button action-primary">What should I do next?</button>
+                    <a href="/dashboard" class="cta-button action-review">Open Mission Control</a>
+                </div>
+                <div class="ceo-command-card-grid" aria-label="Primary CEO actions">
+                    <a class="ceo-command-card ceo-command-card-continue" href="/solidity-lab#token-launch-operator-pipeline">
+                        <span>Continue</span>
+                        <strong>Continue Current Launch Project</strong>
+                        <p>Resume the saved token, logo, website, whitepaper, roadmap, dapp, wallet/funding, social kit, and launch package workflow.</p>
+                    </a>
+                    <a class="ceo-command-card ceo-command-card-primary" href="/solidity-lab#token-launch-operator-pipeline">
+                        <span>Create</span>
+                        <strong>Create Token / Dapp</strong>
+                        <p>Start token creation, choose the chain, define tokenomics, plan dapp modules, then move into logo, website, whitepaper, and roadmap.</p>
+                    </a>
+                    <a class="ceo-command-card ceo-command-card-safe" href="/strategy-lab">
+                        <span>Trade</span>
+                        <strong>Build Trading Bot</strong>
+                        <p>Create strategies, run safe paper simulations, review bot readiness, and keep live execution locked until explicit owner approval.</p>
+                    </a>
+                    <a class="ceo-command-card ceo-command-card-builder" href="/creator">
+                        <span>Build</span>
+                        <strong>Ask EtherealAI To Build Something</strong>
+                        <p>Describe an app, website, automation, analysis tool, or local workflow. EtherealAI creates local plans before risky actions.</p>
+                    </a>
+                </div>
+                <div class="ceo-secondary-card-grid" aria-label="Secondary CEO actions">
+                    <a class="ceo-secondary-card" href="/api-connection-center">
+                        <strong>Connect APIs</strong>
+                        <span>Kraken first, Coinbase next, DEX read-only lanes. No live order is enabled here.</span>
+                    </a>
+                    <a class="ceo-secondary-card" href="/dashboard#model-roles">
+                        <strong>Local Model Status</strong>
+                        <span>Review local model roles, MLX status, and system memory from Mission Control.</span>
+                    </a>
+                    <a class="ceo-secondary-card ceo-secondary-card-advanced" href="/server-route-inventory">
+                        <strong>Advanced Developer Mode</strong>
+                        <span>Raw routes, diagnostics, logs, proof packets, JSON, and safety events remain available here.</span>
+                    </a>
                 </div>
                 <div id="home-mission-status" class="artifact-grid home-proof-grid" aria-label="Local proof status">
                     <div class="artifact-stat">
@@ -100,63 +133,32 @@
 
         <section class="home-workflows">
             <div class="container">
-                <h2>Main Operating Areas</h2>
+                <h2>Clean Operating Areas</h2>
+                <p class="workflow-helper-text">The same features are still here, but Simple Mode groups them by the way a CEO actually operates the system.</p>
                 <div class="home-workflow-grid">
                     <a class="home-workflow-card" href="/dashboard">
-                        <strong>Home / Mission Control</strong>
+                        <strong>Mission Control</strong>
                         <span>Review local health, readiness percentages, full-live blockers, and System Memory export.</span>
                     </a>
-                    <a class="home-workflow-card" href="/owner-setup">
-                        <strong>Setup Wizard</strong>
-                        <span>Finish paper and full E2E setup gates with plain-English checks, public wallet metadata, and live execution disabled.</span>
-                    </a>
-                    <a class="home-workflow-card" href="/api-connection-center">
-                        <strong>API Connection Center</strong>
-                        <span>Manage Kraken first, Coinbase next, and DEX quote-only lanes with two-gate owner workflows.</span>
-                    </a>
-                    <a class="home-workflow-card" href="/strategy-lab#strategy-entry">
-                        <strong>Strategy Builder</strong>
-                        <span>Create strategies in plain English, use safe defaults, and run local research before paper trading.</span>
-                    </a>
-                    <a class="home-workflow-card" href="/strategy-lab#bot-automation">
-                        <strong>Paper Trading Center</strong>
-                        <span>Create paper plans, schedules, verification runs, and see exactly what is needed for 100%.</span>
-                    </a>
-                    <a class="home-workflow-card" href="/strategy-lab#bot-automation">
-                        <strong>Bot Control Center</strong>
-                        <span>Start, pause, schedule, and monitor paper bots while live mode stays locked.</span>
-                    </a>
-                    <a class="home-workflow-card" href="/operator-control">
-                        <strong>Wallet & Funding Center</strong>
-                        <span>Attach wallet metadata, scope permissions, review owner key handoff steps, and revoke wallet access without coding.</span>
-                    </a>
-                    <a class="home-workflow-card" href="/security-lockdown">
-                        <strong>Security Lockdown Center</strong>
-                        <span>Audit local Mac hardening, review listening services, and follow the hostile-network owner checklist.</span>
-                    </a>
-                    <a class="home-workflow-card" href="/mvp-test-pass">
-                        <strong>Owner Evidence Manifest</strong>
-                        <span>Review local proof rows, checksum marker, and live-blocked checklist.</span>
-                    </a>
-                    <a class="home-workflow-card" href="/owner-proof-packet">
-                        <strong>Owner Proof Packet</strong>
-                        <span>Download one local JSON packet with readiness, proof surfaces, route safety, and blocked live gates.</span>
+                    <a class="home-workflow-card" href="/solidity-lab#token-launch-operator-pipeline">
+                        <strong>Token Launch</strong>
+                        <span>Token creation, Logo Studio, website, whitepaper, roadmap, dapp modules, wallet/funding context, socials, and launch review.</span>
                     </a>
                     <a class="home-workflow-card" href="/strategy-lab">
-                        <strong>Strategy / Paper / Bots</strong>
-                        <span>Run research, backtests, paper automation, dossier exports, and monitor-only bot workflows.</span>
+                        <strong>Trading & Bots</strong>
+                        <span>Strategy builder, safe paper testing, bot controls, exchange readiness, wallet/funding context, and locked live launch gates.</span>
                     </a>
                     <a class="home-workflow-card" href="/creator">
-                        <strong>Creator Agent</strong>
-                        <span>Create local tasks, file proposals, checkpoints, and safe verification command runs.</span>
-                    </a>
-                    <a class="home-workflow-card" href="/server-route-inventory">
-                        <strong>Advanced / Developer Tools</strong>
-                        <span>Inspect server routes, safety module boundaries, and monitor-only route profiles.</span>
+                        <strong>AI Builder</strong>
+                        <span>Ask EtherealAI to build local software, tools, automations, dashboards, and project plans.</span>
                     </a>
                     <a class="home-workflow-card" href="/social-ops">
-                        <strong>Social Ops</strong>
-                        <span>Draft and queue local content while external posting remains disabled.</span>
+                        <strong>Socials</strong>
+                        <span>Create local community drafts and token launch content. Public posting remains locked.</span>
+                    </a>
+                    <a class="home-workflow-card" href="/server-route-inventory">
+                        <strong>Advanced</strong>
+                        <span>Inspect server routes, safety module boundaries, and monitor-only route profiles.</span>
                     </a>
                 </div>
             </div>

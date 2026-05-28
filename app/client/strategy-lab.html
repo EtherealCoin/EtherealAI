@@ -8,20 +8,17 @@
 </head>
 <body>
     <nav>
-        <a href="/mvp-test-pass">MVP Test Pass</a>
-        <a href="/owner-proof-packet">Proof Packet</a>
-        <a href="/operator-control">Wallet & Funding</a>
-        <a href="/security-lockdown">Security</a>
         <a href="/dashboard">Mission Control</a>
-        <a href="/creator">Creator Agent</a>
-        <a href="/live-trading-launch">Live Trading Launch</a>
-        <a href="/solidity-lab">Solidity Lab</a>
-        <a href="/social-ops">Social Ops</a>
+        <a href="/solidity-lab#token-launch-operator-pipeline">Token Launch</a>
+        <a href="/strategy-lab">Trading & Bots</a>
+        <a href="/creator">AI Builder</a>
+        <a href="/social-ops">Socials</a>
+        <a href="/server-route-inventory">Advanced</a>
         <a href="/logout">Logout</a>
     </nav>
 
     <main class="container">
-        <h1>Strategy, Paper Trading, and Bot Control</h1>
+        <h1>Trading & Bots</h1>
         <p>This page turns trading ideas into local simulations and paper bots. Paper trading never needs wallet signing, and live mode remains locked behind a future separate approval process.</p>
         <div class="auth-proof-banner" role="status">
             <strong>MVP 100% · Local E2E 100%</strong>
@@ -56,6 +53,10 @@
                     <strong>Exchange Connector Manager</strong>
                     <span>Create safe placeholders for CEXs, DEXs, aggregators, perps, and P2P venues without adding keys.</span>
                 </a>
+                <a class="ceo-workflow-card" href="#trading-wallet-funding-context">
+                    <strong>Wallet & Funding Context</strong>
+                    <span>Public wallet metadata, exchange funding notes, and future live-readiness context. No signing, withdrawal, or transfer is enabled.</span>
+                </a>
                 <a class="ceo-workflow-card" href="/live-trading-launch">
                     <strong>Live Trading Launch Center</strong>
                     <span>Run read-only spread scans, paper simulate opportunities, and review locked live gates.</span>
@@ -75,8 +76,25 @@
                 <a href="#risk-profile-configuration">Risk</a>
                 <a href="#bot-automation">Paper/Bots</a>
                 <a href="#exchange-connector-manager">Exchanges</a>
+                <a href="#trading-wallet-funding-context">Wallet/Funding</a>
                 <a href="#rebalance-batch">Rebalance</a>
                 <a href="#advanced-strategy-tools">Advanced</a>
+            </div>
+        </section>
+
+        <section id="trading-wallet-funding-context" class="model-panel token-context-bridge trading-wallet-funding-context">
+            <span>Trading execution readiness context</span>
+            <h2>Wallet & Funding For Trading</h2>
+            <p>Use this area as the trading-side reminder that live strategies eventually need exchange balances, risk limits, and wallet metadata. Today it is local/read-only context only: no wallet signing, no withdrawals, no transfers, no swaps, no live orders, and no autonomous execution.</p>
+            <div class="token-context-status-grid">
+                <article class="status-success"><strong>Paper mode</strong><small>Safe to run without wallet signing.</small></article>
+                <article class="status-info"><strong>Public wallet metadata</strong><small>Managed in Wallet & Funding.</small></article>
+                <article class="status-danger"><strong>Live funds locked</strong><small>Real trading remains behind owner approval.</small></article>
+            </div>
+            <div class="button-row">
+                <a class="cta-button action-safe" href="/operator-control">Open Wallet & Funding</a>
+                <a class="cta-button action-review" href="/api-connection-center">Open API Connection Center</a>
+                <a class="cta-button action-danger" href="/live-trading-launch">Review Locked Live Launch</a>
             </div>
         </section>
 

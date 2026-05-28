@@ -5,9 +5,9 @@
 
     const pageConfigs = {
         '/': {
-            area: 'Home / Mission Control',
-            title: 'Run EtherealAI From One Screen',
-            summary: 'Check the system, see what is safe, and press one button for the next recommended action.',
+            area: 'Mission Control',
+            title: 'CEO Command Screen',
+            summary: 'Choose what EtherealAI should build or run next. The daily workflow is grouped into Token Launch, Trading & Bots, AI Builder, Socials, and Advanced.',
             primaryAction: { label: 'What should I do next?', kind: 'next' },
             showLaunchPipeline: true,
             keepHeadings: [],
@@ -24,7 +24,8 @@
                 ['Start here', 'Open the full beginner manual and walkthrough.', { label: 'Open Operator Manual', href: '/operator-manual' }],
                 ['Check next action', 'Ask the local assistant what to do next.', { label: 'What should I do next?', kind: 'next' }],
                 ['Continue token launch', 'Resume the connected local token, logo, website, whitepaper, and launch package workflow.', { label: 'Continue Launch Project', href: '/solidity-lab#token-launch-operator-pipeline' }],
-                ['Open paper controls', 'Go straight to safe local paper trading.', { label: 'Open Paper Trading', href: '/strategy-lab#bot-automation' }]
+                ['Build trading bot', 'Open the trading strategy, paper simulation, wallet funding context, and live-readiness workbench.', { label: 'Open Trading & Bots', href: '/strategy-lab#bot-automation' }],
+                ['Ask AI to build', 'Create a local plan for software, tools, websites, or automations without public side effects.', { label: 'Open AI Builder', href: '/creator' }]
             ]
         },
         '/dashboard': {
@@ -99,11 +100,11 @@
             ]
         },
         '/strategy-lab': {
-            area: 'Strategy / Paper / Bots',
-            title: 'Build A Strategy, Then Run One Safe Paper Test',
-            summary: 'Create the strategy in plain English, then click one button. EtherealAI handles paper sessions, risk, connector, plan, schedule, verification, and simulation in the background.',
+            area: 'Trading & Bots',
+            title: 'Build Trading Systems Without Developer Workflow',
+            summary: 'Create the strategy, run a safe paper test, review bot readiness, and see wallet/funding context for future live readiness. Live execution remains locked.',
             primaryAction: { label: 'Run This Strategy Safely', selector: '#run-this-strategy-safely' },
-            keepIds: [],
+            keepIds: ['trading-wallet-funding-context', 'strategy-entry', 'bot-automation', 'exchange-connector-manager'],
             keepHeadings: [],
             readyLabel: 'Paper Trading Ready',
             nextText: 'Use Run This Strategy Safely. Advanced infrastructure objects stay hidden unless you intentionally open Advanced Mode.',
@@ -192,14 +193,14 @@
             ]
         },
         '/solidity-lab': {
-            area: 'Solidity Lab',
-            title: 'Token Launch Factory',
-            summary: 'Build the local token launch package in order: category, chain, identity, tokenomics, use case, local code plan, logo, website, whitepaper, roadmap, and dapp options. Deployment remains locked.',
+            area: 'Token Launch',
+            title: 'Token Launch Workbench',
+            summary: 'Create the token, logo, website, whitepaper, roadmap, dapp modules, wallet/funding plan, social launch kit, and local launch package review in one grouped operator flow. Deployment remains locked.',
             primaryAction: { label: 'Start Token Launch Pipeline', selector: '#token-launch-operator-pipeline' },
-            keepIds: ['token-launch-operator-pipeline', 'website-whitepaper-roadmap-builder', 'launch-package-review'],
+            keepIds: ['token-launch-operator-pipeline', 'token-workbench-map', 'token-wallet-funding-bridge', 'token-social-launch-bridge', 'website-whitepaper-roadmap-builder', 'token-market-inspiration-panel', 'launch-package-review'],
             keepHeadings: ['Deployment Boundary', 'Contract Spec', 'Token Ecosystem Projects', 'Logo Creation Center'],
             readyLabel: 'Token Planning Ready',
-            nextText: 'Start or resume a local launch project. The connected pipeline moves from token details to Logo Studio, website/whitepaper/roadmap, local preview, and Launch Package Review. Deployment remains locked.',
+            nextText: 'Start or resume a local launch project. The workbench flows through token creation, Logo Studio, website, whitepaper, roadmap, dapp modules, wallet/funding context, social launch kit, and Launch Package Review. Deployment remains locked.',
             cards: [
                 ['1. Pick category', 'Use-case token, meme token, or hybrid meme + utility token.'],
                 ['2. Choose chain', 'Base, Polygon, Solana, BNB, Avalanche, Arbitrum, Optimism, Ethereum, Move, Cosmos, NEAR, TRON, Bitcoin L2, or custom.'],
@@ -207,7 +208,8 @@
                 ['4. Save draft', 'The full CEO workflow draft is saved locally and can be reopened without losing ticker, tokenomics, logo direction, or dapp fields.'],
                 ['5. Continue to Logo Studio', 'Choose one of three local logo direction specs before website, whitepaper, roadmap, social package, listing icon package, and dapp visuals.'],
                 ['6. Edit website and whitepaper', 'Persist hero copy, use-case explanation, tokenomics, roadmap, FAQ, how-to-buy, community links, disclaimer, dapp preview, and owner edit instructions locally.'],
-                ['7. Review launch package', 'Open one local review screen for identity, chain, tokenomics, use case, contract plan, dapp plan, selected logo, site draft, API readiness, blockers, and locked external actions.']
+                ['7. Add launch context', 'Review wallet/funding cost planning, Social Ops drafts, and Top Token Website Inspiration without connecting wallets or posting publicly.'],
+                ['8. Review launch package', 'Open one local review screen for identity, chain, tokenomics, use case, contract plan, dapp plan, selected logo, site draft, API readiness, blockers, and locked external actions.']
             ],
             workflow: [
                 ['1. Start pipeline', 'Open the CEO token launch panel and review the two gates.', { label: 'Start Token Launch Pipeline', selector: '#token-launch-operator-pipeline' }],
@@ -215,8 +217,9 @@
                 ['3. Preview package', 'Review blockers in one list before saving.', { label: 'Preview Local Package', selector: '#token-launch-preview' }],
                 ['4. Save local draft', 'Save or update the persistent local draft. This keeps Simple Mode fields recoverable.', { label: 'Save Local Token Project', selector: '#save-token-ecosystem-project' }],
                 ['5. Open Logo Studio', 'Choose a local logo direction. External image generation and listing submissions stay locked.', { label: 'Open Logo Studio', selector: '#logo-blueprint' }],
-                ['6. Save website draft', 'Edit and save local website, whitepaper, and roadmap sections. Cloudflare/GitHub deployment stays locked.', { label: 'Save Website / Whitepaper Draft', selector: '#website-whitepaper-roadmap-builder' }],
-                ['7. Review launch package', 'Review the connected local package before any future external action.', { label: 'Review Launch Package', selector: '#launch-package-review' }]
+                ['6. Save website draft', 'Edit and save local website, whitepaper, roadmap, palette, and market inspiration sections. Cloudflare/GitHub deployment stays locked.', { label: 'Save Website / Whitepaper Draft', selector: '#website-whitepaper-roadmap-builder' }],
+                ['7. Review wallet and socials', 'Use embedded wallet/funding and social launch cards as context. Signing and posting stay locked.', { label: 'Open Social Launch Kit', selector: '#token-social-launch-bridge' }],
+                ['8. Review launch package', 'Review the connected local package before any future external action.', { label: 'Review Launch Package', selector: '#launch-package-review' }]
             ]
         },
         '/social-ops': {
@@ -767,7 +770,7 @@
     function topTrainingDropdownMarkup() {
         return `
             <div class="operator-top-dropdown operator-top-training-dropdown">
-                <button type="button" class="operator-top-control" data-operator-nav-toggle aria-haspopup="true" aria-expanded="false">Show Me How</button>
+                <button type="button" class="operator-top-control" data-operator-nav-toggle aria-haspopup="true" aria-expanded="false">Help</button>
                 <div class="operator-top-dropdown-list" hidden>
                     <button type="button" data-operator-training-choice="text">Text Explanation</button>
                     <button type="button" data-operator-training-choice="video">Video Explanation</button>
@@ -1198,20 +1201,37 @@
         const bar = document.createElement('div');
         bar.id = 'operator-mode-bar';
         bar.className = 'operator-mode-bar';
-        const pageNavItems = [
-            { label: 'MVP Test Pass', href: '/mvp-test-pass' },
-            { label: 'Proof Packet', href: '/owner-proof-packet' },
-            { label: 'Wallet & Funding', href: '/operator-control' },
-            { label: 'Setup Wizard', href: '/owner-setup' },
-            { label: 'Security', href: '/security-lockdown' }
-        ];
-        const systemNavItems = [
+        const missionNavItems = [
             { label: 'Mission Control', href: '/dashboard' },
-            { label: 'API Connection Center', href: '/api-connection-center' },
-            { label: 'Creator Agent', href: '/creator' },
+            { label: 'Setup Wizard', href: '/owner-setup' },
+            { label: 'Security', href: '/security-lockdown' },
+            { label: 'Proof Packet', href: '/owner-proof-packet' },
+            { label: 'MVP Test Pass', href: '/mvp-test-pass' }
+        ];
+        const tokenNavItems = [
+            { label: 'Token Launch Workbench', href: '/solidity-lab#token-launch-operator-pipeline' },
+            { label: 'Logo Studio', href: '/solidity-lab#logo-blueprint' },
+            { label: 'Website / Whitepaper / Roadmap', href: '/solidity-lab#website-whitepaper-roadmap-builder' },
+            { label: 'Launch Package Review', href: '/solidity-lab#launch-package-review' },
+            { label: 'Social Launch Kit', href: '/social-ops' }
+        ];
+        const tradingNavItems = [
+            { label: 'Trading & Bots', href: '/strategy-lab' },
             { label: 'Live Trading Launch', href: '/live-trading-launch' },
-            { label: 'Solidity Lab', href: '/solidity-lab' },
-            { label: 'Social Ops', href: '/social-ops' }
+            { label: 'API Connection Center', href: '/api-connection-center' },
+            { label: 'Wallet & Funding', href: '/operator-control' }
+        ];
+        const builderNavItems = [
+            { label: 'AI Builder', href: '/creator' },
+            { label: 'Training Library', href: '/operator-training' }
+        ];
+        const socialNavItems = [
+            { label: 'Socials', href: '/social-ops' },
+            { label: 'Token Social Launch Kit', href: '/social-ops#token-community-launch' },
+            { label: 'Creator Agent Content', href: '/creator' }
+        ];
+        const advancedNavItems = [
+            { label: 'Advanced Tools', href: '/server-route-inventory' }
         ];
 
         bar.innerHTML = `
@@ -1228,8 +1248,12 @@
                 <strong>LIVE LOCKED</strong>
             </div>
             <div class="operator-mode-actions">
-                ${topNavDropdownMarkup('Pages', pageNavItems, 'operator-pages-dropdown')}
-                ${topNavDropdownMarkup('Systems', systemNavItems, 'operator-systems-dropdown')}
+                ${topNavDropdownMarkup('Mission', missionNavItems, 'operator-mission-dropdown')}
+                ${topNavDropdownMarkup('Token', tokenNavItems, 'operator-token-dropdown')}
+                ${topNavDropdownMarkup('Trading', tradingNavItems, 'operator-trading-dropdown')}
+                ${topNavDropdownMarkup('AI', builderNavItems, 'operator-builder-dropdown')}
+                ${topNavDropdownMarkup('Socials', socialNavItems, 'operator-social-dropdown')}
+                ${topNavDropdownMarkup('Advanced', advancedNavItems, 'operator-advanced-dropdown')}
                 ${topTrainingDropdownMarkup()}
                 ${topThemeDropdownMarkup()}
                 <button type="button" class="operator-mode-toggle" data-operator-mode="simple">Simple</button>

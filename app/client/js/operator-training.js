@@ -13,12 +13,14 @@
             path: '/',
             title: 'Start EtherealAI',
             libraryTitle: 'Start EtherealAI',
-            purpose: 'Use Home as the front door. It tells you whether the local app is reachable, whether Local E2E is complete, whether Live E2E is locked, and where to go next.',
+            purpose: 'Use Home as the CEO command screen. It asks what you want EtherealAI to build or run, then points you to Mission Control, Token Launch, Trading & Bots, AI Builder, Socials, APIs, or Advanced.',
             buttons: [
-                ['Open Mission Control', 'Opens the main operator dashboard for health, readiness, wallets, bots, and security.'],
                 ['What should I do next?', 'Asks EtherealAI to choose the next safest action from current local state.'],
-                ['Open Setup Wizard', 'Opens the owner setup flow when a required local paper step needs attention.'],
-                ['Open Paper Trading Center', 'Jumps to Strategy / Paper / Bots for paper plans, schedules, and results.']
+                ['Continue Current Launch Project', 'Resumes the token, logo, website, whitepaper, roadmap, dapp, wallet/funding, social kit, and launch review workflow.'],
+                ['Create Token / Dapp', 'Starts Token Launch Workbench.'],
+                ['Build Trading Bot', 'Opens Trading & Bots for strategies, paper tests, and locked live-readiness work.'],
+                ['Ask EtherealAI To Build Something', 'Opens AI Builder for local plans and safe build requests.'],
+                ['Connect APIs', 'Opens Kraken/Coinbase/DEX read-only setup without enabling live orders.']
             ],
             fields: [
                 ['No normal entry fields', 'Home is for reading status and choosing the next page.']
@@ -29,8 +31,8 @@
             ],
             order: [
                 'Confirm the proof strip says Local E2E and Live E2E locked.',
-                'Press What should I do next.',
-                'Follow the one recommended page link.',
+                'Press What should I do next if you want the app to choose for you.',
+                'Otherwise choose one primary card: launch token, build bot, ask AI to build, or continue the current launch project.',
                 'Return to Home when you want a clean starting point.'
             ],
             safeDefaults: [
@@ -822,12 +824,13 @@
         },
         {
             id: 'use-solidity-lab',
-            tab: 'Solidity Lab',
+            tab: 'Token Launch',
             path: '/solidity-lab',
-            title: 'Use Solidity Lab',
-            libraryTitle: 'Use Solidity Lab',
-            purpose: 'Solidity Lab plans token, NFT, website, whitepaper, listing, dapp, and ecosystem assets locally. It does not deploy to a blockchain in this phase.',
+            title: 'Use Token Launch Workbench',
+            libraryTitle: 'Use Token Launch Workbench',
+            purpose: 'Token Launch Workbench plans token creation, logo, website, whitepaper, roadmap, dapp modules, wallet/funding context, socials, and launch package review locally. It does not deploy to a blockchain in this phase.',
             buttons: [
+                ['Continue Next Step', 'Moves through token creation, Logo Studio, website, whitepaper, roadmap, social kit, and launch review.'],
                 ['Select Chain-Neutral Launch Defaults', 'Fills a chain-neutral planning profile.'],
                 ['Select Low-Fee Launch Defaults', 'Fills a low-fee chain planning profile.'],
                 ['Select Polygon As Target Chain', 'Selects Polygon for this project only. It does not make Polygon the system default.'],
@@ -837,6 +840,7 @@
                 ['Continue Draft', 'Reloads a saved draft without losing Simple Mode fields.'],
                 ['Logo Studio', 'Opens three local logo direction choices before website, whitepaper, social package, listing icon package, and dapp visuals.'],
                 ['Choose This Local Logo Direction', 'Selects a local logo spec and saves it into the draft. It does not call an image generator or submit to a listing site.'],
+                ['Build Local Website Inspiration Brief', 'Creates a local website structure brief from token category, use case, selected palette, and approved source mode. It does not scrape CoinMarketCap or run public submissions.'],
                 ['Save Website / Whitepaper Draft', 'Saves website hero copy, use case, tokenomics, roadmap, FAQ, how-to-buy, community links, disclaimer, whitepaper notes, dapp preview, and owner edit instructions locally.'],
                 ['Review Launch Package', 'Opens one connected local review screen for token identity, chain, tokenomics, use case, contract plan, dapp plan, logo, website, whitepaper, roadmap, API readiness, blockers, and locked external actions.'],
                 ['Generate Workspace', 'Creates local project files for review.']
@@ -853,6 +857,8 @@
                 ['Logo / Brand Direction', 'The token logo brief. This is local planning and does not call an external image generator.'],
                 ['Logo influence sliders', 'Tune text, image, and token-logo category influence for local logo specs.'],
                 ['Website hero', 'First-screen website copy.'],
+                ['Top Token Website Inspiration', 'Local/read-only website pattern brief. CoinMarketCap Top 200 analysis needs an approved API/data source or local dataset before it is considered live research.'],
+                ['Color palette', 'Primary, secondary, accent, and optional fourth/fifth colors. Status colors still keep their safety meaning.'],
                 ['Roadmap milestones', 'Editable token roadmap.'],
                 ['Whitepaper notes', 'Technical, utility, risk, and limitation notes for the whitepaper.'],
                 ['FAQ / How to buy / Disclaimer', 'Local website sections that stay draft-only until public launch approval.']
@@ -868,7 +874,9 @@
                 'Add NFT utility and ecosystem notes.',
                 'Save the local ecosystem project draft.',
                 'Continue into Logo Studio and choose one local logo direction before website, whitepaper, roadmap, and dapp visuals.',
-                'Save the website, whitepaper, and roadmap edits locally.',
+                'Build the local Top Token Website Inspiration brief if you want EtherealAI to shape the site like a high-quality token launch.',
+                'Save the website, whitepaper, roadmap, palette, and inspiration edits locally.',
+                'Use the embedded wallet/funding and social launch cards for context only; signing and posting stay locked.',
                 'Open Launch Package Review to inspect the full local package in one place.',
                 'Generate workspace only for local review.'
             ],
@@ -887,6 +895,7 @@
                 'A local spec or ecosystem project is saved.',
                 'The saved draft can be reopened without losing CEO workflow fields.',
                 'Logo Studio shows three local direction choices and a lock-state explanation.',
+                'Top Token Website Inspiration clearly states whether it used local patterns or needs an approved external data source.',
                 'Website, whitepaper, and roadmap edits stay attached to the saved local draft.',
                 'Launch Package Review shows one connected package with blockers and locked external actions.',
                 'Target chain is explicit per project.',
@@ -928,8 +937,8 @@
                     {
                         title: 'Edit website and whitepaper',
                         screen: 'Website / Whitepaper / Roadmap Builder',
-                        narration: 'Use this section like a founder draft editor. EtherealAI keeps the token website, whitepaper, roadmap, and dapp preview tied to the local token project.',
-                        click: 'Edit the sections, then click Save Website / Whitepaper Draft.',
+                        narration: 'Use this section like a founder draft editor. EtherealAI keeps the token website, whitepaper, roadmap, dapp preview, palette, and market-inspiration brief tied to the local token project.',
+                        click: 'Edit the sections or click Build Local Website Inspiration Brief, then click Save Website / Whitepaper Draft.',
                         pause: 'Pause here and confirm Cloudflare, GitHub, DNS, and public deployment remain locked.'
                     },
                     {

@@ -7833,6 +7833,9 @@ function checkStrategyLabOneClickSafePaperUi() {
     || !html.includes('function updateStrategyBuilderMode()')
     || !html.includes('id="run-this-strategy-safely"')
     || !html.includes('Run This Strategy Safely')
+    || !html.includes('id="trading-wallet-funding-context"')
+    || !html.includes('Wallet & Funding For Trading')
+    || !html.includes('no wallet signing, no withdrawals, no transfers, no swaps, no live orders')
     || !html.includes('EtherealAI automatically creates or reuses the safe paper session, risk profile, local connector, plan, schedule, verifier, and simulation run.')
     || !html.includes('id="safe-paper-results"')
     || !html.includes('id="safe-paper-progress"')
@@ -8769,16 +8772,19 @@ function checkOperatorControlCenterUi() {
   const html = fs.readFileSync(path.join(projectRoot, 'app/client/operator-control.html'), 'utf8');
   const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
   const home = fs.readFileSync(path.join(projectRoot, 'app/client/index.html'), 'utf8');
+  const strategy = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
+  const solidity = fs.readFileSync(path.join(projectRoot, 'app/client/solidity-lab.html'), 'utf8');
+  const operatorMode = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-mode.js'), 'utf8');
   const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
   const styles = fs.readFileSync(path.join(projectRoot, 'app/client/styles.css'), 'utf8');
 
   if (
     !pages.includes("app.get('/operator-control', requirePageAuth")
     || !pages.includes("app.get('/security-lockdown', requirePageAuth")
-    || !dashboard.includes('/operator-control')
+    || !(strategy.includes('/operator-control') && solidity.includes('/operator-control') && operatorMode.includes('/operator-control'))
     || !dashboard.includes('/security-lockdown')
-    || !home.includes('Wallet & Funding Center')
-    || !home.includes('Security Lockdown Center')
+    || !home.includes('Connect APIs')
+    || !dashboard.includes('Security & Proof')
     || !html.includes('Wallet & Funding Center')
     || !html.includes('Wallet Onboarding Wizard')
     || !html.includes('wallet-quick-start')
@@ -8833,6 +8839,7 @@ function checkOwnerSetupWizardUi() {
   const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
   const home = fs.readFileSync(path.join(projectRoot, 'app/client/index.html'), 'utf8');
   const header = fs.readFileSync(path.join(projectRoot, 'components/header.html'), 'utf8');
+  const operatorMode = fs.readFileSync(path.join(projectRoot, 'app/client/js/operator-mode.js'), 'utf8');
   const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
   const route = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/owner-setup-wizard.js'), 'utf8');
   const lib = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/owner-setup-wizard.js'), 'utf8');
@@ -8840,11 +8847,11 @@ function checkOwnerSetupWizardUi() {
 
   if (
     !pages.includes("app.get('/owner-setup', requirePageAuth")
-    || !dashboard.includes('/owner-setup')
-    || !dashboard.includes('Open Setup Wizard')
-    || !home.includes('/owner-setup')
-    || !home.includes('Setup Wizard')
-    || !header.includes('/owner-setup')
+    || !operatorMode.includes('/owner-setup')
+    || !operatorMode.includes('Setup Wizard')
+    || !dashboard.includes('Security & Proof')
+    || !home.includes('Mission Control')
+    || !header.includes('/dashboard')
     || !html.includes('Setup Wizard')
     || !html.includes('Paper Trading Complete')
     || !html.includes('Core Setup Complete')
@@ -9076,36 +9083,35 @@ function checkHomeLocalProofUi() {
   const headerStyles = fs.readFileSync(path.join(projectRoot, 'styles/components/header.css'), 'utf8');
 
   if (
-    !html.includes('Home / Mission Control')
-    || !html.includes('Operate EtherealAI as founder software')
+    !html.includes('What do you want EtherealAI to build or run?')
+    || !html.includes('EtherealAI CEO operator shell')
     || !html.includes('Open Mission Control')
-    || !html.includes('What do I do next?')
-    || !html.includes('Open Setup Wizard')
-    || !html.includes('Open Paper Trading Center')
+    || !html.includes('What should I do next?')
+    || !html.includes('Continue Current Launch Project')
+    || !html.includes('Create Token / Dapp')
+    || !html.includes('Build Trading Bot')
+    || !html.includes('Ask EtherealAI To Build Something')
+    || !html.includes('Connect APIs')
+    || !html.includes('Local Model Status')
     || !html.includes('System Health')
     || !html.includes('Paper Trading')
     || !html.includes('Local E2E Readiness')
     || !html.includes('Live Execution')
     || !html.includes('Loading next recommended action')
-    || !html.includes('Main Operating Areas')
-    || !html.includes('Setup Wizard')
-    || !html.includes('Strategy Builder')
-    || !html.includes('Paper Trading Center')
-    || !html.includes('Bot Control Center')
-    || !html.includes('Wallet & Funding Center')
-    || !html.includes('Security Lockdown Center')
-    || !html.includes('Owner Evidence Manifest')
-    || !html.includes('Review local proof rows, checksum marker, and live-blocked checklist.')
-    || !html.includes('Owner Proof Packet')
-    || !html.includes('Download one local JSON packet with readiness, proof surfaces, route safety, and blocked live gates.')
-    || !html.includes('Advanced / Developer Tools')
+    || !html.includes('Clean Operating Areas')
+    || !html.includes('Token Launch')
+    || !html.includes('Trading & Bots')
+    || !html.includes('AI Builder')
+    || !html.includes('Socials')
+    || !html.includes('Advanced Developer Mode')
     || !html.includes('window.EtherealOperatorAssistant.collectState')
     || !html.includes('home-next-action')
     || !html.includes('home-mission-status')
     || !header.includes('MVP 100% · Local E2E 100% · Live E2E locked')
-    || !header.includes('/owner-proof-packet')
-    || !header.includes('/security-lockdown')
-    || !header.includes('/mvp-test-pass')
+    || !header.includes('/solidity-lab#token-launch-operator-pipeline')
+    || !header.includes('/strategy-lab')
+    || !header.includes('/creator')
+    || !header.includes('/social-ops')
     || !header.includes('/server-route-inventory')
     || !footer.includes('Local Proof')
     || !footer.includes('MVP 100%, Local E2E complete for paper operation, Live E2E locked, and live execution disabled.')
@@ -9115,6 +9121,8 @@ function checkHomeLocalProofUi() {
     || !styles.includes('.home-proof-grid')
     || !styles.includes('.home-workflow-grid')
     || !styles.includes('.home-workflow-card')
+    || !styles.includes('.ceo-command-card-grid')
+    || !styles.includes('.ceo-secondary-card-grid')
     || !styles.includes('.header-proof-strip')
     || !styles.includes('.footer-content')
     || !headerStyles.includes('.header-proof-strip')
@@ -9212,6 +9220,15 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !operatorMode.includes('operator-dapp-safety-strip')
     || !operatorMode.includes('operator-black-hole-logout')
     || !operatorMode.includes('topNavDropdownMarkup')
+    || !operatorMode.includes('Mission Control')
+    || !operatorMode.includes('Token Launch')
+    || !operatorMode.includes('Trading & Bots')
+    || !operatorMode.includes('AI Builder')
+    || !operatorMode.includes('Token Launch Workbench')
+    || !operatorMode.includes('token-wallet-funding-bridge')
+    || !operatorMode.includes('token-social-launch-bridge')
+    || !operatorMode.includes('token-market-inspiration-panel')
+    || !operatorMode.includes('trading-wallet-funding-context')
     || !operatorMode.includes('Text Explanation')
     || !operatorMode.includes('Video Explanation')
     || !operatorMode.includes('markActiveNavigation')
@@ -9300,6 +9317,11 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !styles.includes('.ethereal-brand-lockup')
     || !styles.includes('.operator-brand-logo')
     || !styles.includes('.operator-mode-logo')
+    || !styles.includes('.ceo-command-card-grid')
+    || !styles.includes('.token-workbench-map')
+    || !styles.includes('.market-inspiration-panel')
+    || !styles.includes('.action-primary')
+    || !styles.includes('.action-danger')
     || !styles.includes('.login-brand-mark')
     || !header.includes('/public/brand/etherealai-logo.png')
     || !header.includes('EtherealAI logo')
@@ -9441,7 +9463,7 @@ function checkOperatorTrainingSystem() {
     'Review Route Inventory',
     'Use Creator Agent',
     'Build and Paper Test Strategy',
-    'Use Solidity Lab',
+    'Use Token Launch Workbench',
     'Use Social Ops'
   ];
   const requiredPages = [
@@ -9608,8 +9630,15 @@ function checkLocalOnlySurfaceCues() {
 
   if (
     !solidity.includes('Deployment Boundary')
+    || !solidity.includes('Token Launch Workbench')
     || !solidity.includes('CEO Token Launch Factory')
     || !solidity.includes('token-launch-operator-pipeline')
+    || !solidity.includes('token-workbench-map')
+    || !solidity.includes('Token Creation')
+    || !solidity.includes('Wallet & Funding For This Token')
+    || !solidity.includes('token-wallet-funding-bridge')
+    || !solidity.includes('Social Launch Kit')
+    || !solidity.includes('token-social-launch-bridge')
     || !solidity.includes('Token category')
     || !solidity.includes('Use-case token')
     || !solidity.includes('Meme token')
@@ -9751,6 +9780,17 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('token-site-how-to-buy')
     || !solidity.includes('token-site-community-links')
     || !solidity.includes('token-site-disclaimer')
+    || !solidity.includes('Top Token Website Inspiration')
+    || !solidity.includes('CoinMarketCap Top 200 analysis requires an approved API/data source or local dataset')
+    || !solidity.includes('Build Local Website Inspiration Brief')
+    || !solidity.includes('token-site-market-source')
+    || !solidity.includes('token-site-primary-color')
+    || !solidity.includes('token-site-secondary-color')
+    || !solidity.includes('token-site-accent-color')
+    || !solidity.includes('token-site-whitepaper-quality')
+    || !solidity.includes('token-site-roadmap-inputs')
+    || !solidity.includes('token-site-ecosystem-role')
+    || !solidity.includes('renderMarketInspirationBrief')
     || !solidity.includes('Listing Readiness')
     || !solidity.includes('Cross-Chain Arbitrage Design')
     || !solidity.includes('Discord, Telegram, YouTube, Medium, X, docs')
