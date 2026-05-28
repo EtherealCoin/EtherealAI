@@ -541,10 +541,14 @@
             </div>
             <div class="button-row">
                 <button id="save-website-whitepaper-draft" type="button">Save Website / Whitepaper Draft</button>
+                <button id="refresh-token-site-preview" type="button">Refresh Local Website Preview</button>
                 <button id="open-website-blueprint" type="button">Open Website Blueprint</button>
                 <button id="open-whitepaper-blueprint" type="button">Open Whitepaper Blueprint</button>
             </div>
             <div id="website-whitepaper-status" class="inline-status">Save a token draft first, then use this builder to persist website, whitepaper, and roadmap edits locally.</div>
+            <div id="token-site-local-preview" class="token-site-local-preview">
+                Local preview will render here from the saved token draft. It stays inside EtherealAI and does not deploy publicly.
+            </div>
         </section>
 
         <section class="model-panel">
@@ -1213,6 +1217,7 @@
             Object.entries(WEBSITE_DRAFT_FIELD_IDS).forEach(([key, id]) => {
                 setTokenDraftField(id, draft[key], { allowEmpty: true });
             });
+            renderTokenSiteLocalPreview();
         }
 
         function buildWebsiteWhitepaperCompletion(website = getWebsiteWhitepaperInputs()) {
@@ -1624,6 +1629,70 @@
             status.textContent = 'Saving website, whitepaper, and roadmap edits locally...';
             await saveTokenEcosystemProject({ openNext: false });
             status.textContent = 'Saved locally. Website, whitepaper, and roadmap edits are attached to the token draft. No public deployment happened.';
+            renderTokenSiteLocalPreview();
+        }
+
+        function splitPreviewLines(value = '') {
+            return String(value || '')
+                .split(/\n|\. /)
+                .map(line => line.trim().replace(/\.$/, ''))
+                .filter(Boolean)
+                .slice(0, 6);
+        }
+
+        function renderTokenSiteLocalPreview() {
+            const host = document.getElementById('token-site-local-preview');
+            const token = readTokenLaunchPipelineInput();
+            const website = getWebsiteWhitepaperInputs();
+            const logo = getLogoBriefInputs();
+            const tokenName = token.name || 'Token Project';
+            const ticker = token.ticker || 'TICKER';
+
+            if (!host) {
+                return;
+            }
+
+            host.innerHTML = `
+                <article class="token-site-preview-hero">
+                    <span>Local website preview · ${escapeHtml(website.websiteTemplate)}</span>
+                    <h3>${escapeHtml(tokenName)} ${ticker ? `(${escapeHtml(ticker)})` : ''}</h3>
+                    <p>${escapeHtml(website.hero || token.detailedUseCase || token.useCase || 'Add website hero copy to preview the first screen.')}</p>
+                    <small>Logo direction: ${escapeHtml(logo.selectedChoiceId || logo.style || 'editable draft')}</small>
+                </article>
+                <div class="token-site-preview-grid">
+                    <article>
+                        <strong>Use Case</strong>
+                        <p>${escapeHtml(website.useCase || token.detailedUseCase || token.useCase || 'Use-case copy pending.')}</p>
+                    </article>
+                    <article>
+                        <strong>Tokenomics</strong>
+                        <p>${escapeHtml(website.tokenomics || `Supply: ${token.totalSupply || 'pending'} · Treasury: ${token.treasuryAllocation || 'pending'} · Liquidity: ${token.liquidityAllocation || 'pending'}`)}</p>
+                    </article>
+                    <article>
+                        <strong>Dapp Preview</strong>
+                        <p>${escapeHtml(website.dappPreview || token.dappModules || token.dappMode || 'Dapp preview pending owner input.')}</p>
+                    </article>
+                </div>
+                <div class="token-site-preview-grid">
+                    <article>
+                        <strong>Roadmap</strong>
+                        <ul>${splitPreviewLines(website.roadmap || token.releasePlan).map(line => `<li>${escapeHtml(line)}</li>`).join('') || '<li>Roadmap pending.</li>'}</ul>
+                    </article>
+                    <article>
+                        <strong>Whitepaper</strong>
+                        <ul>${splitPreviewLines(website.whitepaperNotes).map(line => `<li>${escapeHtml(line)}</li>`).join('') || '<li>Whitepaper notes pending.</li>'}</ul>
+                    </article>
+                    <article>
+                        <strong>Locked Public Actions</strong>
+                        <ul>
+                            <li>Cloudflare/GitHub deployment locked</li>
+                            <li>DNS mutation locked</li>
+                            <li>Listing submission locked</li>
+                            <li>Wallet signing and minting locked</li>
+                        </ul>
+                    </article>
+                </div>
+            `;
         }
 
         function renderEcosystemBlueprint(blueprint = {}) {
@@ -1872,6 +1941,7 @@
         document.getElementById('apply-token-options').addEventListener('click', applyTokenOptionsToSpec);
         document.getElementById('apply-logo-brief').addEventListener('click', applyLogoBriefToTokenPlan);
         document.getElementById('save-website-whitepaper-draft').addEventListener('click', saveWebsiteWhitepaperDraft);
+        document.getElementById('refresh-token-site-preview').addEventListener('click', renderTokenSiteLocalPreview);
         document.getElementById('open-website-blueprint').addEventListener('click', () => document.getElementById('website-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' }));
         document.getElementById('open-whitepaper-blueprint').addEventListener('click', () => document.getElementById('whitepaper-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' }));
         document.getElementById('select-low-fee-token-options').addEventListener('click', selectLowFeeTokenDefaults);
@@ -1894,6 +1964,8 @@
         ['token-launch-category', 'token-launch-ticker', 'token-launch-community', 'token-launch-dapp-mode', 'token-launch-total-supply', 'token-launch-initial-supply', 'token-launch-supply-model', 'token-launch-admin-model', 'token-launch-burn', 'token-launch-pausable', 'token-launch-transfer-fee', 'token-launch-staking-rewards', 'token-launch-treasury-allocation', 'token-launch-liquidity-allocation', 'token-launch-team-allocation', 'token-launch-community-allocation', 'token-launch-release-plan', 'token-launch-use-case', 'token-launch-dapp-modules', 'contract-name', 'contract-network', 'contract-type', 'token-ecosystem-notes', 'nft-utility-notes', 'token-logo-style', 'token-logo-palette', 'token-logo-direction', 'token-site-template', 'token-site-hero', 'token-site-use-case', 'token-site-tokenomics', 'token-site-roadmap', 'token-site-whitepaper', 'token-site-dapp-preview', 'token-site-edit-instructions'].forEach(id => {
             document.getElementById(id)?.addEventListener('input', renderTokenLaunchTwoGate);
             document.getElementById(id)?.addEventListener('change', renderTokenLaunchTwoGate);
+            document.getElementById(id)?.addEventListener('input', renderTokenSiteLocalPreview);
+            document.getElementById(id)?.addEventListener('change', renderTokenSiteLocalPreview);
         });
         document.querySelectorAll('#token-feature-options input').forEach(input => {
             input.addEventListener('change', renderTokenLaunchTwoGate);
@@ -1903,6 +1975,7 @@
 
         renderTokenDraftStatus();
         renderTokenLaunchTwoGate();
+        renderTokenSiteLocalPreview();
         loadContracts().then(openArtifactFromHash);
         loadEcosystemCatalog();
         loadTokenEcosystemProjects();
