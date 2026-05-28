@@ -196,14 +196,14 @@
                 ['2. Choose chain', 'Base, Polygon, Solana, BNB, Avalanche, Arbitrum, Optimism, Ethereum, Move, Cosmos, NEAR, TRON, Bitcoin L2, or custom.'],
                 ['3. Build package', 'Supply, release model, allocations, fees, rewards, use case, contract plan, logo, website, whitepaper, roadmap, and dapp options.'],
                 ['4. Save draft', 'The full CEO workflow draft is saved locally and can be reopened without losing ticker, tokenomics, logo direction, or dapp fields.'],
-                ['5. Continue to Logo Studio', 'Logo Studio becomes the next step before website, whitepaper, roadmap, social package, listing icon package, and dapp visuals.']
+                ['5. Continue to Logo Studio', 'Choose one of three local logo direction specs before website, whitepaper, roadmap, social package, listing icon package, and dapp visuals.']
             ],
             workflow: [
                 ['1. Start pipeline', 'Open the CEO token launch panel and review the two gates.', { label: 'Start Token Launch Pipeline', selector: '#token-launch-operator-pipeline' }],
                 ['2. Fill draft', 'Use the safe draft example or enter token category, chain, ticker, community, supply, allocations, release model, and dapp plan.', { label: 'Use Safe Draft Example', selector: '#token-launch-two-gate' }],
                 ['3. Preview package', 'Review blockers in one list before saving.', { label: 'Preview Local Package', selector: '#token-launch-preview' }],
                 ['4. Save local draft', 'Save or update the persistent local draft. This keeps Simple Mode fields recoverable.', { label: 'Save Local Token Project', selector: '#save-token-ecosystem-project' }],
-                ['5. Open Logo Studio', 'Continue into logo identity before website and public launch materials.', { label: 'Open Logo Studio', selector: '#logo-blueprint' }]
+                ['5. Open Logo Studio', 'Choose a local logo direction. External image generation and listing submissions stay locked.', { label: 'Open Logo Studio', selector: '#logo-blueprint' }]
             ]
         },
         '/social-ops': {

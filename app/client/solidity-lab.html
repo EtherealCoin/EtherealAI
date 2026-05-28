@@ -506,6 +506,7 @@
     <script src="/js/operator-gates.js"></script>
     <script>
         let selectedTokenEcosystemProjectId = null;
+        let selectedLogoChoiceId = null;
         const TOKEN_DRAFT_FIELD_IDS = {
             category: 'token-launch-category',
             ticker: 'token-launch-ticker',
@@ -987,6 +988,66 @@
             `).join('');
         }
 
+        function renderLogoChoiceCards(logo = {}) {
+            const choices = logo.choices || [];
+            const selectedId = selectedLogoChoiceId || getLogoBriefInputs().selectedChoiceId;
+
+            if (!choices.length) {
+                return '<p>No local logo choices are available yet. Save or open a token project blueprint first.</p>';
+            }
+
+            return `
+                <div class="logo-studio-choice-grid" aria-label="Local logo direction choices">
+                    ${choices.map(choice => {
+                        const selected = choice.id === selectedId;
+                        return `
+                            <article class="logo-studio-choice-card ${selected ? 'logo-studio-choice-selected' : ''}">
+                                <span>${selected ? 'Selected local direction' : 'Local choice'}</span>
+                                <h3>${escapeHtml(choice.label)}</h3>
+                                <p>${escapeHtml(choice.bestFor || '')}</p>
+                                <dl>
+                                    <dt>Visual spec</dt>
+                                    <dd>${escapeHtml(choice.visualSpec || '')}</dd>
+                                    <dt>Prompt/spec sheet</dt>
+                                    <dd>${escapeHtml(choice.prompt || '')}</dd>
+                                    <dt>Export package</dt>
+                                    <dd>${escapeHtml(choice.exportNotes || '')}</dd>
+                                </dl>
+                                <button type="button" data-logo-choice-id="${escapeHtml(choice.id)}">${selected ? 'Selected' : 'Choose This Local Logo Direction'}</button>
+                            </article>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function attachLogoChoiceHandlers(logo = {}) {
+            document.querySelectorAll('button[data-logo-choice-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const choice = (logo.choices || []).find(item => item.id === button.dataset.logoChoiceId);
+
+                    if (!choice) {
+                        return;
+                    }
+
+                    selectedLogoChoiceId = choice.id;
+                    document.getElementById('token-logo-style').value = choice.stylePreset || choice.label || '';
+                    document.getElementById('token-logo-direction').value = [
+                        choice.visualSpec,
+                        choice.prompt,
+                        'Lock state: pre-listing selected. Editable until public listing or immutable metadata lock is detected.'
+                    ].filter(Boolean).join('\n');
+                    document.getElementById('token-logo-brief-status').textContent = `${choice.label} selected locally. Save/update the token draft to keep this logo direction. No external image generation or listing submission happened.`;
+
+                    if (selectedTokenEcosystemProjectId) {
+                        await saveTokenEcosystemProject({ openNext: false });
+                    } else {
+                        renderTokenDraftStatus(null, `${choice.label} selected locally. Save the token draft to persist this Logo Studio choice.`);
+                    }
+                });
+            });
+        }
+
         function renderEcosystemCatalog(catalog = {}) {
             document.getElementById('ecosystem-catalog').innerHTML = `
                 <h3>Recommended Low-Fee Token Chains</h3>
@@ -1046,7 +1107,9 @@
             return {
                 style: document.getElementById('token-logo-style').value.trim(),
                 palette: document.getElementById('token-logo-palette').value.trim(),
-                direction: document.getElementById('token-logo-direction').value.trim()
+                direction: document.getElementById('token-logo-direction').value.trim(),
+                selectedChoiceId: selectedLogoChoiceId || '',
+                lockState: selectedLogoChoiceId ? 'pre-listing selected' : 'editable draft'
             };
         }
 
@@ -1152,6 +1215,7 @@
             Object.entries(TOKEN_DRAFT_FIELD_IDS).forEach(([key, id]) => {
                 setTokenDraftField(id, pipeline[key]);
             });
+            selectedLogoChoiceId = logo.selectedChoiceId || null;
             setTokenDraftField('token-logo-style', logo.style);
             setTokenDraftField('token-logo-palette', logo.palette);
             setTokenDraftField('token-logo-direction', logo.direction);
@@ -1511,28 +1575,37 @@
                 }))
             ]);
 
-            document.getElementById('logo-blueprint').innerHTML = renderTaskCards([
-                {
-                    title: logo.title || 'Token Logo Brief',
-                    description: 'Local visual identity planning for token icon, NFT badge, social avatar, favicon, listing icon, dapp mark, and website art direction.',
-                    status: 'logo'
-                },
-                ...(logo.prompts || []).map((prompt, index) => ({
-                    title: `Prompt ${index + 1}`,
-                    description: prompt,
-                    status: 'prompt'
-                })),
-                ...(logo.deliverables || []).map(deliverable => ({
-                    title: deliverable,
-                    description: 'Required logo package output before public launch asset generation.',
-                    status: 'deliverable'
-                })),
-                ...(logo.checks || []).map(check => ({
-                    title: check,
-                    description: 'Review this before using the asset in listings, socials, website, or dapp UI.',
-                    status: 'check'
-                }))
-            ]);
+            document.getElementById('logo-blueprint').innerHTML = `
+                <section class="logo-studio-operator-panel">
+                    <div class="operator-two-gate-heading">
+                        <span>Logo Studio Phase 2</span>
+                        <h2>${escapeHtml(logo.title || 'Token Logo Brief')}</h2>
+                        <p>Choose one local logo direction before website, whitepaper, social avatar, listing icon package, dapp header mark, and NFT badge work. This does not call an external image generator.</p>
+                    </div>
+                    ${renderLogoChoiceCards(logo)}
+                    <div class="logo-studio-lock-grid">
+                        ${(logo.lockStates || []).map(lock => `
+                            <article>
+                                <span>${escapeHtml(lock.state)}</span>
+                                <p>${escapeHtml(lock.meaning)}</p>
+                            </article>
+                        `).join('')}
+                    </div>
+                    ${renderTaskCards([
+                        ...(logo.deliverables || []).map(deliverable => ({
+                            title: deliverable,
+                            description: 'Required local logo package output before public launch asset generation.',
+                            status: 'deliverable'
+                        })),
+                        ...(logo.checks || []).map(check => ({
+                            title: check,
+                            description: 'Review this before using the asset in listings, socials, website, or dapp UI.',
+                            status: 'check'
+                        }))
+                    ])}
+                </section>
+            `;
+            attachLogoChoiceHandlers(logo);
 
             document.getElementById('chain-node-blueprint').innerHTML = renderTaskCards([
                 ...(chainBuilder.options || []),
@@ -1684,6 +1757,7 @@
         document.getElementById('update-token-ecosystem-project').addEventListener('click', updateTokenEcosystemProject);
         document.getElementById('clear-token-ecosystem-selection').addEventListener('click', () => {
             setTokenProjectSelection(null);
+            selectedLogoChoiceId = null;
             renderTokenDraftStatus(null, 'Selection cleared. The visible form can be saved as a new local token draft.');
         });
         document.getElementById('refresh-token-ecosystem-projects').addEventListener('click', loadTokenEcosystemProjects);

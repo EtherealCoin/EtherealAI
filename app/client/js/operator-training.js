@@ -835,7 +835,8 @@
                 ['Save Spec', 'Saves the local contract planning spec.'],
                 ['Save Ecosystem Project Draft', 'Saves the full CEO workflow draft locally, including tokenomics, ticker, category, logo direction, and dapp fields.'],
                 ['Continue Draft', 'Reloads a saved draft without losing Simple Mode fields.'],
-                ['Logo Studio', 'Opens the next identity step before website, whitepaper, social package, listing icon package, and dapp visuals.'],
+                ['Logo Studio', 'Opens three local logo direction choices before website, whitepaper, social package, listing icon package, and dapp visuals.'],
+                ['Choose This Local Logo Direction', 'Selects a local logo spec and saves it into the draft. It does not call an image generator or submit to a listing site.'],
                 ['Generate Workspace', 'Creates local project files for review.']
             ],
             fields: [
@@ -859,7 +860,7 @@
                 'Choose token creation options.',
                 'Add NFT utility and ecosystem notes.',
                 'Save the local ecosystem project draft.',
-                'Continue into Logo Studio before website, whitepaper, roadmap, and dapp visuals.',
+                'Continue into Logo Studio and choose one local logo direction before website, whitepaper, roadmap, and dapp visuals.',
                 'Generate workspace only for local review.'
             ],
             safeDefaults: [
@@ -876,7 +877,7 @@
             success: [
                 'A local spec or ecosystem project is saved.',
                 'The saved draft can be reopened without losing CEO workflow fields.',
-                'Logo Studio is the next visible step after saving.',
+                'Logo Studio shows three local direction choices and a lock-state explanation.',
                 'Target chain is explicit per project.',
                 'No deployment occurred.',
                 'Live E2E and wallet signing remain locked.'
@@ -909,8 +910,8 @@
                     {
                         title: 'Continue to Logo Studio',
                         screen: 'Logo Creation Center',
-                        narration: 'Logo Studio is where the token identity becomes usable for the website, social avatar, listing icon package, dapp header mark, and NFT badge direction.',
-                        click: 'Review the Logo Studio prompts and local deliverables.',
+                        narration: 'Logo Studio is where the token identity becomes usable for the website, social avatar, listing icon package, dapp header mark, and NFT badge direction. The choices are local specs, not external generation.',
+                        click: 'Choose one local logo direction, then save/update the token draft.',
                         pause: 'Pause here and confirm no wallet signing, listing submission, or external image generation happened automatically.'
                     }
                 ]

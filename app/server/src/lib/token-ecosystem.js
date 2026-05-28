@@ -1183,8 +1183,26 @@ function buildWebsiteBlueprint(spec = {}) {
   };
 }
 
+function toTickerSymbol(value = '') {
+  const cleaned = String(value || '')
+    .replace(/[^a-zA-Z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!cleaned.length) {
+    return 'TOKEN';
+  }
+
+  if (cleaned.length === 1) {
+    return cleaned[0].slice(0, 6).toUpperCase();
+  }
+
+  return cleaned.map(part => part.charAt(0)).join('').slice(0, 6).toUpperCase();
+}
+
 function buildLogoBrief(spec = {}) {
   const tokenName = spec.name || 'Token Project';
+  const tokenSymbol = toTickerSymbol(tokenName);
   const source = [
     spec.features,
     spec.ecosystemNotes,
@@ -1206,7 +1224,48 @@ function buildLogoBrief(spec = {}) {
       `Ecosystem token identity for ${tokenName}, symbol-first, modern blockchain utility, trustworthy but distinctive.`,
       `NFT-compatible emblem for ${tokenName}, works as a token icon, Discord avatar, website favicon, marketplace collection badge, dapp mark, and listing icon.`
     ],
+    choices: [
+      {
+        id: 'real-world-mark',
+        label: 'REAL World Mark',
+        stylePreset: 'R/world mark, global infrastructure, premium dark token identity',
+        bestFor: 'EtherealAI ecosystem token, founder updates, launch deck, listing icon, and dapp header.',
+        visualSpec: `${tokenSymbol} or R-inspired world mark, black field, white edge clarity, cyan digital-world surface, neon pink accent triangle, readable at 32px.`,
+        prompt: `Create a scalable crypto token logo for ${tokenName}: R/world mark, digital globe, black background, cyan earth-light, neon pink accent, white rim, premium exchange-listing clarity.`,
+        exportNotes: 'Square token icon, transparent PNG, dark variant, light variant, social avatar, favicon, listing icon.'
+      },
+      {
+        id: 'orbital-ai-core',
+        label: 'Orbital AI Core',
+        stylePreset: 'orbital AI core, neon safety locks, local command center',
+        bestFor: 'AI operating system, automation, safety, local-first infrastructure, and command center visuals.',
+        visualSpec: `${tokenSymbol} orbital core with concentric rings, magenta/cyan energy, dark purple depth, no tiny text, strong circular silhouette.`,
+        prompt: `Create a futuristic AI-core token logo for ${tokenName}: orbital safety core, neon magenta and cyan, dark purple/black field, precise circular geometry, exchange-icon readable.`,
+        exportNotes: 'Token icon, dapp status mark, NFT badge base, automation module emblem, community avatar.'
+      },
+      {
+        id: 'we-math-better',
+        label: 'We Math Better',
+        stylePreset: 'trading math, tokenomics proof, purple starfield campaign',
+        bestFor: 'Trading strategy, tokenomics, market proof, public progress updates, and education content.',
+        visualSpec: `${tokenSymbol} math/proof emblem, purple starfield, cyan/pink data particles, minimal symbol-first mark, no long slogan inside the icon.`,
+        prompt: `Create a proof-driven crypto logo for ${tokenName}: mathematical strategy identity, purple starfield, cyan/pink particles, clean symbol, readable icon, no copied coin logos.`,
+        exportNotes: 'Campaign badge, social banner mark, YouTube chapter icon, Medium article mark, token listing fallback icon.'
+      }
+    ],
     deliverables: ['square icon', 'transparent PNG', 'dark background variant', 'light background variant', 'favicon', 'social avatar', 'dapp header mark', 'NFT utility badge set', 'CoinMarketCap/CoinGecko listing icon'],
+    exportPackage: {
+      localOnly: true,
+      outputs: ['token-icon-1024.png plan', 'token-icon-256.png plan', 'token-icon-64.png plan', 'transparent-png plan', 'svg/vector spec', 'favicon plan', 'social-avatar plan', 'dapp-header-mark plan', 'listing-icon-package plan'],
+      externalImageGenerationEnabled: false,
+      listingSubmissionEnabled: false
+    },
+    lockStates: [
+      { state: 'editable draft', meaning: 'Logo direction can be changed freely before public/listing use.' },
+      { state: 'pre-listing selected', meaning: 'Owner selected a direction, but it is still editable before public submission.' },
+      { state: 'listing-detected locked', meaning: 'Treat as locked after DexScreener, CoinMarketCap, CoinGecko, or public listing metadata confirms it.' },
+      { state: 'immutable metadata locked', meaning: 'Treat as locked if deployed metadata or contract-linked metadata makes the asset hard to change.' }
+    ],
     checks: ['legible at 32px', 'unique enough for listing pages', 'does not imitate existing coin logos', 'works without tiny text', 'readable on black/neon dapp UI', 'consistent with pink, cyan blue, dark purple, black, and white brand colors']
   };
 }
@@ -1678,6 +1737,8 @@ function normalizeTokenOperatorDraft(value = {}, existing = {}) {
       style: cleanProjectText(logo.style, '', 240),
       palette: cleanProjectText(logo.palette, '', 180),
       direction: cleanProjectText(logo.direction, '', 1600),
+      selectedChoiceId: cleanProjectText(logo.selectedChoiceId, '', 80),
+      lockState: cleanProjectText(logo.lockState, 'editable draft', 80),
       status: cleanProjectText(logo.status, 'editable draft', 80)
     },
     completion: {

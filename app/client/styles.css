@@ -8545,6 +8545,74 @@ body.operator-advanced-mode .community-art-grid span {
     margin: 0;
 }
 
+.logo-studio-operator-panel {
+    display: grid;
+    gap: 16px;
+}
+
+.logo-studio-choice-grid,
+.logo-studio-lock-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.logo-studio-choice-card,
+.logo-studio-lock-grid article {
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--theme-pink) 10%, transparent), transparent 52%),
+        var(--theme-card-background-muted);
+    border: 1px solid var(--theme-border);
+    color: var(--theme-primary-text);
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+}
+
+.logo-studio-choice-card.logo-studio-choice-selected {
+    border-color: color-mix(in srgb, var(--theme-success) 72%, var(--theme-border));
+    box-shadow: 0 0 22px color-mix(in srgb, var(--theme-success) 18%, transparent);
+}
+
+.logo-studio-choice-card > span,
+.logo-studio-lock-grid span {
+    color: var(--theme-cyan);
+    font-size: 0.74rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.logo-studio-choice-card h3 {
+    color: var(--theme-primary-text);
+    margin: 0;
+}
+
+.logo-studio-choice-card p,
+.logo-studio-lock-grid p,
+.logo-studio-choice-card dd {
+    color: var(--theme-secondary-text);
+    margin: 0;
+}
+
+.logo-studio-choice-card dl {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+}
+
+.logo-studio-choice-card dt {
+    color: var(--theme-pink);
+    font-size: 0.78rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.logo-studio-choice-card button {
+    min-height: 44px;
+}
+
 .token-launch-operator-grid,
 .token-launch-detail-grid {
     display: grid;
@@ -8596,6 +8664,8 @@ body.operator-simple-mode .api-connection-shell .advanced-operator-tools:not([op
     .api-lane-grid,
     .operator-two-gate-grid,
     .token-launch-draft-status,
+    .logo-studio-choice-grid,
+    .logo-studio-lock-grid,
     .token-launch-operator-grid,
     .token-launch-detail-grid,
     .token-launch-wide-controls {
