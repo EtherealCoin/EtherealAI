@@ -833,7 +833,9 @@
                 ['Select Polygon As Target Chain', 'Selects Polygon for this project only. It does not make Polygon the system default.'],
                 ['Apply Token Options To Spec', 'Copies selected token options into the contract spec.'],
                 ['Save Spec', 'Saves the local contract planning spec.'],
-                ['Save Ecosystem Project', 'Saves website, whitepaper, listing, social, and tokenomics planning data.'],
+                ['Save Ecosystem Project Draft', 'Saves the full CEO workflow draft locally, including tokenomics, ticker, category, logo direction, and dapp fields.'],
+                ['Continue Draft', 'Reloads a saved draft without losing Simple Mode fields.'],
+                ['Logo Studio', 'Opens the next identity step before website, whitepaper, social package, listing icon package, and dapp visuals.'],
                 ['Generate Workspace', 'Creates local project files for review.']
             ],
             fields: [
@@ -844,7 +846,8 @@
                 ['Features', 'Plain-English token features.'],
                 ['Risk Notes', 'Known legal, economic, technical, or community risks.'],
                 ['NFT Utility Notes', 'How NFTs affect access, utility, roles, or dapp features.'],
-                ['Ecosystem Notes', 'Website, roadmap, whitepaper, social, listing, and use-case notes.']
+                ['Ecosystem Notes', 'Website, roadmap, whitepaper, social, listing, and use-case notes.'],
+                ['Logo / Brand Direction', 'The token logo brief. This is local planning and does not call an external image generator.']
             ],
             doNotEnter: [
                 'Do not enter private keys, seed phrases, deployer keys, wallet passwords, RPC secrets, or exchange keys.',
@@ -855,7 +858,8 @@
                 'Fill the contract spec.',
                 'Choose token creation options.',
                 'Add NFT utility and ecosystem notes.',
-                'Save spec and ecosystem project.',
+                'Save the local ecosystem project draft.',
+                'Continue into Logo Studio before website, whitepaper, roadmap, and dapp visuals.',
                 'Generate workspace only for local review.'
             ],
             safeDefaults: [
@@ -871,6 +875,8 @@
             ],
             success: [
                 'A local spec or ecosystem project is saved.',
+                'The saved draft can be reopened without losing CEO workflow fields.',
+                'Logo Studio is the next visible step after saving.',
                 'Target chain is explicit per project.',
                 'No deployment occurred.',
                 'Live E2E and wallet signing remain locked.'
@@ -896,9 +902,16 @@
                     {
                         title: 'Build the ecosystem packet',
                         screen: 'Token Ecosystem Studio',
-                        narration: 'Now add website, roadmap, whitepaper, social, listing, dapp, and NFT utility notes. This creates local planning assets.',
-                        click: 'Click Save Ecosystem Project, then Generate Workspace when ready.',
+                        narration: 'Now add website, roadmap, whitepaper, social, listing, dapp, and NFT utility notes. This creates local planning assets and preserves the Simple Mode draft.',
+                        click: 'Click Save Ecosystem Project Draft. EtherealAI opens Logo Studio next.',
                         pause: 'Pause here and confirm deployment boundary remains local only.'
+                    },
+                    {
+                        title: 'Continue to Logo Studio',
+                        screen: 'Logo Creation Center',
+                        narration: 'Logo Studio is where the token identity becomes usable for the website, social avatar, listing icon package, dapp header mark, and NFT badge direction.',
+                        click: 'Review the Logo Studio prompts and local deliverables.',
+                        pause: 'Pause here and confirm no wallet signing, listing submission, or external image generation happened automatically.'
                     }
                 ]
             }

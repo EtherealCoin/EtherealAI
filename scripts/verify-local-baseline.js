@@ -9612,10 +9612,15 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('Dapp module descriptions')
     || !solidity.includes('token-launch-total-supply')
     || !solidity.includes('token-launch-dapp-modules')
+    || !solidity.includes('token-launch-draft-status')
     || !solidity.includes('Token launch uses two owner gates')
     || !solidity.includes('Preview / Review')
     || !solidity.includes('Final Confirm / Execute')
-    || !solidity.includes('Save Local Token Project')
+    || !solidity.includes('Save Local Token Project And Open Logo Studio')
+    || !solidity.includes('buildTokenOperatorDraftPayload')
+    || !solidity.includes('operatorDraft')
+    || !solidity.includes('Continue Draft')
+    || !solidity.includes('Logo Studio')
     || !solidity.includes('Launch safety boundary')
     || !solidity.includes('/js/operator-gates.js')
     || !solidity.includes('Deployment')
@@ -9636,7 +9641,7 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('Artifact Manifest')
     || !solidity.includes('Archive Project')
     || !solidity.includes('/api/v1/token-ecosystem-projects')
-    || !solidity.includes("method: 'PATCH'")
+    || !solidity.includes("method: isUpdate ? 'PATCH' : 'POST'")
     || !solidity.includes("method: 'DELETE'")
     || !solidity.includes('/workspace')
     || !solidity.includes('/website-deploy-package')
@@ -9699,6 +9704,21 @@ function checkLocalOnlySurfaceCues() {
     || !solidity.includes('no deploy, no wallet keys, no external posting')
   ) {
     fail('Solidity Lab is missing local-only deployment boundary cues');
+  }
+
+  const tokenEcosystem = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/token-ecosystem.js'), 'utf8');
+  const databaseSchema = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/database-schema.js'), 'utf8');
+
+  if (
+    !databaseSchema.includes('operator_draft_json')
+    || !tokenEcosystem.includes('normalizeTokenOperatorDraft')
+    || !tokenEcosystem.includes('ceo-token-draft-v1')
+    || !tokenEcosystem.includes('Logo Studio')
+    || !tokenEcosystem.includes('Final Confirm / Execute')
+    || !tokenEcosystem.includes('deploymentEnabled: false')
+    || !tokenEcosystem.includes('walletSigningEnabled: false')
+  ) {
+    fail('Token Launch Factory is missing persistent CEO operator draft support');
   }
 
   pass('local-only external surface cues');

@@ -400,8 +400,8 @@ function registerSolidityLabRoutes(app, {
       const result = await dbRun(
         `INSERT INTO token_ecosystem_projects
            (user_id, contract_spec_id, name, target_chain, contract_type, feature_selections_json,
-            nft_utility_notes, ecosystem_notes, status, blueprint_json, local_only, external_actions_enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0)`,
+            operator_draft_json, nft_utility_notes, ecosystem_notes, status, blueprint_json, local_only, external_actions_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0)`,
         [
           req.session.userId || null,
           input.contractSpecId,
@@ -409,6 +409,7 @@ function registerSolidityLabRoutes(app, {
           input.targetChain,
           input.contractType,
           JSON.stringify(input.featureSelections),
+          JSON.stringify(input.operatorDraft),
           input.nftUtilityNotes,
           input.ecosystemNotes,
           input.status,
@@ -450,7 +451,7 @@ function registerSolidityLabRoutes(app, {
       await dbRun(
         `UPDATE token_ecosystem_projects
          SET contract_spec_id = ?, name = ?, target_chain = ?, contract_type = ?,
-             feature_selections_json = ?, nft_utility_notes = ?, ecosystem_notes = ?,
+             feature_selections_json = ?, operator_draft_json = ?, nft_utility_notes = ?, ecosystem_notes = ?,
              status = ?, local_only = 1, external_actions_enabled = 0, updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
         [
@@ -459,6 +460,7 @@ function registerSolidityLabRoutes(app, {
           input.targetChain,
           input.contractType,
           JSON.stringify(input.featureSelections),
+          JSON.stringify(input.operatorDraft),
           input.nftUtilityNotes,
           input.ecosystemNotes,
           input.status,

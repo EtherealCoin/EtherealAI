@@ -8510,6 +8510,41 @@ body.operator-advanced-mode .community-art-grid span {
     aspect-ratio: 1 / 1;
 }
 
+.token-launch-draft-status {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.token-launch-draft-status article {
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--theme-cyan) 9%, transparent), transparent 55%),
+        var(--theme-card-background-muted);
+    border: 1px solid var(--theme-border);
+    color: var(--theme-primary-text);
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+}
+
+.token-launch-draft-status span {
+    color: var(--theme-pink);
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+}
+
+.token-launch-draft-status strong {
+    color: var(--theme-primary-text);
+    font-size: 1.1rem;
+}
+
+.token-launch-draft-status p {
+    color: var(--theme-secondary-text);
+    margin: 0;
+}
+
 .token-launch-operator-grid,
 .token-launch-detail-grid {
     display: grid;
@@ -8560,6 +8595,7 @@ body.operator-simple-mode .api-connection-shell .advanced-operator-tools:not([op
     .api-status-grid,
     .api-lane-grid,
     .operator-two-gate-grid,
+    .token-launch-draft-status,
     .token-launch-operator-grid,
     .token-launch-detail-grid,
     .token-launch-wide-controls {

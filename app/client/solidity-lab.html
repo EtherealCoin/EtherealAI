@@ -34,6 +34,23 @@
                     <p>Use this guided pipeline to turn a token idea into a local launch package: category, chain, identity, tokenomics, use case, contract plan, logo, website, whitepaper, roadmap, and dapp options. Deployment, wallet signing, liquidity, public posting, and listing submissions stay locked.</p>
                 </div>
             </div>
+            <div id="token-launch-draft-status" class="token-launch-draft-status">
+                <article>
+                    <span>Draft state</span>
+                    <strong>No local token draft selected yet.</strong>
+                    <p>Use the safe draft example, review the preview, then save the local draft. After saving, EtherealAI will take you to Logo Studio next.</p>
+                </article>
+                <article>
+                    <span>Next step</span>
+                    <strong>Logo Studio</strong>
+                    <p>Token identity comes before website, whitepaper, social package, listing icon package, and dapp visuals.</p>
+                </article>
+                <article>
+                    <span>Safety</span>
+                    <strong>Local only</strong>
+                    <p>No deployment, wallet signing, minting, liquidity, public posting, DNS mutation, or listing submission runs from this draft flow.</p>
+                </article>
+            </div>
             <div class="token-launch-operator-grid">
                 <label for="token-launch-category">
                     Token category
@@ -372,8 +389,8 @@
                         <button id="select-chain-neutral-token-options" type="button">Select Chain-Neutral Launch Defaults</button>
                         <button id="select-low-fee-token-options" type="button">Select Low-Fee Launch Defaults</button>
                         <button id="select-polygon-token-options" type="button">Select Polygon As Target Chain</button>
-                        <button id="save-token-ecosystem-project" type="button">Save Ecosystem Project</button>
-                        <button id="update-token-ecosystem-project" type="button">Update Selected Project</button>
+                        <button id="save-token-ecosystem-project" type="button">Save Ecosystem Project Draft</button>
+                        <button id="update-token-ecosystem-project" type="button">Update Selected Project Draft</button>
                         <button id="clear-token-ecosystem-selection" type="button">Clear Selection</button>
                     </div>
                 </section>
@@ -489,6 +506,27 @@
     <script src="/js/operator-gates.js"></script>
     <script>
         let selectedTokenEcosystemProjectId = null;
+        const TOKEN_DRAFT_FIELD_IDS = {
+            category: 'token-launch-category',
+            ticker: 'token-launch-ticker',
+            community: 'token-launch-community',
+            dappMode: 'token-launch-dapp-mode',
+            totalSupply: 'token-launch-total-supply',
+            initialSupply: 'token-launch-initial-supply',
+            supplyModel: 'token-launch-supply-model',
+            adminModel: 'token-launch-admin-model',
+            burnModel: 'token-launch-burn',
+            pauseModel: 'token-launch-pausable',
+            transferFee: 'token-launch-transfer-fee',
+            stakingRewards: 'token-launch-staking-rewards',
+            treasuryAllocation: 'token-launch-treasury-allocation',
+            liquidityAllocation: 'token-launch-liquidity-allocation',
+            teamAllocation: 'token-launch-team-allocation',
+            communityAllocation: 'token-launch-community-allocation',
+            releasePlan: 'token-launch-release-plan',
+            detailedUseCase: 'token-launch-use-case',
+            dappModules: 'token-launch-dapp-modules'
+        };
 
         function escapeHtml(value) {
             return String(value)
@@ -527,6 +565,78 @@
                 nftUtility: document.getElementById('nft-utility-notes')?.value.trim() || '',
                 featureSelections: getSelectedTokenOptions()
             };
+        }
+
+        function setTokenDraftField(id, value) {
+            const field = document.getElementById(id);
+
+            if (!field || value === undefined || value === null || value === '') {
+                return;
+            }
+
+            field.value = value;
+        }
+
+        function buildTokenDraftCompletion(input = readTokenLaunchPipelineInput(), logo = getLogoBriefInputs()) {
+            return {
+                tokenIdentity: Boolean(input.name && input.ticker && input.chain && input.contractType),
+                tokenomics: Boolean(input.totalSupply && input.supplyModel),
+                useCase: Boolean(input.useCase || input.detailedUseCase),
+                logoBrief: Boolean(logo.style || logo.palette || logo.direction),
+                websiteWhitepaper: input.featureSelections.includes('website, roadmap, logo, and whitepaper generation'),
+                dappPlan: Boolean(input.dappMode && input.dappMode !== 'no dapp planned')
+            };
+        }
+
+        function buildTokenOperatorDraftPayload() {
+            const input = readTokenLaunchPipelineInput();
+            const logo = getLogoBriefInputs();
+
+            return {
+                pipeline: input,
+                logo: {
+                    ...logo,
+                    status: 'editable draft'
+                },
+                completion: buildTokenDraftCompletion(input, logo),
+                nextStep: 'Logo Studio'
+            };
+        }
+
+        function renderTokenDraftStatus(project = null, message = '') {
+            const host = document.getElementById('token-launch-draft-status');
+
+            if (!host) {
+                return;
+            }
+
+            const draft = project?.operatorDraft || buildTokenOperatorDraftPayload();
+            const completion = draft.completion || {};
+            const saved = Boolean(project?.id);
+            const nextStep = saved ? (draft.nextStep || 'Logo Studio') : 'Save local draft';
+
+            host.innerHTML = `
+                <article>
+                    <span>Draft state</span>
+                    <strong>${saved ? `Saved local draft #${escapeHtml(project.id)}` : 'Not saved yet'}</strong>
+                    <p>${escapeHtml(message || (saved ? `${project.name} is stored locally and can be reopened without losing the CEO workflow fields.` : 'Use the safe draft example, review the preview, then save the local draft.'))}</p>
+                </article>
+                <article>
+                    <span>Next step</span>
+                    <strong>${escapeHtml(nextStep)}</strong>
+                    <p>${saved ? 'Continue into Logo Studio, then website, whitepaper, roadmap, dapp modules, and launch package.' : 'Saving locally unlocks the guided Logo Studio handoff.'}</p>
+                </article>
+                <article>
+                    <span>Progress</span>
+                    <strong>${[
+                        completion.tokenIdentity && 'identity',
+                        completion.tokenomics && 'tokenomics',
+                        completion.useCase && 'use case',
+                        completion.logoBrief && 'logo brief'
+                    ].filter(Boolean).join(' · ') || 'draft inputs needed'}</strong>
+                    <p>External actions remain locked: no deployment, signing, minting, liquidity, DNS, posting, or listing submission.</p>
+                </article>
+            `;
         }
 
         function tokenLaunchBlockers() {
@@ -687,11 +797,11 @@
                     title: 'Final Confirm / Execute',
                     status: ready ? 'Ready To Save Locally' : 'Blocked Until Review Is Clear',
                     summary: ready
-                        ? 'Save the local token ecosystem project. This does not deploy, sign, mint, create liquidity, post publicly, mutate DNS, or submit listings.'
+                        ? 'Save the local token ecosystem project draft, preserve the full CEO workflow fields, and open Logo Studio next. This does not deploy, sign, mint, create liquidity, post publicly, mutate DNS, or submit listings.'
                         : 'Fix the blocker list first. Saving stays disabled until the local package has the minimum owner inputs.',
                     blockers: ready ? [] : blockers,
                     actions: [
-                        { label: 'Save Local Token Project', action: 'token-save-project', primary: true },
+                        { label: 'Save Local Token Project And Open Logo Studio', action: 'token-save-project', primary: true },
                         { label: 'Open Logo Studio', action: 'token-open-logo' },
                         { label: 'Open Website / Whitepaper', action: 'token-open-website' }
                     ]
@@ -704,11 +814,13 @@
         function handleTokenLaunchGateAction(action) {
             if (action === 'token-fill-draft') {
                 fillTokenLaunchSafeDraft();
+                renderTokenDraftStatus(null, 'Safe local draft example is ready for review. Preview it, then save it locally.');
                 return;
             }
             if (action === 'token-preview') {
                 applyTokenLaunchBriefToSpec();
                 previewTokenLaunchPackage();
+                renderTokenDraftStatus(null, 'Preview is refreshed. Save the local draft when the blocker list is clear.');
                 return;
             }
             if (action === 'token-open-form') {
@@ -719,9 +831,10 @@
                 const blockers = tokenLaunchBlockers();
                 if (blockers.length) {
                     previewTokenLaunchPackage();
+                    renderTokenDraftStatus(null, 'Fix the visible blocker list before saving the local token draft.');
                     return;
                 }
-                saveTokenEcosystemProject();
+                saveTokenEcosystemProject({ openNext: true });
                 return;
             }
             if (action === 'token-open-logo') {
@@ -1025,13 +1138,23 @@
             const status = document.getElementById('token-ecosystem-project-status');
 
             if (selectedTokenEcosystemProjectId) {
-                status.textContent = `Editing token ecosystem project #${selectedTokenEcosystemProjectId}.`;
+                status.textContent = `Editing local token ecosystem draft #${selectedTokenEcosystemProjectId}.`;
             } else {
                 status.textContent = 'Projects save website, whitepaper, social, listing, tokenomics, and arbitrage planning locally.';
             }
         }
 
         function populateTokenEcosystemProjectForm(project = {}) {
+            const draft = project.operatorDraft || {};
+            const pipeline = draft.pipeline || {};
+            const logo = draft.logo || {};
+
+            Object.entries(TOKEN_DRAFT_FIELD_IDS).forEach(([key, id]) => {
+                setTokenDraftField(id, pipeline[key]);
+            });
+            setTokenDraftField('token-logo-style', logo.style);
+            setTokenDraftField('token-logo-palette', logo.palette);
+            setTokenDraftField('token-logo-direction', logo.direction);
             document.getElementById('contract-name').value = project.name || '';
             document.getElementById('contract-network').value = project.target_chain || 'base';
             document.getElementById('contract-type').value = project.contract_type || 'erc20';
@@ -1042,6 +1165,8 @@
                 input.checked = selected.has(input.value);
             });
             setTokenProjectSelection(project.id);
+            renderTokenDraftStatus(project, `${project.name || 'Token project'} loaded. Continue editing, then save/update the local draft.`);
+            previewTokenLaunchPackage();
         }
 
         function buildTokenEcosystemProjectPayload() {
@@ -1050,6 +1175,7 @@
                 targetChain: document.getElementById('contract-network').value.trim() || 'base',
                 contractType: document.getElementById('contract-type').value,
                 featureSelections: getSelectedTokenOptions(),
+                operatorDraft: buildTokenOperatorDraftPayload(),
                 nftUtilityNotes: document.getElementById('nft-utility-notes').value.trim(),
                 ecosystemNotes: [
                     document.getElementById('token-ecosystem-notes').value.trim(),
@@ -1071,11 +1197,13 @@
                 <article class="task-card">
                     <div>
                         <h3>#${project.id} ${escapeHtml(project.name)}</h3>
-                        <p>${escapeHtml(project.target_chain)} · ${escapeHtml(project.contract_type)} · ${(project.featureSelections || []).length} feature option(s) · ${escapeHtml(project.status)}</p>
+                        <p>${escapeHtml(project.target_chain)} · ${escapeHtml(project.contract_type)} · ${(project.featureSelections || []).length} feature option(s) · ${escapeHtml(project.status)} · next: ${escapeHtml(project.operatorDraft?.nextStep || 'Logo Studio')}</p>
                     </div>
                     <div class="button-row">
+                        <button type="button" data-project-continue-id="${project.id}">Continue Draft</button>
                         <button type="button" data-project-blueprint-id="${project.id}">Open Blueprint</button>
                         <button type="button" data-project-edit-id="${project.id}">Load For Edit</button>
+                        <button type="button" data-project-logo-id="${project.id}">Logo Studio</button>
                         <button type="button" data-project-workspace-id="${project.id}">Generate Workspace</button>
                         <button type="button" data-project-website-package-id="${project.id}">Website Package</button>
                         <button type="button" data-project-cloudflare-id="${project.id}">Cloudflare Plan</button>
@@ -1084,6 +1212,11 @@
                     </div>
                 </article>
             `).join('');
+            container.querySelectorAll('button[data-project-continue-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    await loadTokenProjectForEdit(button.dataset.projectContinueId, { openNext: false });
+                });
+            });
             container.querySelectorAll('button[data-project-blueprint-id]').forEach(button => {
                 button.addEventListener('click', async () => {
                     const response = await fetch(`/api/v1/token-ecosystem-projects/${button.dataset.projectBlueprintId}`);
@@ -1100,16 +1233,16 @@
             });
             container.querySelectorAll('button[data-project-edit-id]').forEach(button => {
                 button.addEventListener('click', async () => {
-                    const response = await fetch(`/api/v1/token-ecosystem-projects/${button.dataset.projectEditId}`);
-                    const data = await response.json();
+                    await loadTokenProjectForEdit(button.dataset.projectEditId, { openNext: false });
+                });
+            });
+            container.querySelectorAll('button[data-project-logo-id]').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const project = await loadTokenProjectForEdit(button.dataset.projectLogoId, { openNext: false });
 
-                    if (!response.ok) {
-                        document.getElementById('token-ecosystem-project-status').textContent = data.error || 'Unable to load token ecosystem project.';
-                        return;
+                    if (project) {
+                        openTokenLaunchNextStep(project);
                     }
-
-                    populateTokenEcosystemProjectForm(data.project || {});
-                    renderEcosystemBlueprint(data.project.blueprint || {});
                 });
             });
             container.querySelectorAll('button[data-project-workspace-id]').forEach(button => {
@@ -1235,11 +1368,45 @@
             renderTokenEcosystemProjects(data.projects || []);
         }
 
-        async function saveTokenEcosystemProject() {
+        async function loadTokenProjectForEdit(projectId, { openNext = false } = {}) {
+            const response = await fetch(`/api/v1/token-ecosystem-projects/${projectId}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('token-ecosystem-project-status').textContent = data.error || 'Unable to load token ecosystem project.';
+                return null;
+            }
+
+            populateTokenEcosystemProjectForm(data.project || {});
+            renderEcosystemBlueprint(data.project.blueprint || {});
+
+            if (openNext) {
+                openTokenLaunchNextStep(data.project);
+            }
+
+            return data.project || null;
+        }
+
+        function openTokenLaunchNextStep(project = {}) {
             const status = document.getElementById('token-ecosystem-project-status');
-            status.textContent = 'Saving token ecosystem project...';
-            const response = await fetch('/api/v1/token-ecosystem-projects', {
-                method: 'POST',
+            const logoTarget = document.getElementById('logo-blueprint');
+
+            renderTokenDraftStatus(project, 'Next step opened: Logo Studio. Confirm the token visual identity before website, whitepaper, roadmap, and dapp visuals.');
+            status.textContent = `Local draft #${project.id || selectedTokenEcosystemProjectId || '-'} saved. Next: Logo Studio.`;
+
+            if (logoTarget) {
+                logoTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        async function saveTokenEcosystemProject({ openNext = true } = {}) {
+            const status = document.getElementById('token-ecosystem-project-status');
+            const isUpdate = Boolean(selectedTokenEcosystemProjectId);
+            status.textContent = isUpdate
+                ? `Updating local token ecosystem draft #${selectedTokenEcosystemProjectId}...`
+                : 'Saving local token ecosystem draft...';
+            const response = await fetch(isUpdate ? `/api/v1/token-ecosystem-projects/${selectedTokenEcosystemProjectId}` : '/api/v1/token-ecosystem-projects', {
+                method: isUpdate ? 'PATCH' : 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
@@ -1252,9 +1419,15 @@
                 return;
             }
 
-            status.textContent = `Saved token ecosystem project #${data.project.id}.`;
+            setTokenProjectSelection(data.project.id);
+            status.textContent = `Saved local token ecosystem draft #${data.project.id}.`;
             renderEcosystemBlueprint(data.project.blueprint || {});
+            renderTokenDraftStatus(data.project, 'Saved locally. EtherealAI preserved the CEO workflow fields and prepared Logo Studio as the next step.');
             await loadTokenEcosystemProjects();
+
+            if (openNext) {
+                openTokenLaunchNextStep(data.project);
+            }
         }
 
         async function updateTokenEcosystemProject() {
@@ -1265,24 +1438,7 @@
                 return;
             }
 
-            status.textContent = `Updating token ecosystem project #${selectedTokenEcosystemProjectId}...`;
-            const response = await fetch(`/api/v1/token-ecosystem-projects/${selectedTokenEcosystemProjectId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(buildTokenEcosystemProjectPayload())
-            });
-            const data = await response.json();
-
-            if (!response.ok) {
-                status.textContent = data.error || 'Token ecosystem project update failed.';
-                return;
-            }
-
-            status.textContent = `Updated token ecosystem project #${data.project.id}.`;
-            renderEcosystemBlueprint(data.project.blueprint || {});
-            await loadTokenEcosystemProjects();
+            await saveTokenEcosystemProject({ openNext: false });
         }
 
         function renderEcosystemBlueprint(blueprint = {}) {
@@ -1526,7 +1682,10 @@
         document.getElementById('select-polygon-token-options').addEventListener('click', selectPolygonTokenDefaults);
         document.getElementById('save-token-ecosystem-project').addEventListener('click', saveTokenEcosystemProject);
         document.getElementById('update-token-ecosystem-project').addEventListener('click', updateTokenEcosystemProject);
-        document.getElementById('clear-token-ecosystem-selection').addEventListener('click', () => setTokenProjectSelection(null));
+        document.getElementById('clear-token-ecosystem-selection').addEventListener('click', () => {
+            setTokenProjectSelection(null);
+            renderTokenDraftStatus(null, 'Selection cleared. The visible form can be saved as a new local token draft.');
+        });
         document.getElementById('refresh-token-ecosystem-projects').addEventListener('click', loadTokenEcosystemProjects);
         document.getElementById('token-launch-operator-pipeline').addEventListener('click', event => {
             const action = event.target.closest('[data-two-gate-action]')?.dataset.twoGateAction;
@@ -1534,7 +1693,7 @@
                 handleTokenLaunchGateAction(action);
             }
         });
-        ['token-launch-category', 'token-launch-ticker', 'token-launch-community', 'token-launch-dapp-mode', 'token-launch-total-supply', 'token-launch-initial-supply', 'token-launch-supply-model', 'token-launch-admin-model', 'token-launch-burn', 'token-launch-pausable', 'token-launch-transfer-fee', 'token-launch-staking-rewards', 'token-launch-treasury-allocation', 'token-launch-liquidity-allocation', 'token-launch-team-allocation', 'token-launch-community-allocation', 'token-launch-release-plan', 'token-launch-use-case', 'token-launch-dapp-modules', 'contract-name', 'contract-network', 'contract-type', 'token-ecosystem-notes', 'nft-utility-notes'].forEach(id => {
+        ['token-launch-category', 'token-launch-ticker', 'token-launch-community', 'token-launch-dapp-mode', 'token-launch-total-supply', 'token-launch-initial-supply', 'token-launch-supply-model', 'token-launch-admin-model', 'token-launch-burn', 'token-launch-pausable', 'token-launch-transfer-fee', 'token-launch-staking-rewards', 'token-launch-treasury-allocation', 'token-launch-liquidity-allocation', 'token-launch-team-allocation', 'token-launch-community-allocation', 'token-launch-release-plan', 'token-launch-use-case', 'token-launch-dapp-modules', 'contract-name', 'contract-network', 'contract-type', 'token-ecosystem-notes', 'nft-utility-notes', 'token-logo-style', 'token-logo-palette', 'token-logo-direction'].forEach(id => {
             document.getElementById(id)?.addEventListener('input', renderTokenLaunchTwoGate);
             document.getElementById(id)?.addEventListener('change', renderTokenLaunchTwoGate);
         });
@@ -1544,6 +1703,7 @@
 
         window.addEventListener('hashchange', openArtifactFromHash);
 
+        renderTokenDraftStatus();
         renderTokenLaunchTwoGate();
         loadContracts().then(openArtifactFromHash);
         loadEcosystemCatalog();

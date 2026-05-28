@@ -875,6 +875,7 @@ function initializeDatabase(db) {
         target_chain TEXT NOT NULL DEFAULT 'base',
         contract_type TEXT NOT NULL DEFAULT 'erc20',
         feature_selections_json TEXT NOT NULL DEFAULT '[]',
+        operator_draft_json TEXT NOT NULL DEFAULT '{}',
         nft_utility_notes TEXT,
         ecosystem_notes TEXT,
         status TEXT NOT NULL DEFAULT 'draft',
@@ -887,6 +888,7 @@ function initializeDatabase(db) {
         FOREIGN KEY(contract_spec_id) REFERENCES solidity_contract_specs(id)
       )
     `);
+    db.run("ALTER TABLE token_ecosystem_projects ADD COLUMN operator_draft_json TEXT NOT NULL DEFAULT '{}'", () => {});
 
     db.run(`
       CREATE TABLE IF NOT EXISTS social_posts (

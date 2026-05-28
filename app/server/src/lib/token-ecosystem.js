@@ -1606,6 +1606,14 @@ function cleanProjectText(value, fallback = '', maxLength = 4000) {
   return cleaned.length > maxLength ? cleaned.slice(0, maxLength) : cleaned;
 }
 
+function safeJsonParse(value, fallback = {}) {
+  try {
+    return JSON.parse(value || JSON.stringify(fallback));
+  } catch (error) {
+    return fallback;
+  }
+}
+
 function rejectSecretLikeTokenProjectInput(payload = {}) {
   const text = JSON.stringify(payload);
 
@@ -1625,6 +1633,72 @@ function normalizeFeatureSelections(value) {
   return Array.from(new Set(raw.map(item => cleanProjectText(item, '', 160)).filter(Boolean))).slice(0, 32);
 }
 
+function normalizeTokenOperatorDraft(value = {}, existing = {}) {
+  const raw = value && typeof value === 'object'
+    ? value
+    : safeJsonParse(value, {});
+  const fallback = existing && typeof existing === 'object'
+    ? existing
+    : safeJsonParse(existing, {});
+  const pipeline = raw.pipeline && typeof raw.pipeline === 'object'
+    ? raw.pipeline
+    : (fallback.pipeline && typeof fallback.pipeline === 'object' ? fallback.pipeline : {});
+  const logo = raw.logo && typeof raw.logo === 'object'
+    ? raw.logo
+    : (fallback.logo && typeof fallback.logo === 'object' ? fallback.logo : {});
+  const completion = raw.completion && typeof raw.completion === 'object'
+    ? raw.completion
+    : (fallback.completion && typeof fallback.completion === 'object' ? fallback.completion : {});
+
+  return {
+    version: 'ceo-token-draft-v1',
+    savedLocally: true,
+    pipeline: {
+      category: cleanProjectText(pipeline.category, 'use-case token', 80),
+      ticker: cleanProjectText(pipeline.ticker, '', 24).toUpperCase(),
+      community: cleanProjectText(pipeline.community, '', 240),
+      dappMode: cleanProjectText(pipeline.dappMode, 'add dapp later', 80),
+      totalSupply: cleanProjectText(pipeline.totalSupply, '', 80),
+      initialSupply: cleanProjectText(pipeline.initialSupply, '', 80),
+      supplyModel: cleanProjectText(pipeline.supplyModel, '', 120),
+      adminModel: cleanProjectText(pipeline.adminModel, '', 120),
+      burnModel: cleanProjectText(pipeline.burnModel, '', 120),
+      pauseModel: cleanProjectText(pipeline.pauseModel, '', 120),
+      transferFee: cleanProjectText(pipeline.transferFee, '', 180),
+      stakingRewards: cleanProjectText(pipeline.stakingRewards, '', 240),
+      treasuryAllocation: cleanProjectText(pipeline.treasuryAllocation, '', 80),
+      liquidityAllocation: cleanProjectText(pipeline.liquidityAllocation, '', 80),
+      teamAllocation: cleanProjectText(pipeline.teamAllocation, '', 120),
+      communityAllocation: cleanProjectText(pipeline.communityAllocation, '', 120),
+      releasePlan: cleanProjectText(pipeline.releasePlan, '', 1800),
+      detailedUseCase: cleanProjectText(pipeline.detailedUseCase, '', 2200),
+      dappModules: cleanProjectText(pipeline.dappModules, '', 2200)
+    },
+    logo: {
+      style: cleanProjectText(logo.style, '', 240),
+      palette: cleanProjectText(logo.palette, '', 180),
+      direction: cleanProjectText(logo.direction, '', 1600),
+      status: cleanProjectText(logo.status, 'editable draft', 80)
+    },
+    completion: {
+      tokenIdentity: Boolean(completion.tokenIdentity),
+      tokenomics: Boolean(completion.tokenomics),
+      useCase: Boolean(completion.useCase),
+      logoBrief: Boolean(completion.logoBrief),
+      websiteWhitepaper: Boolean(completion.websiteWhitepaper),
+      dappPlan: Boolean(completion.dappPlan)
+    },
+    nextStep: cleanProjectText(raw.nextStep || fallback.nextStep, 'Logo Studio', 80),
+    safetyBoundary: {
+      localOnly: true,
+      deploymentEnabled: false,
+      walletSigningEnabled: false,
+      publicPostingEnabled: false,
+      listingSubmissionEnabled: false
+    }
+  };
+}
+
 function normalizeTokenEcosystemProjectInput(input = {}, existing = {}) {
   rejectSecretLikeTokenProjectInput(input);
   const name = cleanProjectText(input.name ?? existing.name, '', 140);
@@ -1632,6 +1706,10 @@ function normalizeTokenEcosystemProjectInput(input = {}, existing = {}) {
   const contractType = cleanProjectText(input.contractType ?? input.contract_type ?? existing.contract_type ?? existing.contractType ?? 'erc20', 'erc20', 40).toLowerCase();
   const featureSelections = normalizeFeatureSelections(input.featureSelections ?? input.feature_selections ?? existing.featureSelections ?? existing.feature_selections);
   const contractSpecId = input.contractSpecId ?? input.contract_spec_id ?? existing.contract_spec_id ?? existing.contractSpecId ?? null;
+  const operatorDraft = normalizeTokenOperatorDraft(
+    input.operatorDraft ?? input.operator_draft ?? input.operator_draft_json,
+    existing.operatorDraft ?? existing.operator_draft ?? existing.operator_draft_json
+  );
   const allowedContractTypes = new Set(SUPPORTED_TOKEN_CONTRACT_TYPES);
 
   if (!name) {
@@ -1648,6 +1726,7 @@ function normalizeTokenEcosystemProjectInput(input = {}, existing = {}) {
     targetChain,
     contractType,
     featureSelections: featureSelections.length ? featureSelections : DEFAULT_TOKEN_FEATURE_SELECTIONS,
+    operatorDraft,
     nftUtilityNotes: cleanProjectText(input.nftUtilityNotes ?? input.nft_utility_notes ?? existing.nft_utility_notes ?? existing.nftUtilityNotes, '', 2000),
     ecosystemNotes: cleanProjectText(input.ecosystemNotes ?? input.ecosystem_notes ?? existing.ecosystem_notes ?? existing.ecosystemNotes, '', 4000),
     status: cleanProjectText(input.status ?? existing.status ?? 'draft', 'draft', 40),
@@ -1659,6 +1738,12 @@ function normalizeTokenEcosystemProjectInput(input = {}, existing = {}) {
 function buildTokenEcosystemProjectSpec(project = {}) {
   const features = [
     `Feature selections: ${(project.featureSelections || []).join('; ')}`,
+    project.operatorDraft?.pipeline?.ticker ? `Ticker: ${project.operatorDraft.pipeline.ticker}` : '',
+    project.operatorDraft?.pipeline?.category ? `Token category: ${project.operatorDraft.pipeline.category}` : '',
+    project.operatorDraft?.pipeline?.totalSupply ? `Total supply: ${project.operatorDraft.pipeline.totalSupply}` : '',
+    project.operatorDraft?.pipeline?.supplyModel ? `Supply model: ${project.operatorDraft.pipeline.supplyModel}` : '',
+    project.operatorDraft?.pipeline?.dappMode ? `Dapp plan: ${project.operatorDraft.pipeline.dappMode}` : '',
+    project.operatorDraft?.logo?.direction ? `Logo direction: ${project.operatorDraft.logo.direction}` : '',
     project.nftUtilityNotes ? `NFT utility notes: ${project.nftUtilityNotes}` : '',
     project.ecosystemNotes ? `Ecosystem notes: ${project.ecosystemNotes}` : ''
   ].filter(Boolean).join('\n');
@@ -1687,10 +1772,19 @@ function buildTokenEcosystemProjectBlueprint(project = {}) {
       id: project.id || null,
       contractSpecId: project.contractSpecId || project.contract_spec_id || null,
       featureSelections: project.featureSelections || [],
+      operatorDraft: normalizeTokenOperatorDraft(project.operatorDraft || project.operator_draft_json || {}),
       nftUtilityNotes: project.nftUtilityNotes || '',
       ecosystemNotes: project.ecosystemNotes || '',
       localOnly: true,
       externalActionsEnabled: false
+    },
+    operatorWorkflow: {
+      mode: 'Simple CEO Operator',
+      currentStep: 'Local token draft saved',
+      nextStep: 'Logo Studio',
+      nextStepReason: 'Logo identity should be locked before the website, whitepaper, social package, listing icon package, and dapp visuals are finalized.',
+      gates: ['Preview / Review', 'Final Confirm / Execute'],
+      lockedExternalActions: ['deployment', 'wallet signing', 'liquidity creation', 'public posting', 'Cloudflare/GitHub publishing', 'CMC/CoinGecko submission', 'paid services']
     }
   };
 }
@@ -1707,7 +1801,8 @@ function parseTokenEcosystemProject(row = {}) {
     name: row.name,
     target_chain: row.target_chain,
     contract_type: row.contract_type,
-    featureSelections: JSON.parse(row.feature_selections_json || '[]'),
+    featureSelections: safeJsonParse(row.feature_selections_json, []),
+    operatorDraft: normalizeTokenOperatorDraft(row.operator_draft_json || '{}'),
     nft_utility_notes: row.nft_utility_notes || '',
     ecosystem_notes: row.ecosystem_notes || '',
     status: row.status,
