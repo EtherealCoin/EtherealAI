@@ -63,6 +63,16 @@
             Loading Kraken two-gate API flow...
         </section>
 
+        <section id="api-kraken-operator-wizard" class="model-panel api-operator-wizard operator-guided-focus">
+            <div class="operator-two-gate-heading">
+                <span>Kraken owner path</span>
+                <h2>Finish Kraken From One Checklist</h2>
+                <p>This turns the Kraken setup into plain owner steps: saved key, vault readback, read/account test, dry-run proof, and tiny-live eligibility. No order endpoint can be called from this page.</p>
+            </div>
+            <div id="api-kraken-next-action" class="api-owner-next-action">Loading Kraken next action...</div>
+            <div id="api-kraken-wizard-steps" class="api-owner-step-grid">Loading Kraken owner steps...</div>
+        </section>
+
         <section class="model-panel api-provider-model" id="kraken-operator-setup">
             <div class="operator-two-gate-heading">
                 <span>Kraken first</span>
@@ -368,6 +378,129 @@
             `;
         }
 
+        function krakenOwnerStep(id, label, status, note, action) {
+            const normalized = String(status || '').toLowerCase();
+            const tone = normalized.includes('complete') || normalized.includes('ready')
+                ? 'operator-two-gate-safe'
+                : normalized.includes('blocked') || normalized.includes('unsafe')
+                    ? 'operator-two-gate-danger'
+                    : 'operator-two-gate-warning';
+            const actionMarkup = action?.href
+                ? `<a class="cta-button" href="${apiEscape(action.href)}">${apiEscape(action.label)}</a>`
+                : action?.selector
+                    ? `<button type="button" data-api-owner-click="${apiEscape(action.selector)}">${apiEscape(action.label)}</button>`
+                    : '';
+
+            return `
+                <article class="operator-two-gate-card ${tone}">
+                    <div class="operator-two-gate-card-header">
+                        <span>${apiEscape(id)}</span>
+                        <strong>${apiEscape(label)}</strong>
+                    </div>
+                    <p><strong>${apiEscape(status)}</strong></p>
+                    <p>${apiEscape(note)}</p>
+                    ${actionMarkup}
+                </article>
+            `;
+        }
+
+        function renderKrakenOperatorWizard() {
+            const provider = providerById('kraken') || {};
+            const metadata = provider.metadata || {};
+            const keyReady = hasSavedKrakenKey();
+            const vaultVerified = Boolean(metadata.vaultDecodeSucceeded && metadata.readbackMatchesMetadata);
+            const readReady = Boolean(metadata.readAccountAccessAvailable || provider.currentStatus === 'connected');
+            const dryRunReady = Boolean(metadata.dryRunProofReady || krakenPreviewReady());
+            const endpointCalled = krakenEndpointCalled();
+            const tinyEligible = Boolean(metadata.tinyLiveEligibilityUnlocked && dryRunReady && keyReady && !endpointCalled);
+            const fingerprints = [
+                metadata.apiKeyFingerprint ? `Key ${metadata.apiKeyFingerprint}` : '',
+                metadata.apiSecretSha256Fingerprint ? `Secret ${metadata.apiSecretSha256Fingerprint}` : ''
+            ].filter(Boolean).join(' · ');
+            const savedAt = metadata.timestampSaved ? `Saved ${metadata.timestampSaved}` : 'No saved timestamp found.';
+            const nextAction = !keyReady
+                ? {
+                    title: 'Next: replace or save Kraken key',
+                    body: 'Open the Kraken key panel, paste the restricted spot key, confirm withdrawals/transfers/margin/futures/leverage are off, then save safely.',
+                    action: { label: 'Replace Kraken Key', selector: 'api-open-kraken-replace' }
+                }
+                : !vaultVerified
+                    ? {
+                        title: 'Next: verify vault readback',
+                        body: 'Run Check Kraken Saved Status. The UI should confirm the encrypted vault can decode the current saved key and secret fingerprints.',
+                        action: { label: 'Check Kraken Saved Status', selector: 'api-check-kraken-status' }
+                    }
+                    : !dryRunReady
+                        ? {
+                            title: 'Next: run dry-run proof',
+                            body: 'Run the dry-run proof. This simulates the tiny setup and must keep production endpoint called: No.',
+                            action: { label: 'Run Kraken Dry-Run Proof', selector: 'api-run-kraken-dryrun' }
+                        }
+                        : tinyEligible
+                            ? {
+                                title: 'Next: review tiny live eligibility',
+                                body: 'Kraken is ready for the existing final owner approval screen. This page still cannot place an order.',
+                                action: { label: 'Open Final Kraken Approval', href: '/live-trading-launch#kraken-tiny-live-test' }
+                            }
+                            : {
+                                title: 'Next: review blockers',
+                                body: endpointCalled
+                                    ? 'A previous endpoint event exists. Track and reconcile it before preparing another tiny test.'
+                                    : 'Review the blocker list below before moving to final approval.',
+                                action: { label: 'Review Tiny Live Eligibility', href: '/live-trading-launch#kraken-tiny-live-test' }
+                            };
+
+            document.getElementById('api-kraken-next-action').innerHTML = `
+                <article class="operator-two-gate-card ${tinyEligible ? 'operator-two-gate-safe' : 'operator-two-gate-warning'}">
+                    <div class="operator-two-gate-card-header">
+                        <span>What to do next</span>
+                        <strong>${apiEscape(nextAction.title)}</strong>
+                    </div>
+                    <p>${apiEscape(nextAction.body)}</p>
+                    ${nextAction.action.href
+                        ? `<a class="cta-button" href="${apiEscape(nextAction.action.href)}">${apiEscape(nextAction.action.label)}</a>`
+                        : `<button type="button" data-api-owner-click="${apiEscape(nextAction.action.selector)}">${apiEscape(nextAction.action.label)}</button>`}
+                </article>
+            `;
+            document.getElementById('api-kraken-wizard-steps').innerHTML = [
+                krakenOwnerStep(
+                    'Step 1',
+                    'Restricted Kraken key saved',
+                    keyReady ? 'Complete' : 'Needs key',
+                    keyReady ? `${fingerprints || 'Fingerprints available.'} ${savedAt}` : 'Save a restricted spot key in the encrypted vault. Do not enable withdrawals, transfers, futures, margin, or leverage.',
+                    keyReady ? { label: 'Replace Only If Needed', selector: 'api-open-kraken-replace' } : { label: 'Replace Kraken Key', selector: 'api-open-kraken-replace' }
+                ),
+                krakenOwnerStep(
+                    'Step 2',
+                    'Vault readback verified',
+                    vaultVerified ? 'Complete' : 'Needs review',
+                    vaultVerified ? 'The encrypted vault decoded the latest saved values and the fingerprints match the saved metadata.' : 'Run saved status to confirm EtherealAI is not using stale credentials.',
+                    { label: 'Check Kraken Saved Status', selector: 'api-check-kraken-status' }
+                ),
+                krakenOwnerStep(
+                    'Step 3',
+                    'Read/account access checked',
+                    readReady ? 'Ready' : 'Needs test',
+                    readReady ? 'Kraken read/account checks are available. No order endpoint is called by this check.' : 'Test authenticated read/account access before dry-run proof.',
+                    { label: 'Test Kraken Read Access', selector: 'api-test-kraken-access' }
+                ),
+                krakenOwnerStep(
+                    'Step 4',
+                    'Dry-run proof',
+                    dryRunReady ? 'Complete' : 'Needs dry-run',
+                    dryRunReady ? 'Dry-run proof is available. Production endpoint called remains blocked unless the final approval page is used.' : 'Simulate the tiny setup before any final live approval.',
+                    { label: 'Run Kraken Dry-Run Proof', selector: 'api-run-kraken-dryrun' }
+                ),
+                krakenOwnerStep(
+                    'Step 5',
+                    'Tiny-live eligibility',
+                    tinyEligible ? 'Ready for owner approval' : (endpointCalled ? 'Blocked' : 'Locked until ready'),
+                    tinyEligible ? 'Use the final Kraken approval page only when you intentionally want the one tiny live test.' : 'This stays locked until the saved key, vault readback, read check, dry-run proof, and endpoint safety state are clean.',
+                    { label: 'Review Tiny Live Eligibility', href: '/live-trading-launch#kraken-tiny-live-test' }
+                )
+            ].join('');
+        }
+
         function renderKrakenTwoGate() {
             const blockers = krakenBlockers();
             const previewReady = krakenPreviewReady();
@@ -530,6 +663,7 @@
             apiState.krakenDiagnostics = krakenDiagnostics;
             apiState.krakenTiny = krakenTiny;
             renderKrakenTwoGate();
+            renderKrakenOperatorWizard();
             renderKrakenDetails();
             renderCoinbaseTwoGate();
             renderDexRegistry();
@@ -784,6 +918,12 @@
         }
 
         document.addEventListener('click', event => {
+            const ownerClick = event.target.closest('[data-api-owner-click]')?.dataset.apiOwnerClick;
+            if (ownerClick) {
+                document.getElementById(ownerClick)?.click();
+                return;
+            }
+
             const action = event.target.closest('[data-two-gate-action]')?.dataset.twoGateAction;
             if (action === 'refresh') refreshApiConnectionCenter();
             if (action === 'test-kraken-access') testKrakenAccess();

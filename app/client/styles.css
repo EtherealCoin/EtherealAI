@@ -8327,6 +8327,30 @@ body.operator-advanced-mode .community-art-grid span {
     gap: 14px;
 }
 
+.api-operator-wizard {
+    display: grid;
+    gap: 18px;
+}
+
+.api-owner-next-action {
+    display: grid;
+}
+
+.api-owner-step-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.api-owner-step-grid button,
+.api-owner-next-action button,
+.api-owner-step-grid .cta-button,
+.api-owner-next-action .cta-button {
+    justify-content: center;
+    margin-top: 8px;
+    width: 100%;
+}
+
 .api-status-grid article,
 .api-lane-grid article,
 .operator-two-gate-card {

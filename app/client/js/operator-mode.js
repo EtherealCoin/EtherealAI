@@ -58,7 +58,7 @@
             title: 'Connect APIs Without Developer Workflow',
             summary: 'Use one CEO-level surface for Kraken first, Coinbase next, and DEX quote-only lanes later. Simple Mode shows preview/review, then final approval. Raw diagnostics stay behind Advanced Mode.',
             primaryAction: { label: 'Refresh API Status', selector: '#api-refresh-status' },
-            keepIds: ['api-kraken-two-gate', 'kraken-operator-setup', 'coinbase-readonly-setup'],
+            keepIds: ['api-kraken-two-gate', 'api-kraken-operator-wizard', 'kraken-operator-setup', 'coinbase-readonly-setup'],
             keepHeadings: ['DEX Read-Only Connector Lane', 'Next Connection Order'],
             readyLabel: 'API Center Ready',
             nextText: 'Refresh API Status first. Finish Kraken before adding Coinbase or DEX execution paths.',
