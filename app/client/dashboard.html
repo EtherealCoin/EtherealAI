@@ -124,6 +124,10 @@
                     <strong>Wallet & Funding Center</strong>
                     <span>Add public wallet metadata, label purposes, and keep keys outside EtherealAI.</span>
                 </a>
+                <a class="ceo-workflow-card" href="/solidity-lab#token-launch-operator-pipeline">
+                    <strong>Token Launch Factory</strong>
+                    <span>Token plan, chain, tokenomics, Logo Studio, website, whitepaper, roadmap, dapp plan, and local launch package review.</span>
+                </a>
                 <a class="ceo-workflow-card" href="/security-lockdown">
                     <strong>Security Lockdown Center</strong>
                     <span>Review local Mac security, secrets status, attack surfaces, backups, and emergency controls.</span>
@@ -147,6 +151,20 @@
             </div>
             <div id="dashboard-api-connection-summary" class="api-status-grid">Loading API connection summary...</div>
             <div id="dashboard-api-next-action" class="phase3-results">Loading next API action...</div>
+        </section>
+
+        <section class="model-panel launch-mission-control-card" id="launch-pipeline-summary-card">
+            <div class="operator-two-gate-heading">
+                <span>Token launch pipeline</span>
+                <h2>Active Local Launch Project</h2>
+                <p>Mission Control now connects token details, Logo Studio, website, whitepaper, roadmap, local preview, API readiness, and launch review into one CEO workflow. Public/external actions remain locked.</p>
+            </div>
+            <div class="button-row">
+                <button id="refresh-launch-pipeline-summary" type="button">Refresh Launch Project</button>
+                <a class="cta-button" href="/solidity-lab#token-launch-operator-pipeline">Continue Launch Project</a>
+            </div>
+            <div id="dashboard-launch-pipeline-summary" class="launch-pipeline-status-grid">Loading token launch pipeline...</div>
+            <div id="dashboard-launch-next-action" class="phase3-results">Loading launch next action...</div>
         </section>
 
         <section class="model-panel">
@@ -838,6 +856,111 @@
                     </article>
                 `;
                 document.getElementById('dashboard-api-next-action').textContent = 'Open API Connection Center if this persists.';
+            }
+        }
+
+        function renderLaunchPipelineSummary(pipeline = {}) {
+            const container = document.getElementById('dashboard-launch-pipeline-summary');
+            const nextAction = document.getElementById('dashboard-launch-next-action');
+            const project = pipeline.activeProject || null;
+            const statuses = pipeline.statuses || {};
+            const api = pipeline.apiReadiness || {};
+
+            if (!project) {
+                container.innerHTML = `
+                    <article class="status-warning">
+                        <span>Active project</span>
+                        <strong>No local launch project yet</strong>
+                        <small>Start the Token Launch Factory when you are ready to build a token plan.</small>
+                    </article>
+                `;
+                nextAction.innerHTML = `
+                    <article class="operator-two-gate-card operator-two-gate-warning">
+                        <div class="operator-two-gate-card-header">
+                            <span>Next recommended launch action</span>
+                            <strong>Start a token launch project</strong>
+                        </div>
+                        <p>Local token planning does not require Kraken, Coinbase, wallet signing, deployment, DNS, or public posting.</p>
+                    </article>
+                `;
+                return;
+            }
+
+            const cards = [
+                {
+                    label: 'Active Project',
+                    value: `${project.projectName || 'Token Project'}${project.ticker ? ` (${project.ticker})` : ''}`,
+                    note: `${project.chain || 'chain pending'} · ${project.category || 'category pending'}`,
+                    tone: 'status-info'
+                },
+                {
+                    label: 'Progress',
+                    value: `${pipeline.progressPercent || 0}%`,
+                    note: `Current step: ${pipeline.currentStep?.label || 'Launch project'}`,
+                    tone: pipeline.blockers?.length ? 'status-warning' : 'status-success'
+                },
+                {
+                    label: 'Logo Studio',
+                    value: statuses.logoStudio || 'draft',
+                    note: 'Local logo specs only; no image provider or listing submission.',
+                    tone: apiSummaryTone(statuses.logoStudio)
+                },
+                {
+                    label: 'Website / Whitepaper',
+                    value: statuses.websiteWhitepaperRoadmap || 'draft',
+                    note: 'Local draft and preview only; Cloudflare/GitHub/DNS are locked.',
+                    tone: apiSummaryTone(statuses.websiteWhitepaperRoadmap)
+                },
+                {
+                    label: 'API Readiness',
+                    value: api.kraken?.status || 'optional',
+                    note: `Kraken: ${api.kraken?.status || 'optional'} · Coinbase: ${api.coinbase?.status || 'optional'} · DEX: ${api.dexReadOnly?.status || 'planned'}`,
+                    tone: 'status-info'
+                }
+            ];
+
+            container.innerHTML = cards.map(card => `
+                <article class="${card.tone}">
+                    <span>${escapeHtml(card.label)}</span>
+                    <strong>${escapeHtml(card.value)}</strong>
+                    <small>${escapeHtml(card.note)}</small>
+                </article>
+            `).join('');
+            nextAction.innerHTML = `
+                <article class="operator-two-gate-card ${pipeline.blockers?.length ? 'operator-two-gate-warning' : 'operator-two-gate-safe'}">
+                    <div class="operator-two-gate-card-header">
+                        <span>Next recommended launch action</span>
+                        <strong>${escapeHtml(pipeline.nextRecommendedAction || 'Review launch package')}</strong>
+                    </div>
+                    <p>${pipeline.blockers?.length
+                        ? escapeHtml(`Blocked because: ${pipeline.blockers.map(blocker => blocker.title).join('; ')}`)
+                        : 'Complete local launch package is ready for review. External actions remain locked.'}</p>
+                </article>
+            `;
+        }
+
+        async function loadLaunchPipelineSummary() {
+            const container = document.getElementById('dashboard-launch-pipeline-summary');
+            container.textContent = 'Loading token launch pipeline...';
+
+            try {
+                const response = await fetch('/api/v1/token-launch-pipeline/state');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load token launch pipeline');
+                }
+
+                renderLaunchPipelineSummary(data.pipeline || {});
+            } catch (error) {
+                container.innerHTML = `
+                    <article class="status-warning">
+                        <span>Token Launch Pipeline</span>
+                        <strong>Needs Review</strong>
+                        <small>${escapeHtml(error.message)}</small>
+                    </article>
+                `;
+                document.getElementById('dashboard-launch-next-action').textContent = 'Open Token Launch Factory if this persists.';
             }
         }
 
@@ -1755,6 +1878,7 @@
         document.getElementById('refresh-dev-server').addEventListener('click', loadDevServerStatus);
         document.getElementById('refresh-mvp-readiness').addEventListener('click', loadMvpReadiness);
         document.getElementById('refresh-api-connection-summary').addEventListener('click', loadApiConnectionSummary);
+        document.getElementById('refresh-launch-pipeline-summary').addEventListener('click', loadLaunchPipelineSummary);
         document.getElementById('refresh-live-handoff').addEventListener('click', loadLiveExecutionHandoff);
         document.getElementById('refresh-mlx-lifecycle').addEventListener('click', loadMlxLifecycleStatus);
         document.getElementById('refresh-multi-agent').addEventListener('click', loadMultiAgentRegistry);
@@ -1802,6 +1926,7 @@
         loadHealth();
         loadDevServerStatus();
         loadApiConnectionSummary();
+        loadLaunchPipelineSummary();
         loadMvpReadiness();
         loadLiveExecutionHandoff();
         loadSystemMemory();

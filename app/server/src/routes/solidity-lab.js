@@ -17,10 +17,13 @@ function registerSolidityLabRoutes(app, {
   buildTokenEcosystemProjectBlueprint,
   buildTokenEcosystemWorkspaceFiles,
   buildTokenWebsiteDeployPackageFiles,
+  buildTokenLaunchPipelineState,
+  buildTokenLaunchPackageReview,
   buildCloudflareWebsitePlan,
   normalizeTokenEcosystemProjectInput,
   normalizeCompanyDnsTargetInput,
   parseTokenEcosystemProject,
+  parseExchangeConnector,
   parseCompanyDnsTarget,
   readCompanyIdentity,
   ensureWorkspacesDir,
@@ -83,6 +86,115 @@ function registerSolidityLabRoutes(app, {
       'SELECT * FROM token_ecosystem_projects WHERE id = ?',
       [id]
     ));
+  }
+
+  function normalizeExchangeId(value = '') {
+    return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+
+  function parseConnectorForLaunch(row = {}) {
+    if (!row) {
+      return null;
+    }
+
+    if (typeof parseExchangeConnector === 'function') {
+      return parseExchangeConnector(row);
+    }
+
+    return {
+      ...row,
+      settings: safeJsonParse(row.settings_json, {})
+    };
+  }
+
+  function findConnectorByExchange(connectors = [], exchangeName) {
+    const exchangeId = normalizeExchangeId(exchangeName);
+
+    return connectors.find(connector => (
+      normalizeExchangeId(connector?.settings?.registryId || connector?.exchange_name) === exchangeId
+    )) || null;
+  }
+
+  async function buildLaunchProjectApiReadiness() {
+    const [connectorRows, walletCountRow, krakenEndpointCountRow] = await Promise.all([
+      dbAll(
+        `SELECT *
+         FROM exchange_connectors
+         ORDER BY updated_at DESC, id DESC
+         LIMIT 500`
+      ).catch(() => []),
+      dbGet(
+        `SELECT COUNT(*) AS count
+         FROM owner_wallets`,
+        []
+      ).catch(() => ({ count: 0 })),
+      dbGet(
+        `SELECT COUNT(*) AS count
+         FROM production_order_executions
+         WHERE exchange_name = 'kraken'
+           AND production_order_endpoint_called = 1`,
+        []
+      ).catch(() => ({ count: 0 }))
+    ]);
+    const connectors = connectorRows.map(parseConnectorForLaunch).filter(Boolean);
+    const kraken = findConnectorByExchange(connectors, 'kraken');
+    const coinbase = findConnectorByExchange(connectors, 'coinbase');
+    const krakenConnection = kraken?.settings?.productionConnection || {};
+    const coinbaseConnection = coinbase?.settings?.readOnlyConnection || {};
+    const krakenEndpointCallCount = Number(krakenEndpointCountRow?.count || 0);
+    const krakenHasReference = Boolean(krakenConnection.referenceName);
+    const krakenDryRunReady = Boolean(
+      krakenConnection.phase6EFinalStatus?.readyForTinyLiveTest
+      || krakenConnection.phase6EPreflight?.technicalReady
+    );
+    const krakenStatus = krakenEndpointCallCount > 0
+      ? 'blocked'
+      : krakenHasReference && krakenDryRunReady
+        ? 'connected'
+        : krakenHasReference
+          ? 'draft'
+          : 'needs key';
+    const coinbaseStatus = String(coinbaseConnection.connectionStatus || coinbase?.status || '').toLowerCase().includes('connected')
+      ? 'connected'
+      : coinbaseConnection.referenceName
+        ? 'draft'
+        : 'needs key';
+
+    return {
+      kraken: {
+        label: 'Kraken',
+        status: krakenStatus,
+        detail: krakenStatus === 'connected'
+          ? 'Kraken auth/dry-run readiness is available. Token launch drafting still does not place orders.'
+          : 'Use API Connection Center for Kraken key repair, read checks, dry-run proof, and tiny-live eligibility.',
+        endpointCallCount: krakenEndpointCallCount,
+        liveOrderEnabledFromLaunchPipeline: false
+      },
+      coinbase: {
+        label: 'Coinbase Advanced',
+        status: coinbaseStatus,
+        detail: coinbaseStatus === 'connected'
+          ? 'Coinbase read-only account status is available for future market/account context.'
+          : 'Coinbase is optional next. It does not block local token/logo/website work.'
+      },
+      dexReadOnly: {
+        label: 'DEX read-only',
+        status: 'planned',
+        detail: 'DEX token, pair, price, pool, liquidity, and quote research lanes are read-only/planned. No swaps or signatures.'
+      },
+      walletMetadata: {
+        label: 'Wallet metadata',
+        status: Number(walletCountRow?.count || 0) > 0 ? 'connected' : 'optional',
+        detail: Number(walletCountRow?.count || 0) > 0
+          ? `${Number(walletCountRow?.count || 0)} public wallet metadata record(s) exist. No seed phrase/private key is stored.`
+          : 'Public wallet metadata is optional for local launch drafting.'
+      },
+      dexExecution: {
+        label: 'DEX execution',
+        status: 'locked external action',
+        detail: 'DEX swaps, approvals, and wallet signing require a future owner-approved execution phase.'
+      }
+    };
   }
 
   async function buildTokenProjectArtifactManifest(project) {
@@ -357,6 +469,48 @@ function registerSolidityLabRoutes(app, {
     }
   });
 
+  app.get('/api/v1/token-launch-pipeline/state', requireAuth, async (req, res) => {
+    try {
+      const projectId = req.query.projectId ? Number(req.query.projectId) : null;
+      const row = projectId
+        ? await dbGet(
+          `SELECT *
+           FROM token_ecosystem_projects
+           WHERE id = ?`,
+          [projectId]
+        )
+        : await dbGet(
+          `SELECT *
+           FROM token_ecosystem_projects
+           WHERE status != 'archived'
+           ORDER BY updated_at DESC, id DESC
+           LIMIT 1`,
+          []
+        );
+      const project = parseTokenEcosystemProject(row);
+      const apiReadiness = await buildLaunchProjectApiReadiness();
+
+      res.json({
+        pipeline: buildTokenLaunchPipelineState(project, { apiReadiness }),
+        localOnly: true,
+        externalActionsEnabled: false,
+        liveTradingEnabled: false,
+        walletSigningEnabled: false,
+        deploymentEnabled: false,
+        publicPostingEnabled: false,
+        listingSubmissionEnabled: false
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: error.message,
+        localOnly: true,
+        externalActionsEnabled: false,
+        liveTradingEnabled: false,
+        walletSigningEnabled: false
+      });
+    }
+  });
+
   app.get('/api/v1/token-ecosystem-projects/:id', requireAuth, async (req, res) => {
     try {
       const project = await getTokenEcosystemProject(req.params.id);
@@ -368,6 +522,40 @@ function registerSolidityLabRoutes(app, {
       res.json({ project });
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/token-ecosystem-projects/:id/launch-package', requireAuth, async (req, res) => {
+    try {
+      const project = await getTokenEcosystemProject(req.params.id);
+
+      if (!project) {
+        return res.status(404).json({ error: 'Token ecosystem project not found' });
+      }
+
+      const [apiReadiness, artifactManifest] = await Promise.all([
+        buildLaunchProjectApiReadiness(),
+        buildTokenProjectArtifactManifest(project).catch(() => null)
+      ]);
+
+      res.json({
+        launchPackage: buildTokenLaunchPackageReview(project, { apiReadiness, artifactManifest }),
+        localOnly: true,
+        externalActionsEnabled: false,
+        liveTradingEnabled: false,
+        walletSigningEnabled: false,
+        deploymentEnabled: false,
+        publicPostingEnabled: false,
+        listingSubmissionEnabled: false
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: error.message,
+        localOnly: true,
+        externalActionsEnabled: false,
+        liveTradingEnabled: false,
+        walletSigningEnabled: false
+      });
     }
   });
 

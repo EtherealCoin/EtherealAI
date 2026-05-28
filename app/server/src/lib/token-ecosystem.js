@@ -1740,6 +1740,13 @@ function normalizeTokenOperatorDraft(value = {}, existing = {}) {
       style: cleanProjectText(logo.style, '', 240),
       palette: cleanProjectText(logo.palette, '', 180),
       direction: cleanProjectText(logo.direction, '', 1600),
+      existingLogo: cleanProjectText(logo.existingLogo, '', 800),
+      inspirationImageNotes: cleanProjectText(logo.inspirationImageNotes, '', 800),
+      textInfluence: Number.isFinite(Number(logo.textInfluence)) ? Math.min(100, Math.max(1, Number(logo.textInfluence))) : 60,
+      imageInfluence: Number.isFinite(Number(logo.imageInfluence)) ? Math.min(100, Math.max(1, Number(logo.imageInfluence))) : 40,
+      tokenStyleInfluence: Number.isFinite(Number(logo.tokenStyleInfluence)) ? Math.min(100, Math.max(1, Number(logo.tokenStyleInfluence))) : 75,
+      shape: cleanProjectText(logo.shape, 'lettermark', 80),
+      backgroundPreference: cleanProjectText(logo.backgroundPreference, 'transparent and dark variants', 120),
       selectedChoiceId: cleanProjectText(logo.selectedChoiceId, '', 80),
       lockState: cleanProjectText(logo.lockState, 'editable draft', 80),
       status: cleanProjectText(logo.status, 'editable draft', 80)
@@ -1752,6 +1759,10 @@ function normalizeTokenOperatorDraft(value = {}, existing = {}) {
       roadmap: cleanProjectText(website.roadmap, '', 2600),
       whitepaperNotes: cleanProjectText(website.whitepaperNotes, '', 3000),
       dappPreview: cleanProjectText(website.dappPreview, '', 2000),
+      faq: cleanProjectText(website.faq, '', 2200),
+      howToBuy: cleanProjectText(website.howToBuy, '', 2200),
+      communityLinks: cleanProjectText(website.communityLinks, '', 1600),
+      disclaimer: cleanProjectText(website.disclaimer, '', 2200),
       editInstructions: cleanProjectText(website.editInstructions, '', 2000),
       status: cleanProjectText(website.status, 'editable local draft', 80)
     },
@@ -1867,6 +1878,430 @@ function buildTokenEcosystemProjectBlueprint(project = {}) {
   };
 }
 
+const TOKEN_LAUNCH_PIPELINE_STEPS = Object.freeze([
+  {
+    id: 'token-type',
+    label: 'Token Type',
+    ownerAction: 'Choose use-case, meme, or hybrid meme + utility.'
+  },
+  {
+    id: 'chain',
+    label: 'Blockchain',
+    ownerAction: 'Choose the target chain for this token project.'
+  },
+  {
+    id: 'identity',
+    label: 'Identity',
+    ownerAction: 'Enter token name, ticker, description, community, and personality.'
+  },
+  {
+    id: 'tokenomics',
+    label: 'Tokenomics',
+    ownerAction: 'Enter supply, release, allocation, fee, burn, pause, admin, airdrop, and reward settings.'
+  },
+  {
+    id: 'use-case',
+    label: 'Use Case',
+    ownerAction: 'Describe what the token does in plain English.'
+  },
+  {
+    id: 'dapp-plan',
+    label: 'Dapp Plan',
+    ownerAction: 'Choose no dapp, add later, or describe up to three local dapp modules.'
+  },
+  {
+    id: 'contract-plan',
+    label: 'Contract Plan',
+    ownerAction: 'Review the local contract feature plan. Deployment remains locked.'
+  },
+  {
+    id: 'logo-studio',
+    label: 'Logo Studio',
+    ownerAction: 'Choose or regenerate three local logo direction specs.'
+  },
+  {
+    id: 'website-builder',
+    label: 'Website / Whitepaper / Roadmap',
+    ownerAction: 'Generate and edit local website, whitepaper, roadmap, FAQ, how-to-buy, and disclaimer sections.'
+  },
+  {
+    id: 'local-preview',
+    label: 'Local Website Preview',
+    ownerAction: 'Preview the local website draft without publishing.'
+  },
+  {
+    id: 'launch-review',
+    label: 'Launch Package Review',
+    ownerAction: 'Review the complete local launch package and locked external actions.'
+  }
+]);
+
+function hasDraftText(value) {
+  return Boolean(String(value || '').trim());
+}
+
+function buildWebsiteDraftCompletion(website = {}) {
+  return Boolean(
+    hasDraftText(website.hero)
+    || hasDraftText(website.useCase)
+    || hasDraftText(website.tokenomics)
+    || hasDraftText(website.roadmap)
+    || hasDraftText(website.whitepaperNotes)
+    || hasDraftText(website.dappPreview)
+    || hasDraftText(website.faq)
+    || hasDraftText(website.howToBuy)
+    || hasDraftText(website.communityLinks)
+    || hasDraftText(website.disclaimer)
+  );
+}
+
+function buildTokenLaunchStepStatus(project = {}) {
+  const draft = normalizeTokenOperatorDraft(project.operatorDraft || project.operator_draft_json || {});
+  const pipeline = draft.pipeline || {};
+  const logo = draft.logo || {};
+  const website = draft.websiteWhitepaperRoadmap || {};
+  const blueprint = project.blueprint?.status
+    ? project.blueprint
+    : buildTokenEcosystemProjectBlueprint(project);
+  const useCaseText = [
+    pipeline.detailedUseCase,
+    project.ecosystemNotes,
+    project.ecosystem_notes
+  ].filter(hasDraftText).join('\n');
+  const selectedLogo = hasDraftText(logo.selectedChoiceId) || hasDraftText(logo.direction);
+  const websiteComplete = buildWebsiteDraftCompletion(website);
+  const completedMap = {
+    'token-type': hasDraftText(pipeline.category),
+    chain: hasDraftText(project.target_chain || project.targetChain),
+    identity: hasDraftText(project.name) && hasDraftText(pipeline.ticker),
+    tokenomics: hasDraftText(pipeline.totalSupply) && hasDraftText(pipeline.supplyModel),
+    'use-case': hasDraftText(useCaseText),
+    'dapp-plan': hasDraftText(pipeline.dappMode),
+    'contract-plan': Boolean(blueprint.operatorWorkflow || blueprint.multiChainTokenBuild),
+    'logo-studio': selectedLogo,
+    'website-builder': websiteComplete,
+    'local-preview': websiteComplete,
+    'launch-review': selectedLogo && websiteComplete && hasDraftText(project.name) && hasDraftText(pipeline.ticker)
+  };
+  const firstIncompleteStep = TOKEN_LAUNCH_PIPELINE_STEPS.find(step => !completedMap[step.id]);
+  const lastCompletedStep = [...TOKEN_LAUNCH_PIPELINE_STEPS].reverse().find(step => completedMap[step.id]) || null;
+  const completedCount = TOKEN_LAUNCH_PIPELINE_STEPS.filter(step => completedMap[step.id]).length;
+
+  return {
+    steps: TOKEN_LAUNCH_PIPELINE_STEPS.map(step => ({
+      ...step,
+      status: completedMap[step.id] ? 'ready' : (firstIncompleteStep?.id === step.id ? 'needs review' : 'draft'),
+      complete: Boolean(completedMap[step.id])
+    })),
+    completedMap,
+    currentStep: firstIncompleteStep || TOKEN_LAUNCH_PIPELINE_STEPS[TOKEN_LAUNCH_PIPELINE_STEPS.length - 1],
+    lastCompletedStep,
+    progressPercent: Math.round((completedCount / TOKEN_LAUNCH_PIPELINE_STEPS.length) * 100)
+  };
+}
+
+function buildTokenLaunchBlockers(project = {}) {
+  const draft = normalizeTokenOperatorDraft(project.operatorDraft || project.operator_draft_json || {});
+  const pipeline = draft.pipeline || {};
+  const blockers = [];
+
+  if (!hasDraftText(project.name)) {
+    blockers.push({
+      title: 'Token name is missing',
+      fix: 'Enter the token name in Token Launch Factory.'
+    });
+  }
+
+  if (!hasDraftText(project.target_chain || project.targetChain)) {
+    blockers.push({
+      title: 'Target blockchain is missing',
+      fix: 'Choose the chain for this token project.'
+    });
+  }
+
+  if (!hasDraftText(pipeline.ticker)) {
+    blockers.push({
+      title: 'Ticker is missing',
+      fix: 'Enter the ticker so the website, logo package, and launch package can inherit it.'
+    });
+  }
+
+  if (!hasDraftText(pipeline.totalSupply)) {
+    blockers.push({
+      title: 'Total supply is missing',
+      fix: 'Enter total supply in Tokenomics.'
+    });
+  }
+
+  if (!hasDraftText(pipeline.detailedUseCase) && !hasDraftText(project.ecosystemNotes || project.ecosystem_notes)) {
+    blockers.push({
+      title: 'Use case is missing',
+      fix: 'Describe what the token does so EtherealAI can build the contract plan, dapp plan, website, and whitepaper.'
+    });
+  }
+
+  if (!hasDraftText(draft.logo?.selectedChoiceId) && !hasDraftText(draft.logo?.direction)) {
+    blockers.push({
+      title: 'Logo direction is not selected',
+      fix: 'Open Logo Studio and choose one of the three local logo specs.'
+    });
+  }
+
+  if (!buildWebsiteDraftCompletion(draft.websiteWhitepaperRoadmap || {})) {
+    blockers.push({
+      title: 'Website / whitepaper / roadmap draft is missing',
+      fix: 'Open Website / Whitepaper / Roadmap Builder and save the local draft.'
+    });
+  }
+
+  return blockers;
+}
+
+function buildTokenLaunchApiReadiness(apiReadiness = {}) {
+  const fallback = {
+    kraken: {
+      label: 'Kraken',
+      status: 'optional',
+      detail: 'API status is shown in API Connection Center. Token/logo/website drafts do not require Kraken.'
+    },
+    coinbase: {
+      label: 'Coinbase Advanced',
+      status: 'optional',
+      detail: 'Coinbase read-only setup is optional future integration.'
+    },
+    dexReadOnly: {
+      label: 'DEX read-only',
+      status: 'planned',
+      detail: 'DEX quote/token/pool research is planned read-only. Swaps and wallet signing stay locked.'
+    },
+    walletMetadata: {
+      label: 'Wallet metadata',
+      status: 'optional',
+      detail: 'Public wallet metadata can be added later. Seed phrases and private keys are never requested.'
+    },
+    dexExecution: {
+      label: 'DEX execution',
+      status: 'locked external action',
+      detail: 'Swaps, approvals, and wallet signing require a future owner-approved phase.'
+    }
+  };
+
+  return {
+    ...fallback,
+    ...apiReadiness,
+    doesNotBlockLocalLaunchPackage: true
+  };
+}
+
+function buildTokenLaunchPipelineState(project = null, { apiReadiness = {}, generatedAt = new Date().toISOString() } = {}) {
+  if (!project) {
+    return {
+      generatedAt,
+      activeProject: null,
+      currentStep: {
+        id: 'start-project',
+        label: 'Start Token Launch Project',
+        ownerAction: 'Create or resume a local token launch project.'
+      },
+      lastCompletedStep: null,
+      progressPercent: 0,
+      blockers: [],
+      nextRecommendedAction: 'Start a token launch project.',
+      apiReadiness: buildTokenLaunchApiReadiness(apiReadiness),
+      statuses: {
+        tokenLaunchFactory: 'draft',
+        logoStudio: 'draft',
+        websiteWhitepaperRoadmap: 'draft',
+        localPreview: 'draft',
+        launchPackage: 'draft'
+      },
+      safetyBoundary: {
+        localOnly: true,
+        externalActionsEnabled: false,
+        deploymentEnabled: false,
+        walletSigningEnabled: false,
+        publicPostingEnabled: false,
+        listingSubmissionEnabled: false,
+        liveTradingEnabled: false
+      }
+    };
+  }
+
+  const draft = normalizeTokenOperatorDraft(project.operatorDraft || project.operator_draft_json || {});
+  const stepStatus = buildTokenLaunchStepStatus(project);
+  const blockers = buildTokenLaunchBlockers(project);
+  const websiteReady = buildWebsiteDraftCompletion(draft.websiteWhitepaperRoadmap || {});
+  const logoReady = Boolean(draft.logo?.selectedChoiceId || draft.logo?.direction);
+  const launchReviewReady = blockers.length === 0;
+  const nextStep = stepStatus.currentStep;
+
+  return {
+    generatedAt,
+    activeProject: {
+      id: project.id,
+      projectName: project.name,
+      chain: project.target_chain || project.targetChain || '',
+      tokenName: project.name || '',
+      ticker: draft.pipeline?.ticker || '',
+      category: draft.pipeline?.category || '',
+      status: project.status || 'draft',
+      updatedAt: project.updated_at || null,
+      localOnly: true
+    },
+    currentStep: nextStep,
+    lastCompletedStep: stepStatus.lastCompletedStep,
+    steps: stepStatus.steps,
+    progressPercent: stepStatus.progressPercent,
+    blockers,
+    nextRecommendedAction: blockers.length
+      ? nextStep.ownerAction
+      : 'Review the complete local launch package.',
+    apiReadiness: buildTokenLaunchApiReadiness(apiReadiness),
+    statuses: {
+      tokenLaunchFactory: stepStatus.completedMap.identity && stepStatus.completedMap.tokenomics ? 'ready for review' : 'draft',
+      logoStudio: logoReady ? 'ready for review' : 'draft',
+      websiteWhitepaperRoadmap: websiteReady ? 'locally generated' : 'draft',
+      localPreview: websiteReady ? 'locally generated' : 'draft',
+      launchPackage: launchReviewReady ? 'ready for review' : 'blocked'
+    },
+    lockedExternalActions: [
+      'Contract deployment',
+      'Token minting',
+      'Wallet signing',
+      'Liquidity creation',
+      'Swaps',
+      'Withdrawals/transfers',
+      'Cloudflare or DNS mutation',
+      'GitHub publishing',
+      'Public social posting',
+      'CoinMarketCap/CoinGecko/DexScreener submission',
+      'Paid services',
+      'Live trading'
+    ],
+    safetyBoundary: {
+      localOnly: true,
+      externalActionsEnabled: false,
+      deploymentEnabled: false,
+      walletSigningEnabled: false,
+      publicPostingEnabled: false,
+      listingSubmissionEnabled: false,
+      liveTradingEnabled: false
+    },
+    advancedDiagnostics: {
+      rawProjectRoute: `/api/v1/token-ecosystem-projects/${project.id}`,
+      artifactManifestRoute: `/api/v1/token-ecosystem-projects/${project.id}/artifacts`,
+      websitePackageRoute: `/api/v1/token-ecosystem-projects/${project.id}/website-deploy-package`
+    }
+  };
+}
+
+function buildTokenLaunchPackageReview(project = {}, { apiReadiness = {}, artifactManifest = null } = {}) {
+  const draft = normalizeTokenOperatorDraft(project.operatorDraft || project.operator_draft_json || {});
+  const blueprint = project.blueprint?.status
+    ? project.blueprint
+    : buildTokenEcosystemProjectBlueprint(project);
+  const pipelineState = buildTokenLaunchPipelineState(project, { apiReadiness });
+  const website = draft.websiteWhitepaperRoadmap || {};
+  const pipeline = draft.pipeline || {};
+  const logo = draft.logo || {};
+
+  return {
+    status: pipelineState.blockers.length ? 'blocked' : 'ready for review',
+    generatedAt: new Date().toISOString(),
+    project: pipelineState.activeProject,
+    progressPercent: pipelineState.progressPercent,
+    nextSafeAction: pipelineState.nextRecommendedAction,
+    tokenIdentity: {
+      tokenName: project.name || '',
+      ticker: pipeline.ticker || '',
+      category: pipeline.category || '',
+      chain: project.target_chain || project.targetChain || '',
+      contractType: project.contract_type || project.contractType || '',
+      community: pipeline.community || ''
+    },
+    tokenomics: {
+      totalSupply: pipeline.totalSupply || '',
+      initialSupply: pipeline.initialSupply || '',
+      supplyModel: pipeline.supplyModel || '',
+      adminModel: pipeline.adminModel || '',
+      burnModel: pipeline.burnModel || '',
+      pauseModel: pipeline.pauseModel || '',
+      transferFee: pipeline.transferFee || '',
+      stakingRewards: pipeline.stakingRewards || '',
+      treasuryAllocation: pipeline.treasuryAllocation || '',
+      liquidityAllocation: pipeline.liquidityAllocation || '',
+      teamAllocation: pipeline.teamAllocation || '',
+      communityAllocation: pipeline.communityAllocation || '',
+      releasePlan: pipeline.releasePlan || ''
+    },
+    useCase: {
+      plainEnglish: pipeline.detailedUseCase || project.ecosystemNotes || project.ecosystem_notes || '',
+      websiteExplanation: website.useCase || '',
+      whitepaperExplanation: website.whitepaperNotes || ''
+    },
+    contractPlan: {
+      status: 'local generated plan',
+      selectedChain: blueprint.multiChainTokenBuild?.selectedChain || null,
+      standardPlan: blueprint.multiChainTokenBuild?.standardPlan || null,
+      featureMatrixCount: blueprint.tokenFeatureMatrix?.length || 0,
+      deploymentEnabled: false,
+      mintingEnabled: false,
+      walletSigningEnabled: false
+    },
+    dappPlan: {
+      mode: pipeline.dappMode || '',
+      modules: pipeline.dappModules || '',
+      preview: website.dappPreview || '',
+      deploymentStatus: 'locked external action'
+    },
+    selectedLogo: {
+      status: logo.selectedChoiceId || logo.direction ? 'pre-listing selected' : 'editable draft',
+      selectedChoiceId: logo.selectedChoiceId || '',
+      style: logo.style || '',
+      palette: logo.palette || '',
+      direction: logo.direction || '',
+      lockState: logo.lockState || 'editable draft'
+    },
+    websiteDraft: {
+      status: buildWebsiteDraftCompletion(website) ? 'locally generated' : 'draft',
+      template: website.websiteTemplate || '',
+      hero: website.hero || '',
+      useCase: website.useCase || '',
+      tokenomics: website.tokenomics || '',
+      faqStatus: hasDraftText(website.faq) ? 'locally generated' : 'draft',
+      howToBuyStatus: hasDraftText(website.howToBuy) ? 'locally generated' : 'draft',
+      disclaimerStatus: hasDraftText(website.disclaimer) ? 'locally generated' : 'draft'
+    },
+    whitepaperDraft: {
+      status: hasDraftText(website.whitepaperNotes) ? 'locally generated' : 'draft',
+      notes: website.whitepaperNotes || ''
+    },
+    roadmapDraft: {
+      status: hasDraftText(website.roadmap) ? 'locally generated' : 'draft',
+      milestones: website.roadmap || ''
+    },
+    localPreview: {
+      status: buildWebsiteDraftCompletion(website) ? 'locally generated' : 'draft',
+      inAppSection: 'token-site-local-preview',
+      publicUrl: null,
+      publicDeploymentEnabled: false
+    },
+    apiReadiness: pipelineState.apiReadiness,
+    blockers: pipelineState.blockers,
+    lockedExternalActions: pipelineState.lockedExternalActions,
+    artifactSummary: artifactManifest?.counts || null,
+    buttons: [
+      { label: 'Edit Token Details', target: 'token-launch-operator-pipeline' },
+      { label: 'Edit Logo', target: 'logo-blueprint' },
+      { label: 'Edit Website', target: 'website-whitepaper-roadmap-builder' },
+      { label: 'Preview Local Site', target: 'token-site-local-preview' },
+      { label: 'Export Local Package', action: 'website-package', lockedExternal: false },
+      { label: 'Advanced Diagnostics', target: 'advanced-token-launch-diagnostics' }
+    ],
+    safetyBoundary: pipelineState.safetyBoundary
+  };
+}
+
 function parseTokenEcosystemProject(row = {}) {
   if (!row) {
     return null;
@@ -1912,6 +2347,15 @@ function plainTextList(items = [], fallback = 'Pending owner input') {
     .length
     ? items.map(item => String(item || '').trim()).filter(Boolean)
     : [fallback];
+}
+
+function splitDraftLines(value = '', fallback = 'Pending owner input') {
+  const lines = String(value || '')
+    .split(/\n|\. /)
+    .map(line => line.trim().replace(/\.$/, ''))
+    .filter(Boolean);
+
+  return lines.length ? lines : [fallback];
 }
 
 function renderStaticTokenPage({
@@ -1962,6 +2406,9 @@ function renderStaticTokenPage({
 
 function buildTokenWebsiteDeployPackageFiles(project = {}, cloudflarePlan = {}) {
   const blueprint = project.blueprint?.status ? project.blueprint : buildTokenEcosystemProjectBlueprint(project);
+  const operatorDraft = normalizeTokenOperatorDraft(project.operatorDraft || project.operator_draft_json || {});
+  const pipeline = operatorDraft.pipeline || {};
+  const draftWebsite = operatorDraft.websiteWhitepaperRoadmap || {};
   const tokenName = project.name || blueprint.contract?.name || 'Token Ecosystem Project';
   const website = blueprint.website || {};
   const whitepaper = blueprint.whitepaper || {};
@@ -1981,18 +2428,29 @@ function buildTokenWebsiteDeployPackageFiles(project = {}, cloudflarePlan = {}) 
     { label: 'Dapp', href: './app/' },
     { label: 'Community', href: './community/' }
   ];
-  const roadmapItems = (website.roadmap || []).map(item => `${item.phase}: ${item.title} - ${item.output}`);
+  const roadmapItems = hasDraftText(draftWebsite.roadmap)
+    ? splitDraftLines(draftWebsite.roadmap, 'Roadmap pending owner input')
+    : (website.roadmap || []).map(item => `${item.phase}: ${item.title} - ${item.output}`);
   const featureItems = [
     `Target chain: ${multiChain.selectedChain?.name || project.target_chain || project.targetChain || 'Base'}`,
     `Token standard: ${multiChain.standardPlan?.primaryStandard || project.contract_type || project.contractType || 'ERC20'}`,
+    pipeline.category ? `Token category: ${pipeline.category}` : '',
+    pipeline.ticker ? `Ticker: ${pipeline.ticker}` : '',
+    pipeline.totalSupply ? `Total supply: ${pipeline.totalSupply}` : '',
+    pipeline.initialSupply ? `Initial minted supply: ${pipeline.initialSupply}` : '',
+    pipeline.supplyModel ? `Supply model: ${pipeline.supplyModel}` : '',
+    pipeline.transferFee ? `Transfer fee / tax: ${pipeline.transferFee}` : '',
     ...plainTextList(project.featureSelections || [], 'Feature plan pending owner input')
-  ];
+  ].filter(Boolean);
   const whitepaperItems = [
+    draftWebsite.whitepaperNotes || '',
+    draftWebsite.useCase || '',
     whitepaper.draft?.abstract || 'Whitepaper abstract pending.',
     whitepaper.draft?.useCase || 'Use case pending owner input.',
     ...plainTextList(whitepaper.draft?.disclosures || [], 'Disclosures pending owner review')
-  ];
+  ].filter(Boolean);
   const communityItems = (social.channels || []).map(channel => `${channel.label}: ${channel.purpose}`);
+  const communityDraftItems = splitDraftLines(draftWebsite.communityLinks, 'Community links pending owner input');
   const listingItems = (listing.checklist || []).map(item => `${item.label}: ${item.evidence}`);
   const applicationItems = (applicationPlan.phases || []).map(phase => `${phase.label}: ${phase.output}`);
   const polygonItems = [
@@ -2170,14 +2628,18 @@ h1 {
       content: renderStaticTokenPage({
         tokenName,
         title: tokenName,
-        subtitle: `Token website package planned for ${primaryFqdn}.`,
+        subtitle: draftWebsite.hero || `Token website package planned for ${primaryFqdn}.`,
         nav,
         sections: [
-          { title: 'Token Plan', body: 'Local launch site generated from the Solidity Lab token ecosystem blueprint.', items: featureItems },
+          { title: 'Token Plan', body: draftWebsite.useCase || 'Local launch site generated from the Solidity Lab token ecosystem blueprint.', items: featureItems },
+          { title: 'Tokenomics', body: draftWebsite.tokenomics || 'Tokenomics draft pending owner review.', items: splitDraftLines(pipeline.releasePlan, 'Release plan pending owner input') },
           { title: 'Polygon Operating Profile', body: 'Polygon-specific chain planning for low-fee token, dapp, trading, and listing evidence workflows when Polygon is selected.', items: polygonItems },
           { title: 'Roadmap', body: 'Milestones generated from the token website and whitepaper plan.', items: roadmapItems },
+          { title: 'FAQ', body: 'Founder/operator FAQ draft.', items: splitDraftLines(draftWebsite.faq, 'FAQ pending owner input') },
+          { title: 'How To Buy', body: draftWebsite.howToBuy || 'Official buy instructions stay draft-only until owner-approved deployment and liquidity creation.', items: ['No public contract address is published by this local package.', 'No listing submission or public posting has been performed.'] },
           { title: 'Listing Evidence', body: 'Evidence checklist for future owner-reviewed CoinMarketCap/CoinGecko readiness.', items: listingItems },
-          { title: 'CMC/CoinGecko Application Path', body: 'Official-form-only application plan. No spam, fake activity, paid guarantees, or bypass behavior.', items: applicationItems }
+          { title: 'CMC/CoinGecko Application Path', body: 'Official-form-only application plan. No spam, fake activity, paid guarantees, or bypass behavior.', items: applicationItems },
+          { title: 'Risk Disclaimer', body: draftWebsite.disclaimer || 'Risk/disclaimer copy pending owner review.', items: ['Draft only; not investment advice.', 'External actions require separate owner approval.'] }
         ]
       })
     },
@@ -2206,7 +2668,7 @@ h1 {
         currentPath: '/app/',
         sections: [
           { title: 'Disabled Live Boundary', items: ['No wallet signing.', 'No RPC broadcast.', 'No live token deployment.', 'No live trading orders.'] },
-          { title: 'Future Modules', items: plainTextList(website.pages?.find(page => page.id === 'dapp')?.sections || [], 'Dapp modules pending owner input') }
+          { title: 'Future Modules', body: draftWebsite.dappPreview || pipeline.dappModules || 'Dapp preview pending owner input.', items: plainTextList(website.pages?.find(page => page.id === 'dapp')?.sections || [], 'Dapp modules pending owner input') }
         ]
       })
     },
@@ -2219,7 +2681,7 @@ h1 {
         nav,
         currentPath: '/community/',
         sections: [
-          { title: 'Social Channels', items: communityItems },
+          { title: 'Social Channels', body: draftWebsite.communityLinks || 'Community links pending owner input.', items: communityDraftItems.concat(communityItems).slice(0, 12) },
           { title: 'Community Operations', items: communityOpsItems },
           { title: 'Launch Cadence', items: (social.launchCadence || []).flatMap(phase => (phase.outputs || []).map(output => `${phase.phase}: ${output}`)) },
           { title: 'Posting Boundary', items: ['Draft locally.', 'Review manually.', 'Connect official accounts only after owner approval.'] }
@@ -2615,6 +3077,9 @@ module.exports = {
   normalizeTokenEcosystemProjectInput,
   buildTokenEcosystemProjectSpec,
   buildTokenEcosystemProjectBlueprint,
+  TOKEN_LAUNCH_PIPELINE_STEPS,
+  buildTokenLaunchPipelineState,
+  buildTokenLaunchPackageReview,
   buildTokenEcosystemWorkspaceFiles,
   buildTokenWebsiteDeployPackageFiles,
   parseTokenEcosystemProject

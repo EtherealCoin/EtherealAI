@@ -837,7 +837,8 @@
                 ['Continue Draft', 'Reloads a saved draft without losing Simple Mode fields.'],
                 ['Logo Studio', 'Opens three local logo direction choices before website, whitepaper, social package, listing icon package, and dapp visuals.'],
                 ['Choose This Local Logo Direction', 'Selects a local logo spec and saves it into the draft. It does not call an image generator or submit to a listing site.'],
-                ['Save Website / Whitepaper Draft', 'Saves website hero copy, use case, tokenomics, roadmap, whitepaper notes, dapp preview, and owner edit instructions locally.'],
+                ['Save Website / Whitepaper Draft', 'Saves website hero copy, use case, tokenomics, roadmap, FAQ, how-to-buy, community links, disclaimer, whitepaper notes, dapp preview, and owner edit instructions locally.'],
+                ['Review Launch Package', 'Opens one connected local review screen for token identity, chain, tokenomics, use case, contract plan, dapp plan, logo, website, whitepaper, roadmap, API readiness, blockers, and locked external actions.'],
                 ['Generate Workspace', 'Creates local project files for review.']
             ],
             fields: [
@@ -850,9 +851,11 @@
                 ['NFT Utility Notes', 'How NFTs affect access, utility, roles, or dapp features.'],
                 ['Ecosystem Notes', 'Website, roadmap, whitepaper, social, listing, and use-case notes.'],
                 ['Logo / Brand Direction', 'The token logo brief. This is local planning and does not call an external image generator.'],
+                ['Logo influence sliders', 'Tune text, image, and token-logo category influence for local logo specs.'],
                 ['Website hero', 'First-screen website copy.'],
                 ['Roadmap milestones', 'Editable token roadmap.'],
-                ['Whitepaper notes', 'Technical, utility, risk, and limitation notes for the whitepaper.']
+                ['Whitepaper notes', 'Technical, utility, risk, and limitation notes for the whitepaper.'],
+                ['FAQ / How to buy / Disclaimer', 'Local website sections that stay draft-only until public launch approval.']
             ],
             doNotEnter: [
                 'Do not enter private keys, seed phrases, deployer keys, wallet passwords, RPC secrets, or exchange keys.',
@@ -866,6 +869,7 @@
                 'Save the local ecosystem project draft.',
                 'Continue into Logo Studio and choose one local logo direction before website, whitepaper, roadmap, and dapp visuals.',
                 'Save the website, whitepaper, and roadmap edits locally.',
+                'Open Launch Package Review to inspect the full local package in one place.',
                 'Generate workspace only for local review.'
             ],
             safeDefaults: [
@@ -884,6 +888,7 @@
                 'The saved draft can be reopened without losing CEO workflow fields.',
                 'Logo Studio shows three local direction choices and a lock-state explanation.',
                 'Website, whitepaper, and roadmap edits stay attached to the saved local draft.',
+                'Launch Package Review shows one connected package with blockers and locked external actions.',
                 'Target chain is explicit per project.',
                 'No deployment occurred.',
                 'Live E2E and wallet signing remain locked.'
@@ -926,6 +931,13 @@
                         narration: 'Use this section like a founder draft editor. EtherealAI keeps the token website, whitepaper, roadmap, and dapp preview tied to the local token project.',
                         click: 'Edit the sections, then click Save Website / Whitepaper Draft.',
                         pause: 'Pause here and confirm Cloudflare, GitHub, DNS, and public deployment remain locked.'
+                    },
+                    {
+                        title: 'Review the complete local package',
+                        screen: 'Launch Package Review',
+                        narration: 'This is the CEO review screen. It summarizes identity, tokenomics, contract plan, logo, website, whitepaper, roadmap, API readiness, blockers, and every external action that remains locked.',
+                        click: 'Click Review Launch Package.',
+                        pause: 'Pause here and verify no deploy, mint, signing, posting, listing submission, DNS, or live trading action occurred.'
                     }
                 ]
             }

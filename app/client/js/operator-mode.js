@@ -9,6 +9,7 @@
             title: 'Run EtherealAI From One Screen',
             summary: 'Check the system, see what is safe, and press one button for the next recommended action.',
             primaryAction: { label: 'What should I do next?', kind: 'next' },
+            showLaunchPipeline: true,
             keepHeadings: [],
             readyLabel: 'Mission Control Ready',
             nextText: 'Press What should I do next. EtherealAI will choose the safest current action from local state.',
@@ -16,11 +17,13 @@
                 ['System Health', 'Shows whether the local server and database are responding.'],
                 ['Paper Trading', 'Shows whether paper setup is complete without using real money.'],
                 ['Live Trading Lock', 'Confirms live orders and wallet signing are still blocked.'],
-                ['Security', 'Shows whether the Mac needs owner review or immediate action.']
+                ['Security', 'Shows whether the Mac needs owner review or immediate action.'],
+                ['Launch Project', 'Shows the active local token launch project, current step, and next safe action.']
             ],
             workflow: [
                 ['Start here', 'Open the full beginner manual and walkthrough.', { label: 'Open Operator Manual', href: '/operator-manual' }],
                 ['Check next action', 'Ask the local assistant what to do next.', { label: 'What should I do next?', kind: 'next' }],
+                ['Continue token launch', 'Resume the connected local token, logo, website, whitepaper, and launch package workflow.', { label: 'Continue Launch Project', href: '/solidity-lab#token-launch-operator-pipeline' }],
                 ['Open paper controls', 'Go straight to safe local paper trading.', { label: 'Open Paper Trading', href: '/strategy-lab#bot-automation' }]
             ]
         },
@@ -29,17 +32,23 @@
             title: 'Mission Control',
             summary: 'Use this page to decide what to do next. Advanced diagnostics are hidden unless you switch modes.',
             primaryAction: { label: 'What should I do next?', kind: 'next' },
+            showLaunchPipeline: true,
+            keepIds: ['launch-pipeline-summary-card', 'api-connection-summary-card'],
             keepHeadings: [],
             readyLabel: 'Mission Control Ready',
-            nextText: 'Use the next-action button first. It will not route you to optional provider keys after paper trading is ready.',
+            nextText: 'Use the next-action button first. Token launch drafting, local website preview, and API readiness are shown without exposing developer diagnostics.',
             cards: [
                 ['Health', 'Server, database, and local model status.'],
                 ['Readiness', 'Paper setup and full E2E setup progress.'],
                 ['Locks', 'Live trading and wallet signing must remain locked.'],
-                ['Next Action', 'The safest next click based on current system state.']
+                ['Next Action', 'The safest next click based on current system state.'],
+                ['Active Launch Project', 'Resume the local token launch package without coding.'],
+                ['API Readiness', 'Kraken, Coinbase, DEX read-only, and wallet metadata status without blocking local drafting.']
             ],
             workflow: [
                 ['Check core setup', 'Confirm local paper operation, wallet metadata, and live locks.', { label: 'Refresh Mission Control', kind: 'next' }],
+                ['Continue launch project', 'Resume token details, Logo Studio, website, whitepaper, roadmap, and package review.', { label: 'Continue Launch Project', href: '/solidity-lab#token-launch-operator-pipeline' }],
+                ['Review API readiness', 'Open Kraken-first, Coinbase-next, and DEX read-only setup without enabling live execution.', { label: 'Open API Connection Center', href: '/api-connection-center' }],
                 ['Run paper trading', 'Open the guided paper workflow.', { label: 'Open Paper Trading', href: '/strategy-lab#bot-automation' }],
                 ['Review security', 'Open plain-English security tasks.', { label: 'Open Security Review', href: '/security-lockdown' }]
             ]
@@ -187,17 +196,18 @@
             title: 'Token Launch Factory',
             summary: 'Build the local token launch package in order: category, chain, identity, tokenomics, use case, local code plan, logo, website, whitepaper, roadmap, and dapp options. Deployment remains locked.',
             primaryAction: { label: 'Start Token Launch Pipeline', selector: '#token-launch-operator-pipeline' },
-            keepIds: ['token-launch-operator-pipeline'],
-            keepHeadings: ['Deployment Boundary', 'Contract Spec'],
+            keepIds: ['token-launch-operator-pipeline', 'website-whitepaper-roadmap-builder', 'launch-package-review'],
+            keepHeadings: ['Deployment Boundary', 'Contract Spec', 'Token Ecosystem Projects', 'Logo Creation Center'],
             readyLabel: 'Token Planning Ready',
-            nextText: 'Start with the Token Launch Factory panel. It uses Preview / Review, then Save Local Token Project and opens Logo Studio as the next step. Deployment remains locked.',
+            nextText: 'Start or resume a local launch project. The connected pipeline moves from token details to Logo Studio, website/whitepaper/roadmap, local preview, and Launch Package Review. Deployment remains locked.',
             cards: [
                 ['1. Pick category', 'Use-case token, meme token, or hybrid meme + utility token.'],
                 ['2. Choose chain', 'Base, Polygon, Solana, BNB, Avalanche, Arbitrum, Optimism, Ethereum, Move, Cosmos, NEAR, TRON, Bitcoin L2, or custom.'],
                 ['3. Build package', 'Supply, release model, allocations, fees, rewards, use case, contract plan, logo, website, whitepaper, roadmap, and dapp options.'],
                 ['4. Save draft', 'The full CEO workflow draft is saved locally and can be reopened without losing ticker, tokenomics, logo direction, or dapp fields.'],
                 ['5. Continue to Logo Studio', 'Choose one of three local logo direction specs before website, whitepaper, roadmap, social package, listing icon package, and dapp visuals.'],
-                ['6. Edit website and whitepaper', 'Persist hero copy, use-case explanation, tokenomics, roadmap, whitepaper notes, dapp preview, and owner edit instructions locally.']
+                ['6. Edit website and whitepaper', 'Persist hero copy, use-case explanation, tokenomics, roadmap, FAQ, how-to-buy, community links, disclaimer, dapp preview, and owner edit instructions locally.'],
+                ['7. Review launch package', 'Open one local review screen for identity, chain, tokenomics, use case, contract plan, dapp plan, selected logo, site draft, API readiness, blockers, and locked external actions.']
             ],
             workflow: [
                 ['1. Start pipeline', 'Open the CEO token launch panel and review the two gates.', { label: 'Start Token Launch Pipeline', selector: '#token-launch-operator-pipeline' }],
@@ -205,7 +215,8 @@
                 ['3. Preview package', 'Review blockers in one list before saving.', { label: 'Preview Local Package', selector: '#token-launch-preview' }],
                 ['4. Save local draft', 'Save or update the persistent local draft. This keeps Simple Mode fields recoverable.', { label: 'Save Local Token Project', selector: '#save-token-ecosystem-project' }],
                 ['5. Open Logo Studio', 'Choose a local logo direction. External image generation and listing submissions stay locked.', { label: 'Open Logo Studio', selector: '#logo-blueprint' }],
-                ['6. Save website draft', 'Edit and save local website, whitepaper, and roadmap sections. Cloudflare/GitHub deployment stays locked.', { label: 'Save Website / Whitepaper Draft', selector: '#website-whitepaper-roadmap-builder' }]
+                ['6. Save website draft', 'Edit and save local website, whitepaper, and roadmap sections. Cloudflare/GitHub deployment stays locked.', { label: 'Save Website / Whitepaper Draft', selector: '#website-whitepaper-roadmap-builder' }],
+                ['7. Review launch package', 'Review the connected local package before any future external action.', { label: 'Review Launch Package', selector: '#launch-package-review' }]
             ]
         },
         '/social-ops': {
@@ -929,6 +940,142 @@
         `;
     }
 
+    function launchWidgetTone(status = '') {
+        const normalized = String(status || '').toLowerCase();
+
+        if (normalized.includes('blocked') || normalized.includes('unsafe')) {
+            return 'operator-status-danger';
+        }
+
+        if (normalized.includes('locked')) {
+            return 'operator-status-live';
+        }
+
+        if (normalized.includes('draft') || normalized.includes('planned') || normalized.includes('optional') || normalized.includes('needs')) {
+            return 'operator-status-warning';
+        }
+
+        return 'operator-status-safe';
+    }
+
+    function formatLaunchBlocker(blocker) {
+        if (!blocker || typeof blocker !== 'object') {
+            return String(blocker || 'Review this launch package item.');
+        }
+
+        const title = blocker.title || blocker.label || blocker.reason || 'Launch package item needs review';
+        const fix = blocker.fix || blocker.nextAction || blocker.ownerAction || '';
+
+        return fix ? `${title}: ${fix}` : title;
+    }
+
+    function renderLaunchPipelineWidget(pipeline = null) {
+        if (!pipeline) {
+            return `
+                <section class="operator-launch-widget">
+                    <div class="operator-launch-widget-header">
+                        <div>
+                            <span class="operator-page-label">Active Local Launch Project</span>
+                            <h2>Start a token launch project</h2>
+                            <p>No active local token launch project was found yet.</p>
+                        </div>
+                        <a class="operator-primary-action operator-launch-widget-action" href="/solidity-lab#token-launch-operator-pipeline">Start Token Launch Project</a>
+                    </div>
+                    <p class="operator-launch-widget-note">Token creation, logo direction, website, whitepaper, roadmap, and launch package review stay local. Deployment, signing, minting, public posting, listings, and paid/external services remain locked.</p>
+                </section>
+            `;
+        }
+
+        const project = pipeline.activeProject;
+        const statuses = pipeline.statuses || {};
+        const apiReadiness = pipeline.apiReadiness || {};
+        const blockers = Array.isArray(pipeline.blockers) ? pipeline.blockers : [];
+        const projectTitle = project?.projectName || project?.tokenName || 'Start a token launch project';
+        const progress = Number(pipeline.progressPercent || 0);
+        const nextAction = pipeline.nextRecommendedAction || pipeline.currentStep?.ownerAction || 'Continue the local launch workflow.';
+        const statusTiles = [
+            ['Current Step', pipeline.currentStep?.label || 'Start Token Launch Project', pipeline.currentStep?.ownerAction || 'Create or resume the project.'],
+            ['Progress', `${progress}%`, 'Local pipeline progress only.'],
+            ['Token Launch Factory', statuses.tokenLaunchFactory || 'draft', 'Token details, chain, tokenomics, use case, dapp, and contract plan.'],
+            ['Logo Studio', statuses.logoStudio || 'draft', 'Three local logo direction specs and selected logo status.'],
+            ['Website / Whitepaper', statuses.websiteWhitepaperRoadmap || 'draft', 'Local website, whitepaper, roadmap, FAQ, how-to-buy, community, and risk copy.'],
+            ['API Readiness', `Kraken: ${apiReadiness.kraken?.status || 'optional'}`, 'APIs help future trading context but do not block local token drafting.']
+        ];
+
+        return `
+            <section class="operator-launch-widget">
+                <div class="operator-launch-widget-header">
+                    <div>
+                        <span class="operator-page-label">Active Local Launch Project</span>
+                        <h2>${escapeHtml(projectTitle)}</h2>
+                        <p>${escapeHtml(nextAction)}</p>
+                    </div>
+                    <div class="operator-launch-widget-actions">
+                        <a class="operator-primary-action" href="/solidity-lab#token-launch-operator-pipeline">Continue Launch Project</a>
+                        <a class="operator-secondary-action hero-button-equal-button" href="/solidity-lab#launch-package-review">Review Launch Package</a>
+                        <a class="operator-secondary-action hero-button-equal-button" href="/api-connection-center">API Connection Center</a>
+                    </div>
+                </div>
+                <div class="operator-launch-widget-grid">
+                    ${statusTiles.map(([label, value, note]) => `
+                        <article class="operator-status-tile ${launchWidgetTone(value)}">
+                            <span>${escapeHtml(label)}</span>
+                            <strong>${escapeHtml(value)}</strong>
+                            <small>${escapeHtml(note)}</small>
+                        </article>
+                    `).join('')}
+                </div>
+                <div class="operator-launch-widget-blockers">
+                    <strong>${blockers.length ? 'Blockers to fix before local package review' : 'Local package review status'}</strong>
+                    ${blockers.length
+                        ? `<ul>${blockers.map(blocker => `<li>${escapeHtml(formatLaunchBlocker(blocker))}</li>`).join('')}</ul>`
+                        : '<p>No local package blocker is currently reported. External actions remain locked until a future owner approval flow.</p>'}
+                </div>
+            </section>
+        `;
+    }
+
+    async function loadLaunchPipelineWidget() {
+        const host = document.getElementById('operator-launch-pipeline-widget');
+        if (!host) {
+            return;
+        }
+
+        host.innerHTML = `
+            <section class="operator-launch-widget">
+                <div class="operator-launch-widget-header">
+                    <div>
+                        <span class="operator-page-label">Active Local Launch Project</span>
+                        <h2>Loading launch project</h2>
+                        <p>Checking the local token launch pipeline.</p>
+                    </div>
+                </div>
+            </section>
+        `;
+
+        try {
+            const response = await fetch('/api/v1/token-launch-pipeline/state');
+            if (!response.ok) {
+                throw new Error(`Launch pipeline check returned ${response.status}`);
+            }
+            const data = await response.json();
+            host.innerHTML = renderLaunchPipelineWidget(data.pipeline);
+        } catch (error) {
+            host.innerHTML = `
+                <section class="operator-launch-widget operator-launch-widget-error">
+                    <div class="operator-launch-widget-header">
+                        <div>
+                            <span class="operator-page-label">Active Local Launch Project</span>
+                            <h2>Launch project status needs review</h2>
+                            <p>${escapeHtml(error.message || 'Unable to read the local launch pipeline right now.')}</p>
+                        </div>
+                        <a class="operator-primary-action operator-launch-widget-action" href="/solidity-lab#token-launch-operator-pipeline">Open Token Launch Factory</a>
+                    </div>
+                </section>
+            `;
+        }
+    }
+
     function renderStatus(summary = null) {
         const owner = summary?.owner?.wizard;
         const bot = summary?.bot?.capabilityPath;
@@ -1021,6 +1168,7 @@
             <div id="operator-simple-status" class="operator-status-grid">
                 <article class="operator-status-tile operator-status-warning"><span>Status</span><strong>Loading</strong><small>Checking local system.</small></article>
             </div>
+            ${config.showLaunchPipeline ? '<div id="operator-launch-pipeline-widget"></div>' : ''}
             ${renderCommunityShowcase(config)}
             <div id="operator-simple-answers">${renderReadiness(null, config)}</div>
             ${renderWorkflow(config.workflow || [])}
@@ -1039,6 +1187,7 @@
         const summary = await loadSummary();
         document.getElementById('operator-simple-status').innerHTML = renderStatus(summary);
         document.getElementById('operator-simple-answers').innerHTML = renderReadiness(summary, config);
+        await loadLaunchPipelineWidget();
     }
 
     function renderModeBar() {

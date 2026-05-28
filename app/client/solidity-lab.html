@@ -51,6 +51,14 @@
                     <p>No deployment, wallet signing, minting, liquidity, public posting, DNS mutation, or listing submission runs from this draft flow.</p>
                 </article>
             </div>
+            <div id="launch-pipeline-progress" class="launch-pipeline-progress">
+                Loading connected launch pipeline state...
+            </div>
+            <div class="button-row">
+                <button id="continue-launch-project" type="button">Continue Next Step</button>
+                <button id="review-launch-package" type="button">Review Launch Package</button>
+                <button id="refresh-launch-pipeline-state" type="button">Refresh Pipeline State</button>
+            </div>
             <div class="token-launch-operator-grid">
                 <label for="token-launch-category">
                     Token category
@@ -375,11 +383,65 @@
                         <label for="token-logo-palette">Color Palette</label>
                         <input id="token-logo-palette" type="text" value="black, neon pink, cyan blue, dark purple, white">
 
+                        <div class="token-launch-detail-grid">
+                            <label for="token-logo-existing">
+                                Use existing logo / reference
+                                <textarea id="token-logo-existing" rows="2" maxlength="800" placeholder="Optional: describe an existing logo, pasted image reference, or saved file path. Do not paste private keys or exchange credentials."></textarea>
+                            </label>
+                            <label for="token-logo-inspiration">
+                                Inspiration image notes
+                                <textarea id="token-logo-inspiration" rows="2" maxlength="800" placeholder="Optional: describe the image inspiration. Local image upload can be wired later; this field stores the direction only."></textarea>
+                            </label>
+                            <label for="token-logo-shape">
+                                Shape
+                                <select id="token-logo-shape">
+                                    <option value="lettermark">Lettermark</option>
+                                    <option value="orbital core">Orbital core</option>
+                                    <option value="coin medallion">Coin medallion</option>
+                                    <option value="globe/world">Globe/world</option>
+                                    <option value="shield/security">Shield/security</option>
+                                    <option value="mascot or character">Mascot or character</option>
+                                    <option value="abstract geometry">Abstract geometry</option>
+                                </select>
+                            </label>
+                            <label for="token-logo-background">
+                                Background preference
+                                <select id="token-logo-background">
+                                    <option value="transparent and dark variants">Transparent and dark variants</option>
+                                    <option value="dark neon only">Dark neon only</option>
+                                    <option value="light and dark variants">Light and dark variants</option>
+                                    <option value="exchange icon flat background">Exchange icon flat background</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="token-logo-slider-grid">
+                            <label for="token-logo-text-influence">
+                                Text influence
+                                <input id="token-logo-text-influence" type="range" min="1" max="100" value="60">
+                                <span>60</span>
+                            </label>
+                            <label for="token-logo-image-influence">
+                                Image influence
+                                <input id="token-logo-image-influence" type="range" min="1" max="100" value="40">
+                                <span>40</span>
+                            </label>
+                            <label for="token-logo-style-influence">
+                                Token-logo category influence
+                                <input id="token-logo-style-influence" type="range" min="1" max="100" value="75">
+                                <span>75</span>
+                            </label>
+                        </div>
                         <label for="token-logo-direction">Logo / Brand Direction</label>
                         <textarea id="token-logo-direction" rows="3" maxlength="1200" placeholder="Example: create an R/world token identity that feels premium, futuristic, readable at icon size, and usable across website, dapp, NFT badges, Discord, X, CoinMarketCap, and CoinGecko."></textarea>
 
+                        <div id="token-logo-readability-preview" class="token-logo-readability-preview">
+                            Listing icon preview: square icon, favicon, dapp header mark, social avatar, and dark/light variants are local specs only.
+                        </div>
                         <div class="button-row">
                             <button id="apply-logo-brief" type="button">Apply Logo Brief To Token Plan</button>
+                            <button id="regenerate-logo-specs" type="button">Regenerate 3 Local Logo Specs</button>
+                            <button id="edit-selected-logo-spec" type="button">Edit Selected Logo Spec</button>
+                            <button id="continue-to-website-builder" type="button">Continue To Website Builder</button>
                         </div>
                         <div id="token-logo-brief-status" class="inline-status">Logo planning stays local. Do not upload private files or exchange credentials here.</div>
                     </section>
@@ -534,6 +596,26 @@
                     Owner edit instructions
                     <textarea id="token-site-edit-instructions" rows="3" placeholder="Example: make this more premium, move roadmap higher, make meme voice stronger, add whitepaper detail about arbitrage utility."></textarea>
                 </label>
+                <label for="token-site-faq">
+                    FAQ
+                    <textarea id="token-site-faq" rows="3" placeholder="Questions and answers for holders, dapp users, utility, launch timing, risks, and where official links will live."></textarea>
+                </label>
+            </div>
+            <div class="token-launch-wide-controls">
+                <label for="token-site-how-to-buy">
+                    How to buy
+                    <textarea id="token-site-how-to-buy" rows="3" placeholder="Local draft only. Example: official links will be published after owner-approved deployment and liquidity creation."></textarea>
+                </label>
+                <label for="token-site-community-links">
+                    Community / social links
+                    <textarea id="token-site-community-links" rows="3" placeholder="Draft official X, Discord, Telegram, YouTube, Medium, docs, and support links. Public posting and account automation stay locked."></textarea>
+                </label>
+                <label for="token-site-disclaimer">
+                    Disclaimer / risk section
+                    <textarea id="token-site-disclaimer" rows="3" placeholder="Explain risks, no guaranteed profit, owner review, launch boundaries, and what is planned versus shipped."></textarea>
+                </label>
+            </div>
+            <div class="token-launch-wide-controls">
                 <label>
                     Local-only status
                     <textarea rows="3" readonly>Editable local draft. No Cloudflare/GitHub deployment, DNS mutation, public posting, listing submission, wallet signing, minting, or live trading.</textarea>
@@ -549,6 +631,30 @@
             <div id="token-site-local-preview" class="token-site-local-preview">
                 Local preview will render here from the saved token draft. It stays inside EtherealAI and does not deploy publicly.
             </div>
+        </section>
+
+        <section id="launch-package-review" class="model-panel launch-package-review">
+            <div class="operator-two-gate-heading">
+                <span>Launch Package Review</span>
+                <h2>Complete Local Token Launch Package</h2>
+                <p>Review token identity, chain, tokenomics, contract plan, dapp plan, logo, website, whitepaper, roadmap, API readiness, blockers, and locked external actions in one place. Nothing public happens here.</p>
+            </div>
+            <div class="button-row">
+                <button id="load-launch-package-review" type="button">Load Launch Package Review</button>
+                <button id="launch-review-edit-token" type="button">Edit Token Details</button>
+                <button id="launch-review-edit-logo" type="button">Edit Logo</button>
+                <button id="launch-review-edit-website" type="button">Edit Website</button>
+                <button id="launch-review-preview-site" type="button">Preview Local Site</button>
+                <button id="launch-review-export-package" type="button">Export Local Package</button>
+            </div>
+            <div id="launch-package-review-status" class="inline-status">Save or load a token launch project, then open the package review.</div>
+            <div id="launch-package-review-content" class="launch-package-review-grid">
+                No launch package loaded yet.
+            </div>
+            <details id="advanced-token-launch-diagnostics" class="compact-details advanced-operator-tools">
+                <summary>Advanced Diagnostics</summary>
+                <pre id="launch-package-advanced-output" class="model-output">Raw launch package diagnostics stay here in Advanced Developer Mode.</pre>
+            </details>
         </section>
 
         <section class="model-panel">
@@ -571,6 +677,8 @@
     <script>
         let selectedTokenEcosystemProjectId = null;
         let selectedLogoChoiceId = null;
+        let latestLaunchPipelineState = null;
+        let latestLaunchPackageReview = null;
         const TOKEN_DRAFT_FIELD_IDS = {
             category: 'token-launch-category',
             ticker: 'token-launch-ticker',
@@ -600,6 +708,10 @@
             roadmap: 'token-site-roadmap',
             whitepaperNotes: 'token-site-whitepaper',
             dappPreview: 'token-site-dapp-preview',
+            faq: 'token-site-faq',
+            howToBuy: 'token-site-how-to-buy',
+            communityLinks: 'token-site-community-links',
+            disclaimer: 'token-site-disclaimer',
             editInstructions: 'token-site-edit-instructions'
         };
 
@@ -650,6 +762,39 @@
             }
 
             field.value = value;
+        }
+
+        function updateLogoSliderLabels() {
+            ['token-logo-text-influence', 'token-logo-image-influence', 'token-logo-style-influence'].forEach(id => {
+                const input = document.getElementById(id);
+                const label = input?.parentElement?.querySelector('span');
+
+                if (input && label) {
+                    label.textContent = input.value;
+                }
+            });
+            renderTokenLogoReadabilityPreview();
+        }
+
+        function renderTokenLogoReadabilityPreview() {
+            const host = document.getElementById('token-logo-readability-preview');
+            const logo = getLogoBriefInputs();
+            const token = readTokenLaunchPipelineInput();
+
+            if (!host) {
+                return;
+            }
+
+            host.innerHTML = `
+                <div class="token-logo-mini-preview">
+                    <span>${escapeHtml((token.ticker || 'REAL').slice(0, 4))}</span>
+                </div>
+                <div>
+                    <strong>Exchange/listing readability preview</strong>
+                    <p>${escapeHtml(logo.shape)} · ${escapeHtml(logo.backgroundPreference)} · text ${logo.textInfluence}% · image ${logo.imageInfluence}% · token style ${logo.tokenStyleInfluence}%.</p>
+                    <small>Local spec only. No image provider, listing service, wallet, or deployment action is called.</small>
+                </div>
+            `;
         }
 
         function buildTokenDraftCompletion(input = readTokenLaunchPipelineInput(), logo = getLogoBriefInputs(), website = getWebsiteWhitepaperInputs()) {
@@ -714,6 +859,120 @@
                     <p>External actions remain locked: no deployment, signing, minting, liquidity, DNS, posting, or listing submission.</p>
                 </article>
             `;
+        }
+
+        function statusTone(status = '') {
+            const text = String(status || '').toLowerCase();
+            if (text.includes('ready') || text.includes('connected') || text.includes('generated')) return 'status-success';
+            if (text.includes('blocked') || text.includes('unsafe')) return 'status-danger';
+            if (text.includes('locked')) return 'status-info';
+            return 'status-warning';
+        }
+
+        function renderLaunchPipelineProgress(pipeline = {}) {
+            const host = document.getElementById('launch-pipeline-progress');
+
+            if (!host) {
+                return;
+            }
+
+            latestLaunchPipelineState = pipeline;
+
+            if (!pipeline.activeProject) {
+                host.innerHTML = `
+                    <article class="operator-two-gate-card operator-two-gate-warning">
+                        <div class="operator-two-gate-card-header">
+                            <span>Connected launch workflow</span>
+                            <strong>No local token launch project yet</strong>
+                        </div>
+                        <p>Start or save a token launch project. EtherealAI will then guide you through Logo Studio, website/whitepaper/roadmap, local preview, and launch package review.</p>
+                    </article>
+                `;
+                return;
+            }
+
+            const steps = pipeline.steps || [];
+            const statuses = pipeline.statuses || {};
+            const api = pipeline.apiReadiness || {};
+
+            host.innerHTML = `
+                <div class="launch-pipeline-summary-row">
+                    <article class="${pipeline.blockers?.length ? 'status-warning' : 'status-success'}">
+                        <span>Active launch project</span>
+                        <strong>${escapeHtml(pipeline.activeProject.projectName || 'Token Project')}</strong>
+                        <small>${escapeHtml(pipeline.activeProject.chain || 'chain pending')} · ${escapeHtml(pipeline.activeProject.ticker || 'ticker pending')} · ${pipeline.progressPercent || 0}% complete</small>
+                    </article>
+                    <article class="${statusTone(statuses.launchPackage)}">
+                        <span>Current step</span>
+                        <strong>${escapeHtml(pipeline.currentStep?.label || 'Launch project')}</strong>
+                        <small>${escapeHtml(pipeline.nextRecommendedAction || 'Continue next step.')}</small>
+                    </article>
+                    <article class="status-info">
+                        <span>API readiness</span>
+                        <strong>Optional for local package</strong>
+                        <small>Kraken ${escapeHtml(api.kraken?.status || 'optional')} · Coinbase ${escapeHtml(api.coinbase?.status || 'optional')} · DEX ${escapeHtml(api.dexReadOnly?.status || 'planned')}</small>
+                    </article>
+                </div>
+                <div class="launch-step-track">
+                    ${steps.map(step => `
+                        <article class="${step.complete ? 'launch-step-complete' : (step.id === pipeline.currentStep?.id ? 'launch-step-current' : 'launch-step-draft')}">
+                            <span>${escapeHtml(step.label)}</span>
+                            <strong>${step.complete ? 'Done' : (step.id === pipeline.currentStep?.id ? 'Next' : 'Draft')}</strong>
+                            <small>${escapeHtml(step.ownerAction || '')}</small>
+                        </article>
+                    `).join('')}
+                </div>
+                <div class="launch-blocker-list">
+                    ${(pipeline.blockers || []).length
+                        ? `<strong>Blockers to fix:</strong><ul>${pipeline.blockers.map(blocker => `<li>${escapeHtml(blocker.title)} — ${escapeHtml(blocker.fix || '')}</li>`).join('')}</ul>`
+                        : '<strong>Local package is ready for review.</strong><p>External actions remain locked until a separate owner-approved phase.</p>'}
+                </div>
+            `;
+        }
+
+        async function loadLaunchPipelineState() {
+            const query = selectedTokenEcosystemProjectId ? `?projectId=${encodeURIComponent(selectedTokenEcosystemProjectId)}` : '';
+            const response = await fetch(`/api/v1/token-launch-pipeline/state${query}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                document.getElementById('launch-pipeline-progress').textContent = data.error || 'Unable to load launch pipeline state.';
+                return null;
+            }
+
+            renderLaunchPipelineProgress(data.pipeline || {});
+            return data.pipeline || null;
+        }
+
+        function scrollToLaunchStep(stepId = '') {
+            const stepTargets = {
+                'token-type': 'token-launch-operator-pipeline',
+                chain: 'contract-network',
+                identity: 'contract-name',
+                tokenomics: 'token-launch-total-supply',
+                'use-case': 'token-launch-use-case',
+                'dapp-plan': 'token-launch-dapp-modules',
+                'contract-plan': 'contract-form',
+                'logo-studio': 'logo-blueprint',
+                'website-builder': 'website-whitepaper-roadmap-builder',
+                'local-preview': 'token-site-local-preview',
+                'launch-review': 'launch-package-review'
+            };
+            const target = document.getElementById(stepTargets[stepId] || 'token-launch-operator-pipeline');
+
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        async function continueLaunchProject() {
+            const pipeline = latestLaunchPipelineState || await loadLaunchPipelineState();
+            const stepId = pipeline?.currentStep?.id || 'token-type';
+            scrollToLaunchStep(stepId);
+
+            if (stepId === 'launch-review') {
+                await loadLaunchPackageReview();
+            }
         }
 
         function tokenLaunchBlockers() {
@@ -831,7 +1090,19 @@
             document.getElementById('token-site-roadmap').value = 'Phase 1: local AI operating system. Phase 2: token website, whitepaper, roadmap, and logo package. Phase 3: community launch drafts. Phase 4: deployment only after separate owner approval.';
             document.getElementById('token-site-whitepaper').value = 'Explain local-first AI infrastructure, token utility, dapp modules, tokenomics, risks, limitations, launch boundary, and owner approval requirements.';
             document.getElementById('token-site-dapp-preview').value = 'Local dapp preview: token dashboard, NFT utility upgrades, community/listing evidence dashboard, and future wallet connection only after separate approval.';
+            document.getElementById('token-site-faq').value = 'What is EtherealAI? A local-first AI operating system. Is this token deployed? No, this is a local launch package until owner approval. Are profits guaranteed? No.';
+            document.getElementById('token-site-how-to-buy').value = 'Official buy instructions stay draft-only until deployment, liquidity creation, and listing links are owner-approved.';
+            document.getElementById('token-site-community-links').value = 'Draft links: X, Discord, Telegram, YouTube, Medium, docs, and support. Public accounts and posting remain locked.';
+            document.getElementById('token-site-disclaimer').value = 'Draft risk section: crypto assets are risky, no guaranteed profit, roadmap items may be planned rather than shipped, and public launch requires final owner approval.';
             document.getElementById('token-site-edit-instructions').value = 'Make the site premium, founder/operator focused, clear about local safety, and ready for community progress updates.';
+            document.getElementById('token-logo-existing').value = 'Use Ethereal/REAL R-world logo and archived dapp artwork as brand inspiration.';
+            document.getElementById('token-logo-inspiration').value = 'Dark purple/black field, cyan/pink neon globe, R-world identity, We Math Better community art, and exchange-icon readability.';
+            document.getElementById('token-logo-shape').value = 'lettermark';
+            document.getElementById('token-logo-background').value = 'transparent and dark variants';
+            document.getElementById('token-logo-text-influence').value = '60';
+            document.getElementById('token-logo-image-influence').value = '40';
+            document.getElementById('token-logo-style-influence').value = '75';
+            updateLogoSliderLabels();
             selectChainNeutralTokenDefaults();
             applyTokenLaunchBriefToSpec();
             previewTokenLaunchPackage();
@@ -1192,6 +1463,13 @@
                 style: document.getElementById('token-logo-style').value.trim(),
                 palette: document.getElementById('token-logo-palette').value.trim(),
                 direction: document.getElementById('token-logo-direction').value.trim(),
+                existingLogo: document.getElementById('token-logo-existing')?.value.trim() || '',
+                inspirationImageNotes: document.getElementById('token-logo-inspiration')?.value.trim() || '',
+                textInfluence: Number(document.getElementById('token-logo-text-influence')?.value || 60),
+                imageInfluence: Number(document.getElementById('token-logo-image-influence')?.value || 40),
+                tokenStyleInfluence: Number(document.getElementById('token-logo-style-influence')?.value || 75),
+                shape: document.getElementById('token-logo-shape')?.value || 'lettermark',
+                backgroundPreference: document.getElementById('token-logo-background')?.value || 'transparent and dark variants',
                 selectedChoiceId: selectedLogoChoiceId || '',
                 lockState: selectedLogoChoiceId ? 'pre-listing selected' : 'editable draft'
             };
@@ -1206,6 +1484,10 @@
                 roadmap: document.getElementById('token-site-roadmap')?.value.trim() || '',
                 whitepaperNotes: document.getElementById('token-site-whitepaper')?.value.trim() || '',
                 dappPreview: document.getElementById('token-site-dapp-preview')?.value.trim() || '',
+                faq: document.getElementById('token-site-faq')?.value.trim() || '',
+                howToBuy: document.getElementById('token-site-how-to-buy')?.value.trim() || '',
+                communityLinks: document.getElementById('token-site-community-links')?.value.trim() || '',
+                disclaimer: document.getElementById('token-site-disclaimer')?.value.trim() || '',
                 editInstructions: document.getElementById('token-site-edit-instructions')?.value.trim() || '',
                 status: 'editable local draft'
             };
@@ -1221,7 +1503,7 @@
         }
 
         function buildWebsiteWhitepaperCompletion(website = getWebsiteWhitepaperInputs()) {
-            return Boolean(website.hero || website.useCase || website.tokenomics || website.roadmap || website.whitepaperNotes || website.dappPreview);
+            return Boolean(website.hero || website.useCase || website.tokenomics || website.roadmap || website.whitepaperNotes || website.dappPreview || website.faq || website.howToBuy || website.communityLinks || website.disclaimer);
         }
 
         function formatLogoBriefForNotes() {
@@ -1230,6 +1512,11 @@
                 'Logo art direction:',
                 `- Style: ${logo.style || 'owner-directed token identity'}`,
                 `- Palette: ${logo.palette || 'black, neon pink, cyan blue, dark purple, white'}`,
+                `- Shape: ${logo.shape || 'lettermark'}`,
+                `- Background: ${logo.backgroundPreference || 'transparent and dark variants'}`,
+                `- Influence sliders: text ${logo.textInfluence || 60}%, image ${logo.imageInfluence || 40}%, token-logo category ${logo.tokenStyleInfluence || 75}%`,
+                logo.existingLogo ? `- Existing logo/reference: ${logo.existingLogo}` : '- Existing logo/reference: none attached yet',
+                logo.inspirationImageNotes ? `- Inspiration image notes: ${logo.inspirationImageNotes}` : '- Inspiration image notes: none yet',
                 logo.direction ? `- Owner direction: ${logo.direction}` : '- Owner direction: use the REAL R/world identity as inspiration without cluttering the UI.',
                 '- Required outputs: square token icon, transparent PNG, dark background variant, light background variant, dapp mark, NFT utility badge set, social avatar, favicon, CoinMarketCap/CoinGecko listing icon.',
                 '- Safety: do not imitate existing coin logos; keep text minimal; verify readability at 32px.'
@@ -1330,6 +1617,14 @@
             setTokenDraftField('token-logo-style', logo.style);
             setTokenDraftField('token-logo-palette', logo.palette);
             setTokenDraftField('token-logo-direction', logo.direction);
+            setTokenDraftField('token-logo-existing', logo.existingLogo, { allowEmpty: true });
+            setTokenDraftField('token-logo-inspiration', logo.inspirationImageNotes, { allowEmpty: true });
+            setTokenDraftField('token-logo-shape', logo.shape, { allowEmpty: true });
+            setTokenDraftField('token-logo-background', logo.backgroundPreference, { allowEmpty: true });
+            setTokenDraftField('token-logo-text-influence', logo.textInfluence || 60);
+            setTokenDraftField('token-logo-image-influence', logo.imageInfluence || 40);
+            setTokenDraftField('token-logo-style-influence', logo.tokenStyleInfluence || 75);
+            updateLogoSliderLabels();
             applyWebsiteWhitepaperDraft(project);
             document.getElementById('contract-name').value = project.name || '';
             document.getElementById('contract-network').value = project.target_chain || 'base';
@@ -1343,6 +1638,7 @@
             setTokenProjectSelection(project.id);
             renderTokenDraftStatus(project, `${project.name || 'Token project'} loaded. Continue editing, then save/update the local draft.`);
             previewTokenLaunchPackage();
+            loadLaunchPipelineState();
         }
 
         function buildTokenEcosystemProjectPayload() {
@@ -1600,6 +1896,7 @@
             renderEcosystemBlueprint(data.project.blueprint || {});
             renderTokenDraftStatus(data.project, 'Saved locally. EtherealAI preserved the CEO workflow fields and prepared Logo Studio as the next step.');
             await loadTokenEcosystemProjects();
+            await loadLaunchPipelineState();
 
             if (openNext) {
                 openTokenLaunchNextStep(data.project);
@@ -1692,7 +1989,163 @@
                         </ul>
                     </article>
                 </div>
+                <div class="token-site-preview-grid">
+                    <article>
+                        <strong>FAQ</strong>
+                        <ul>${splitPreviewLines(website.faq).map(line => `<li>${escapeHtml(line)}</li>`).join('') || '<li>FAQ pending.</li>'}</ul>
+                    </article>
+                    <article>
+                        <strong>How To Buy</strong>
+                        <p>${escapeHtml(website.howToBuy || 'Buy instructions stay draft-only until deployment, liquidity, and official links are owner-approved.')}</p>
+                    </article>
+                    <article>
+                        <strong>Community / Risk</strong>
+                        <p>${escapeHtml(website.communityLinks || 'Community links pending owner input.')}</p>
+                        <small>${escapeHtml(website.disclaimer || 'Risk section pending owner input.')}</small>
+                    </article>
+                </div>
             `;
+        }
+
+        function renderLaunchPackageReview(launchPackage = {}) {
+            const host = document.getElementById('launch-package-review-content');
+            const status = document.getElementById('launch-package-review-status');
+            const advanced = document.getElementById('launch-package-advanced-output');
+            const identity = launchPackage.tokenIdentity || {};
+            const tokenomics = launchPackage.tokenomics || {};
+            const logo = launchPackage.selectedLogo || {};
+            const website = launchPackage.websiteDraft || {};
+            const api = launchPackage.apiReadiness || {};
+            const blockers = launchPackage.blockers || [];
+
+            latestLaunchPackageReview = launchPackage;
+
+            if (status) {
+                status.textContent = blockers.length
+                    ? `Launch package needs ${blockers.length} fix(es) before local review is complete.`
+                    : 'Launch package is ready for local owner review. External actions remain locked.';
+            }
+
+            host.innerHTML = `
+                <article class="${blockers.length ? 'status-warning' : 'status-success'}">
+                    <span>Package status</span>
+                    <strong>${escapeHtml(launchPackage.status || 'draft')}</strong>
+                    <small>${escapeHtml(launchPackage.nextSafeAction || 'Review the package locally.')}</small>
+                </article>
+                <article>
+                    <span>Token identity</span>
+                    <strong>${escapeHtml(identity.tokenName || 'Token name pending')} ${identity.ticker ? `(${escapeHtml(identity.ticker)})` : ''}</strong>
+                    <small>${escapeHtml(identity.category || 'category pending')} · ${escapeHtml(identity.chain || 'chain pending')} · ${escapeHtml(identity.contractType || 'contract pending')}</small>
+                </article>
+                <article>
+                    <span>Tokenomics</span>
+                    <strong>${escapeHtml(tokenomics.totalSupply || 'Supply pending')}</strong>
+                    <small>Treasury ${escapeHtml(tokenomics.treasuryAllocation || 'pending')} · Liquidity ${escapeHtml(tokenomics.liquidityAllocation || 'pending')} · Community ${escapeHtml(tokenomics.communityAllocation || 'pending')}</small>
+                </article>
+                <article>
+                    <span>Use case</span>
+                    <strong>${escapeHtml((launchPackage.useCase?.plainEnglish || 'Use case pending').slice(0, 80))}</strong>
+                    <small>${escapeHtml(launchPackage.useCase?.websiteExplanation || 'Website explanation pending.')}</small>
+                </article>
+                <article>
+                    <span>Contract plan</span>
+                    <strong>${escapeHtml(launchPackage.contractPlan?.status || 'local generated plan')}</strong>
+                    <small>${escapeHtml(launchPackage.contractPlan?.standardPlan?.primaryStandard || 'standard pending')} · deployment locked · minting locked</small>
+                </article>
+                <article>
+                    <span>Dapp plan</span>
+                    <strong>${escapeHtml(launchPackage.dappPlan?.mode || 'add dapp later')}</strong>
+                    <small>${escapeHtml(launchPackage.dappPlan?.deploymentStatus || 'locked external action')}</small>
+                </article>
+                <article>
+                    <span>Selected logo</span>
+                    <strong>${escapeHtml(logo.selectedChoiceId || logo.style || 'editable draft')}</strong>
+                    <small>${escapeHtml(logo.lockState || 'editable draft')} · ${escapeHtml(logo.palette || 'palette pending')}</small>
+                </article>
+                <article>
+                    <span>Website / whitepaper / roadmap</span>
+                    <strong>${escapeHtml(website.status || 'draft')}</strong>
+                    <small>Whitepaper ${escapeHtml(launchPackage.whitepaperDraft?.status || 'draft')} · Roadmap ${escapeHtml(launchPackage.roadmapDraft?.status || 'draft')}</small>
+                </article>
+                <article>
+                    <span>Local preview</span>
+                    <strong>${escapeHtml(launchPackage.localPreview?.status || 'draft')}</strong>
+                    <small>Public URL: none. Deployment is locked.</small>
+                </article>
+                <article>
+                    <span>API readiness</span>
+                    <strong>Optional for local package</strong>
+                    <small>Kraken ${escapeHtml(api.kraken?.status || 'optional')} · Coinbase ${escapeHtml(api.coinbase?.status || 'optional')} · DEX ${escapeHtml(api.dexReadOnly?.status || 'planned')}</small>
+                </article>
+                <article class="status-info">
+                    <span>Locked external actions</span>
+                    <strong>${(launchPackage.lockedExternalActions || []).length} locked</strong>
+                    <small>No deploy, mint, sign, swap, DNS mutation, posting, listing submission, or live trading.</small>
+                </article>
+                <article class="${blockers.length ? 'status-warning' : 'status-success'}">
+                    <span>Blockers</span>
+                    <strong>${blockers.length ? `${blockers.length} to fix` : 'None for local review'}</strong>
+                    <small>${blockers.length ? escapeHtml(blockers.map(blocker => blocker.title).join('; ')) : 'Ready for local review.'}</small>
+                </article>
+            `;
+
+            if (advanced) {
+                advanced.textContent = JSON.stringify(launchPackage, null, 2);
+            }
+        }
+
+        async function loadLaunchPackageReview() {
+            const status = document.getElementById('launch-package-review-status');
+
+            if (!selectedTokenEcosystemProjectId) {
+                status.textContent = 'Save or load a token launch project before opening Launch Package Review.';
+                document.getElementById('token-launch-operator-pipeline').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return null;
+            }
+
+            status.textContent = 'Loading local launch package review...';
+            const response = await fetch(`/api/v1/token-ecosystem-projects/${selectedTokenEcosystemProjectId}/launch-package`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                status.textContent = data.error || 'Unable to load launch package review.';
+                return null;
+            }
+
+            renderLaunchPackageReview(data.launchPackage || {});
+            document.getElementById('launch-package-review').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return data.launchPackage || null;
+        }
+
+        async function exportLocalLaunchPackage() {
+            const status = document.getElementById('launch-package-review-status');
+
+            if (!selectedTokenEcosystemProjectId) {
+                status.textContent = 'Save or load a token launch project before exporting a local package.';
+                return;
+            }
+
+            status.textContent = 'Generating local website/export package. No deployment or DNS mutation will run...';
+            const response = await fetch(`/api/v1/token-ecosystem-projects/${selectedTokenEcosystemProjectId}/website-deploy-package`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+                status.textContent = data.error || 'Local package generation failed.';
+                return;
+            }
+
+            status.textContent = `Local package ready: ${data.deployPackage.outputDirectory} · ${data.deployPackage.fileCount} file(s). Deployment, DNS, GitHub, and Cloudflare API calls stayed disabled.`;
+            document.getElementById('launch-package-advanced-output').textContent = JSON.stringify({
+                deployPackage: data.deployPackage,
+                cloudflareApiCallsEnabled: data.cloudflareApiCallsEnabled,
+                dnsMutationEnabled: data.dnsMutationEnabled,
+                deploymentEnabled: data.deploymentEnabled
+            }, null, 2);
+            await loadLaunchPackageReview();
         }
 
         function renderEcosystemBlueprint(blueprint = {}) {
@@ -1940,10 +2393,35 @@
         document.getElementById('load-ecosystem-catalog').addEventListener('click', loadEcosystemCatalog);
         document.getElementById('apply-token-options').addEventListener('click', applyTokenOptionsToSpec);
         document.getElementById('apply-logo-brief').addEventListener('click', applyLogoBriefToTokenPlan);
+        document.getElementById('regenerate-logo-specs').addEventListener('click', () => {
+            selectedLogoChoiceId = null;
+            renderTokenDraftStatus(null, 'Logo specs are ready to regenerate from the current local token brief. Open or save a project blueprint to view the three local choices.');
+            document.getElementById('logo-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            renderTokenLogoReadabilityPreview();
+        });
+        document.getElementById('edit-selected-logo-spec').addEventListener('click', () => {
+            document.getElementById('token-logo-direction').focus();
+            document.getElementById('token-logo-brief-status').textContent = 'Edit the selected local logo spec here, then save/update the token draft. No image provider is called.';
+        });
+        document.getElementById('continue-to-website-builder').addEventListener('click', () => {
+            document.getElementById('website-whitepaper-roadmap-builder').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
         document.getElementById('save-website-whitepaper-draft').addEventListener('click', saveWebsiteWhitepaperDraft);
         document.getElementById('refresh-token-site-preview').addEventListener('click', renderTokenSiteLocalPreview);
         document.getElementById('open-website-blueprint').addEventListener('click', () => document.getElementById('website-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' }));
         document.getElementById('open-whitepaper-blueprint').addEventListener('click', () => document.getElementById('whitepaper-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' }));
+        document.getElementById('continue-launch-project').addEventListener('click', continueLaunchProject);
+        document.getElementById('review-launch-package').addEventListener('click', loadLaunchPackageReview);
+        document.getElementById('refresh-launch-pipeline-state').addEventListener('click', loadLaunchPipelineState);
+        document.getElementById('load-launch-package-review').addEventListener('click', loadLaunchPackageReview);
+        document.getElementById('launch-review-edit-token').addEventListener('click', () => document.getElementById('token-launch-operator-pipeline').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        document.getElementById('launch-review-edit-logo').addEventListener('click', () => document.getElementById('logo-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' }));
+        document.getElementById('launch-review-edit-website').addEventListener('click', () => document.getElementById('website-whitepaper-roadmap-builder').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        document.getElementById('launch-review-preview-site').addEventListener('click', () => {
+            renderTokenSiteLocalPreview();
+            document.getElementById('token-site-local-preview').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+        document.getElementById('launch-review-export-package').addEventListener('click', exportLocalLaunchPackage);
         document.getElementById('select-low-fee-token-options').addEventListener('click', selectLowFeeTokenDefaults);
         document.getElementById('select-chain-neutral-token-options').addEventListener('click', selectChainNeutralTokenDefaults);
         document.getElementById('select-polygon-token-options').addEventListener('click', selectPolygonTokenDefaults);
@@ -1953,6 +2431,7 @@
             setTokenProjectSelection(null);
             selectedLogoChoiceId = null;
             renderTokenDraftStatus(null, 'Selection cleared. The visible form can be saved as a new local token draft.');
+            loadLaunchPipelineState();
         });
         document.getElementById('refresh-token-ecosystem-projects').addEventListener('click', loadTokenEcosystemProjects);
         document.getElementById('token-launch-operator-pipeline').addEventListener('click', event => {
@@ -1961,11 +2440,15 @@
                 handleTokenLaunchGateAction(action);
             }
         });
-        ['token-launch-category', 'token-launch-ticker', 'token-launch-community', 'token-launch-dapp-mode', 'token-launch-total-supply', 'token-launch-initial-supply', 'token-launch-supply-model', 'token-launch-admin-model', 'token-launch-burn', 'token-launch-pausable', 'token-launch-transfer-fee', 'token-launch-staking-rewards', 'token-launch-treasury-allocation', 'token-launch-liquidity-allocation', 'token-launch-team-allocation', 'token-launch-community-allocation', 'token-launch-release-plan', 'token-launch-use-case', 'token-launch-dapp-modules', 'contract-name', 'contract-network', 'contract-type', 'token-ecosystem-notes', 'nft-utility-notes', 'token-logo-style', 'token-logo-palette', 'token-logo-direction', 'token-site-template', 'token-site-hero', 'token-site-use-case', 'token-site-tokenomics', 'token-site-roadmap', 'token-site-whitepaper', 'token-site-dapp-preview', 'token-site-edit-instructions'].forEach(id => {
+        ['token-launch-category', 'token-launch-ticker', 'token-launch-community', 'token-launch-dapp-mode', 'token-launch-total-supply', 'token-launch-initial-supply', 'token-launch-supply-model', 'token-launch-admin-model', 'token-launch-burn', 'token-launch-pausable', 'token-launch-transfer-fee', 'token-launch-staking-rewards', 'token-launch-treasury-allocation', 'token-launch-liquidity-allocation', 'token-launch-team-allocation', 'token-launch-community-allocation', 'token-launch-release-plan', 'token-launch-use-case', 'token-launch-dapp-modules', 'contract-name', 'contract-network', 'contract-type', 'token-ecosystem-notes', 'nft-utility-notes', 'token-logo-style', 'token-logo-palette', 'token-logo-direction', 'token-logo-existing', 'token-logo-inspiration', 'token-logo-shape', 'token-logo-background', 'token-logo-text-influence', 'token-logo-image-influence', 'token-logo-style-influence', 'token-site-template', 'token-site-hero', 'token-site-use-case', 'token-site-tokenomics', 'token-site-roadmap', 'token-site-whitepaper', 'token-site-dapp-preview', 'token-site-faq', 'token-site-how-to-buy', 'token-site-community-links', 'token-site-disclaimer', 'token-site-edit-instructions'].forEach(id => {
             document.getElementById(id)?.addEventListener('input', renderTokenLaunchTwoGate);
             document.getElementById(id)?.addEventListener('change', renderTokenLaunchTwoGate);
             document.getElementById(id)?.addEventListener('input', renderTokenSiteLocalPreview);
             document.getElementById(id)?.addEventListener('change', renderTokenSiteLocalPreview);
+        });
+        ['token-logo-text-influence', 'token-logo-image-influence', 'token-logo-style-influence', 'token-logo-shape', 'token-logo-background', 'token-launch-ticker'].forEach(id => {
+            document.getElementById(id)?.addEventListener('input', updateLogoSliderLabels);
+            document.getElementById(id)?.addEventListener('change', updateLogoSliderLabels);
         });
         document.querySelectorAll('#token-feature-options input').forEach(input => {
             input.addEventListener('change', renderTokenLaunchTwoGate);
@@ -1976,9 +2459,11 @@
         renderTokenDraftStatus();
         renderTokenLaunchTwoGate();
         renderTokenSiteLocalPreview();
+        updateLogoSliderLabels();
         loadContracts().then(openArtifactFromHash);
         loadEcosystemCatalog();
         loadTokenEcosystemProjects();
+        loadLaunchPipelineState();
     </script>
     <script src="/js/operator-next-action.js"></script>
     <script src="/js/operator-training.js"></script>

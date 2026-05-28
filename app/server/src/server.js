@@ -90,6 +90,8 @@ const {
   buildTokenEcosystemCatalog,
   buildTokenEcosystemBlueprint,
   normalizeTokenEcosystemProjectInput,
+  buildTokenLaunchPipelineState,
+  buildTokenLaunchPackageReview,
   parseTokenEcosystemProject
 } = require('./lib/token-ecosystem');
 const {
@@ -1107,6 +1109,8 @@ registerEtherealRoutes(app, {
   buildTokenEcosystemProjectBlueprint,
   buildTokenEcosystemWorkspaceFiles,
   buildTokenWebsiteDeployPackageFiles,
+  buildTokenLaunchPipelineState,
+  buildTokenLaunchPackageReview,
   buildCloudflareWebsitePlan,
   normalizeTokenEcosystemProjectInput,
   sanitizeWalletInput,
