@@ -144,6 +144,94 @@
             }
         },
         {
+            id: 'connect-apis-safely',
+            tab: 'API Connection Center',
+            path: '/api-connection-center',
+            title: 'Connect APIs Safely',
+            libraryTitle: 'Connect API Connection Center',
+            purpose: 'API Connection Center is the CEO setup surface for Kraken first, Coinbase next, and DEX read-only research lanes. It keeps secrets in local encrypted vaults and keeps execution locked.',
+            buttons: [
+                ['Refresh API Status', 'Loads Kraken, Coinbase, wallet metadata, and DEX read-only status.'],
+                ['Replace Kraken Key', 'Opens the safe local vault replacement form. This does not place orders.'],
+                ['Test Kraken Read/Account Access', 'Runs authenticated Kraken read checks only.'],
+                ['Run Kraken Dry-Run Proof', 'Builds a no-order preview and confirms the production endpoint remains blocked.'],
+                ['Save Coinbase Key Safely', 'Saves a Coinbase read-only key to the encrypted read-only vault.'],
+                ['Test Coinbase Read-Only Connection', 'Checks Coinbase read/account access without trading.'],
+                ['Run Read-Only Price Compare', 'Compares public market data without exchange orders, swaps, withdrawals, or wallet signing.']
+            ],
+            fields: [
+                ['Kraken API key', 'Paste only the restricted Kraken API key when replacing the saved key.'],
+                ['Kraken private key / secret', 'Paste only the Kraken private key shown by Kraken, then the field is cleared after save.'],
+                ['Coinbase API key', 'Paste a View/read-only Coinbase key.'],
+                ['Coinbase API secret', 'Paste the Coinbase secret shown during key creation.'],
+                ['Coinbase passphrase', 'Paste the Coinbase passphrase if Coinbase shows one.']
+            ],
+            doNotEnter: [
+                'Do not enter seed phrases, wallet private keys, recovery phrases, bank passwords, or exchange withdrawal keys.',
+                'Do not create keys with withdrawals, transfers, margin, futures, leverage, admin, manage, or unrestricted trade permissions for this phase.',
+                'Do not treat DEX read-only as wallet connection. DEX swaps and approvals remain locked.'
+            ],
+            order: [
+                'Refresh API Status.',
+                'If Kraken needs repair, replace the key or test read/account access.',
+                'Run Kraken dry-run proof only after the saved key is verified.',
+                'Use Coinbase read-only setup after Kraken status is clear.',
+                'Use DEX lanes for token, pair, pool, liquidity, price, and quote research only.'
+            ],
+            safeDefaults: [
+                'Kraken first.',
+                'Coinbase read-only next.',
+                'DEX public/read-only only.',
+                'Live order placement, swaps, wallet signing, withdrawals, deployments, and public submissions stay locked.'
+            ],
+            errors: [
+                ['Kraken key missing', 'Click Replace Kraken Key and save a restricted spot key in the encrypted local vault.'],
+                ['Unsafe permission detected', 'Delete the key and recreate it without withdrawals, transfers, margin, futures, leverage, or admin permissions.'],
+                ['Coinbase connector missing', 'Click Create Coinbase Connector or Save Coinbase Key Safely. The app will create the placeholder before saving.'],
+                ['DEX provider draft', 'This is normal. Draft means read-only provider planning is registered and execution is locked.']
+            ],
+            success: [
+                'Kraken shows connected or ready without any production endpoint call.',
+                'Coinbase can be saved and tested as read-only.',
+                'DEX read-only lanes explain what is safe now and what remains locked.',
+                'Advanced raw JSON is hidden unless Advanced Mode is opened.'
+            ],
+            video: {
+                duration: '11 minutes',
+                assetSlug: 'connect-apis-safely',
+                chapters: [
+                    {
+                        title: 'Read the safety boundary first',
+                        screen: 'API Connection Center top cards',
+                        narration: 'Start by confirming the page says live safety is locked. API setup is about read access, dry-run proof, and quote research, not execution.',
+                        click: 'Click Refresh API Status.',
+                        pause: 'Pause here and confirm the Live Safety card says locked.'
+                    },
+                    {
+                        title: 'Kraken first',
+                        screen: 'Kraken Safe Setup And Readiness panel',
+                        narration: 'The Kraken panel shows whether a key exists, whether dry-run proof is ready, and whether the production endpoint has ever been called.',
+                        click: 'Click Test Kraken Read/Account Access only if the key is saved. Click Run Kraken Dry-Run Proof after verification.',
+                        pause: 'Pause here and verify the blocker list is plain English.'
+                    },
+                    {
+                        title: 'Coinbase read-only next',
+                        screen: 'Coinbase Advanced Read-Only Setup panel',
+                        narration: 'Coinbase is next, but it stays read-only. The key must have View permission only. Transfers and trading stay disabled.',
+                        click: 'Paste the Coinbase read-only values only when you intentionally choose to connect Coinbase.',
+                        pause: 'Pause here and verify the confirmation statement before saving.'
+                    },
+                    {
+                        title: 'DEX lanes are research only',
+                        screen: 'DEX Read-Only Connector Lane',
+                        narration: 'DEX lanes help with token, pair, pool, price, liquidity, and quote research. They do not connect a wallet and cannot swap.',
+                        click: 'Click Run Read-Only Price Compare when you want a safe public-data check.',
+                        pause: 'Pause here and confirm no wallet signing was requested.'
+                    }
+                ]
+            }
+        },
+        {
             id: 'complete-setup-wizard',
             tab: 'Setup Wizard',
             path: '/owner-setup',

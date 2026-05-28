@@ -135,6 +135,20 @@
             </div>
         </section>
 
+        <section class="model-panel api-mission-control-card" id="api-connection-summary-card">
+            <div class="operator-two-gate-heading">
+                <span>API connection status</span>
+                <h2>Exchange And DEX Connection Summary</h2>
+                <p>Kraken first, Coinbase next, DEX read-only research lanes later. This dashboard card cannot place live orders, sign wallets, swap tokens, or submit public listings.</p>
+            </div>
+            <div class="button-row">
+                <button id="refresh-api-connection-summary" type="button">Refresh API Summary</button>
+                <a class="cta-button" href="/api-connection-center">Open API Connection Center</a>
+            </div>
+            <div id="dashboard-api-connection-summary" class="api-status-grid">Loading API connection summary...</div>
+            <div id="dashboard-api-next-action" class="phase3-results">Loading next API action...</div>
+        </section>
+
         <section class="model-panel">
             <h2>MVP Readiness</h2>
             <div class="button-row">
@@ -735,6 +749,96 @@
                     <span>${escapeHtml(row.badge)}</span>
                 </article>
             `).join('');
+        }
+
+        function apiSummaryTone(status = '') {
+            const text = String(status || '').toLowerCase();
+            if (text.includes('connected') || text.includes('complete') || text.includes('ready')) return 'status-success';
+            if (text.includes('blocked') || text.includes('unsafe') || text.includes('error')) return 'status-danger';
+            if (text.includes('locked')) return 'status-info';
+            return 'status-warning';
+        }
+
+        function renderApiConnectionSummary(apiCenter = {}) {
+            const container = document.getElementById('dashboard-api-connection-summary');
+            const nextAction = document.getElementById('dashboard-api-next-action');
+            const providers = apiCenter.providers || [];
+            const summary = apiCenter.summary || {};
+            const providerById = id => providers.find(provider => provider.providerId === id) || {};
+            const kraken = providerById('kraken');
+            const coinbase = providerById('coinbase');
+            const wallet = providerById('metamask-wallet-metadata');
+            const dexCount = apiCenter.dexReadOnlyProviders?.length || 0;
+            const cards = [
+                {
+                    label: 'Kraken',
+                    value: kraken.currentStatus || summary.krakenStatus || 'not connected',
+                    note: kraken.nextRecommendedAction || 'Refresh API Center.',
+                    tone: apiSummaryTone(kraken.currentStatus || summary.krakenStatus)
+                },
+                {
+                    label: 'Coinbase Advanced',
+                    value: coinbase.currentStatus || summary.coinbaseStatus || 'not connected',
+                    note: coinbase.nextRecommendedAction || 'Read-only setup comes next.',
+                    tone: apiSummaryTone(coinbase.currentStatus || summary.coinbaseStatus)
+                },
+                {
+                    label: 'DEX Read-Only',
+                    value: dexCount ? `${dexCount} lanes` : summary.dexReadOnlyStatus || 'draft',
+                    note: 'Token, pair, pool, liquidity, price, and quote research only.',
+                    tone: 'status-info'
+                },
+                {
+                    label: 'Wallet Metadata',
+                    value: wallet.currentStatus || summary.walletMetadataStatus || 'draft',
+                    note: wallet.lastCheckResult || 'Public wallet metadata only. No seed phrases.',
+                    tone: apiSummaryTone(wallet.currentStatus || summary.walletMetadataStatus)
+                }
+            ];
+
+            container.innerHTML = cards.map(card => `
+                <article class="${card.tone}">
+                    <span>${escapeHtml(card.label)}</span>
+                    <strong>${escapeHtml(card.value)}</strong>
+                    <small>${escapeHtml(card.note)}</small>
+                </article>
+            `).join('');
+            nextAction.innerHTML = `
+                <article class="operator-two-gate-card operator-two-gate-warning">
+                    <div class="operator-two-gate-card-header">
+                        <span>Next recommended API action</span>
+                        <strong>${escapeHtml(summary.nextRecommendedAction || 'Open API Connection Center')}</strong>
+                    </div>
+                    <p>${summary.blockedBecause?.length
+                        ? escapeHtml(`Blocked because: ${summary.blockedBecause.join('; ')}`)
+                        : 'No required API blocker is shown on Mission Control. Optional integrations stay optional.'}</p>
+                </article>
+            `;
+        }
+
+        async function loadApiConnectionSummary() {
+            const container = document.getElementById('dashboard-api-connection-summary');
+            container.textContent = 'Loading API connection summary...';
+
+            try {
+                const response = await fetch('/api/v1/api-connection-center/status');
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Unable to load API connection summary');
+                }
+
+                renderApiConnectionSummary(data.apiCenter || {});
+            } catch (error) {
+                container.innerHTML = `
+                    <article class="status-warning">
+                        <span>API Summary</span>
+                        <strong>Needs Review</strong>
+                        <small>${escapeHtml(error.message)}</small>
+                    </article>
+                `;
+                document.getElementById('dashboard-api-next-action').textContent = 'Open API Connection Center if this persists.';
+            }
         }
 
         function formatOwnerAcceptanceStatus(status) {
@@ -1650,6 +1754,7 @@
         document.getElementById('refresh-github-publish').addEventListener('click', loadGitHubPublishStatus);
         document.getElementById('refresh-dev-server').addEventListener('click', loadDevServerStatus);
         document.getElementById('refresh-mvp-readiness').addEventListener('click', loadMvpReadiness);
+        document.getElementById('refresh-api-connection-summary').addEventListener('click', loadApiConnectionSummary);
         document.getElementById('refresh-live-handoff').addEventListener('click', loadLiveExecutionHandoff);
         document.getElementById('refresh-mlx-lifecycle').addEventListener('click', loadMlxLifecycleStatus);
         document.getElementById('refresh-multi-agent').addEventListener('click', loadMultiAgentRegistry);
@@ -1696,6 +1801,7 @@
 
         loadHealth();
         loadDevServerStatus();
+        loadApiConnectionSummary();
         loadMvpReadiness();
         loadLiveExecutionHandoff();
         loadSystemMemory();

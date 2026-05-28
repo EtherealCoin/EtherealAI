@@ -30,32 +30,32 @@
             </div>
             <div class="button-row">
                 <button id="api-refresh-status" type="button">Refresh API Status</button>
-                <a class="cta-button" href="/live-trading-launch#kraken-live-setup-walkthrough">Open Kraken Setup</a>
-                <a class="cta-button" href="/live-trading-launch#kraken-tiny-live-test">Open Kraken Final Approval</a>
+                <button id="api-check-kraken-status" type="button">Check Kraken Saved Status</button>
+                <button id="api-open-kraken-replace" type="button">Replace Kraken Key</button>
                 <a class="cta-button" href="/strategy-lab#exchange-connector-manager">Open Advanced Connector Manager</a>
             </div>
         </section>
 
         <section class="api-status-grid" aria-label="API connection status">
-            <article class="status-success">
+            <article id="api-card-kraken" class="status-warning">
                 <span>Kraken</span>
                 <strong id="api-kraken-status">Checking</strong>
                 <small id="api-kraken-note">Reading local verification state.</small>
             </article>
-            <article class="status-warning">
+            <article id="api-card-coinbase" class="status-warning">
                 <span>Coinbase Advanced</span>
-                <strong>Next</strong>
-                <small>Build after Kraken tiny-live succeeds.</small>
+                <strong id="api-coinbase-status">Next</strong>
+                <small id="api-coinbase-note">Read-only setup is available after Kraken-first work.</small>
             </article>
-            <article class="status-info">
+            <article id="api-card-dex" class="status-info">
                 <span>DEX Quote-Only</span>
-                <strong>Quote-Only</strong>
-                <small>0x, 1inch, ParaSwap, Li.Fi, Rango, Jupiter later.</small>
+                <strong id="api-dex-status">Quote-Only</strong>
+                <small id="api-dex-note">Token, pool, price, liquidity, and quote research only.</small>
             </article>
             <article class="status-success">
                 <span>Live Safety</span>
                 <strong>Locked</strong>
-                <small>No hidden order calls from this page.</small>
+                <small>No live order, swap, wallet signing, withdrawal, deployment, or posting endpoint is enabled here.</small>
             </article>
         </section>
 
@@ -63,9 +63,104 @@
             Loading Kraken two-gate API flow...
         </section>
 
+        <section class="model-panel api-provider-model" id="kraken-operator-setup">
+            <div class="operator-two-gate-heading">
+                <span>Kraken first</span>
+                <h2>Kraken Safe Setup And Readiness</h2>
+                <p>Use this panel to inspect saved Kraken status, replace or delete the local key, run safe authenticated read checks, and run dry-run proof. No live order is placed here.</p>
+            </div>
+
+            <div id="api-kraken-detail-grid" class="api-lane-grid">
+                <article><strong>Saved key</strong><span>Loading...</span></article>
+                <article><strong>Fingerprint</strong><span>Loading...</span></article>
+                <article><strong>Dry-run proof</strong><span>Loading...</span></article>
+                <article><strong>Tiny live eligibility</strong><span>Loading...</span></article>
+                <article><strong>Production endpoint calls</strong><span>Loading...</span></article>
+            </div>
+
+            <div id="api-kraken-blockers" class="phase3-results">Loading Kraken blocker list...</div>
+
+            <div class="button-row api-action-row">
+                <button id="api-delete-kraken-key" class="operator-two-gate-action operator-two-gate-danger" type="button">Delete Saved Kraken Key</button>
+                <button id="api-test-kraken-access" type="button">Test Kraken Read/Account Access</button>
+                <button id="api-run-kraken-dryrun" type="button">Run Kraken Dry-Run Proof</button>
+                <a class="cta-button" href="/live-trading-launch#kraken-tiny-live-test">Review Tiny Live Eligibility</a>
+            </div>
+
+            <details id="api-kraken-replace-panel" class="compact-details api-key-replace-panel">
+                <summary>Replace Kraken Key In Encrypted Vault</summary>
+                <p class="inline-status">Use this only when replacing the current Kraken key. The key and private key are sent to the local server for encrypted vault storage, then the fields are cleared. Secret values are never stored in SQLite or browser localStorage.</p>
+                <form id="api-kraken-replace-form" class="model-test-form">
+                    <label for="api-kraken-key">Kraken API key</label>
+                    <input id="api-kraken-key" name="apiKey" autocomplete="off" spellcheck="false" placeholder="Paste Kraken API key">
+
+                    <label for="api-kraken-secret">Kraken private key / secret</label>
+                    <textarea id="api-kraken-secret" name="apiSecret" rows="3" autocomplete="off" spellcheck="false" placeholder="Paste Kraken private key"></textarea>
+
+                    <label class="checkbox-line">
+                        <input id="api-kraken-restricted-confirm" type="checkbox">
+                        I confirm this is a restricted Kraken spot key, withdrawals/transfers are off, futures/margin/leverage are off, and no live order will be placed by saving it.
+                    </label>
+
+                    <button id="api-save-kraken-key" type="submit">Save Kraken Key Safely</button>
+                </form>
+            </details>
+
+            <details class="compact-details advanced-operator-tools">
+                <summary>Advanced Kraken Auth Diagnostics</summary>
+                <p class="inline-status">This diagnostic can call the Kraken Balance read endpoint with the saved key. It cannot place orders and returns redacted logs only.</p>
+                <div class="button-row">
+                    <button id="api-test-raw-kraken-balance" type="button">Test Raw Kraken Balance Endpoint</button>
+                    <a class="cta-button" href="/live-trading-launch#kraken-auth-diagnostics">Open Full Kraken Diagnostics</a>
+                </div>
+            </details>
+
+            <div id="api-kraken-action-result" class="phase3-results">No Kraken action has run from this page yet.</div>
+        </section>
+
+        <section id="api-coinbase-two-gate" class="model-panel operator-guided-focus">
+            Loading Coinbase read-only setup flow...
+        </section>
+
+        <section class="model-panel api-provider-model" id="coinbase-readonly-setup">
+            <div class="operator-two-gate-heading">
+                <span>Coinbase next</span>
+                <h2>Coinbase Advanced Read-Only Setup</h2>
+                <p>Coinbase stays read-only in this phase. EtherealAI can save a restricted key to the encrypted local vault, verify account-read access, and keep live trading locked.</p>
+            </div>
+            <div id="api-coinbase-guide" class="api-lane-grid">
+                <article><strong>Allowed</strong><span>View/read permission only.</span></article>
+                <article><strong>Forbidden</strong><span>Trade, transfer, manage/admin, withdrawal-capable permissions.</span></article>
+                <article><strong>Storage</strong><span>Encrypted local vault only. No secrets in browser localStorage or plain SQLite.</span></article>
+                <article><strong>Status</strong><span id="api-coinbase-detail-status">Loading...</span></article>
+            </div>
+            <form id="api-coinbase-form" class="model-test-form">
+                <label for="api-coinbase-key">Coinbase API key</label>
+                <input id="api-coinbase-key" name="apiKey" autocomplete="off" spellcheck="false" placeholder="Paste Coinbase read-only API key">
+
+                <label for="api-coinbase-secret">Coinbase API secret</label>
+                <textarea id="api-coinbase-secret" name="apiSecret" rows="3" autocomplete="off" spellcheck="false" placeholder="Paste Coinbase API secret"></textarea>
+
+                <label for="api-coinbase-passphrase">Coinbase passphrase</label>
+                <input id="api-coinbase-passphrase" name="passphrase" autocomplete="off" spellcheck="false" placeholder="Paste Coinbase passphrase if shown">
+
+                <label class="checkbox-line">
+                    <input id="api-coinbase-readonly-confirm" type="checkbox">
+                    I confirm this Coinbase key is read/view-only. Trading, transfers, withdrawals, manage/admin permissions, margin, futures, and leverage are disabled.
+                </label>
+
+                <div class="button-row">
+                    <button id="api-save-coinbase-key" type="submit">Save Coinbase Key Safely</button>
+                    <button id="api-test-coinbase-key" type="button">Test Coinbase Read-Only Connection</button>
+                    <button id="api-delete-coinbase-key" class="operator-two-gate-action operator-two-gate-danger" type="button">Delete Coinbase Key</button>
+                </div>
+            </form>
+            <div id="api-coinbase-action-result" class="phase3-results">Coinbase read-only setup has not run yet.</div>
+        </section>
+
         <section class="model-panel api-readonly-lanes">
-            <h2>Read-Only Market Data Lanes</h2>
-            <p class="inline-status">These can compare public prices and spreads without trading permissions, wallet signing, withdrawals, or swaps.</p>
+            <h2>DEX Read-Only Connector Lane</h2>
+            <p class="inline-status">DEX public/read-only data does not require your exchange account. Execution, swaps, token approvals, transaction building, and wallet signing are locked for a later owner-approved phase.</p>
             <div class="api-lane-grid">
                 <article>
                     <strong>Recommended first CEX data</strong>
@@ -76,10 +171,15 @@
                     <span id="api-quote-only-dex">Loading...</span>
                 </article>
                 <article>
-                    <strong>Safety model</strong>
-                    <span>No browser secret storage. No order endpoint. No wallet signing.</span>
+                    <strong>Safe now</strong>
+                    <span>Token info, pair info, price, liquidity, pool, quote, and research data.</span>
+                </article>
+                <article>
+                    <strong>Locked later</strong>
+                    <span>Swaps, approvals, seed phrases, private keys, wallet signatures, and broadcast transactions.</span>
                 </article>
             </div>
+            <div id="api-dex-provider-grid" class="api-lane-grid">Loading DEX read-only provider registry...</div>
             <div class="button-row">
                 <button id="api-run-price-compare" type="button">Run Read-Only BTC/USDT Price Compare</button>
                 <a class="cta-button" href="/strategy-lab#read-only-price-compare">Open Full Price Compare</a>
@@ -102,7 +202,7 @@
                         <span>Next</span>
                         <strong>Coinbase Advanced</strong>
                     </div>
-                    <p>Build a Coinbase setup wizard after Kraken succeeds: safe key instructions, encrypted vault save, account read, dry-run, no live order.</p>
+                    <p>Use a Coinbase read-only setup wizard: safe key instructions, encrypted vault save, account read test, no live order.</p>
                 </article>
                 <article class="operator-two-gate-card operator-two-gate-live">
                     <div class="operator-two-gate-card-header">
@@ -116,7 +216,7 @@
 
         <details class="compact-details advanced-operator-tools">
             <summary>Advanced API Diagnostics</summary>
-            <p class="inline-status">Raw status is here for debugging. Simple Mode should use the two-gate panels above.</p>
+            <p class="inline-status">Raw status is here for debugging. Simple Mode should use the status cards and two-gate panels above.</p>
             <pre id="api-raw-status" class="model-output operator-simple-readable">No raw status loaded yet.</pre>
         </details>
     </main>
@@ -124,6 +224,7 @@
     <script src="/js/operator-gates.js"></script>
     <script>
         const apiState = {
+            centerStatus: null,
             setupGuides: null,
             readOnlyStatus: null,
             krakenDiagnostics: null,
@@ -152,7 +253,37 @@
             return data;
         }
 
+        async function postJson(url, body = {}) {
+            return fetchJson(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+        }
+
+        function providerById(id) {
+            return apiState.centerStatus?.apiCenter?.providers?.find(provider => provider.providerId === id) || null;
+        }
+
+        function toneClass(status) {
+            const text = String(status || '').toLowerCase();
+            if (text.includes('connected') || text.includes('ready') || text.includes('complete')) return 'status-success';
+            if (text.includes('blocked') || text.includes('unsafe') || text.includes('error')) return 'status-danger';
+            if (text.includes('locked')) return 'status-info';
+            return 'status-warning';
+        }
+
+        function setCardTone(id, tone) {
+            const element = document.getElementById(id);
+            if (!element) return;
+            element.classList.remove('status-success', 'status-warning', 'status-danger', 'status-info');
+            element.classList.add(tone);
+        }
+
         function hasSavedKrakenKey() {
+            const provider = providerById('kraken');
+            if (provider?.metadata?.keyExistsLocally) return true;
+
             const diagnostics = apiState.krakenDiagnostics || {};
             const vault = diagnostics.vaultStatus || diagnostics.vault || diagnostics.diagnostics?.vaultStatus || {};
             const keyExists = diagnostics.apiKeyExists
@@ -173,6 +304,9 @@
         }
 
         function krakenPreviewReady() {
+            const provider = providerById('kraken');
+            if (provider?.metadata?.dryRunProofReady) return true;
+
             const gate = apiState.krakenTiny?.gate || {};
             const latest = apiState.krakenTiny?.latestReadyPreview || apiState.krakenTiny?.readyPreview;
             const latestOrders = apiState.krakenTiny?.latestOrders || [];
@@ -183,23 +317,29 @@
         }
 
         function krakenEndpointCalled() {
+            const provider = providerById('kraken');
+            if (Number(provider?.metadata?.productionEndpointCallCount || 0) > 0) return true;
+
             const audit = apiState.krakenTiny?.auditState || {};
             const latestOrders = apiState.krakenTiny?.latestOrders || [];
             return Boolean(audit.endpointCalled || latestOrders.some(order => order.production_order_endpoint_called || order.endpointCalled));
         }
 
         function krakenBlockers() {
+            const provider = providerById('kraken');
+            if (provider?.blockers?.length) return provider.blockers;
+
             const blockers = [];
             if (!hasSavedKrakenKey()) {
                 blockers.push({
                     title: 'Kraken key status needs review',
-                    detail: 'Open Kraken Setup to save or verify the restricted spot key in the encrypted vault.'
+                    detail: 'Use Replace Kraken Key to save the restricted spot key in the encrypted vault.'
                 });
             }
             if (!krakenPreviewReady()) {
                 blockers.push({
                     title: 'Tiny live preview is not ready',
-                    detail: 'Run the Kraken dry-run and preview from Live Trading Launch. This should call no order endpoint.'
+                    detail: 'Run the Kraken dry-run and preview from this page or Live Trading Launch. This should call no order endpoint.'
                 });
             }
             if (krakenEndpointCalled()) {
@@ -209,6 +349,23 @@
                 });
             }
             return blockers;
+        }
+
+        function blockerListMarkup(blockers = []) {
+            if (!blockers.length) {
+                return '<article class="operator-two-gate-card operator-two-gate-safe"><strong>No visible blockers</strong><p>Simple Mode sees this API step as ready or optional. Backend safety checks still run when you click a safe action.</p></article>';
+            }
+
+            return `
+                <ul class="operator-two-gate-blockers">
+                    ${blockers.map(blocker => `
+                        <li>
+                            <strong>${apiEscape(blocker.title)}</strong>
+                            <span>${apiEscape(blocker.detail || blocker.nextClick || '')}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
         }
 
         function renderKrakenTwoGate() {
@@ -221,7 +378,8 @@
             document.getElementById('api-kraken-status').textContent = finalReady ? 'Ready' : (keyReady ? 'Review' : 'Needs Key Review');
             document.getElementById('api-kraken-note').textContent = endpointCalled
                 ? 'Existing live endpoint event needs tracking.'
-                : (finalReady ? 'Final owner approval can happen from the Kraken panel.' : 'Open Kraken Setup or Preview to finish the visible blockers.');
+                : (finalReady ? 'Final owner approval can happen from the Kraken panel.' : 'Use the Kraken buttons below to clear the blocker list.');
+            setCardTone('api-card-kraken', finalReady ? 'status-success' : (endpointCalled ? 'status-danger' : 'status-warning'));
 
             window.EtherealOperatorGates.renderTwoGateFlow('#api-kraken-two-gate', {
                 eyebrow: 'Kraken API path',
@@ -234,8 +392,8 @@
                     blockers,
                     actions: [
                         { label: 'Refresh API Status', action: 'refresh', primary: true },
-                        { label: 'Open Kraken Setup', href: '/live-trading-launch#kraken-live-setup-walkthrough' },
-                        { label: 'Open Kraken Preview', href: '/live-trading-launch#kraken-tiny-live-test' }
+                        { label: 'Test Kraken Read Access', action: 'test-kraken-access' },
+                        { label: 'Run Dry-Run Proof', action: 'run-kraken-dryrun' }
                     ]
                 },
                 gateTwo: {
@@ -255,6 +413,96 @@
             });
         }
 
+        function renderKrakenDetails() {
+            const provider = providerById('kraken') || {};
+            const metadata = provider.metadata || {};
+            const blockers = provider.blockers || krakenBlockers();
+            const detailGrid = document.getElementById('api-kraken-detail-grid');
+            detailGrid.innerHTML = `
+                <article>
+                    <strong>Saved key</strong>
+                    <span>${metadata.keyExistsLocally ? 'Key exists in encrypted local vault.' : 'No saved key detected.'}</span>
+                </article>
+                <article>
+                    <strong>Fingerprints</strong>
+                    <span>Key: ${apiEscape(metadata.apiKeyFingerprint || metadata.apiKeySha256Fingerprint || 'none')}<br>Secret: ${apiEscape(metadata.apiSecretSha256Fingerprint || 'none')}</span>
+                </article>
+                <article>
+                    <strong>Dry-run proof</strong>
+                    <span>${metadata.dryRunProofReady ? 'Dry-run proof is ready.' : 'Not complete yet.'}</span>
+                </article>
+                <article>
+                    <strong>Tiny live eligibility</strong>
+                    <span>${apiEscape(metadata.tinyLiveEligibilityStatus || 'Locked')}</span>
+                </article>
+                <article>
+                    <strong>Production endpoint calls</strong>
+                    <span>${Number(metadata.productionEndpointCallCount || 0)} call(s)</span>
+                </article>
+            `;
+            document.getElementById('api-kraken-blockers').innerHTML = blockerListMarkup(blockers);
+        }
+
+        function renderCoinbaseTwoGate() {
+            const provider = providerById('coinbase') || {};
+            const metadata = provider.metadata || {};
+            const connected = provider.currentStatus === 'connected';
+            const keyExists = Boolean(metadata.keyExistsLocally);
+            const blockers = connected ? [] : (provider.blockers || []);
+
+            document.getElementById('api-coinbase-status').textContent = connected ? 'Connected' : (keyExists ? 'Saved' : 'Not Connected');
+            document.getElementById('api-coinbase-note').textContent = provider.lastCheckResult || 'Read-only setup is available.';
+            document.getElementById('api-coinbase-detail-status').textContent = provider.lastCheckResult || 'Not connected yet.';
+            setCardTone('api-card-coinbase', toneClass(provider.currentStatus || 'needs key'));
+
+            window.EtherealOperatorGates.renderTwoGateFlow('#api-coinbase-two-gate', {
+                eyebrow: 'Coinbase Advanced',
+                title: 'Coinbase setup stays read-only',
+                summary: 'Use one review gate for permissions, then one final save/test action. Live trading remains locked.',
+                gateOne: {
+                    title: 'Preview / Review',
+                    status: keyExists ? 'Ready To Test' : 'Needs Key',
+                    summary: 'Create a Coinbase read/view-only key. Keep Trade, Transfer, Manage, withdrawals, margin, futures, and leverage disabled.',
+                    blockers,
+                    actions: [
+                        { label: 'Open Coinbase Setup Fields', action: 'open-coinbase-fields', primary: true },
+                        { label: 'Create Coinbase Connector', action: 'ensure-coinbase-connector' }
+                    ]
+                },
+                gateTwo: {
+                    title: 'Final Confirm / Execute',
+                    status: connected ? 'Complete' : 'Read-Only Locked',
+                    summary: connected
+                        ? 'Coinbase read-only account check is connected. Live order placement is still locked.'
+                        : 'Save the key safely, then test read-only access. This does not enable live orders.',
+                    blockers: connected ? [] : blockers,
+                    actions: [
+                        { label: 'Save Coinbase Key Safely', action: 'focus-coinbase-save', primary: true },
+                        { label: 'Test Coinbase Read-Only', action: 'test-coinbase-readonly' }
+                    ]
+                },
+                footerTitle: 'Coinbase safety boundary',
+                footer: 'Coinbase keys are stored only in the encrypted read-only vault. This page cannot place Coinbase orders.'
+            });
+        }
+
+        function renderDexRegistry() {
+            const dexProviders = apiState.centerStatus?.apiCenter?.dexReadOnlyProviders || [];
+            const grid = document.getElementById('api-dex-provider-grid');
+            document.getElementById('api-dex-status').textContent = dexProviders.length ? 'Ready To Plan' : 'Draft';
+            document.getElementById('api-dex-note').textContent = dexProviders.length
+                ? `${dexProviders.length} read-only provider lanes are registered.`
+                : 'Provider registry is not loaded yet.';
+            setCardTone('api-card-dex', 'status-info');
+            grid.innerHTML = dexProviders.map(provider => `
+                <article>
+                    <strong>${apiEscape(provider.providerName)}</strong>
+                    <span>${apiEscape(provider.lastCheckResult || 'Read-only planning lane.')}</span>
+                    <small>${apiEscape(provider.nextRecommendedAction || 'Quote-only only.')}</small>
+                </article>
+            `).join('') || '<article><strong>No DEX providers loaded</strong><span>Refresh API Status.</span></article>';
+        }
+
         function renderReadOnlyLanes() {
             const guides = apiState.setupGuides || {};
             const recommended = guides.recommendedFirst || [];
@@ -269,24 +517,235 @@
 
         async function refreshApiConnectionCenter() {
             document.getElementById('api-raw-status').textContent = 'Loading API connection status...';
-            const [setupGuides, readOnlyStatus, krakenDiagnostics, krakenTiny] = await Promise.all([
+            const [centerStatus, setupGuides, readOnlyStatus, krakenDiagnostics, krakenTiny] = await Promise.all([
+                fetchJson('/api/v1/api-connection-center/status').catch(error => ({ error: error.message })),
                 fetchJson('/api/v1/exchange-connectors/read-only/setup-guides').catch(error => ({ error: error.message })),
                 fetchJson('/api/v1/exchange-connectors/read-only/status').catch(error => ({ error: error.message })),
                 fetchJson('/api/v1/live-trading-launch/kraken-auth-diagnostics/status').catch(error => ({ error: error.message })),
                 fetchJson('/api/v1/live-trading-launch/kraken-tiny-live-test/status').catch(error => ({ error: error.message }))
             ]);
+            apiState.centerStatus = centerStatus;
             apiState.setupGuides = setupGuides;
             apiState.readOnlyStatus = readOnlyStatus;
             apiState.krakenDiagnostics = krakenDiagnostics;
             apiState.krakenTiny = krakenTiny;
             renderKrakenTwoGate();
+            renderKrakenDetails();
+            renderCoinbaseTwoGate();
+            renderDexRegistry();
             renderReadOnlyLanes();
             document.getElementById('api-raw-status').textContent = JSON.stringify({
+                centerStatus,
                 setupGuides,
                 readOnlyStatus,
                 krakenDiagnostics,
                 krakenTiny
             }, null, 2);
+        }
+
+        function setActionResult(targetId, tone, title, detail, raw = null) {
+            document.getElementById(targetId).innerHTML = `
+                <article class="operator-two-gate-card operator-two-gate-${tone}">
+                    <div class="operator-two-gate-card-header">
+                        <span>Action result</span>
+                        <strong>${apiEscape(title)}</strong>
+                    </div>
+                    <p>${apiEscape(detail)}</p>
+                    ${raw ? `<small>${apiEscape(raw)}</small>` : ''}
+                </article>
+            `;
+        }
+
+        async function saveKrakenKey(event) {
+            event.preventDefault();
+            const apiKey = document.getElementById('api-kraken-key').value.trim();
+            const apiSecret = document.getElementById('api-kraken-secret').value.trim();
+            const confirmed = document.getElementById('api-kraken-restricted-confirm').checked;
+
+            if (!apiKey || !apiSecret || !confirmed) {
+                setActionResult('api-kraken-action-result', 'warning', 'Missing review item', 'Paste the Kraken key and private key, then confirm the restricted-key statement.');
+                return;
+            }
+
+            setActionResult('api-kraken-action-result', 'warning', 'Saving Kraken key', 'Saving to the encrypted local production vault. No live order endpoint is available here.');
+            try {
+                const result = await postJson('/api/v1/live-trading-launch/phase6e/save-kraken-key', {
+                    apiKey,
+                    apiSecret,
+                    permissionsChecklist: {
+                        walkthroughReviewed: true,
+                        queryFundsEnabled: true,
+                        queryOpenOrdersTradesEnabled: true,
+                        queryClosedOrdersTradesReviewed: true,
+                        modifyOrdersEnabled: false,
+                        cancelCloseOrdersEnabled: false,
+                        withdrawFundsDisabled: true,
+                        depositFundsDisabled: true,
+                        transfersDisabled: true,
+                        spotKeyOnly: true,
+                        marginDisabled: true,
+                        futuresDisabled: true,
+                        leverageDisabled: true,
+                        noMasterKey: true,
+                        privateKeyWillNotBeSharedElsewhere: true,
+                        ownerUnderstandsTinyLiveUsesRealMoneyLater: true,
+                        ownerUnderstandsNoOrderYet: true,
+                        ipRestrictionReviewed: true,
+                        twoFactorEnabled: true
+                    }
+                });
+                document.getElementById('api-kraken-key').value = '';
+                document.getElementById('api-kraken-secret').value = '';
+                document.getElementById('api-kraken-restricted-confirm').checked = false;
+                setActionResult('api-kraken-action-result', 'safe', 'Kraken key saved safely', result.nextClick || 'Verify Kraken read/account access next.');
+                await refreshApiConnectionCenter();
+            } catch (error) {
+                setActionResult('api-kraken-action-result', 'danger', 'Kraken key was not saved', error.message);
+            }
+        }
+
+        async function deleteKrakenKey() {
+            if (!window.confirm('Delete the saved Kraken key from the local encrypted vault? This will not place orders.')) return;
+            setActionResult('api-kraken-action-result', 'warning', 'Deleting Kraken key', 'Removing the saved Kraken key reference and encrypted vault entry.');
+            try {
+                const result = await fetchJson('/api/v1/live-trading-launch/phase6e/kraken-key', { method: 'DELETE' });
+                setActionResult('api-kraken-action-result', 'safe', 'Kraken key deleted', result.nextClick || 'Replace the key later if needed.');
+                await refreshApiConnectionCenter();
+            } catch (error) {
+                setActionResult('api-kraken-action-result', 'danger', 'Unable to delete Kraken key', error.message);
+            }
+        }
+
+        async function testKrakenAccess() {
+            setActionResult('api-kraken-action-result', 'warning', 'Testing Kraken read access', 'Calling authenticated read/account checks only. No order endpoint is called.');
+            try {
+                const result = await postJson('/api/v1/live-trading-launch/phase6e/verify-kraken-key', {
+                    symbol: 'BTC/USD',
+                    notionalUsd: 1,
+                    maxOrderUsd: 10
+                });
+                setActionResult('api-kraken-action-result', 'safe', 'Kraken read/account test complete', result.nextClick || 'Run dry-run proof next.');
+                await refreshApiConnectionCenter();
+            } catch (error) {
+                setActionResult('api-kraken-action-result', 'danger', 'Kraken read/account test failed', error.message);
+                await refreshApiConnectionCenter().catch(() => {});
+            }
+        }
+
+        async function runKrakenDryRun() {
+            setActionResult('api-kraken-action-result', 'warning', 'Running Kraken dry-run proof', 'Simulating the tiny setup. Production order endpoint remains blocked.');
+            try {
+                const result = await postJson('/api/v1/live-trading-launch/phase6e/dry-run-proof', {
+                    symbol: 'BTC/USD',
+                    side: 'buy',
+                    orderType: 'limit',
+                    notionalUsd: 1,
+                    maxOrderUsd: 10
+                });
+                setActionResult('api-kraken-action-result', 'safe', 'Kraken dry-run proof complete', result.nextClick || 'Review tiny live eligibility next.');
+                await refreshApiConnectionCenter();
+            } catch (error) {
+                setActionResult('api-kraken-action-result', 'danger', 'Kraken dry-run proof failed', error.message);
+                await refreshApiConnectionCenter().catch(() => {});
+            }
+        }
+
+        async function testRawKrakenBalance() {
+            setActionResult('api-kraken-action-result', 'warning', 'Testing raw Kraken Balance endpoint', 'This is an authenticated read-only diagnostic. No order endpoint is called.');
+            try {
+                const result = await postJson('/api/v1/live-trading-launch/kraken-auth-diagnostics/raw-balance', {});
+                const responseCode = result.diagnostics?.krakenResponse?.error?.join?.(', ') || result.diagnostics?.classification || 'Read endpoint returned a response.';
+                setActionResult('api-kraken-action-result', 'safe', 'Raw Kraken Balance diagnostic complete', 'Review Advanced Diagnostics for redacted details.', responseCode);
+                await refreshApiConnectionCenter();
+            } catch (error) {
+                setActionResult('api-kraken-action-result', 'danger', 'Raw Kraken Balance diagnostic failed', error.message);
+                await refreshApiConnectionCenter().catch(() => {});
+            }
+        }
+
+        async function ensureCoinbaseConnector() {
+            const provider = providerById('coinbase');
+            if (provider?.metadata?.connectorId) return provider.metadata.connectorId;
+
+            const result = await postJson('/api/v1/exchange-connectors/placeholders', {
+                scope: 'single',
+                exchangeId: 'coinbase',
+                mode: 'read_only'
+            });
+            const connector = (result.created || []).concat(result.reused || []).find(item => (
+                String(item?.settings?.registryId || item?.exchange_name || '').toLowerCase() === 'coinbase'
+            ));
+            await refreshApiConnectionCenter();
+            return connector?.id || providerById('coinbase')?.metadata?.connectorId || null;
+        }
+
+        async function saveCoinbaseKey(event) {
+            event.preventDefault();
+            const apiKey = document.getElementById('api-coinbase-key').value.trim();
+            const apiSecret = document.getElementById('api-coinbase-secret').value.trim();
+            const passphrase = document.getElementById('api-coinbase-passphrase').value.trim();
+            const confirmed = document.getElementById('api-coinbase-readonly-confirm').checked;
+
+            if (!apiKey || !apiSecret || !passphrase || !confirmed) {
+                setActionResult('api-coinbase-action-result', 'warning', 'Missing review item', 'Paste the Coinbase key, secret, passphrase, and confirm the read-only permission statement.');
+                return;
+            }
+
+            setActionResult('api-coinbase-action-result', 'warning', 'Saving Coinbase key', 'Creating or reusing the Coinbase connector, then saving to the encrypted read-only vault.');
+            try {
+                const connectorId = await ensureCoinbaseConnector();
+                if (!connectorId) throw new Error('Coinbase connector could not be created.');
+                const result = await postJson(`/api/v1/exchange-connectors/${connectorId}/read-only-credentials`, {
+                    credentials: { apiKey, apiSecret, passphrase },
+                    permissionsChecklist: {
+                        readOnlyEnabled: true,
+                        tradingDisabled: true,
+                        withdrawalsDisabled: true,
+                        transferDisabled: true,
+                        ipRestrictionReviewed: true,
+                        twoFactorEnabled: true,
+                        ownerUnderstandsReadOnlyOnly: true
+                    }
+                });
+                document.getElementById('api-coinbase-key').value = '';
+                document.getElementById('api-coinbase-secret').value = '';
+                document.getElementById('api-coinbase-passphrase').value = '';
+                document.getElementById('api-coinbase-readonly-confirm').checked = false;
+                setActionResult('api-coinbase-action-result', 'safe', 'Coinbase key saved safely', result.nextClick || 'Test Coinbase read-only connection next.');
+                await refreshApiConnectionCenter();
+            } catch (error) {
+                setActionResult('api-coinbase-action-result', 'danger', 'Coinbase key was not saved', error.message);
+            }
+        }
+
+        async function testCoinbaseReadOnly() {
+            setActionResult('api-coinbase-action-result', 'warning', 'Testing Coinbase read-only connection', 'This uses saved read-only vault credentials and cannot place orders.');
+            try {
+                const connectorId = await ensureCoinbaseConnector();
+                if (!connectorId) throw new Error('Coinbase connector is not ready.');
+                const result = await postJson(`/api/v1/exchange-connectors/${connectorId}/read-only-connection-test`, {
+                    symbol: 'BTC/USDT'
+                });
+                setActionResult('api-coinbase-action-result', 'safe', 'Coinbase read-only test complete', result.test?.plainEnglishStatus || 'Read-only test completed.');
+                await refreshApiConnectionCenter();
+            } catch (error) {
+                setActionResult('api-coinbase-action-result', 'danger', 'Coinbase read-only test failed', error.message);
+                await refreshApiConnectionCenter().catch(() => {});
+            }
+        }
+
+        async function deleteCoinbaseKey() {
+            if (!window.confirm('Delete the saved Coinbase read-only key from the local vault?')) return;
+            setActionResult('api-coinbase-action-result', 'warning', 'Deleting Coinbase key', 'Removing Coinbase read-only vault credentials.');
+            try {
+                const connectorId = providerById('coinbase')?.metadata?.connectorId;
+                if (!connectorId) throw new Error('No Coinbase connector exists yet.');
+                const result = await fetchJson(`/api/v1/exchange-connectors/${connectorId}/read-only-credentials`, { method: 'DELETE' });
+                setActionResult('api-coinbase-action-result', 'safe', 'Coinbase key deleted', result.nextClick || 'Add a new read-only key later if needed.');
+                await refreshApiConnectionCenter();
+            } catch (error) {
+                setActionResult('api-coinbase-action-result', 'danger', 'Unable to delete Coinbase key', error.message);
+            }
         }
 
         async function runReadOnlyPriceCompare() {
@@ -307,7 +766,7 @@
                             <strong>${apiEscape(comparison.symbol || 'BTC/USDT')}</strong>
                         </div>
                         <p>${apiEscape(comparison.summary || comparison.plainEnglish || 'Market data comparison completed without placing orders.')}</p>
-                        <small>Venues checked: ${apiEscape(venues.length || comparison.venueCount || 'review raw output')} · Live trading disabled · wallet signing disabled.</small>
+                        <small>Venues checked: ${apiEscape(venues.length || comparison.venueCount || 'review raw output')} - Live trading disabled - wallet signing disabled.</small>
                     </article>
                 `;
             } catch (error) {
@@ -326,12 +785,32 @@
 
         document.addEventListener('click', event => {
             const action = event.target.closest('[data-two-gate-action]')?.dataset.twoGateAction;
-            if (action === 'refresh') {
-                refreshApiConnectionCenter();
-            }
+            if (action === 'refresh') refreshApiConnectionCenter();
+            if (action === 'test-kraken-access') testKrakenAccess();
+            if (action === 'run-kraken-dryrun') runKrakenDryRun();
+            if (action === 'open-coinbase-fields') document.getElementById('api-coinbase-key')?.focus();
+            if (action === 'ensure-coinbase-connector') ensureCoinbaseConnector().then(() => {
+                setActionResult('api-coinbase-action-result', 'safe', 'Coinbase connector ready', 'You can now save a read-only Coinbase key.');
+            }).catch(error => setActionResult('api-coinbase-action-result', 'danger', 'Coinbase connector failed', error.message));
+            if (action === 'focus-coinbase-save') document.getElementById('api-save-coinbase-key')?.focus();
+            if (action === 'test-coinbase-readonly') testCoinbaseReadOnly();
         });
 
         document.getElementById('api-refresh-status').addEventListener('click', refreshApiConnectionCenter);
+        document.getElementById('api-check-kraken-status').addEventListener('click', refreshApiConnectionCenter);
+        document.getElementById('api-open-kraken-replace').addEventListener('click', () => {
+            const panel = document.getElementById('api-kraken-replace-panel');
+            panel.open = true;
+            document.getElementById('api-kraken-key').focus();
+        });
+        document.getElementById('api-delete-kraken-key').addEventListener('click', deleteKrakenKey);
+        document.getElementById('api-test-kraken-access').addEventListener('click', testKrakenAccess);
+        document.getElementById('api-run-kraken-dryrun').addEventListener('click', runKrakenDryRun);
+        document.getElementById('api-test-raw-kraken-balance').addEventListener('click', testRawKrakenBalance);
+        document.getElementById('api-kraken-replace-form').addEventListener('submit', saveKrakenKey);
+        document.getElementById('api-coinbase-form').addEventListener('submit', saveCoinbaseKey);
+        document.getElementById('api-test-coinbase-key').addEventListener('click', testCoinbaseReadOnly);
+        document.getElementById('api-delete-coinbase-key').addEventListener('click', deleteCoinbaseKey);
         document.getElementById('api-run-price-compare').addEventListener('click', runReadOnlyPriceCompare);
         refreshApiConnectionCenter().catch(error => {
             document.getElementById('api-raw-status').textContent = error.message;

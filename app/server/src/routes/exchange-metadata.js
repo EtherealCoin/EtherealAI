@@ -1,4 +1,11 @@
 const crypto = require('crypto');
+const {
+  API_PROVIDER_CATEGORIES,
+  API_PROVIDER_STATUSES,
+  API_SAFETY_LEVELS,
+  DEX_READONLY_PROVIDER_REGISTRY,
+  buildApiConnectionCenterStatus
+} = require('../lib/api-connection-center');
 
 function registerExchangeMetadataRoutes(app, {
   requireAuth,
@@ -197,6 +204,220 @@ function registerExchangeMetadataRoutes(app, {
     const exchangeId = normalizeExchangeId(registryEntry?.id || connector?.settings?.registryId || connector?.exchange_name);
 
     return exchangeReadOnlySetupGuides?.[exchangeId] || null;
+  }
+
+  function getConnectorByExchange(connectors = [], exchangeName) {
+    const exchangeId = normalizeExchangeId(exchangeName);
+
+    return connectors.find(connector => (
+      normalizeExchangeId(connector?.settings?.registryId || connector?.exchange_name) === exchangeId
+    )) || null;
+  }
+
+  function shortFingerprint(value = '') {
+    const text = String(value || '');
+
+    if (!text) return '';
+    if (text.length <= 16) return text;
+
+    return `${text.slice(0, 8)}...${text.slice(-6)}`;
+  }
+
+  function buildReadOnlyExchangeProviderStatus({
+    exchangeName,
+    displayName,
+    connector,
+    guide,
+    vaultStatus
+  }) {
+    const readOnlyConnection = connector?.settings?.readOnlyConnection || {};
+    const referenceName = readOnlyConnection.referenceName || connector?.secret_reference_name || null;
+    const vaultEntry = referenceName
+      ? (vaultStatus?.entries || []).find(entry => entry.referenceName === referenceName)
+      : null;
+    const hasCredential = Boolean(referenceName && vaultEntry);
+    const lastConnectionStatus = String(readOnlyConnection.connectionStatus || connector?.status || '').toLowerCase();
+    const connected = ['read_only_connected', 'quote_only_connected'].includes(lastConnectionStatus);
+    const currentStatus = connected
+      ? API_PROVIDER_STATUSES.CONNECTED
+      : hasCredential
+        ? API_PROVIDER_STATUSES.DRAFT
+        : API_PROVIDER_STATUSES.NEEDS_KEY;
+    const blockers = [];
+
+    if (!hasCredential) {
+      blockers.push({
+        title: `${displayName} read-only key is not saved yet`,
+        detail: 'Create a read/view-only key at the exchange, keep trading and transfers disabled, then save it to the local encrypted vault.'
+      });
+    }
+
+    return {
+      providerName: displayName,
+      providerId: exchangeName,
+      category: API_PROVIDER_CATEGORIES.CENTRALIZED_EXCHANGE,
+      currentStatus,
+      safetyLevel: API_SAFETY_LEVELS.READ_ONLY,
+      lastCheckResult: readOnlyConnection.plainEnglishStatus
+        || (connected
+          ? `${displayName} read-only account check passed.`
+          : `${displayName} is ready for a read-only key when you choose to connect it.`),
+      lastCheckedAt: readOnlyConnection.lastTestAt || readOnlyConnection.lastCredentialRotationAt || null,
+      blockers,
+      nextRecommendedAction: connected
+        ? `${displayName} read-only connection is working.`
+        : hasCredential
+          ? `Click Test ${displayName} Read-Only Connection.`
+          : `Save a restricted ${displayName} read-only key when ready.`,
+      advancedDiagnosticsLink: '/strategy-lab#exchange-connector-manager',
+      metadata: {
+        connectorId: connector?.id || null,
+        keyExistsLocally: hasCredential,
+        setupUrl: guide?.setupUrl || '',
+        docsUrl: guide?.docsUrl || '',
+        allowedPermissions: guide?.permissionsChecklist || [],
+        forbiddenPermissions: [
+          'Trading/order placement',
+          'Withdrawals/transfers',
+          'Margin/futures/leverage',
+          'Admin/manage permissions'
+        ],
+        credentialFields: guide?.credentialFields || [],
+        passphraseRequired: Boolean(guide?.passphraseRequired),
+        apiKeyFingerprint: shortFingerprint(vaultEntry?.metadata?.apiKeyFingerprint || readOnlyConnection.apiKeyFingerprint || ''),
+        secretValuesReturnedToUi: false
+      }
+    };
+  }
+
+  async function buildKrakenApiCenterProviderStatus({ userId, connectors }) {
+    const connector = await findOrCreateProductionConnector({ exchangeName: 'kraken' });
+    const productionConnection = connector?.settings?.productionConnection || {};
+    const referenceName = productionConnection.referenceName || null;
+    const vaultStatus = referenceName
+      ? await getProductionVaultStatus(referenceName)
+      : { exists: false, count: 0, entries: [] };
+    const vaultReadback = referenceName
+      ? await getProductionVaultReadbackDiagnostics(referenceName)
+      : {
+          exists: false,
+          vaultDecodeSucceeded: false,
+          secretValuesReturned: false
+        };
+    const [endpointCountRow, latestOrders, tinyGate] = await Promise.all([
+      dbGet(
+        `SELECT COUNT(*) AS count
+         FROM production_order_executions
+         WHERE user_id = ?
+           AND exchange_name = 'kraken'
+           AND production_order_endpoint_called = 1`,
+        [userId]
+      ),
+      getLatestKrakenTinyLiveExecutions(userId, 10),
+      buildKrakenTinyLiveGate({ userId }).catch(error => ({
+        canPreview: false,
+        canPlace: false,
+        label: 'NEEDS REVIEW',
+        plainEnglish: error.message,
+        missing: [{ label: 'Tiny live eligibility could not be loaded', plainEnglish: error.message }]
+      }))
+    ]);
+    const endpointCallCount = Number(endpointCountRow?.count || 0);
+    const keySaved = Boolean(referenceName && vaultReadback.exists && vaultReadback.vaultDecodeSucceeded !== false);
+    const unsafeDetected = String(productionConnection.phase6EReadiness?.status || '').toLowerCase().includes('unsafe');
+    const dryRunReady = Boolean(
+      productionConnection.phase6EFinalStatus?.readyForTinyLiveTest
+      || productionConnection.phase6EPreflight?.technicalReady
+      || latestOrders.some(order => String(order.phase || order.status || '').toLowerCase().includes('preview'))
+      || tinyGate?.canPreview
+    );
+    const blockers = [];
+
+    if (!keySaved) {
+      blockers.push({
+        title: 'Kraken key is not saved in the local vault',
+        detail: 'Use Replace Kraken Key only after creating a restricted Kraken spot key. Secrets are not stored in SQLite.'
+      });
+    }
+
+    if (unsafeDetected) {
+      blockers.push({
+        title: 'Unsafe Kraken permission was detected',
+        detail: 'Delete this key and recreate it without withdrawals, transfers, margin, futures, or leverage.'
+      });
+    }
+
+    if (keySaved && !dryRunReady) {
+      blockers.push({
+        title: 'Dry-run proof is not complete yet',
+        detail: 'Run dry-run proof to preview the tiny test without calling the production order endpoint.'
+      });
+    }
+
+    if (endpointCallCount > 0) {
+      blockers.push({
+        title: 'A Kraken live endpoint call already exists',
+        detail: 'Track, reconcile, or cancel the existing tiny test before preparing another one.'
+      });
+    }
+
+    const currentStatus = unsafeDetected || endpointCallCount > 0
+      ? API_PROVIDER_STATUSES.BLOCKED
+      : keySaved && dryRunReady
+        ? API_PROVIDER_STATUSES.CONNECTED
+        : keySaved
+          ? API_PROVIDER_STATUSES.DRAFT
+          : API_PROVIDER_STATUSES.NEEDS_KEY;
+
+    return {
+      providerName: 'Kraken',
+      providerId: 'kraken',
+      category: API_PROVIDER_CATEGORIES.CENTRALIZED_EXCHANGE,
+      currentStatus,
+      safetyLevel: API_SAFETY_LEVELS.DRY_RUN,
+      lastCheckResult: productionConnection.plainEnglishStatus
+        || tinyGate?.plainEnglish
+        || (keySaved ? 'Kraken key exists locally. Run verification or dry-run proof next.' : 'No Kraken key is saved yet.'),
+      lastCheckedAt: productionConnection.phase6EVerifiedAt
+        || productionConnection.phase6EKeySavedAt
+        || productionConnection.lastCredentialRotationAt
+        || null,
+      blockers,
+      nextRecommendedAction: currentStatus === API_PROVIDER_STATUSES.CONNECTED
+        ? 'Review tiny live eligibility from Live Trading Launch. API Center still cannot place orders.'
+        : keySaved
+          ? 'Run Kraken read/account access test, then dry-run proof.'
+          : 'Replace Kraken key with a restricted spot key in the local encrypted vault.',
+      advancedDiagnosticsLink: '/live-trading-launch#kraken-auth-diagnostics',
+      metadata: {
+        connectorId: connector?.id || null,
+        keyExistsLocally: keySaved,
+        credentialReferenceName: referenceName,
+        apiKeyFingerprint: shortFingerprint(vaultReadback.apiKeyFingerprint || productionConnection.apiKeyFingerprint || ''),
+        apiKeySha256Fingerprint: shortFingerprint(vaultReadback.apiKeySha256Fingerprint || productionConnection.apiKeySha256Fingerprint || ''),
+        apiSecretSha256Fingerprint: shortFingerprint(vaultReadback.apiSecretSha256Fingerprint || productionConnection.apiSecretSha256Fingerprint || ''),
+        vaultDecodeSucceeded: vaultReadback.vaultDecodeSucceeded === true,
+        readbackMatchesMetadata: vaultReadback.readbackMatchesMetadata,
+        timestampSaved: vaultReadback.timestampSaved || productionConnection.phase6EKeySavedAt || null,
+        readAccountAccessAvailable: keySaved,
+        rawBalanceEndpointTestAvailable: keySaved,
+        dryRunProofAvailable: keySaved,
+        dryRunProofReady: dryRunReady,
+        tinyLiveEligibilityStatus: tinyGate?.label || 'LOCKED',
+        tinyLiveEligibilityUnlocked: Boolean(tinyGate?.canPreview || dryRunReady),
+        productionEndpointCallCount: endpointCallCount,
+        latestOrders: latestOrders.slice(0, 3).map(order => ({
+          id: order.id,
+          status: order.status,
+          phase: order.phase,
+          endpointCalled: Boolean(order.production_order_endpoint_called),
+          createdAt: order.created_at
+        })),
+        secretValuesReturnedToUi: false,
+        productionOrderEndpointEnabledFromApiCenter: false,
+        relatedConnectorCount: connectors.filter(item => normalizeExchangeId(item?.exchange_name) === 'kraken').length
+      }
+    };
   }
 
   function mergeReadOnlyConnectionSettings(connector, updates = {}) {
@@ -2181,6 +2402,79 @@ function registerExchangeMetadataRoutes(app, {
       });
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.get('/api/v1/api-connection-center/status', requireAuth, async (req, res) => {
+    try {
+      const rows = await dbAll(
+        `${exchangeConnectorSelect}
+         ORDER BY exchange_connectors.created_at DESC
+         LIMIT 500`
+      );
+      const connectors = rows.map(parseExchangeConnector);
+      const [readOnlyVaultStatus, krakenProvider, walletCountRow] = await Promise.all([
+        getReadOnlyVaultStatus(),
+        buildKrakenApiCenterProviderStatus({ userId: req.session.userId, connectors }),
+        dbGet(
+          `SELECT COUNT(*) AS count
+           FROM owner_wallets
+           WHERE user_id = ?`,
+          [req.session.userId]
+        ).catch(() => ({ count: 0 }))
+      ]);
+      const coinbaseProvider = buildReadOnlyExchangeProviderStatus({
+        exchangeName: 'coinbase',
+        displayName: 'Coinbase Advanced',
+        connector: getConnectorByExchange(connectors, 'coinbase'),
+        guide: exchangeReadOnlySetupGuides?.coinbase,
+        vaultStatus: readOnlyVaultStatus
+      });
+      const apiCenter = buildApiConnectionCenterStatus({
+        kraken: krakenProvider,
+        coinbase: coinbaseProvider,
+        dexReadOnlyProviders: DEX_READONLY_PROVIDER_REGISTRY,
+        walletMetadataCount: Number(walletCountRow?.count || 0)
+      });
+
+      res.json({
+        apiCenter,
+        statusModel: {
+          categories: Object.values(API_PROVIDER_CATEGORIES),
+          statuses: Object.values(API_PROVIDER_STATUSES),
+          safetyLevels: Object.values(API_SAFETY_LEVELS)
+        },
+        readOnlyConnectionSummary: buildReadOnlyConnectionSummary(connectors),
+        readOnlyVaultStatus,
+        cexGuides: {
+          kraken: exchangeReadOnlySetupGuides?.kraken || null,
+          coinbase: exchangeReadOnlySetupGuides?.coinbase || null
+        },
+        dexReadOnlyRegistry: apiCenter.dexReadOnlyProviders,
+        twoGateModel: {
+          gateOne: 'Preview / Review',
+          gateTwo: 'Final Confirm / Execute',
+          maxVisibleOwnerGates: 2,
+          backendChecksStillRun: true
+        },
+        safetyBoundary: apiCenter.safetyBoundary,
+        advancedDiagnostics: {
+          rawRoutesAvailableInAdvancedMode: true,
+          krakenDiagnosticsPath: '/live-trading-launch#kraken-auth-diagnostics',
+          connectorManagerPath: '/strategy-lab#exchange-connector-manager',
+          secretValuesReturnedToUi: false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishExchangeError
+          ? createPlainEnglishExchangeError('API Connection Center status', error)
+          : error.message,
+        liveTradingEnabled: false,
+        walletSigningEnabled: false,
+        withdrawalsEnabled: false,
+        orderEndpointEnabled: false
+      });
     }
   });
 

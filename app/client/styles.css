@@ -8458,6 +8458,49 @@ body.operator-advanced-mode .community-art-grid span {
     margin-top: 14px;
 }
 
+.api-provider-model {
+    display: grid;
+    gap: 16px;
+}
+
+.api-action-row {
+    align-items: stretch;
+}
+
+.api-key-replace-panel {
+    border-color: color-mix(in srgb, var(--theme-warning) 44%, var(--theme-border));
+}
+
+.api-key-replace-panel[open] {
+    box-shadow: 0 0 22px color-mix(in srgb, var(--theme-warning) 18%, transparent);
+}
+
+.api-provider-model .model-test-form {
+    background: var(--theme-card-background-muted);
+    border: 1px solid var(--theme-border);
+    padding: 14px;
+}
+
+.api-provider-model .checkbox-line {
+    align-items: flex-start;
+    background: color-mix(in srgb, var(--theme-warning-bg) 55%, transparent);
+    border: 1px solid color-mix(in srgb, var(--theme-warning) 44%, var(--theme-border));
+    color: var(--theme-warning-text);
+    display: flex;
+    gap: 10px;
+    line-height: 1.45;
+    padding: 12px;
+}
+
+.api-provider-model .checkbox-line input {
+    margin-top: 3px;
+    min-height: auto;
+}
+
+.api-provider-model .operator-two-gate-blockers {
+    margin-top: 0;
+}
+
 .token-launch-operator-pipeline {
     display: grid;
     gap: 16px;

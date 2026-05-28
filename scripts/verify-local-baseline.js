@@ -75,6 +75,7 @@ function runNodeSyntaxCheck() {
     'app/server/src/lib/db-selects.js',
     'app/server/src/lib/db-row-lookups.js',
     'app/server/src/lib/exchange-metadata.js',
+    'app/server/src/lib/api-connection-center.js',
     'app/server/src/lib/exchange-readonly-connections.js',
     'app/server/src/lib/exchange-live-safety.js',
     'app/server/src/lib/exchange-sandbox-execution.js',
@@ -9151,6 +9152,8 @@ function checkSimpleOperatorModeUsabilityRefactor() {
   const home = fs.readFileSync(path.join(projectRoot, 'app/client/index.html'), 'utf8');
   const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
   const apiConnectionCenter = fs.readFileSync(path.join(projectRoot, 'app/client/api-connection-center.html'), 'utf8');
+  const apiConnectionCenterLib = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/api-connection-center.js'), 'utf8');
+  const exchangeMetadataRoutes = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/exchange-metadata.js'), 'utf8');
   const social = fs.readFileSync(path.join(projectRoot, 'app/client/social-ops.html'), 'utf8');
   const pages = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/pages.js'), 'utf8');
   const manual = fs.readFileSync(path.join(projectRoot, 'app/client/operator-manual.html'), 'utf8');
@@ -9180,6 +9183,8 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !operatorMode.includes('Connect APIs Without Developer Workflow')
     || !operatorMode.includes('Coinbase Advanced')
     || !operatorMode.includes('DEX Quote-Only')
+    || !operatorMode.includes('Test Kraken Read Access')
+    || !operatorMode.includes('Run Kraken Dry-Run Proof')
     || !operatorMode.includes('data-operator-training-toggle')
     || !operatorMode.includes('data-operator-training-choice="text"')
     || !operatorMode.includes('data-operator-training-choice="video"')
@@ -9338,6 +9343,8 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !styles.includes('.operator-two-gate-action')
     || !styles.includes('.api-status-grid')
     || !styles.includes('.api-connection-shell')
+    || !styles.includes('.api-provider-model')
+    || !styles.includes('.api-key-replace-panel')
     || !styles.includes('.token-launch-operator-pipeline')
     || !styles.includes('.token-launch-operator-grid')
     || !styles.includes('.token-launch-detail-grid')
@@ -9356,12 +9363,25 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !apiConnectionCenter.includes('Final Confirm / Execute')
     || !apiConnectionCenter.includes('API Connection Center cannot call the Kraken order endpoint')
     || !apiConnectionCenter.includes('No live order is placed here')
+    || !apiConnectionCenter.includes('Kraken Safe Setup And Readiness')
+    || !apiConnectionCenter.includes('Coinbase Advanced Read-Only Setup')
+    || !apiConnectionCenter.includes('DEX Read-Only Connector Lane')
+    || !apiConnectionCenter.includes('/api/v1/api-connection-center/status')
+    || !apiConnectionCenter.includes('Test Kraken Read/Account Access')
+    || !apiConnectionCenter.includes('Run Kraken Dry-Run Proof')
     || !apiConnectionCenter.includes('Coinbase Advanced')
     || !apiConnectionCenter.includes('DEX Quote-Only')
     || !apiConnectionCenter.includes('/js/operator-gates.js')
     || !apiConnectionCenter.includes('/js/operator-next-action.js')
     || !apiConnectionCenter.includes('/js/operator-training.js')
     || !apiConnectionCenter.includes('/js/operator-mode.js')
+    || !apiConnectionCenterLib.includes('DEX_READONLY_PROVIDER_REGISTRY')
+    || !apiConnectionCenterLib.includes('DexScreener-style token and pair lookup')
+    || !apiConnectionCenterLib.includes('buildApiConnectionCenterStatus')
+    || !apiConnectionCenterLib.includes('secretValuesReturnedToUi: false')
+    || !exchangeMetadataRoutes.includes("app.get('/api/v1/api-connection-center/status'")
+    || !exchangeMetadataRoutes.includes('productionEndpointCallCount')
+    || !apiConnectionCenterLib.includes('orderEndpointEnabledFromApiCenter: false')
     || apiConnectionCenter.includes('/kraken-tiny-live-test/place')
   ) {
     fail('simple operator mode shell did not expose the beginner operator workflow, manual, or nonblocking next-action behavior');

@@ -49,21 +49,24 @@
             title: 'Connect APIs Without Developer Workflow',
             summary: 'Use one CEO-level surface for Kraken first, Coinbase next, and DEX quote-only lanes later. Simple Mode shows preview/review, then final approval. Raw diagnostics stay behind Advanced Mode.',
             primaryAction: { label: 'Refresh API Status', selector: '#api-refresh-status' },
-            keepIds: ['api-kraken-two-gate'],
-            keepHeadings: ['Read-Only Market Data Lanes', 'Next Connection Order'],
+            keepIds: ['api-kraken-two-gate', 'kraken-operator-setup', 'coinbase-readonly-setup'],
+            keepHeadings: ['DEX Read-Only Connector Lane', 'Next Connection Order'],
             readyLabel: 'API Center Ready',
             nextText: 'Refresh API Status first. Finish Kraken before adding Coinbase or DEX execution paths.',
             cards: [
-                ['Kraken First', 'Continue from the existing verified Kraken path and tiny-live preview state.'],
-                ['Coinbase Next', 'Coinbase Advanced gets its own safe wizard after the first Kraken test succeeds.'],
-                ['DEX Quote-Only', 'DEX integrations start with prices, pools, routes, and liquidity. No swaps or wallet signing.'],
-                ['Advanced Diagnostics', 'Raw API responses, fingerprints, and route details stay collapsible.']
+                ['What this page does', 'It connects safe API lanes without terminal commands or developer route hunting.'],
+                ['Kraken First', 'Inspect saved key fingerprints, test read/account access, run dry-run proof, and review tiny-live eligibility without placing an order.'],
+                ['Coinbase Next', 'Create a read-only Coinbase setup, save the key to the encrypted vault, then test account-read access.'],
+                ['DEX Quote-Only', 'DEX integrations start with token info, pairs, pools, prices, liquidity, and quotes. No swaps or wallet signing.'],
+                ['What is locked', 'Live orders, withdrawals, swaps, wallet signing, deployment, public posting, and listing submissions remain locked.']
             ],
             workflow: [
                 ['1. Review API state', 'Load saved Kraken status, read-only connector status, and tiny live gate state.', { label: 'Refresh API Status', selector: '#api-refresh-status' }],
-                ['2. Finish Kraken setup', 'Open the existing Kraken walkthrough only if the status says a key or preview needs review.', { label: 'Open Kraken Setup', href: '/live-trading-launch#kraken-live-setup-walkthrough' }],
-                ['3. Review final Kraken approval', 'Go to the final approval panel. This API Center cannot place the order.', { label: 'Open Final Kraken Approval', href: '/live-trading-launch#kraken-tiny-live-test' }],
-                ['4. Compare read-only prices', 'Run public market-data comparison without orders, withdrawals, swaps, or wallet signing.', { label: 'Run Read-Only Price Compare', selector: '#api-run-price-compare' }]
+                ['2. Repair or verify Kraken', 'Use Replace Kraken Key only if needed, then Test Kraken Read/Account Access. Secret fields clear after save.', { label: 'Test Kraken Read Access', selector: '#api-test-kraken-access' }],
+                ['3. Run dry-run proof', 'Preview the tiny setup without calling the production order endpoint.', { label: 'Run Kraken Dry-Run Proof', selector: '#api-run-kraken-dryrun' }],
+                ['4. Prepare Coinbase read-only', 'Save a Coinbase View/read-only key only after confirming trade, transfer, manage, and withdrawal permissions are off.', { label: 'Save Coinbase Key Safely', selector: '#api-save-coinbase-key' }],
+                ['5. Review DEX quote-only lanes', 'Use DEX lanes for research data only. Swaps, approvals, and signatures stay locked.', { label: 'Run Read-Only Price Compare', selector: '#api-run-price-compare' }],
+                ['6. Final approval meaning', 'Final approval means leaving this page and using the dedicated live approval panel. API Connection Center itself cannot place a live order.', { label: 'Open Final Kraken Approval', href: '/live-trading-launch#kraken-tiny-live-test' }]
             ]
         },
         '/owner-setup': {
