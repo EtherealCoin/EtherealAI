@@ -837,6 +837,7 @@
                 ['Continue Draft', 'Reloads a saved draft without losing Simple Mode fields.'],
                 ['Logo Studio', 'Opens three local logo direction choices before website, whitepaper, social package, listing icon package, and dapp visuals.'],
                 ['Choose This Local Logo Direction', 'Selects a local logo spec and saves it into the draft. It does not call an image generator or submit to a listing site.'],
+                ['Save Website / Whitepaper Draft', 'Saves website hero copy, use case, tokenomics, roadmap, whitepaper notes, dapp preview, and owner edit instructions locally.'],
                 ['Generate Workspace', 'Creates local project files for review.']
             ],
             fields: [
@@ -848,7 +849,10 @@
                 ['Risk Notes', 'Known legal, economic, technical, or community risks.'],
                 ['NFT Utility Notes', 'How NFTs affect access, utility, roles, or dapp features.'],
                 ['Ecosystem Notes', 'Website, roadmap, whitepaper, social, listing, and use-case notes.'],
-                ['Logo / Brand Direction', 'The token logo brief. This is local planning and does not call an external image generator.']
+                ['Logo / Brand Direction', 'The token logo brief. This is local planning and does not call an external image generator.'],
+                ['Website hero', 'First-screen website copy.'],
+                ['Roadmap milestones', 'Editable token roadmap.'],
+                ['Whitepaper notes', 'Technical, utility, risk, and limitation notes for the whitepaper.']
             ],
             doNotEnter: [
                 'Do not enter private keys, seed phrases, deployer keys, wallet passwords, RPC secrets, or exchange keys.',
@@ -861,6 +865,7 @@
                 'Add NFT utility and ecosystem notes.',
                 'Save the local ecosystem project draft.',
                 'Continue into Logo Studio and choose one local logo direction before website, whitepaper, roadmap, and dapp visuals.',
+                'Save the website, whitepaper, and roadmap edits locally.',
                 'Generate workspace only for local review.'
             ],
             safeDefaults: [
@@ -878,6 +883,7 @@
                 'A local spec or ecosystem project is saved.',
                 'The saved draft can be reopened without losing CEO workflow fields.',
                 'Logo Studio shows three local direction choices and a lock-state explanation.',
+                'Website, whitepaper, and roadmap edits stay attached to the saved local draft.',
                 'Target chain is explicit per project.',
                 'No deployment occurred.',
                 'Live E2E and wallet signing remain locked.'
@@ -913,6 +919,13 @@
                         narration: 'Logo Studio is where the token identity becomes usable for the website, social avatar, listing icon package, dapp header mark, and NFT badge direction. The choices are local specs, not external generation.',
                         click: 'Choose one local logo direction, then save/update the token draft.',
                         pause: 'Pause here and confirm no wallet signing, listing submission, or external image generation happened automatically.'
+                    },
+                    {
+                        title: 'Edit website and whitepaper',
+                        screen: 'Website / Whitepaper / Roadmap Builder',
+                        narration: 'Use this section like a founder draft editor. EtherealAI keeps the token website, whitepaper, roadmap, and dapp preview tied to the local token project.',
+                        click: 'Edit the sections, then click Save Website / Whitepaper Draft.',
+                        pause: 'Pause here and confirm Cloudflare, GitHub, DNS, and public deployment remain locked.'
                     }
                 ]
             }

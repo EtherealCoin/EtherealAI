@@ -1705,6 +1705,9 @@ function normalizeTokenOperatorDraft(value = {}, existing = {}) {
   const logo = raw.logo && typeof raw.logo === 'object'
     ? raw.logo
     : (fallback.logo && typeof fallback.logo === 'object' ? fallback.logo : {});
+  const website = raw.websiteWhitepaperRoadmap && typeof raw.websiteWhitepaperRoadmap === 'object'
+    ? raw.websiteWhitepaperRoadmap
+    : (fallback.websiteWhitepaperRoadmap && typeof fallback.websiteWhitepaperRoadmap === 'object' ? fallback.websiteWhitepaperRoadmap : {});
   const completion = raw.completion && typeof raw.completion === 'object'
     ? raw.completion
     : (fallback.completion && typeof fallback.completion === 'object' ? fallback.completion : {});
@@ -1740,6 +1743,17 @@ function normalizeTokenOperatorDraft(value = {}, existing = {}) {
       selectedChoiceId: cleanProjectText(logo.selectedChoiceId, '', 80),
       lockState: cleanProjectText(logo.lockState, 'editable draft', 80),
       status: cleanProjectText(logo.status, 'editable draft', 80)
+    },
+    websiteWhitepaperRoadmap: {
+      websiteTemplate: cleanProjectText(website.websiteTemplate, 'hybrid utility token site', 120),
+      hero: cleanProjectText(website.hero, '', 1200),
+      useCase: cleanProjectText(website.useCase, '', 2200),
+      tokenomics: cleanProjectText(website.tokenomics, '', 2200),
+      roadmap: cleanProjectText(website.roadmap, '', 2600),
+      whitepaperNotes: cleanProjectText(website.whitepaperNotes, '', 3000),
+      dappPreview: cleanProjectText(website.dappPreview, '', 2000),
+      editInstructions: cleanProjectText(website.editInstructions, '', 2000),
+      status: cleanProjectText(website.status, 'editable local draft', 80)
     },
     completion: {
       tokenIdentity: Boolean(completion.tokenIdentity),
@@ -1805,6 +1819,9 @@ function buildTokenEcosystemProjectSpec(project = {}) {
     project.operatorDraft?.pipeline?.supplyModel ? `Supply model: ${project.operatorDraft.pipeline.supplyModel}` : '',
     project.operatorDraft?.pipeline?.dappMode ? `Dapp plan: ${project.operatorDraft.pipeline.dappMode}` : '',
     project.operatorDraft?.logo?.direction ? `Logo direction: ${project.operatorDraft.logo.direction}` : '',
+    project.operatorDraft?.websiteWhitepaperRoadmap?.hero ? `Website hero: ${project.operatorDraft.websiteWhitepaperRoadmap.hero}` : '',
+    project.operatorDraft?.websiteWhitepaperRoadmap?.roadmap ? `Roadmap draft: ${project.operatorDraft.websiteWhitepaperRoadmap.roadmap}` : '',
+    project.operatorDraft?.websiteWhitepaperRoadmap?.whitepaperNotes ? `Whitepaper notes: ${project.operatorDraft.websiteWhitepaperRoadmap.whitepaperNotes}` : '',
     project.nftUtilityNotes ? `NFT utility notes: ${project.nftUtilityNotes}` : '',
     project.ecosystemNotes ? `Ecosystem notes: ${project.ecosystemNotes}` : ''
   ].filter(Boolean).join('\n');

@@ -8613,6 +8613,21 @@ body.operator-advanced-mode .community-art-grid span {
     min-height: 44px;
 }
 
+.website-whitepaper-roadmap-builder {
+    display: grid;
+    gap: 14px;
+}
+
+.website-whitepaper-roadmap-builder .section-help {
+    color: var(--theme-secondary-text);
+    margin: 0;
+    max-width: 84ch;
+}
+
+.website-whitepaper-roadmap-builder textarea[readonly] {
+    color: var(--theme-success-text);
+}
+
 .token-launch-operator-grid,
 .token-launch-detail-grid {
     display: grid;
