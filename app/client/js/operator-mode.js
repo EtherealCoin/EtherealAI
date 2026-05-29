@@ -60,7 +60,7 @@
             summary: 'Use one CEO-level surface for Kraken first, Coinbase next, and DEX quote-only lanes later. Simple Mode shows preview/review, then final approval. Raw diagnostics stay behind Advanced Mode.',
             primaryAction: { label: 'Refresh API Status', selector: '#api-refresh-status' },
             keepIds: ['api-kraken-two-gate', 'api-kraken-operator-wizard', 'kraken-operator-setup', 'coinbase-readonly-setup'],
-            keepHeadings: ['DEX Market Data', 'DEX Quote / Route Preview', 'DEX Execution: Locked', 'Next Connection Order'],
+            keepHeadings: ['Unified Readiness Checklist', 'DEX Market Data', 'DEX Quote / Route Preview', 'DEX Execution: Locked', 'Next Connection Order'],
             readyLabel: 'API Center Ready',
             nextText: 'Refresh API Status first. Finish Kraken, prepare Coinbase read-only, then use DEX market-data and quote-preview lanes. DEX execution remains wallet-signing locked.',
             cards: [
@@ -73,12 +73,13 @@
             ],
             workflow: [
                 ['1. Review API state', 'Load saved Kraken status, read-only connector status, and tiny live gate state.', { label: 'Refresh API Status', selector: '#api-refresh-status' }],
-                ['2. Repair or verify Kraken', 'Use Replace Kraken Key only if needed, then Test Kraken Read/Account Access. Secret fields clear after save.', { label: 'Test Kraken Read Access', selector: '#api-test-kraken-access' }],
-                ['3. Run dry-run proof', 'Preview the tiny setup without calling the production order endpoint.', { label: 'Run Kraken Dry-Run Proof', selector: '#api-run-kraken-dryrun' }],
-                ['4. Prepare Coinbase read-only', 'Save a Coinbase View/read-only key only after confirming trade, transfer, manage, and withdrawal permissions are off.', { label: 'Save Coinbase Key Safely', selector: '#api-save-coinbase-key' }],
-                ['5. Test DEX market data', 'Run public token/pair/pool checks only. No wallet, swap, approval, signature, or transaction broadcast is available.', { label: 'Test DexScreener Search', selector: '#api-test-dexscreener-search' }],
-                ['6. Preview DEX quote route', 'Preview Jupiter or LI.FI quote data only. Transaction data stays hidden and execution stays locked.', { label: 'Preview Jupiter Quote', selector: '#api-preview-jupiter' }],
-                ['7. Final approval meaning', 'Final approval means leaving this page and using the dedicated live approval panel. API Connection Center itself cannot place a live order.', { label: 'Open Final Kraken Approval', href: '/live-trading-launch#kraken-tiny-live-test' }]
+                ['2. Review unified readiness', 'Read the Phase 4 checklist for Kraken final review, Coinbase read-only, DEX data, DEX quotes, and paper-to-live candidate selection.', { label: 'Open Unified Checklist', selector: '#api-phase4-readiness' }],
+                ['3. Repair or verify Kraken', 'Use Replace Kraken Key only if needed, then Test Kraken Read/Account Access. Secret fields clear after save.', { label: 'Test Kraken Read Access', selector: '#api-test-kraken-access' }],
+                ['4. Run dry-run proof', 'Preview the tiny setup without calling the production order endpoint.', { label: 'Run Kraken Dry-Run Proof', selector: '#api-run-kraken-dryrun' }],
+                ['5. Prepare Coinbase read-only', 'Save a Coinbase View/read-only key only after confirming trade, transfer, manage, and withdrawal permissions are off.', { label: 'Save Coinbase Key Safely', selector: '#api-save-coinbase-key' }],
+                ['6. Test DEX market data', 'Run public token/pair/pool checks only. No wallet, swap, approval, signature, or transaction broadcast is available.', { label: 'Test DexScreener Search', selector: '#api-test-dexscreener-search' }],
+                ['7. Preview DEX quote route', 'Preview Jupiter or LI.FI quote data only. Transaction data stays hidden and execution stays locked.', { label: 'Preview Jupiter Quote', selector: '#api-preview-jupiter' }],
+                ['8. Final approval meaning', 'Final approval means leaving this page and using the dedicated live approval panel. API Connection Center itself cannot place a live order.', { label: 'Open Final Kraken Approval', href: '/live-trading-launch#kraken-tiny-live-test' }]
             ]
         },
         '/owner-setup': {
@@ -130,8 +131,8 @@
             title: 'Start Live Setup Safely Without Unlocking Autonomy',
             summary: 'Use one Kraken setup walkthrough to create a restricted spot key, save it safely, verify it, run dry-run proof, and check tiny live eligibility while keeping trading locked.',
             primaryAction: { label: 'Start Kraken Live Setup Walkthrough', selector: '#start-kraken-live-setup' },
-            keepIds: ['kraken-live-setup-walkthrough', 'kraken-auth-diagnostics', 'live-trading-activation-wizard', 'real-credential-dry-run-proof', 'kraken-tiny-live-framework', 'kraken-authenticated-eligibility', 'kraken-tiny-live-test', 'live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center'],
-            keepHeadings: ['What Should I Do Next?', 'Kraken Live Setup Walkthrough', 'Kraken Authentication Diagnostics', 'Live Trading Activation Wizard', 'Exchange Verification Checklist', 'Read-Only Arbitrage Scanner', 'Run $1 Kraken Tiny Live Test', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center', 'Phase 6: Production Trading Command Center'],
+            keepIds: ['live-phase4-readiness', 'kraken-live-setup-walkthrough', 'kraken-auth-diagnostics', 'live-trading-activation-wizard', 'real-credential-dry-run-proof', 'kraken-tiny-live-framework', 'kraken-authenticated-eligibility', 'kraken-tiny-live-test', 'live-arbitrage-command-center', 'treasury-command-center', 'production-trading-command-center'],
+            keepHeadings: ['What Should I Do Next?', 'One Checklist Before Any Tiny Live Test', 'Kraken Live Setup Walkthrough', 'Kraken Authentication Diagnostics', 'Live Trading Activation Wizard', 'Exchange Verification Checklist', 'Read-Only Arbitrage Scanner', 'Run $1 Kraken Tiny Live Test', 'Phase 3 Operator Dashboard', 'Phase 4: Live Arbitrage Command Center', 'Phase 5: Treasury Command Center', 'Phase 6: Production Trading Command Center'],
             readyLabel: 'Live Trading Launch Locked Safely',
             nextText: 'Click Start Kraken Live Setup Walkthrough. It shows exactly what to click in Kraken, what permissions must stay off, where to paste the key, and what to verify next.',
             cards: [
@@ -144,16 +145,17 @@
             ],
             workflow: [
                 ['1. Start live setup safely', 'Choose one exchange and load the guided activation checklist.', { label: 'Start Live Setup Safely', selector: '#start-live-setup-safely' }],
-                ['2. Start Kraken walkthrough', 'Follow the single owner flow for key creation, safe permissions, vault save, verification, dry-run proof, and eligibility.', { label: 'Start Kraken Live Setup Walkthrough', selector: '#start-kraken-live-setup' }],
-                ['3. Save restricted Kraken key', 'Paste the Kraken API key and private key into encrypted local vault fields only.', { label: 'Save Key Safely', selector: '#kraken-live-save-key' }],
-                ['4. Verify Kraken connection', 'Read balances, account status, fees, symbol rules, and unsafe permission signals.', { label: 'Verify Connection', selector: '#kraken-live-verify' }],
-                ['5. Run Kraken auth diagnostics if verify fails', 'Test the raw Kraken Balance endpoint, local nonce, signature generation, vault decode, and exact Kraken response without placing orders.', { label: 'Test Raw Kraken Balance Endpoint', selector: '#kraken-auth-test-balance' }],
-                ['6. Run dry-run proof', 'Simulate the exact tiny setup without calling the order endpoint.', { label: 'Dry-Run Proof', selector: '#kraken-live-dry-run' }],
-                ['7. Check tiny live eligibility', 'Estimate tiny size, fees, slippage, minimum order rules, exposure, and blockers without placing an order.', { label: 'Tiny Live Eligibility', selector: '#kraken-live-preview' }],
-                ['8. Prepare tiny live mode only if eligible', 'Typed confirmation can prepare locked tiny live test mode. Execution remains blocked.', { label: 'Enable Tiny Live Test Mode', selector: '#phase6f-enable' }],
-                ['9. Preview the final $1 Kraken test', 'Build the exact one-order preview. This does not call the live order endpoint.', { label: 'Preview $1 Kraken Test', selector: '#kraken-tiny-preview' }],
-                ['10. Owner-approved tiny order', 'Only after every gate passes, type the phrase, arm Emergency Stop, and click the final button once.', { label: 'Go To Final Approval', selector: '#kraken-tiny-live-test' }],
-                ['11. Emergency stop', 'Disable production approvals and live connector flags if anything looks unsafe.', { label: 'Emergency Stop Production', selector: '#phase6d-emergency-stop' }]
+                ['2. Review unified readiness', 'Read Kraken final review, Coinbase read-only, DEX data/quote, and paper-to-live candidate status in one checklist.', { label: 'Refresh Unified Readiness', selector: '#live-phase4-readiness' }],
+                ['3. Start Kraken walkthrough', 'Follow the single owner flow for key creation, safe permissions, vault save, verification, dry-run proof, and eligibility.', { label: 'Start Kraken Live Setup Walkthrough', selector: '#start-kraken-live-setup' }],
+                ['4. Save restricted Kraken key', 'Paste the Kraken API key and private key into encrypted local vault fields only.', { label: 'Save Key Safely', selector: '#kraken-live-save-key' }],
+                ['5. Verify Kraken connection', 'Read balances, account status, fees, symbol rules, and unsafe permission signals.', { label: 'Verify Connection', selector: '#kraken-live-verify' }],
+                ['6. Run Kraken auth diagnostics if verify fails', 'Test the raw Kraken Balance endpoint, local nonce, signature generation, vault decode, and exact Kraken response without placing orders.', { label: 'Test Raw Kraken Balance Endpoint', selector: '#kraken-auth-test-balance' }],
+                ['7. Run dry-run proof', 'Simulate the exact tiny setup without calling the order endpoint.', { label: 'Dry-Run Proof', selector: '#kraken-live-dry-run' }],
+                ['8. Check tiny live eligibility', 'Estimate tiny size, fees, slippage, minimum order rules, exposure, and blockers without placing an order.', { label: 'Tiny Live Eligibility', selector: '#kraken-live-preview' }],
+                ['9. Prepare tiny live mode only if eligible', 'Typed confirmation can prepare locked tiny live test mode. Execution remains blocked.', { label: 'Enable Tiny Live Test Mode', selector: '#phase6f-enable' }],
+                ['10. Preview the final $1 Kraken test', 'Build the exact one-order preview. This does not call the live order endpoint.', { label: 'Preview $1 Kraken Test', selector: '#kraken-tiny-preview' }],
+                ['11. Owner-approved tiny order', 'Only after every gate passes, type the phrase, arm Emergency Stop, and click the final button once.', { label: 'Go To Final Approval', selector: '#kraken-tiny-live-test' }],
+                ['12. Emergency stop', 'Disable production approvals and live connector flags if anything looks unsafe.', { label: 'Emergency Stop Production', selector: '#phase6d-emergency-stop' }]
             ]
         },
         '/operator-control': {

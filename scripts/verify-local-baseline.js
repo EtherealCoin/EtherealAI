@@ -3143,6 +3143,72 @@ function checkExchangeMetadataModule() {
   pass('exchange metadata module');
 }
 
+function checkApiConnectionCenterModule() {
+  const {
+    API_PROVIDER_STATUSES,
+    buildApiProviderStatus,
+    buildApiConnectionCenterStatus,
+    buildLiveTradingReadinessPhase4
+  } = require(path.join(projectRoot, 'app/server/src/lib/api-connection-center'));
+  const kraken = buildApiProviderStatus({
+    providerName: 'Kraken',
+    currentStatus: API_PROVIDER_STATUSES.CONNECTED,
+    metadata: {
+      keyExistsLocally: true,
+      dryRunProofReady: true,
+      tinyLiveEligibilityUnlocked: true,
+      productionEndpointCallCount: 0
+    }
+  });
+  const coinbase = buildApiProviderStatus({
+    providerName: 'Coinbase Advanced',
+    currentStatus: API_PROVIDER_STATUSES.NEEDS_KEY,
+    metadata: {
+      keyExistsLocally: false
+    }
+  });
+  const readyPhase4 = buildLiveTradingReadinessPhase4({
+    krakenProvider: kraken,
+    coinbaseProvider: coinbase,
+    safeMarketDataCount: 2,
+    safeQuoteCount: 2
+  });
+  const blockedPhase4 = buildLiveTradingReadinessPhase4({
+    krakenProvider: buildApiProviderStatus({
+      providerName: 'Kraken',
+      currentStatus: API_PROVIDER_STATUSES.NEEDS_KEY,
+      metadata: {
+        keyExistsLocally: false,
+        dryRunProofReady: false,
+        productionEndpointCallCount: 0
+      }
+    }),
+    coinbaseProvider: coinbase,
+    safeMarketDataCount: 0,
+    safeQuoteCount: 0
+  });
+  const centerStatus = buildApiConnectionCenterStatus({ kraken, coinbase });
+
+  if (
+    readyPhase4.phase !== 'Live Trading Readiness Phase 4'
+    || readyPhase4.status !== 'kraken_final_review_ready'
+    || !readyPhase4.checklist.some(item => item.id === 'kraken_tiny_live_final_review' && item.status === 'ready for final owner review')
+    || !readyPhase4.checklist.some(item => item.id === 'dex_execution_wallet_signing_locked' && item.status === 'wallet signing locked')
+    || !readyPhase4.locked.some(item => /No DEX swaps/.test(item))
+    || blockedPhase4.status !== 'readiness_building'
+    || !blockedPhase4.blockers.some(blocker => blocker.title === 'Restricted Kraken key not saved')
+    || centerStatus.phase4Readiness.phase !== 'Live Trading Readiness Phase 4'
+    || centerStatus.safetyBoundary.liveTradingEnabled !== false
+    || centerStatus.safetyBoundary.walletSigningEnabled !== false
+    || centerStatus.safetyBoundary.swapsEnabled !== false
+    || centerStatus.safetyBoundary.secretValuesReturnedToUi !== false
+  ) {
+    fail('API Connection Center module did not expose the locked Phase 4 live-readiness spine');
+  }
+
+  pass('API Connection Center Phase 4 readiness spine module');
+}
+
 function checkExchangeReadOnlyConnectionsModule() {
   const {
     OWNER_SECRETS_DIR,
@@ -8052,6 +8118,10 @@ function checkLiveTradingLaunchCenterUi() {
   if (
     !html.includes('Live Trading Launch Center')
     || !html.includes('Run Read-Only Arbitrage Scan')
+    || !html.includes('Live Trading Readiness Phase 4')
+    || !html.includes('One Checklist Before Any Tiny Live Test')
+    || !html.includes('loadLivePhase4Readiness')
+    || !html.includes('/api/v1/api-connection-center/status')
     || !html.includes('Paper Simulate This Opportunity')
     || !html.includes('Live Trading Approval Center')
     || !html.includes('Advanced Developer Mode')
@@ -9182,6 +9252,7 @@ function checkSimpleOperatorModeUsabilityRefactor() {
   const home = fs.readFileSync(path.join(projectRoot, 'app/client/index.html'), 'utf8');
   const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
   const strategyLab = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
+  const liveTradingLaunch = fs.readFileSync(path.join(projectRoot, 'app/client/live-trading-launch.html'), 'utf8');
   const apiConnectionCenter = fs.readFileSync(path.join(projectRoot, 'app/client/api-connection-center.html'), 'utf8');
   const apiConnectionCenterLib = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/api-connection-center.js'), 'utf8');
   const exchangeMetadataRoutes = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/exchange-metadata.js'), 'utf8');
@@ -9219,6 +9290,7 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !operatorMode.includes("'/api-connection-center'")
     || !operatorMode.includes('API Connection Center')
     || !operatorMode.includes('Connect APIs Without Developer Workflow')
+    || !operatorMode.includes('Unified Readiness Checklist')
     || !operatorMode.includes('Coinbase Advanced')
     || !operatorMode.includes('DEX Market Data')
     || !operatorMode.includes('DEX Quote Preview')
@@ -9442,6 +9514,9 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !apiConnectionCenter.includes('Final Confirm / Execute')
     || !apiConnectionCenter.includes('API Connection Center cannot call the Kraken order endpoint')
     || !apiConnectionCenter.includes('No live order is placed here')
+    || !apiConnectionCenter.includes('api-phase4-readiness')
+    || !apiConnectionCenter.includes('Unified Readiness Checklist')
+    || !apiConnectionCenter.includes('phase4Readiness')
     || !apiConnectionCenter.includes('api-kraken-operator-wizard')
     || !apiConnectionCenter.includes('Finish Kraken From One Checklist')
     || !apiConnectionCenter.includes('renderKrakenOperatorWizard')
@@ -9472,10 +9547,19 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !apiConnectionCenterLib.includes('DexScreener token and pair lookup')
     || !apiConnectionCenterLib.includes('Jupiter Solana quote preview')
     || !apiConnectionCenterLib.includes('buildApiConnectionCenterStatus')
+    || !apiConnectionCenterLib.includes('buildLiveTradingReadinessPhase4')
+    || !apiConnectionCenterLib.includes('Live Trading Readiness Phase 4')
+    || !apiConnectionCenterLib.includes('No DEX swaps')
     || !apiConnectionCenterLib.includes('secretValuesReturnedToUi: false')
     || !exchangeMetadataRoutes.includes("app.get('/api/v1/api-connection-center/status'")
     || !exchangeMetadataRoutes.includes('productionEndpointCallCount')
     || !apiConnectionCenterLib.includes('orderEndpointEnabledFromApiCenter: false')
+    || !strategyLab.includes('strategy-live-phase4-checklist')
+    || !strategyLab.includes('phase4Readiness')
+    || !liveTradingLaunch.includes('live-phase4-readiness')
+    || !liveTradingLaunch.includes('loadLivePhase4Readiness')
+    || !liveTradingLaunch.includes('/api/v1/api-connection-center/status')
+    || !liveTradingLaunch.includes('One Checklist Before Any Tiny Live Test')
     || apiConnectionCenter.includes('/kraken-tiny-live-test/place')
   ) {
     fail('simple operator mode shell did not expose the beginner operator workflow, manual, or nonblocking next-action behavior');
@@ -12971,6 +13055,7 @@ async function main() {
   checkSystemConfigRuntimeModule();
   await checkCompanyIdentityModule();
   checkExchangeMetadataModule();
+  checkApiConnectionCenterModule();
   checkExchangeReadOnlyConnectionsModule();
   await checkExchangeLiveSafetyModule();
   checkExchangeSandboxExecutionModule();

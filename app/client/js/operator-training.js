@@ -154,6 +154,7 @@
             purpose: 'API Connection Center is the CEO setup surface for Kraken first, Coinbase next, DEX market data, and DEX quote previews. It keeps secrets in local encrypted vaults, treats public DEX data as read-only, and keeps execution locked.',
             buttons: [
                 ['Refresh API Status', 'Loads Kraken, Coinbase, wallet metadata, and DEX read-only status.'],
+                ['Unified Readiness Checklist', 'Shows Kraken final review, Coinbase read-only setup, DEX data/quote readiness, and paper-to-live candidate selection in one place.'],
                 ['Replace Kraken Key', 'Opens the safe local vault replacement form. This does not place orders.'],
                 ['Test Kraken Read/Account Access', 'Runs authenticated Kraken read checks only.'],
                 ['Run Kraken Dry-Run Proof', 'Builds a no-order preview and confirms the production endpoint remains blocked.'],
@@ -179,6 +180,7 @@
             ],
             order: [
                 'Refresh API Status.',
+                'Review the Unified Readiness Checklist so Kraken, Coinbase, DEX data, DEX quotes, and paper-to-live candidate status are visible in one place.',
                 'If Kraken needs repair, replace the key or test read/account access.',
                 'Run Kraken dry-run proof only after the saved key is verified.',
                 'Use Coinbase read-only setup after Kraken status is clear.',
@@ -201,6 +203,7 @@
             ],
             success: [
                 'Kraken shows connected or ready without any production endpoint call.',
+                'Unified Readiness Checklist shows what is safe now, what is locked, and what needs final owner review.',
                 'Coinbase can be saved and tested as read-only.',
                 'DEX Market Data shows read-only providers and safe test buttons.',
                 'DEX Quote / Route Preview shows route preview providers and clearly states execution is locked.',
@@ -216,6 +219,13 @@
                         narration: 'Start by confirming the page says live safety is locked. API setup is about read access, dry-run proof, and quote research, not execution.',
                         click: 'Click Refresh API Status.',
                         pause: 'Pause here and confirm the Live Safety card says locked.'
+                    },
+                    {
+                        title: 'Use the unified readiness checklist',
+                        screen: 'Unified Readiness Checklist',
+                        narration: 'This checklist combines Kraken final review, Coinbase read-only setup, DEX market data, DEX quote previews, and paper-to-live candidate status. It is a readiness spine, not an execution panel.',
+                        click: 'Click Open Trading Readiness or Open Kraken Final Review only after reading the blocker list.',
+                        pause: 'Pause here and verify no live order or wallet signing is available from this checklist.'
                     },
                     {
                         title: 'Kraken first',

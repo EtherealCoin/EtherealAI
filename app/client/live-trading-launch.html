@@ -55,6 +55,22 @@
             </article>
         </section>
 
+        <section id="live-phase4-readiness" class="model-panel api-mission-control-card">
+            <div class="token-workbench-section-heading">
+                <span>Live Trading Readiness Phase 4</span>
+                <h2>One Checklist Before Any Tiny Live Test</h2>
+                <p>This summarizes Kraken final owner review, Coinbase read-only setup, DEX data/quote lanes, and paper-to-live candidate selection. It is a readiness view only; it does not place orders, sign wallets, approve tokens, or move funds.</p>
+            </div>
+            <div id="live-phase4-summary" class="phase3-results">Loading unified readiness...</div>
+            <div id="live-phase4-checklist" class="phase3-dashboard-grid">Loading readiness checklist...</div>
+            <div class="button-row">
+                <button id="refresh-live-phase4-readiness" type="button">Refresh Unified Readiness</button>
+                <a class="cta-button action-review" href="#kraken-tiny-live-test">Open Kraken Tiny-Live Final Review</a>
+                <a class="cta-button action-safe" href="/api-connection-center">Open API Connection Center</a>
+                <a class="cta-button action-neutral" href="/strategy-lab#live-trading-readiness-spine">Open Trading Readiness</a>
+            </div>
+        </section>
+
         <section class="model-panel">
             <h2>What Should I Do Next?</h2>
             <div id="live-next-action" class="live-next-action">Loading safest next action...</div>
@@ -6170,7 +6186,58 @@
         document.getElementById('kraken-tiny-emergency-armed').addEventListener('change', updateKrakenTinyPlaceButton);
         document.getElementById('kraken-tiny-emergency-armed').addEventListener('click', updateKrakenTinyPlaceButton);
 
+        function renderLivePhase4Readiness(phase4 = {}) {
+            const summary = document.getElementById('live-phase4-summary');
+            const checklistTarget = document.getElementById('live-phase4-checklist');
+            const checklist = phase4.checklist || [];
+            const blockers = phase4.blockers || [];
+            if (summary) {
+                summary.innerHTML = `
+                    <article class="phase3-account-card ${phase4.status === 'kraken_final_review_ready' ? 'status-success' : 'status-warning'}">
+                        <strong>${escapeHtml(phase4.phase || 'Live Trading Readiness Phase 4')}</strong>
+                        <span>${escapeHtml(phase4.status || 'readiness building')} · ${escapeHtml(phase4.progressPercent ?? 0)}% ready</span>
+                        <small>${escapeHtml(phase4.nextRecommendedAction || 'Refresh readiness before taking any live step.')}</small>
+                        ${blockers.length ? `<ul>${blockers.map(blocker => `<li>${escapeHtml(blocker.label)}: ${escapeHtml(blocker.title)} — ${escapeHtml(blocker.detail)}</li>`).join('')}</ul>` : '<small>No Phase 4 blockers reported by the readiness spine.</small>'}
+                    </article>
+                `;
+            }
+            if (checklistTarget) {
+                checklistTarget.innerHTML = checklist.map(item => `
+                    <article class="phase3-mini-card ${phase6CardClass(item.status)}">
+                        <span>${escapeHtml(item.ownerGate || 'Preview / Review')}</span>
+                        <strong>${escapeHtml(item.label)}</strong>
+                        <small>${escapeHtml(item.status)} · ${escapeHtml(item.safetyLevel)}</small>
+                        <small>${escapeHtml(item.nextAction)}</small>
+                    </article>
+                `).join('') || '<article class="phase3-mini-card status-warning"><strong>Checklist unavailable</strong><span>Refresh unified readiness.</span></article>';
+            }
+        }
+
+        async function loadLivePhase4Readiness() {
+            const summary = document.getElementById('live-phase4-summary');
+            if (summary) summary.textContent = 'Refreshing unified live readiness...';
+            try {
+                const response = await fetch('/api/v1/api-connection-center/status');
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Unable to load API readiness.');
+                renderLivePhase4Readiness(data.apiCenter?.phase4Readiness || {});
+            } catch (error) {
+                if (summary) {
+                    summary.innerHTML = `
+                        <article class="phase3-account-card status-warning">
+                            <strong>Readiness needs review</strong>
+                            <span>${escapeHtml(error.message)}</span>
+                            <small>No live order, swap, wallet signing, withdrawal, transfer, or token approval was attempted.</small>
+                        </article>
+                    `;
+                }
+            }
+        }
+
+        document.getElementById('refresh-live-phase4-readiness')?.addEventListener('click', loadLivePhase4Readiness);
+
         loadRoadmap();
+        loadLivePhase4Readiness();
         loadPhase3Status();
         loadPhase3BStatus();
         loadPhase3CStatus();

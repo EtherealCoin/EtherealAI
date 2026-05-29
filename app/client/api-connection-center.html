@@ -59,6 +59,21 @@
             </article>
         </section>
 
+        <section id="api-phase4-readiness" class="model-panel api-mission-control-card">
+            <div class="operator-two-gate-heading">
+                <span>Live Trading Readiness Phase 4</span>
+                <h2>Unified Readiness Checklist</h2>
+                <p>One owner-facing view for Kraken tiny-live review, Coinbase read-only setup, DEX data/quote readiness, and paper-to-live candidate selection. This is a readiness spine only; it cannot place orders or sign wallets.</p>
+            </div>
+            <div id="api-phase4-summary" class="api-owner-next-action">Loading live readiness summary...</div>
+            <div id="api-phase4-checklist" class="api-owner-step-grid">Loading checklist...</div>
+            <div class="button-row">
+                <a class="cta-button action-review" href="/live-trading-launch#kraken-tiny-live-test">Open Kraken Final Review</a>
+                <a class="cta-button action-safe" href="/strategy-lab#live-trading-readiness-spine">Open Trading Readiness</a>
+                <a class="cta-button action-neutral" href="/api-connection-center#coinbase-readonly-setup">Open Coinbase Read-Only Setup</a>
+            </div>
+        </section>
+
         <section id="api-kraken-two-gate" class="model-panel operator-guided-focus">
             Loading Kraken two-gate API flow...
         </section>
@@ -701,6 +716,33 @@
                 || document.getElementById('api-dex-execution-grid').innerHTML;
         }
 
+        function renderPhase4Readiness() {
+            const phase4 = apiState.centerStatus?.apiCenter?.phase4Readiness || {};
+            const checklist = phase4.checklist || [];
+            const blockers = phase4.blockers || [];
+            const summaryClass = phase4.status === 'kraken_final_review_ready' ? 'operator-two-gate-safe' : 'operator-two-gate-warning';
+            document.getElementById('api-phase4-summary').innerHTML = `
+                <article class="operator-two-gate-card ${summaryClass}">
+                    <div class="operator-two-gate-card-header">
+                        <span>${apiEscape(phase4.phase || 'Live Trading Readiness Phase 4')}</span>
+                        <strong>${apiEscape(phase4.status || 'readiness building')}</strong>
+                    </div>
+                    <p>${apiEscape(phase4.nextRecommendedAction || 'Open API Connection Center and review the readiness checklist.')}</p>
+                    <small>Progress: ${apiEscape(phase4.progressPercent ?? 0)}% · blockers: ${apiEscape(blockers.length)}</small>
+                    ${blockers.length ? blockerListMarkup(blockers.map(blocker => ({ title: `${blocker.label}: ${blocker.title}`, detail: blocker.detail }))) : ''}
+                </article>
+            `;
+            document.getElementById('api-phase4-checklist').innerHTML = checklist.map(item => `
+                <article class="${toneClass(item.status)}">
+                    <strong>${apiEscape(item.label)}</strong>
+                    <span>${apiEscape(item.status)} · ${apiEscape(item.ownerGate || 'Preview / Review')}</span>
+                    <small>${apiEscape(item.plainEnglish)}</small>
+                    <small>Next: ${apiEscape(item.nextAction)}</small>
+                    <small>Safety: ${apiEscape(item.safetyLevel)}</small>
+                </article>
+            `).join('') || '<article class="status-warning"><strong>Readiness not loaded</strong><span>Refresh API Status.</span></article>';
+        }
+
         function renderReadOnlyLanes() {
             const guides = apiState.setupGuides || {};
             const recommended = guides.recommendedFirst || [];
@@ -739,6 +781,7 @@
             renderKrakenDetails();
             renderCoinbaseTwoGate();
             renderDexRegistry();
+            renderPhase4Readiness();
             renderReadOnlyLanes();
             document.getElementById('api-raw-status').textContent = JSON.stringify({
                 centerStatus,

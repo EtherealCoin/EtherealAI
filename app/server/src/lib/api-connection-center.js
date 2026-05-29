@@ -292,6 +292,170 @@ function buildApiProviderStatus(input = {}) {
   };
 }
 
+function phase4ChecklistItem({
+  id,
+  label,
+  status,
+  plainEnglish,
+  nextAction,
+  safetyLevel = API_SAFETY_LEVELS.LIVE_LOCKED,
+  ownerGate = 'Preview / Review',
+  blockers = []
+}) {
+  return {
+    id,
+    label,
+    status,
+    plainEnglish,
+    nextAction,
+    safetyLevel,
+    ownerGate,
+    blockers: blockers.map(blocker => ({
+      title: String(blocker.title || blocker.label || 'Needs review'),
+      detail: String(blocker.detail || blocker.nextClick || blocker.fix || '')
+    }))
+  };
+}
+
+function buildLiveTradingReadinessPhase4({
+  krakenProvider,
+  coinbaseProvider,
+  safeMarketDataCount = 0,
+  safeQuoteCount = 0
+} = {}) {
+  const krakenMetadata = krakenProvider?.metadata || {};
+  const krakenKeySaved = Boolean(krakenMetadata.keyExistsLocally);
+  const krakenDryRunReady = Boolean(krakenMetadata.dryRunProofReady);
+  const krakenEndpointCallCount = Number(krakenMetadata.productionEndpointCallCount || 0);
+  const krakenTinyEligible = Boolean(krakenMetadata.tinyLiveEligibilityUnlocked)
+    && krakenDryRunReady
+    && krakenKeySaved
+    && krakenEndpointCallCount === 0;
+  const coinbaseConnected = coinbaseProvider?.currentStatus === API_PROVIDER_STATUSES.CONNECTED;
+  const coinbaseKeySaved = Boolean(coinbaseProvider?.metadata?.keyExistsLocally);
+  const dexDataReady = safeMarketDataCount > 0;
+  const dexQuoteReady = safeQuoteCount > 0;
+  const checklist = [
+    phase4ChecklistItem({
+      id: 'kraken_tiny_live_final_review',
+      label: 'Kraken tiny-live final owner review',
+      status: krakenTinyEligible ? 'ready for final owner review' : 'needs review',
+      plainEnglish: krakenTinyEligible
+        ? 'Kraken is ready to review on the final tiny-live approval screen. This status does not place an order.'
+        : 'Finish saved key verification and dry-run proof before using the final Kraken approval screen.',
+      nextAction: krakenTinyEligible
+        ? 'Open Live Trading Launch and review the one-order final approval panel.'
+        : krakenKeySaved ? 'Run Kraken dry-run proof and refresh tiny-live eligibility.' : 'Save or replace the restricted Kraken spot key.',
+      safetyLevel: API_SAFETY_LEVELS.DRY_RUN_ONLY,
+      ownerGate: 'Preview / Review',
+      blockers: krakenTinyEligible
+        ? []
+        : [
+            !krakenKeySaved ? { title: 'Restricted Kraken key not saved', detail: 'Save a restricted spot key in the encrypted local vault.' } : null,
+            !krakenDryRunReady ? { title: 'Dry-run proof missing', detail: 'Run Kraken dry-run proof before final owner review.' } : null,
+            krakenEndpointCallCount > 0 ? { title: 'Existing live endpoint event', detail: 'Track and reconcile the existing event before preparing another tiny test.' } : null
+          ].filter(Boolean)
+    }),
+    phase4ChecklistItem({
+      id: 'coinbase_readonly_verification',
+      label: 'Coinbase read-only verification',
+      status: coinbaseConnected ? 'connected' : (coinbaseKeySaved ? 'ready for safe test' : 'needs key'),
+      plainEnglish: coinbaseConnected
+        ? 'Coinbase read-only account access is connected. Live Coinbase trading remains locked.'
+        : 'Coinbase is the next CEX lane. Add only a read/view key through the secure flow.',
+      nextAction: coinbaseConnected
+        ? 'Keep Coinbase read-only until Kraken tiny-live review is stable.'
+        : 'Create a Coinbase read-only key and save it through API Connection Center when ready.',
+      safetyLevel: API_SAFETY_LEVELS.ACCOUNT_READ_ONLY,
+      ownerGate: 'Preview / Review'
+    }),
+    phase4ChecklistItem({
+      id: 'dex_market_data_ready',
+      label: 'DEX market-data readiness',
+      status: dexDataReady ? 'safe tests available' : 'planned',
+      plainEnglish: dexDataReady
+        ? `${safeMarketDataCount} DEX market-data lane(s) can run public read-only checks.`
+        : 'DEX market-data lanes are planned but no safe test lane is available yet.',
+      nextAction: dexDataReady ? 'Use API Connection Center for DexScreener or GeckoTerminal tests.' : 'Configure a safe read-only DEX data source later.',
+      safetyLevel: API_SAFETY_LEVELS.PUBLIC_READ_ONLY,
+      ownerGate: 'Preview / Review'
+    }),
+    phase4ChecklistItem({
+      id: 'dex_quote_preview_ready',
+      label: 'DEX quote/route preview readiness',
+      status: dexQuoteReady ? 'safe quote previews available' : 'planned / needs keys',
+      plainEnglish: dexQuoteReady
+        ? `${safeQuoteCount} quote lane(s) can preview routes without swaps, approvals, or signing.`
+        : 'Quote lanes need a future key reference or provider setup before testing.',
+      nextAction: dexQuoteReady ? 'Preview LI.FI or Jupiter routes; keep transaction execution locked.' : 'Add safe provider key references later.',
+      safetyLevel: API_SAFETY_LEVELS.QUOTE_ONLY,
+      ownerGate: 'Preview / Review'
+    }),
+    phase4ChecklistItem({
+      id: 'paper_to_live_candidate_selection',
+      label: 'Paper-to-live candidate selection',
+      status: 'ready for review',
+      plainEnglish: 'Paper strategies and read-only market data can identify a candidate, but execution remains manual and locked.',
+      nextAction: 'Review paper results, risk profile, exchange minimums, fees, slippage, and live-readiness blockers before any tiny test.',
+      safetyLevel: API_SAFETY_LEVELS.DRY_RUN_ONLY,
+      ownerGate: 'Preview / Review'
+    }),
+    phase4ChecklistItem({
+      id: 'live_execution_locked',
+      label: 'Live execution lock',
+      status: 'locked',
+      plainEnglish: 'Live execution remains behind final owner approval. This is the correct safety state.',
+      nextAction: 'Use only the final Kraken tiny-live panel for a one-order owner-approved test.',
+      safetyLevel: API_SAFETY_LEVELS.LIVE_LOCKED,
+      ownerGate: 'Final Confirm / Execute'
+    }),
+    phase4ChecklistItem({
+      id: 'dex_execution_wallet_signing_locked',
+      label: 'DEX execution and wallet signing',
+      status: 'wallet signing locked',
+      plainEnglish: 'DEX swaps, approvals, permits, wallet signing, and transaction broadcasts remain unavailable.',
+      nextAction: 'Stay in DEX read-only and quote-preview mode until a separate wallet-signing phase is approved.',
+      safetyLevel: API_SAFETY_LEVELS.WALLET_SIGNING_LOCKED,
+      ownerGate: 'Future locked external action'
+    })
+  ];
+  const readyCount = checklist.filter(item => ['connected', 'ready for final owner review', 'safe tests available', 'safe quote previews available', 'ready for review'].includes(item.status)).length;
+  const blockedItems = checklist.filter(item => item.blockers.length);
+
+  return {
+    phase: 'Live Trading Readiness Phase 4',
+    status: krakenTinyEligible ? 'kraken_final_review_ready' : 'readiness_building',
+    progressPercent: Math.round((readyCount / checklist.length) * 100),
+    nextRecommendedAction: krakenTinyEligible
+      ? 'Open Live Trading Launch for the final Kraken tiny-live owner review.'
+      : krakenKeySaved
+        ? 'Run or refresh Kraken dry-run proof, then review tiny-live eligibility.'
+        : 'Save or verify the restricted Kraken key, then continue to Coinbase read-only later.',
+    safeNow: [
+      'Run paper strategies.',
+      'Run read-only market-data checks.',
+      'Run DEX quote previews.',
+      'Run Kraken/Coinbase account-read checks when keys are saved.',
+      'Run production dry-run proof.'
+    ],
+    locked: [
+      'No autonomous live trading.',
+      'No DEX swaps.',
+      'No wallet signing.',
+      'No withdrawals or transfers.',
+      'No token approvals.',
+      'No deployment, minting, liquidity creation, public posting, or listing submission.'
+    ],
+    checklist,
+    blockers: blockedItems.flatMap(item => item.blockers.map(blocker => ({
+      id: item.id,
+      label: item.label,
+      title: blocker.title,
+      detail: blocker.detail
+    })))
+  };
+}
+
 function buildApiConnectionCenterStatus({
   kraken,
   coinbase,
@@ -371,6 +535,12 @@ function buildApiConnectionCenterStatus({
     || dexProviders[0];
   const safeMarketDataCount = dexMarketData.filter(provider => provider.currentStatus === API_PROVIDER_STATUSES.READY_FOR_SAFE_TEST || provider.currentStatus === API_PROVIDER_STATUSES.CONNECTED).length;
   const safeQuoteCount = dexQuotePreview.filter(provider => provider.currentStatus === API_PROVIDER_STATUSES.READY_FOR_SAFE_TEST || provider.currentStatus === API_PROVIDER_STATUSES.CONNECTED).length;
+  const phase4Readiness = buildLiveTradingReadinessPhase4({
+    krakenProvider: providers[0],
+    coinbaseProvider: providers[1],
+    safeMarketDataCount,
+    safeQuoteCount
+  });
 
   return {
     generatedAt,
@@ -391,6 +561,7 @@ function buildApiConnectionCenterStatus({
       dexExecution: 'wallet signing locked',
       nextRecommendedAction: nextProvider?.nextRecommendedAction || 'Open API Connection Center.'
     },
+    phase4Readiness,
     summary: {
       krakenStatus: providers[0].currentStatus,
       coinbaseStatus: providers[1].currentStatus,
@@ -433,5 +604,6 @@ module.exports = {
   DEX_EXECUTION_LOCKED_REGISTRY,
   DEX_READONLY_PROVIDER_REGISTRY,
   buildApiProviderStatus,
-  buildApiConnectionCenterStatus
+  buildApiConnectionCenterStatus,
+  buildLiveTradingReadinessPhase4
 };

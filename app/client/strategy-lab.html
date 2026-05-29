@@ -113,6 +113,7 @@
                 <article class="status-danger"><span>Live Execution</span><strong>Locked</strong><small>No order, swap, wallet signing, withdrawal, or transfer is enabled.</small></article>
             </div>
             <div id="strategy-live-readiness-next" class="phase3-results">Loading next safe action...</div>
+            <div id="strategy-live-phase4-checklist" class="api-lane-grid">Loading unified readiness checklist...</div>
             <div class="button-row">
                 <button id="refresh-live-readiness-spine" type="button">Refresh Live Trading Readiness</button>
                 <a class="cta-button action-safe" href="/api-connection-center#dex-market-data">Open DEX Data / Quote Center</a>
@@ -9889,6 +9890,8 @@
                 const coinbase = providerById('coinbase');
                 const summary = apiCenter.summary || {};
                 const readiness = apiCenter.liveTradingReadiness || {};
+                const phase4 = apiCenter.phase4Readiness || {};
+                const phase4Checklist = phase4.checklist || [];
                 grid.innerHTML = [
                     tradingReadinessCard('Kraken account read-only', kraken.currentStatus || readiness.krakenAccountReadOnly || 'not connected', kraken.nextRecommendedAction || 'Use API Connection Center for Kraken status.', tradingReadinessTone(kraken.currentStatus)),
                     tradingReadinessCard('Coinbase read-only', coinbase.currentStatus || readiness.coinbaseAccountReadOnly || 'not connected', coinbase.nextRecommendedAction || 'Coinbase is the next safe CEX lane.', tradingReadinessTone(coinbase.currentStatus)),
@@ -9903,11 +9906,22 @@
                     <article class="operator-two-gate-card operator-two-gate-warning">
                         <div class="operator-two-gate-card-header">
                             <span>What can I safely test now?</span>
-                            <strong>${tradingReadinessEscape(readiness.nextRecommendedAction || summary.nextRecommendedAction || 'Open API Connection Center')}</strong>
+                            <strong>${tradingReadinessEscape(phase4.nextRecommendedAction || readiness.nextRecommendedAction || summary.nextRecommendedAction || 'Open API Connection Center')}</strong>
                         </div>
-                        <p>Safe now: paper strategies, read-only market data, DEX quote previews, and Kraken/Coinbase read-only checks. Locked: live orders, DEX swaps, wallet signing, withdrawals, transfers, and token approvals.</p>
+                        <p>Safe now: ${(phase4.safeNow || ['paper strategies', 'read-only market data', 'DEX quote previews']).map(tradingReadinessEscape).join(' · ')}. Locked: ${(phase4.locked || ['live orders', 'DEX swaps', 'wallet signing', 'withdrawals', 'transfers', 'token approvals']).map(tradingReadinessEscape).join(' · ')}.</p>
+                        <small>${tradingReadinessEscape(phase4.phase || 'Live Trading Readiness Phase 4')} · ${tradingReadinessEscape(phase4.progressPercent ?? 0)}% ready</small>
                     </article>
                 `;
+                const checklistTarget = document.getElementById('strategy-live-phase4-checklist');
+                if (checklistTarget) {
+                    checklistTarget.innerHTML = phase4Checklist.map(item => `
+                        <article class="${tradingReadinessTone(item.status)}">
+                            <strong>${tradingReadinessEscape(item.label)}</strong>
+                            <span>${tradingReadinessEscape(item.status)}</span>
+                            <small>${tradingReadinessEscape(item.nextAction)}</small>
+                        </article>
+                    `).join('') || '<article class="status-warning"><strong>Unified checklist not loaded</strong><span>Refresh readiness.</span></article>';
+                }
             } catch (error) {
                 next.innerHTML = `
                     <article class="operator-two-gate-card operator-two-gate-warning">
