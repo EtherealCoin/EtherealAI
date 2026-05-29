@@ -8215,6 +8215,9 @@ function checkLiveTradingLaunchCenterUi() {
     || !html.includes('No live order will be placed yet')
     || !html.includes('SAFE READY FOR OPTIONAL TINY LIVE TEST')
     || !html.includes('Run Kraken Tiny Live Test')
+    || !html.includes('Kraken Tiny-Live Owner Review Phase')
+    || !html.includes('Two gates before the first real Kraken test')
+    || !html.includes('Gate 1 builds the exact preview. Gate 2 is the final owner approval.')
     || !html.includes('Preview Kraken Tiny Live Test')
     || !html.includes('First Tiny Live Order Checklist')
     || !html.includes('Copy Confirmation Phrase')
@@ -8382,6 +8385,8 @@ function checkLiveTradingLaunchCenterUi() {
     || !styles.includes('.phase6f-ready-card')
     || !styles.includes('.phase6f-enable-panel')
     || !styles.includes('.kraken-tiny-live-flow')
+    || !styles.includes('.kraken-owner-review-map')
+    || !styles.includes('.kraken-owner-review-gates')
     || !styles.includes('.kraken-tiny-simple-flow')
     || !styles.includes('.kraken-tiny-confirmation-panel')
     || !styles.includes('.kraken-ready-go')
@@ -9596,6 +9601,7 @@ function checkOperatorTrainingSystem() {
     'Confirm MVP Test Pass',
     'Review Route Inventory',
     'Use Creator Agent',
+    'Review Kraken Tiny Live Test',
     'Build and Paper Test Strategy',
     'Use Token Launch Workbench',
     'Use Social Ops'

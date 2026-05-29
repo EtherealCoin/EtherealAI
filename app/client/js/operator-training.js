@@ -259,6 +259,86 @@
             }
         },
         {
+            id: 'review-kraken-tiny-live',
+            tab: 'Live Trading Launch',
+            path: '/live-trading-launch#kraken-tiny-live-test',
+            title: 'Review Kraken Tiny Live Test',
+            libraryTitle: 'Review Kraken Tiny Live Test',
+            purpose: 'This is the final owner-review screen for one optional Kraken tiny live spot order. It keeps the normal flow to two gates: preview/review first, then final owner confirm/execute.',
+            buttons: [
+                ['Refresh Tiny Test Gate', 'Reloads Kraken readiness, endpoint-called state, and the visible blocker list.'],
+                ['Preview Kraken Tiny Live Test', 'Builds the exact order preview. This does not call Kraken AddOrder.'],
+                ['Copy Confirmation Phrase', 'Fills the approval phrase so spelling does not block the owner.'],
+                ['PLACE ONE TINY LIVE KRAKEN ORDER', 'The only button that can call the live endpoint, and only after all visible gates pass.'],
+                ['Track Tiny Test Order', 'Refreshes the tracked tiny order status after the one manual order is submitted.'],
+                ['Cancel Tiny Test Order', 'Cancels the tracked tiny test order if it is open.'],
+                ['Emergency Stop Tiny Test', 'Cancels any tracked open tiny test order and keeps automation disabled.']
+            ],
+            fields: [
+                ['Symbol', 'Choose the Kraken spot pair for the tiny test, such as BTC/USD.'],
+                ['Side', 'Choose Buy or Sell.'],
+                ['Tiny amount USD', 'The requested tiny order amount. Keep this small.'],
+                ['Owner tiny limit USD', 'The maximum spend allowed for this test. The UI caps it to the tiny-test limit.'],
+                ['Limit price optional', 'Leave 0 to let EtherealAI use the preview price logic, or enter a limit if you intentionally want one.'],
+                ['Confirmation phrase', 'Use Copy Confirmation Phrase, then verify Phrase matched appears.']
+            ],
+            doNotEnter: [
+                'Do not enter wallet private keys, seed phrases, withdrawal credentials, bank information, or unrelated exchange keys.',
+                'Do not use this screen for repeated orders, bots, scaling, arbitrage loops, leverage, futures, margin, transfers, withdrawals, swaps, or wallet signing.',
+                'Do not click the final live order button unless the exact preview is current and you intentionally accept the tiny test.'
+            ],
+            order: [
+                'Gate 1: click Refresh Tiny Test Gate, then Preview Kraken Tiny Live Test.',
+                'Review the exact order preview: exchange, symbol, side, quantity, estimated price, estimated fees, worst-case spend, and endpoint-called state.',
+                'Gate 2: click Copy Confirmation Phrase, confirm Phrase matched, check the owner approval box, and check Emergency Stop is armed.',
+                'Only if you choose to run the tiny real-money test, click PLACE ONE TINY LIVE KRAKEN ORDER once.',
+                'Afterward, use Track, Cancel if open, and Emergency Stop if needed.'
+            ],
+            safeDefaults: [
+                'One order only.',
+                'No loops or autonomous retries.',
+                'Withdrawals, transfers, leverage, margin, futures, wallet signing, swaps, and scaling remain disabled.',
+                'Endpoint called should stay No until the final manual button is clicked.'
+            ],
+            errors: [
+                ['Button stays locked', 'Read the visible locked reason under the button. It will name the missing preview, phrase, approval checkbox, or Emergency Stop checkbox.'],
+                ['Preview blocked', 'Fix the first plain-English blocker, then preview again. No live order was placed.'],
+                ['Endpoint already called', 'The one allowed endpoint call has already happened. Repeated execution is blocked. Track or cancel the existing order instead.']
+            ],
+            success: [
+                'The preview shows endpoint called: No before final approval.',
+                'The final button unlocks only after preview, phrase match, owner approval, and Emergency Stop armed are complete.',
+                'After submission, the page shows live order submitted, Kraken order id when available, order status, audit state, and post-trade verification.'
+            ],
+            video: {
+                duration: '9 minutes',
+                assetSlug: 'review-kraken-tiny-live',
+                chapters: [
+                    {
+                        title: 'Use the two-gate review',
+                        screen: 'Kraken Tiny-Live Owner Review Phase panel',
+                        narration: 'This screen has only two human gates. First preview the exact tiny order. Then, only if you choose, complete final approval and click the one live button.',
+                        click: 'Click Refresh Tiny Test Gate.',
+                        pause: 'Pause here and confirm endpoint called still says No.'
+                    },
+                    {
+                        title: 'Build the exact preview',
+                        screen: 'Preview Tiny Live Test controls',
+                        narration: 'The preview is the safety review. Read symbol, side, amount, estimated price, estimated fees, worst-case spend, and recovery plan before approving.',
+                        click: 'Click Preview Kraken Tiny Live Test.',
+                        pause: 'Pause here and read the full preview before touching the final approval section.'
+                    },
+                    {
+                        title: 'Approve only if intentional',
+                        screen: 'Final Owner Approval panel',
+                        narration: 'Use the copy button so spelling is not the blocker. The final button should only become green after the phrase matches and both safety boxes are checked.',
+                        click: 'Click Copy Confirmation Phrase, check owner approval, and check Emergency Stop is armed.',
+                        pause: 'Pause here. The next click can place one tiny live Kraken spot order.'
+                    }
+                ]
+            }
+        },
+        {
             id: 'complete-setup-wizard',
             tab: 'Setup Wizard',
             path: '/owner-setup',

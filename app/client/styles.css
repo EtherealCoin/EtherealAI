@@ -4930,6 +4930,66 @@ footer {
     border-color: color-mix(in srgb, var(--status-warning) 48%, var(--brand-pink));
 }
 
+.kraken-owner-review-map {
+    align-items: stretch;
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--brand-purple) 22%, transparent), transparent 58%),
+        color-mix(in srgb, var(--surface-muted) 88%, var(--brand-blue));
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 44%, var(--brand-pink));
+    border-radius: 10px;
+    box-shadow: 0 0 26px color-mix(in srgb, var(--brand-blue) 12%, transparent);
+    display: grid;
+    gap: 16px;
+    grid-template-columns: minmax(260px, 0.9fr) minmax(300px, 1.4fr);
+    margin: 18px 0;
+    padding: 18px;
+}
+
+.kraken-owner-review-copy {
+    display: grid;
+    gap: 8px;
+}
+
+.kraken-owner-review-copy h3 {
+    color: var(--text-primary);
+    font-size: clamp(1.25rem, 2vw, 1.75rem);
+    line-height: 1.05;
+    margin: 0;
+}
+
+.kraken-owner-review-copy p,
+.kraken-owner-review-gates p {
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.kraken-owner-review-gates {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.kraken-owner-review-gates article {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: grid;
+    gap: 7px;
+    padding: 14px;
+}
+
+.kraken-owner-review-gates span {
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.kraken-owner-review-gates strong {
+    color: var(--text-primary);
+    font-size: 1.02rem;
+}
+
 .danger-action {
     background: var(--status-danger);
     border-color: color-mix(in srgb, var(--status-danger) 75%, black);
@@ -9450,7 +9510,9 @@ body.operator-advanced-mode .button-row .action-advanced,
     .token-two-gate-summary,
     .token-context-bridge-grid,
     .token-context-status-grid,
-    .token-color-grid {
+    .token-color-grid,
+    .kraken-owner-review-map,
+    .kraken-owner-review-gates {
         grid-template-columns: 1fr;
     }
 }
