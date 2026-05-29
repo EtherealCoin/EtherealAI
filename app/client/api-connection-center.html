@@ -168,33 +168,79 @@
             <div id="api-coinbase-action-result" class="phase3-results">Coinbase read-only setup has not run yet.</div>
         </section>
 
-        <section class="model-panel api-readonly-lanes">
-            <h2>DEX Read-Only Connector Lane</h2>
-            <p class="inline-status">DEX public/read-only data does not require your exchange account. Execution, swaps, token approvals, transaction building, and wallet signing are locked for a later owner-approved phase.</p>
+        <section class="model-panel api-readonly-lanes" id="dex-market-data">
+            <h2>DEX Market Data</h2>
+            <p class="inline-status">DEX public/read-only data does not require your exchange account. EtherealAI can test token, pair, pool, price, liquidity, and metadata visibility without wallet signing or swaps.</p>
             <div class="api-lane-grid">
                 <article>
                     <strong>Recommended first CEX data</strong>
                     <span id="api-recommended-cex">Loading...</span>
                 </article>
                 <article>
-                    <strong>Quote-only DEX lanes</strong>
-                    <span id="api-quote-only-dex">Loading...</span>
+                    <strong>DEX market-data lanes</strong>
+                    <span id="api-dex-market-data-lanes">Loading...</span>
                 </article>
                 <article>
                     <strong>Safe now</strong>
-                    <span>Token info, pair info, price, liquidity, pool, quote, and research data.</span>
+                    <span>Token info, pair info, price, liquidity, pool, metadata, and research data.</span>
                 </article>
                 <article>
                     <strong>Locked later</strong>
                     <span>Swaps, approvals, seed phrases, private keys, wallet signatures, and broadcast transactions.</span>
                 </article>
             </div>
-            <div id="api-dex-provider-grid" class="api-lane-grid">Loading DEX read-only provider registry...</div>
+            <div id="api-dex-market-data-grid" class="api-lane-grid">Loading DEX market-data provider registry...</div>
             <div class="button-row">
+                <button id="api-test-dexscreener-search" type="button">Test DexScreener Search</button>
+                <button id="api-test-dexscreener-pair" type="button">Test Token Pair Lookup</button>
+                <button id="api-test-geckoterminal" type="button">Test GeckoTerminal Network/Pools</button>
                 <button id="api-run-price-compare" type="button">Run Read-Only BTC/USDT Price Compare</button>
-                <a class="cta-button" href="/strategy-lab#read-only-price-compare">Open Full Price Compare</a>
             </div>
+            <div id="api-dex-market-data-result" class="phase3-results">No DEX market-data test has run from this page yet.</div>
             <div id="api-price-compare-result" class="phase3-results">No read-only price comparison has run from this page yet.</div>
+        </section>
+
+        <section class="model-panel api-readonly-lanes" id="dex-quote-preview">
+            <h2>DEX Quote / Route Preview</h2>
+            <p class="inline-status">Quote preview means estimated price, route, fees if available, slippage assumption, and quote age only. EtherealAI must not expose a swap button, token approval, wallet signature, transaction payload, or broadcast route in Simple Mode.</p>
+            <div class="api-lane-grid">
+                <article>
+                    <strong>Quote-only DEX lanes</strong>
+                    <span id="api-quote-only-dex">Loading...</span>
+                </article>
+                <article>
+                    <strong>Safe quote preview</strong>
+                    <span>Jupiter and LI.FI can be tested as route previews where public access works.</span>
+                </article>
+                <article>
+                    <strong>Needs safe key later</strong>
+                    <span>0x, 1inch, and Rango should use local secret references before testing.</span>
+                </article>
+                <article>
+                    <strong>Execution locked</strong>
+                    <span>No swap, approval, transaction build, wallet signature, or broadcast.</span>
+                </article>
+            </div>
+            <div id="api-dex-quote-grid" class="api-lane-grid">Loading DEX quote provider registry...</div>
+            <div class="button-row">
+                <button id="api-preview-zero-x" type="button">Preview 0x Quote</button>
+                <button id="api-preview-lifi" type="button">Preview LI.FI Route</button>
+                <button id="api-preview-rango" type="button">Preview Rango Quote</button>
+                <button id="api-preview-jupiter" type="button">Preview Jupiter Quote</button>
+                <a class="cta-button action-review" href="/strategy-lab#read-only-price-compare">Open Full Price Compare</a>
+            </div>
+            <div id="api-dex-quote-result" class="phase3-results">No DEX quote preview has run from this page yet.</div>
+        </section>
+
+        <section class="model-panel api-readonly-lanes" id="dex-execution-locked">
+            <h2>DEX Execution: Locked</h2>
+            <p class="inline-status">This section is intentionally locked. Swaps, approvals, token permits, wallet signing, transaction construction, and transaction broadcasts require a separate future owner-approved wallet-signing phase.</p>
+            <div id="api-dex-execution-grid" class="api-lane-grid">
+                <article class="status-danger"><strong>Swaps locked</strong><span>No swap endpoint or button is enabled.</span></article>
+                <article class="status-danger"><strong>Wallet signing locked</strong><span>No seed phrase, private key, browser wallet signature, or hardware-wallet prompt is requested.</span></article>
+                <article class="status-danger"><strong>Approvals locked</strong><span>No token approval or permit signature is created.</span></article>
+                <article class="status-info"><strong>Future phase</strong><span>Owner-approved wallet-signing boundary, hot-wallet separation, and execution proof required later.</span></article>
+            </div>
         </section>
 
         <section class="model-panel">
@@ -237,6 +283,7 @@
             centerStatus: null,
             setupGuides: null,
             readOnlyStatus: null,
+            dexStatus: null,
             krakenDiagnostics: null,
             krakenTiny: null
         };
@@ -619,47 +666,72 @@
             });
         }
 
+        function providerCardMarkup(provider) {
+            const blockers = provider.blockers || [];
+            const status = provider.currentStatus || provider.status || 'planned';
+            const tone = toneClass(status);
+            return `
+                <article class="${tone}">
+                    <strong>${apiEscape(provider.providerName || provider.displayName || provider.providerId)}</strong>
+                    <span>${apiEscape(status)} · ${apiEscape(provider.safetyLevel || 'read-only')}</span>
+                    <small>${apiEscape(provider.lastCheckResult || provider.nextRecommendedAction || 'Read-only planning lane.')}</small>
+                    ${provider.credentialMode ? `<small>Credential: ${apiEscape(provider.credentialMode)}</small>` : ''}
+                    ${provider.rateLimitNotes ? `<small>${apiEscape(provider.rateLimitNotes)}</small>` : ''}
+                    ${blockers.length ? `<small>Blocked: ${apiEscape(blockers.map(blocker => blocker.title || blocker).join('; '))}</small>` : ''}
+                </article>
+            `;
+        }
+
         function renderDexRegistry() {
-            const dexProviders = apiState.centerStatus?.apiCenter?.dexReadOnlyProviders || [];
-            const grid = document.getElementById('api-dex-provider-grid');
-            document.getElementById('api-dex-status').textContent = dexProviders.length ? 'Ready To Plan' : 'Draft';
-            document.getElementById('api-dex-note').textContent = dexProviders.length
-                ? `${dexProviders.length} read-only provider lanes are registered.`
+            const apiCenter = apiState.centerStatus?.apiCenter || {};
+            const marketProviders = apiCenter.dexMarketDataProviders || [];
+            const quoteProviders = apiCenter.dexQuoteProviders || [];
+            const executionProviders = apiCenter.dexExecutionLockedProviders || [];
+            const combinedCount = marketProviders.length + quoteProviders.length;
+            document.getElementById('api-dex-status').textContent = combinedCount ? 'Read / Quote' : 'Draft';
+            document.getElementById('api-dex-note').textContent = combinedCount
+                ? `${marketProviders.length} market-data lane(s), ${quoteProviders.length} quote lane(s), execution locked.`
                 : 'Provider registry is not loaded yet.';
             setCardTone('api-card-dex', 'status-info');
-            grid.innerHTML = dexProviders.map(provider => `
-                <article>
-                    <strong>${apiEscape(provider.providerName)}</strong>
-                    <span>${apiEscape(provider.lastCheckResult || 'Read-only planning lane.')}</span>
-                    <small>${apiEscape(provider.nextRecommendedAction || 'Quote-only only.')}</small>
-                </article>
-            `).join('') || '<article><strong>No DEX providers loaded</strong><span>Refresh API Status.</span></article>';
+            document.getElementById('api-dex-market-data-grid').innerHTML = marketProviders.map(providerCardMarkup).join('')
+                || '<article><strong>No DEX market-data providers loaded</strong><span>Refresh API Status.</span></article>';
+            document.getElementById('api-dex-quote-grid').innerHTML = quoteProviders.map(providerCardMarkup).join('')
+                || '<article><strong>No DEX quote providers loaded</strong><span>Refresh API Status.</span></article>';
+            document.getElementById('api-dex-execution-grid').innerHTML = executionProviders.map(providerCardMarkup).join('')
+                || document.getElementById('api-dex-execution-grid').innerHTML;
         }
 
         function renderReadOnlyLanes() {
             const guides = apiState.setupGuides || {};
             const recommended = guides.recommendedFirst || [];
             const quoteOnly = guides.quoteOnlyConnectors || [];
+            const marketData = guides.dexMarketDataConnectors || [];
+            const quotePreview = guides.dexQuotePreviewConnectors || [];
             document.getElementById('api-recommended-cex').textContent = recommended.length
                 ? recommended.slice(0, 5).join(', ')
                 : 'Binance, Coinbase, Kraken, OKX, Bybit';
+            document.getElementById('api-dex-market-data-lanes').textContent = marketData.length
+                ? marketData.slice(0, 6).join(', ')
+                : 'DexScreener, GeckoTerminal, CoinGecko metadata';
             document.getElementById('api-quote-only-dex').textContent = quoteOnly.length
-                ? quoteOnly.slice(0, 6).join(', ')
-                : 'Uniswap, Jupiter, 1inch, GMX, Hyperliquid';
+                ? `${quoteOnly.slice(0, 6).join(', ')} · preview: ${quotePreview.slice(0, 6).join(', ')}`
+                : 'Jupiter, LI.FI, 0x, 1inch, Rango, ParaSwap';
         }
 
         async function refreshApiConnectionCenter() {
             document.getElementById('api-raw-status').textContent = 'Loading API connection status...';
-            const [centerStatus, setupGuides, readOnlyStatus, krakenDiagnostics, krakenTiny] = await Promise.all([
+            const [centerStatus, setupGuides, readOnlyStatus, dexStatus, krakenDiagnostics, krakenTiny] = await Promise.all([
                 fetchJson('/api/v1/api-connection-center/status').catch(error => ({ error: error.message })),
                 fetchJson('/api/v1/exchange-connectors/read-only/setup-guides').catch(error => ({ error: error.message })),
                 fetchJson('/api/v1/exchange-connectors/read-only/status').catch(error => ({ error: error.message })),
+                fetchJson('/api/v1/dex-connectors/read-only/status').catch(error => ({ error: error.message })),
                 fetchJson('/api/v1/live-trading-launch/kraken-auth-diagnostics/status').catch(error => ({ error: error.message })),
                 fetchJson('/api/v1/live-trading-launch/kraken-tiny-live-test/status').catch(error => ({ error: error.message }))
             ]);
             apiState.centerStatus = centerStatus;
             apiState.setupGuides = setupGuides;
             apiState.readOnlyStatus = readOnlyStatus;
+            apiState.dexStatus = dexStatus;
             apiState.krakenDiagnostics = krakenDiagnostics;
             apiState.krakenTiny = krakenTiny;
             renderKrakenTwoGate();
@@ -672,6 +744,7 @@
                 centerStatus,
                 setupGuides,
                 readOnlyStatus,
+                dexStatus,
                 krakenDiagnostics,
                 krakenTiny
             }, null, 2);
@@ -917,6 +990,91 @@
             }
         }
 
+        function renderDexMarketDataResult(result) {
+            const output = document.getElementById('api-dex-market-data-result');
+            const pairs = result.pairSummary || [];
+            const networks = result.networkSummary || [];
+            const pool = result.poolSummary || null;
+            output.innerHTML = `
+                <article class="operator-two-gate-card ${result.status === 'connected' ? 'operator-two-gate-safe' : 'operator-two-gate-warning'}">
+                    <div class="operator-two-gate-card-header">
+                        <span>DEX market-data result</span>
+                        <strong>${apiEscape(result.displayName || result.providerId || 'DEX provider')}</strong>
+                    </div>
+                    <p>${apiEscape(result.plainEnglish || 'Read-only DEX data test completed.')}</p>
+                    <small>Action: ${apiEscape(result.action || 'test')} · latency: ${apiEscape(result.latencyMs ?? 'n/a')}ms · live trading disabled · wallet signing disabled.</small>
+                    ${pairs.length ? `<ul>${pairs.slice(0, 4).map(pair => `<li>${apiEscape(pair.chainId)} · ${apiEscape(pair.dexId)} · ${apiEscape(pair.baseToken)}/${apiEscape(pair.quoteToken)} · Liquidity ${apiEscape(pair.liquidityUsd || 'n/a')}</li>`).join('')}</ul>` : ''}
+                    ${networks.length ? `<ul>${networks.slice(0, 6).map(network => `<li>${apiEscape(network.id)} · ${apiEscape(network.name)}</li>`).join('')}</ul>` : ''}
+                    ${pool ? `<small>Pool: ${apiEscape(pool.name || pool.id || 'pool')} · reserve ${apiEscape(pool.reserveUsd || 'n/a')} · volume 24h ${apiEscape(pool.volume24h || 'n/a')}</small>` : ''}
+                </article>
+            `;
+        }
+
+        async function runDexMarketDataTest(providerId, action, params = {}) {
+            const output = document.getElementById('api-dex-market-data-result');
+            output.textContent = `Running ${providerId} ${action} as public read-only data. No wallet, swap, approval, or order endpoint is available here.`;
+            try {
+                const data = await postJson('/api/v1/dex-connectors/read-only/test', { providerId, action, params });
+                renderDexMarketDataResult(data.result || {});
+                apiState.dexStatus = data.dexConnectorCenter || apiState.dexStatus;
+            } catch (error) {
+                output.innerHTML = `
+                    <article class="operator-two-gate-card operator-two-gate-warning">
+                        <div class="operator-two-gate-card-header">
+                            <span>DEX market-data result</span>
+                            <strong>Needs Review</strong>
+                        </div>
+                        <p>${apiEscape(error.message)}</p>
+                        <small>No live trading, wallet signing, swap, approval, or order endpoint was called.</small>
+                    </article>
+                `;
+            }
+        }
+
+        function renderDexQuoteResult(result) {
+            const output = document.getElementById('api-dex-quote-result');
+            const blockers = result.blockers || [];
+            const quote = result.quote || {};
+            const routePlan = quote.routePlan || [];
+            output.innerHTML = `
+                <article class="operator-two-gate-card ${result.status === 'connected' ? 'operator-two-gate-safe' : 'operator-two-gate-warning'}">
+                    <div class="operator-two-gate-card-header">
+                        <span>DEX quote preview</span>
+                        <strong>${apiEscape(result.displayName || result.providerId || 'DEX quote provider')}</strong>
+                    </div>
+                    <p>${apiEscape(result.plainEnglish || 'Quote preview completed.')}</p>
+                    <small>Mode: ${apiEscape(result.quoteMode || 'quote-only')} · quote age: ${apiEscape(result.quoteAge || 'not fetched')} · latency: ${apiEscape(result.latencyMs ?? 'n/a')}ms</small>
+                    ${quote.outAmount ? `<small>Estimated output: ${apiEscape(quote.outAmount)} · price impact: ${apiEscape(quote.priceImpactPct || 'n/a')}</small>` : ''}
+                    ${quote.toAmount ? `<small>Estimated route output: ${apiEscape(quote.toAmount)} · min output: ${apiEscape(quote.toAmountMin || 'n/a')}</small>` : ''}
+                    ${routePlan.length ? `<ul>${routePlan.map(step => `<li>${apiEscape(step.label || 'route step')} · ${apiEscape(step.inAmount || '')} to ${apiEscape(step.outAmount || '')}</li>`).join('')}</ul>` : ''}
+                    ${quote.transactionRequestHidden || quote.approvalAddressHidden ? '<small>Transaction/approval data hidden and locked from Simple Mode.</small>' : ''}
+                    ${blockers.length ? blockerListMarkup(blockers) : ''}
+                    <small>No swap button, token approval, wallet signature, transaction broadcast, or live order is enabled.</small>
+                </article>
+            `;
+        }
+
+        async function runDexQuotePreview(providerId, params = {}) {
+            const output = document.getElementById('api-dex-quote-result');
+            output.textContent = `Running ${providerId} quote preview only. No wallet signing, approval, swap, broadcast, or order endpoint is available here.`;
+            try {
+                const data = await postJson('/api/v1/dex-connectors/quote-preview', { providerId, params });
+                renderDexQuoteResult(data.quotePreview || {});
+                apiState.dexStatus = data.dexConnectorCenter || apiState.dexStatus;
+            } catch (error) {
+                output.innerHTML = `
+                    <article class="operator-two-gate-card operator-two-gate-warning">
+                        <div class="operator-two-gate-card-header">
+                            <span>DEX quote preview</span>
+                            <strong>Needs Review</strong>
+                        </div>
+                        <p>${apiEscape(error.message)}</p>
+                        <small>No live trading, wallet signing, swap, approval, transaction broadcast, or order endpoint was called.</small>
+                    </article>
+                `;
+            }
+        }
+
         document.addEventListener('click', event => {
             const ownerClick = event.target.closest('[data-api-owner-click]')?.dataset.apiOwnerClick;
             if (ownerClick) {
@@ -952,6 +1110,13 @@
         document.getElementById('api-test-coinbase-key').addEventListener('click', testCoinbaseReadOnly);
         document.getElementById('api-delete-coinbase-key').addEventListener('click', deleteCoinbaseKey);
         document.getElementById('api-run-price-compare').addEventListener('click', runReadOnlyPriceCompare);
+        document.getElementById('api-test-dexscreener-search').addEventListener('click', () => runDexMarketDataTest('dexscreener', 'search', { query: 'ETH USDC' }));
+        document.getElementById('api-test-dexscreener-pair').addEventListener('click', () => runDexMarketDataTest('dexscreener', 'pair'));
+        document.getElementById('api-test-geckoterminal').addEventListener('click', () => runDexMarketDataTest('geckoterminal', 'networks'));
+        document.getElementById('api-preview-zero-x').addEventListener('click', () => runDexQuotePreview('zero-x'));
+        document.getElementById('api-preview-lifi').addEventListener('click', () => runDexQuotePreview('lifi'));
+        document.getElementById('api-preview-rango').addEventListener('click', () => runDexQuotePreview('rango'));
+        document.getElementById('api-preview-jupiter').addEventListener('click', () => runDexQuotePreview('jupiter'));
         refreshApiConnectionCenter().catch(error => {
             document.getElementById('api-raw-status').textContent = error.message;
             renderKrakenTwoGate();

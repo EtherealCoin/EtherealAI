@@ -8,6 +8,8 @@ const EXCHANGE_READONLY_VAULT_PATH = path.join(OWNER_SECRETS_DIR, 'exchange-read
 const EXCHANGE_READONLY_VAULT_KEY_PATH = path.join(OWNER_SECRETS_DIR, 'exchange-readonly-vault.key');
 const RECOMMENDED_READONLY_EXCHANGES = ['binance', 'coinbase', 'kraken', 'okx', 'bybit'];
 const QUOTE_ONLY_CONNECTORS = ['uniswap', 'jupiter', 'one-inch', 'gmx', 'hyperliquid'];
+const DEX_MARKET_DATA_CONNECTORS = ['dexscreener', 'geckoterminal', 'coingecko-market-metadata', 'uniswap-style-evm', 'pancakeswap-style-bnb'];
+const DEX_QUOTE_PREVIEW_CONNECTORS = ['zero-x', 'one-inch', 'lifi', 'rango', 'jupiter', 'paraswap'];
 const EXPANDED_READONLY_MARKET_VENUES = [
   'binance',
   'coinbase',
@@ -27,6 +29,26 @@ const DEFAULT_TAKER_FEE_PERCENT = 0.1;
 const DEFAULT_MAKER_FEE_PERCENT = 0.08;
 const DEFAULT_SLIPPAGE_PERCENT = 0.05;
 const DEFAULT_LATENCY_BUFFER_PERCENT = 0.02;
+const ETHEREALAI_READONLY_WALLET_PLACEHOLDER = '0x0000000000000000000000000000000000000001';
+const DEFAULT_EVM_QUOTE = Object.freeze({
+  chainId: '1',
+  fromChain: '1',
+  toChain: '1',
+  sellToken: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+  buyToken: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+  sellAmount: '1000000000000000',
+  slippageBps: '50'
+});
+const DEFAULT_SOLANA_QUOTE = Object.freeze({
+  inputMint: 'So11111111111111111111111111111111111111112',
+  outputMint: 'EPjFWdd5AufqSSqeM2qP4GPiDa7xKseZx8tKxZ1m2',
+  amount: '10000000',
+  slippageBps: '50'
+});
+const DEFAULT_DEX_PAIR = Object.freeze({
+  chainId: 'ethereum',
+  pairAddress: '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640'
+});
 
 const EXCHANGE_READONLY_SETUP_GUIDES = {
   binance: {
@@ -230,6 +252,51 @@ const DEX_QUOTE_ONLY_SETUP_GUIDES = {
   }
 };
 
+const DEX_MARKET_DATA_SETUP_GUIDES = {
+  dexscreener: {
+    providerId: 'dexscreener',
+    displayName: 'DexScreener',
+    category: 'DEX Market Data',
+    credentialMode: 'none needed',
+    safeActions: ['token/pair search', 'pair lookup'],
+    setupUrl: 'https://docs.dexscreener.com/api/reference',
+    instructions: [
+      'Use public token, pair, price, liquidity, and profile data only.',
+      'No exchange account, wallet, seed phrase, signature, or token approval is required.',
+      'Failures should be treated as network/API degradation, not a setup failure.'
+    ],
+    warning: 'DexScreener data is read-only. EtherealAI must not submit listings, mutate profiles, or post anything from this connector.'
+  },
+  geckoterminal: {
+    providerId: 'geckoterminal',
+    displayName: 'GeckoTerminal',
+    category: 'DEX Market Data',
+    credentialMode: 'none needed',
+    safeActions: ['network list', 'pool lookup'],
+    setupUrl: 'https://apiguide.geckoterminal.com/',
+    instructions: [
+      'Use public network, token, pool, volume, and liquidity data only.',
+      'No exchange account, wallet, seed phrase, signature, or token approval is required.',
+      'Public/free API limits can degrade checks; the UI must explain that plainly.'
+    ],
+    warning: 'GeckoTerminal data is read-only. No token listing submission or public mutation is enabled.'
+  },
+  'coingecko-market-metadata': {
+    providerId: 'coingecko-market-metadata',
+    displayName: 'CoinGecko Market Metadata',
+    category: 'Listing / Market Metadata',
+    credentialMode: 'environment variable reference or local dataset',
+    safeActions: ['metadata planning', 'top-token dataset planning'],
+    setupUrl: 'https://docs.coingecko.com/reference/introduction',
+    instructions: [
+      'Use official API access or an owner-approved local dataset only.',
+      'Do not scrape pages, copy token branding, or claim research was performed unless data was fetched or loaded.',
+      'Keep API key values out of frontend code and plain SQLite.'
+    ],
+    warning: 'CoinGecko metadata is read-only. Listing submission remains locked.'
+  }
+};
+
 function normalizeExchangeName(value = '') {
   return String(value || '').trim().toLowerCase().replace(/_/g, '-');
 }
@@ -299,6 +366,434 @@ function createPlainEnglishPublicMarketDataError(exchangeName, error) {
   }
 
   return `${exchangeName} public market-data check failed: ${rawMessage || 'unknown error'}. No live trading, wallet signing, withdrawals, or orders were attempted.`;
+}
+
+function createPlainEnglishDexError(providerName, error) {
+  const rawMessage = String(error?.message || error || '').slice(0, 500);
+  const lower = rawMessage.toLowerCase();
+
+  if (/401|403|unauthorized|forbidden|api key|access token|subscription/.test(lower)) {
+    return `${providerName} needs an API key or rejected the current public request. Add a safe local key reference later if you want this provider. No wallet signing, swap, order, approval, or private key was used.`;
+  }
+
+  if (/429|rate limit|too many requests/.test(lower)) {
+    return `${providerName} rate-limited this read-only test. Wait and retry later. No live trading or wallet action was attempted.`;
+  }
+
+  if (/timeout|network|fetch failed|enotfound|econn|abort/.test(lower)) {
+    return `${providerName} could not be reached from this Mac right now. Check internet/VPN/firewall, then retry. No live trading or wallet action was attempted.`;
+  }
+
+  return `${providerName} read-only/quote test failed: ${rawMessage || 'unknown error'}. No live trading, wallet signing, swap, approval, or order was attempted.`;
+}
+
+function buildDexSafetyBoundary(extra = {}) {
+  return {
+    publicReadOnly: true,
+    quotePreviewOnly: true,
+    marketDataOnly: true,
+    liveTradingEnabled: false,
+    walletSigningEnabled: false,
+    swapsEnabled: false,
+    tokenApprovalsEnabled: false,
+    withdrawalsEnabled: false,
+    transfersEnabled: false,
+    orderEndpointEnabled: false,
+    transactionBroadcastEnabled: false,
+    transactionPayloadExposedInSimpleMode: false,
+    secretsDisplayed: false,
+    ...extra
+  };
+}
+
+function normalizeDexProviderId(value = '') {
+  return String(value || '').trim().toLowerCase().replace(/_/g, '-');
+}
+
+function buildDexConnectorCenterStatus({
+  latestMarketDataTest = null,
+  latestQuotePreview = null
+} = {}) {
+  return {
+    status: 'read-only and quote-only',
+    marketData: {
+      status: 'safe tests available',
+      providers: Object.values(DEX_MARKET_DATA_SETUP_GUIDES).map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        category: provider.category,
+        credentialMode: provider.credentialMode,
+        safeActions: provider.safeActions,
+        setupUrl: provider.setupUrl,
+        instructions: provider.instructions,
+        warning: provider.warning,
+        status: ['dexscreener', 'geckoterminal'].includes(provider.providerId) ? 'ready for safe test' : 'planned / needs key or dataset',
+        safetyLevel: 'public read-only'
+      }))
+    },
+    quotePreview: {
+      status: 'quote previews available where no key is required',
+      providers: [
+        {
+          providerId: 'zero-x',
+          displayName: '0x',
+          status: 'needs key',
+          credentialMode: 'environment variable reference',
+          safetyLevel: 'quote-only',
+          nextRecommendedAction: 'Add a safe local 0x API key reference later. No swap endpoint is enabled.'
+        },
+        {
+          providerId: 'one-inch',
+          displayName: '1inch',
+          status: 'needs key',
+          credentialMode: 'environment variable reference',
+          safetyLevel: 'quote-only',
+          nextRecommendedAction: 'Add a safe local 1inch API key reference later. No transaction execution is enabled.'
+        },
+        {
+          providerId: 'lifi',
+          displayName: 'LI.FI',
+          status: 'ready for safe test',
+          credentialMode: 'none needed',
+          safetyLevel: 'quote-only',
+          nextRecommendedAction: 'Preview route only. Transaction execution remains locked.'
+        },
+        {
+          providerId: 'rango',
+          displayName: 'Rango',
+          status: 'needs key',
+          credentialMode: 'environment variable reference',
+          safetyLevel: 'quote-only',
+          nextRecommendedAction: 'Add a safe local Rango API key reference later. No swap endpoint is enabled.'
+        },
+        {
+          providerId: 'jupiter',
+          displayName: 'Jupiter',
+          status: 'ready for safe test',
+          credentialMode: 'none needed',
+          safetyLevel: 'quote-only',
+          nextRecommendedAction: 'Preview Solana quote only. No swap transaction is requested or signed.'
+        },
+        {
+          providerId: 'paraswap',
+          displayName: 'ParaSwap',
+          status: 'planned',
+          credentialMode: 'not configured',
+          safetyLevel: 'quote-only',
+          nextRecommendedAction: 'Planned after the first quote-preview lanes are stable.'
+        }
+      ]
+    },
+    executionLocked: {
+      status: 'wallet signing locked',
+      blockers: [
+        'DEX swaps are locked.',
+        'Wallet signing is locked.',
+        'Token approvals are locked.',
+        'Transaction broadcast is locked.',
+        'Private keys and seed phrases are not accepted.'
+      ]
+    },
+    latestMarketDataTest,
+    latestQuotePreview,
+    safetyBoundary: buildDexSafetyBoundary(),
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function summarizeDexScreenerPairs(pairs = []) {
+  return pairs.slice(0, 8).map(pair => ({
+    chainId: pair.chainId || '',
+    dexId: pair.dexId || '',
+    pairAddress: pair.pairAddress || '',
+    baseToken: pair.baseToken?.symbol || pair.baseToken?.name || '',
+    quoteToken: pair.quoteToken?.symbol || pair.quoteToken?.name || '',
+    priceUsd: pair.priceUsd || null,
+    liquidityUsd: pair.liquidity?.usd || null,
+    fdv: pair.fdv || null,
+    volume24h: pair.volume?.h24 || null,
+    url: pair.url || ''
+  }));
+}
+
+function summarizeGeckoTerminalNetworks(networks = []) {
+  return networks.slice(0, 12).map(network => ({
+    id: network.id || '',
+    name: network.attributes?.name || network.attributes?.coingecko_asset_platform_id || network.id || '',
+    type: network.type || 'network'
+  }));
+}
+
+function sanitizeDexQuotePayload(providerId, raw = {}) {
+  const provider = normalizeDexProviderId(providerId);
+
+  if (provider === 'jupiter') {
+    return {
+      inputMint: raw.inputMint,
+      outputMint: raw.outputMint,
+      inAmount: raw.inAmount,
+      outAmount: raw.outAmount,
+      otherAmountThreshold: raw.otherAmountThreshold,
+      swapMode: raw.swapMode,
+      slippageBps: raw.slippageBps,
+      priceImpactPct: raw.priceImpactPct,
+      routePlan: Array.isArray(raw.routePlan)
+        ? raw.routePlan.slice(0, 4).map(step => ({
+            label: step.swapInfo?.label || '',
+            ammKey: step.swapInfo?.ammKey || '',
+            inputMint: step.swapInfo?.inputMint || '',
+            outputMint: step.swapInfo?.outputMint || '',
+            inAmount: step.swapInfo?.inAmount || '',
+            outAmount: step.swapInfo?.outAmount || '',
+            feeAmount: step.swapInfo?.feeAmount || '',
+            feeMint: step.swapInfo?.feeMint || '',
+            percent: step.percent || null
+          }))
+        : []
+    };
+  }
+
+  if (provider === 'lifi') {
+    const estimate = raw.estimate || {};
+    const action = raw.action || {};
+    const toolDetails = raw.toolDetails || {};
+
+    return {
+      id: raw.id || '',
+      type: raw.type || '',
+      tool: raw.tool || '',
+      toolName: toolDetails.name || raw.tool || '',
+      fromChainId: action.fromChainId || raw.fromChainId || null,
+      toChainId: action.toChainId || raw.toChainId || null,
+      fromToken: action.fromToken?.symbol || '',
+      toToken: action.toToken?.symbol || '',
+      fromAmount: action.fromAmount || '',
+      toAmount: estimate.toAmount || '',
+      toAmountMin: estimate.toAmountMin || '',
+      approvalAddressHidden: Boolean(raw.estimate?.approvalAddress),
+      gasCosts: Array.isArray(estimate.gasCosts)
+        ? estimate.gasCosts.slice(0, 3).map(cost => ({
+            type: cost.type || '',
+            amount: cost.amount || '',
+            amountUSD: cost.amountUSD || '',
+            tokenSymbol: cost.token?.symbol || ''
+          }))
+        : [],
+      feeCosts: Array.isArray(estimate.feeCosts)
+        ? estimate.feeCosts.slice(0, 3).map(cost => ({
+            name: cost.name || '',
+            amount: cost.amount || '',
+            amountUSD: cost.amountUSD || '',
+            tokenSymbol: cost.token?.symbol || ''
+          }))
+        : [],
+      transactionRequestHidden: Boolean(raw.transactionRequest),
+      includedStepsHidden: Array.isArray(raw.includedSteps)
+    };
+  }
+
+  return {
+    status: 'setup needed',
+    providerId: provider,
+    transactionPayloadHidden: true
+  };
+}
+
+async function testDexMarketDataConnector({ providerId = 'dexscreener', action = 'search', params = {} } = {}) {
+  const provider = normalizeDexProviderId(providerId);
+  const startedAt = Date.now();
+
+  if (provider === 'dexscreener') {
+    if (action === 'pair' || action === 'pairLookup') {
+      const chainId = String(params.chainId || DEFAULT_DEX_PAIR.chainId);
+      const pairAddress = String(params.pairAddress || DEFAULT_DEX_PAIR.pairAddress);
+      const body = await fetchJsonWithTimeout(`https://api.dexscreener.com/latest/dex/pairs/${encodeURIComponent(chainId)}/${encodeURIComponent(pairAddress)}`);
+      const pairs = Array.isArray(body.pairs) ? body.pairs : (body.pair ? [body.pair] : []);
+
+      return {
+        providerId: 'dexscreener',
+        displayName: 'DexScreener',
+        action: 'pair lookup',
+        status: pairs.length ? 'connected' : 'degraded',
+        plainEnglish: pairs.length
+          ? 'DexScreener pair lookup returned read-only pair/liquidity data.'
+          : 'DexScreener responded, but this example pair returned no pair data.',
+        pairSummary: summarizeDexScreenerPairs(pairs),
+        latencyMs: Date.now() - startedAt,
+        safetyBoundary: buildDexSafetyBoundary(),
+        generatedAt: new Date().toISOString()
+      };
+    }
+
+    const query = String(params.query || 'ETH USDC').slice(0, 80);
+    const body = await fetchJsonWithTimeout(`https://api.dexscreener.com/latest/dex/search?q=${encodeURIComponent(query)}`);
+    const pairs = Array.isArray(body.pairs) ? body.pairs : [];
+
+    return {
+      providerId: 'dexscreener',
+      displayName: 'DexScreener',
+      action: 'search',
+      status: pairs.length ? 'connected' : 'degraded',
+      plainEnglish: pairs.length
+        ? 'DexScreener search returned public read-only token/pair results.'
+        : 'DexScreener responded, but the example search returned no pairs.',
+      query,
+      pairSummary: summarizeDexScreenerPairs(pairs),
+      latencyMs: Date.now() - startedAt,
+      safetyBoundary: buildDexSafetyBoundary(),
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  if (provider === 'geckoterminal') {
+    if (action === 'pool' || action === 'poolLookup') {
+      const network = String(params.network || 'eth');
+      const poolAddress = String(params.poolAddress || DEFAULT_DEX_PAIR.pairAddress);
+      const body = await fetchJsonWithTimeout(`https://api.geckoterminal.com/api/v2/networks/${encodeURIComponent(network)}/pools/${encodeURIComponent(poolAddress)}`);
+      const data = body.data || {};
+
+      return {
+        providerId: 'geckoterminal',
+        displayName: 'GeckoTerminal',
+        action: 'pool lookup',
+        status: data.id ? 'connected' : 'degraded',
+        plainEnglish: data.id
+          ? 'GeckoTerminal returned public read-only pool data.'
+          : 'GeckoTerminal responded, but the example pool returned no pool data.',
+        poolSummary: {
+          id: data.id || '',
+          type: data.type || '',
+          name: data.attributes?.name || '',
+          baseTokenPriceUsd: data.attributes?.base_token_price_usd || null,
+          quoteTokenPriceUsd: data.attributes?.quote_token_price_usd || null,
+          reserveUsd: data.attributes?.reserve_in_usd || null,
+          volume24h: data.attributes?.volume_usd?.h24 || null
+        },
+        latencyMs: Date.now() - startedAt,
+        safetyBoundary: buildDexSafetyBoundary(),
+        generatedAt: new Date().toISOString()
+      };
+    }
+
+    const body = await fetchJsonWithTimeout('https://api.geckoterminal.com/api/v2/networks');
+    const networks = Array.isArray(body.data) ? body.data : [];
+
+    return {
+      providerId: 'geckoterminal',
+      displayName: 'GeckoTerminal',
+      action: 'network list',
+      status: networks.length ? 'connected' : 'degraded',
+      plainEnglish: networks.length
+        ? 'GeckoTerminal returned the public read-only network list.'
+        : 'GeckoTerminal responded, but no networks were returned.',
+      networkSummary: summarizeGeckoTerminalNetworks(networks),
+      latencyMs: Date.now() - startedAt,
+      safetyBoundary: buildDexSafetyBoundary(),
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  const guide = DEX_MARKET_DATA_SETUP_GUIDES[provider];
+
+  return {
+    providerId: provider,
+    displayName: guide?.displayName || provider,
+    action,
+    status: 'planned',
+    plainEnglish: guide
+      ? `${guide.displayName} is planned/read-only. It needs an approved local dataset or server-side API key reference before testing.`
+      : 'This DEX market-data provider is not registered yet.',
+    setupInstructions: guide?.instructions || [],
+    safetyBoundary: buildDexSafetyBoundary(),
+    generatedAt: new Date().toISOString()
+  };
+}
+
+async function previewDexQuoteRoute({ providerId = 'jupiter', params = {} } = {}) {
+  const provider = normalizeDexProviderId(providerId);
+  const startedAt = Date.now();
+
+  if (provider === 'jupiter') {
+    const inputMint = String(params.inputMint || DEFAULT_SOLANA_QUOTE.inputMint);
+    const outputMint = String(params.outputMint || DEFAULT_SOLANA_QUOTE.outputMint);
+    const amount = String(params.amount || DEFAULT_SOLANA_QUOTE.amount);
+    const slippageBps = String(params.slippageBps || DEFAULT_SOLANA_QUOTE.slippageBps);
+    const url = `https://quote-api.jup.ag/v6/quote?inputMint=${encodeURIComponent(inputMint)}&outputMint=${encodeURIComponent(outputMint)}&amount=${encodeURIComponent(amount)}&slippageBps=${encodeURIComponent(slippageBps)}`;
+    const body = await fetchJsonWithTimeout(url);
+
+    return {
+      providerId: 'jupiter',
+      displayName: 'Jupiter',
+      status: 'connected',
+      quoteMode: 'quote-only',
+      plainEnglish: 'Jupiter returned a Solana quote preview. EtherealAI did not request, sign, or broadcast a swap transaction.',
+      quote: sanitizeDexQuotePayload('jupiter', body),
+      quoteAge: 'fresh server-side read',
+      latencyMs: Date.now() - startedAt,
+      safetyBoundary: buildDexSafetyBoundary(),
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  if (provider === 'lifi') {
+    const quote = {
+      fromChain: String(params.fromChain || DEFAULT_EVM_QUOTE.fromChain),
+      toChain: String(params.toChain || DEFAULT_EVM_QUOTE.toChain),
+      fromToken: String(params.fromToken || DEFAULT_EVM_QUOTE.sellToken),
+      toToken: String(params.toToken || DEFAULT_EVM_QUOTE.buyToken),
+      fromAmount: String(params.fromAmount || DEFAULT_EVM_QUOTE.sellAmount),
+      fromAddress: String(params.fromAddress || ETHEREALAI_READONLY_WALLET_PLACEHOLDER)
+    };
+    const url = `https://li.quest/v1/quote?fromChain=${encodeURIComponent(quote.fromChain)}&toChain=${encodeURIComponent(quote.toChain)}&fromToken=${encodeURIComponent(quote.fromToken)}&toToken=${encodeURIComponent(quote.toToken)}&fromAmount=${encodeURIComponent(quote.fromAmount)}&fromAddress=${encodeURIComponent(quote.fromAddress)}`;
+    const body = await fetchJsonWithTimeout(url);
+
+    return {
+      providerId: 'lifi',
+      displayName: 'LI.FI',
+      status: 'connected',
+      quoteMode: 'route-preview-only',
+      plainEnglish: 'LI.FI returned a route preview. EtherealAI hides transaction data in Simple Mode and cannot execute this route.',
+      quote: sanitizeDexQuotePayload('lifi', body),
+      quoteAge: 'fresh server-side read',
+      latencyMs: Date.now() - startedAt,
+      safetyBoundary: buildDexSafetyBoundary(),
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  const keyRequired = {
+    'zero-x': '0x quote preview needs a safe local API key reference before testing.',
+    'one-inch': '1inch quote preview needs a safe local API key reference before testing.',
+    rango: 'Rango quote preview needs a safe local API key reference before testing.'
+  }[provider];
+
+  if (keyRequired) {
+    return {
+      providerId: provider,
+      displayName: provider === 'zero-x' ? '0x' : provider === 'one-inch' ? '1inch' : 'Rango',
+      status: 'needs key',
+      quoteMode: 'quote-only',
+      plainEnglish: `${keyRequired} No swap, approval, wallet signature, transaction payload, or live order is enabled.`,
+      blockers: [
+        {
+          title: 'Safe API key reference needed',
+          detail: 'Add a server-side local secret reference in a later owner-approved API setup pass. Do not paste provider keys into frontend code.'
+        }
+      ],
+      safetyBoundary: buildDexSafetyBoundary(),
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  return {
+    providerId: provider,
+    displayName: provider,
+    status: 'planned',
+    quoteMode: 'quote-only',
+    plainEnglish: 'This DEX quote provider is planned. No execution path is enabled.',
+    safetyBoundary: buildDexSafetyBoundary(),
+    generatedAt: new Date().toISOString()
+  };
 }
 
 async function ensureVaultStorage() {
@@ -1954,9 +2449,12 @@ module.exports = {
   EXCHANGE_READONLY_VAULT_KEY_PATH,
   RECOMMENDED_READONLY_EXCHANGES,
   QUOTE_ONLY_CONNECTORS,
+  DEX_MARKET_DATA_CONNECTORS,
+  DEX_QUOTE_PREVIEW_CONNECTORS,
   EXPANDED_READONLY_MARKET_VENUES,
   EXCHANGE_READONLY_SETUP_GUIDES,
   DEX_QUOTE_ONLY_SETUP_GUIDES,
+  DEX_MARKET_DATA_SETUP_GUIDES,
   normalizeExchangeName,
   normalizeTradingSymbol,
   redactValue,
@@ -1975,6 +2473,10 @@ module.exports = {
   scanReadOnlyArbitrageOpportunities,
   createPaperSimulationForOpportunity,
   buildLiveTradingLaunchRoadmap,
+  buildDexConnectorCenterStatus,
+  testDexMarketDataConnector,
+  previewDexQuoteRoute,
+  createPlainEnglishDexError,
   buildReadOnlyConnectionSummary,
   createPlainEnglishPublicMarketDataError,
   createPlainEnglishExchangeError

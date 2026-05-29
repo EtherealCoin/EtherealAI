@@ -3150,20 +3150,29 @@ function checkExchangeReadOnlyConnectionsModule() {
     EXCHANGE_READONLY_VAULT_KEY_PATH,
     RECOMMENDED_READONLY_EXCHANGES,
     QUOTE_ONLY_CONNECTORS,
+    DEX_MARKET_DATA_CONNECTORS,
+    DEX_QUOTE_PREVIEW_CONNECTORS,
     EXPANDED_READONLY_MARKET_VENUES,
     EXCHANGE_READONLY_SETUP_GUIDES,
     DEX_QUOTE_ONLY_SETUP_GUIDES,
+    DEX_MARKET_DATA_SETUP_GUIDES,
     sanitizeCredentialInput,
     sanitizePermissionsChecklist,
     buildReadOnlyConnectionSummary,
     scanReadOnlyArbitrageOpportunities,
     createPaperSimulationForOpportunity,
     buildLiveTradingLaunchRoadmap,
+    buildDexConnectorCenterStatus,
+    testDexMarketDataConnector,
+    previewDexQuoteRoute,
+    createPlainEnglishDexError,
     createPlainEnglishPublicMarketDataError,
     createPlainEnglishExchangeError
   } = require(path.join(projectRoot, 'app/server/src/lib/exchange-readonly-connections'));
   const requiredCex = ['binance', 'coinbase', 'kraken', 'okx', 'bybit'];
   const requiredQuoteOnly = ['uniswap', 'jupiter', 'one-inch', 'gmx', 'hyperliquid'];
+  const requiredDexMarketData = ['dexscreener', 'geckoterminal', 'coingecko-market-metadata'];
+  const requiredDexQuotePreview = ['zero-x', 'one-inch', 'lifi', 'rango', 'jupiter', 'paraswap'];
   const requiredExpandedVenues = [
     'kucoin',
     'gate-io',
@@ -3220,6 +3229,7 @@ function checkExchangeReadOnlyConnectionsModule() {
     }
   ]);
   const launchRoadmap = buildLiveTradingLaunchRoadmap({ connectors: [] });
+  const dexConnectorCenter = buildDexConnectorCenterStatus();
   const paperSimulation = createPaperSimulationForOpportunity({
     symbol: 'BTC/USDT',
     buyVenue: 'OKX',
@@ -3235,9 +3245,12 @@ function checkExchangeReadOnlyConnectionsModule() {
     || !EXCHANGE_READONLY_VAULT_KEY_PATH.endsWith('exchange-readonly-vault.key')
     || requiredCex.some(exchange => !RECOMMENDED_READONLY_EXCHANGES.includes(exchange))
     || requiredQuoteOnly.some(exchange => !QUOTE_ONLY_CONNECTORS.includes(exchange))
+    || requiredDexMarketData.some(provider => !DEX_MARKET_DATA_CONNECTORS.includes(provider))
+    || requiredDexQuotePreview.some(provider => !DEX_QUOTE_PREVIEW_CONNECTORS.includes(provider))
     || requiredExpandedVenues.some(exchange => !EXPANDED_READONLY_MARKET_VENUES.includes(exchange))
     || requiredCex.some(exchange => !EXCHANGE_READONLY_SETUP_GUIDES[exchange]?.permissionsChecklist?.some(item => /withdraw/i.test(item)))
     || requiredQuoteOnly.some(exchange => !DEX_QUOTE_ONLY_SETUP_GUIDES[exchange]?.warning)
+    || requiredDexMarketData.some(provider => !DEX_MARKET_DATA_SETUP_GUIDES[provider]?.warning)
     || permissions.missing.length !== 0
     || missingPermissions.missing.length < 4
     || coinbaseCredential.passphrase !== 'fixture-passphrase'
@@ -3247,6 +3260,8 @@ function checkExchangeReadOnlyConnectionsModule() {
     || summary.safetyBoundary.withdrawalsEnabled !== false
     || summary.safetyBoundary.walletSigningEnabled !== false
     || typeof scanReadOnlyArbitrageOpportunities !== 'function'
+    || typeof testDexMarketDataConnector !== 'function'
+    || typeof previewDexQuoteRoute !== 'function'
     || launchRoadmap.phases.length !== 5
     || launchRoadmap.approvalCenter.status !== 'locked'
     || launchRoadmap.safetyBoundary.liveTradingEnabled !== false
@@ -3258,8 +3273,15 @@ function checkExchangeReadOnlyConnectionsModule() {
     || paperSimulation.safetyBoundary.paperOnly !== true
     || paperSimulation.safetyBoundary.liveTradingEnabled !== false
     || paperSimulation.safetyBoundary.orderEndpointEnabled !== false
+    || dexConnectorCenter.marketData.providers.length < 3
+    || dexConnectorCenter.quotePreview.providers.length < 5
+    || dexConnectorCenter.executionLocked.status !== 'wallet signing locked'
+    || dexConnectorCenter.safetyBoundary.swapsEnabled !== false
+    || dexConnectorCenter.safetyBoundary.tokenApprovalsEnabled !== false
+    || dexConnectorCenter.safetyBoundary.transactionBroadcastEnabled !== false
     || !/read-only/.test(createPlainEnglishExchangeError('Binance', new Error('401 unauthorized')).toLowerCase())
     || !/public market-data/.test(createPlainEnglishPublicMarketDataError('Bybit', new Error('403 forbidden')).toLowerCase())
+    || !/wallet action/.test(createPlainEnglishDexError('Jupiter', new Error('network timeout')).toLowerCase())
     || /private key|credential check/.test(createPlainEnglishPublicMarketDataError('Bybit', new Error('403 forbidden')).toLowerCase())
   ) {
     fail('exchange read-only connection module did not preserve encrypted-vault setup guides and locked safety boundaries');
@@ -9159,6 +9181,7 @@ function checkSimpleOperatorModeUsabilityRefactor() {
   ].map(filePath => path.join(projectRoot, filePath));
   const home = fs.readFileSync(path.join(projectRoot, 'app/client/index.html'), 'utf8');
   const dashboard = fs.readFileSync(path.join(projectRoot, 'app/client/dashboard.html'), 'utf8');
+  const strategyLab = fs.readFileSync(path.join(projectRoot, 'app/client/strategy-lab.html'), 'utf8');
   const apiConnectionCenter = fs.readFileSync(path.join(projectRoot, 'app/client/api-connection-center.html'), 'utf8');
   const apiConnectionCenterLib = fs.readFileSync(path.join(projectRoot, 'app/server/src/lib/api-connection-center.js'), 'utf8');
   const exchangeMetadataRoutes = fs.readFileSync(path.join(projectRoot, 'app/server/src/routes/exchange-metadata.js'), 'utf8');
@@ -9197,7 +9220,11 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !operatorMode.includes('API Connection Center')
     || !operatorMode.includes('Connect APIs Without Developer Workflow')
     || !operatorMode.includes('Coinbase Advanced')
-    || !operatorMode.includes('DEX Quote-Only')
+    || !operatorMode.includes('DEX Market Data')
+    || !operatorMode.includes('DEX Quote Preview')
+    || !operatorMode.includes('Test DexScreener Search')
+    || !operatorMode.includes('Preview Jupiter Quote')
+    || !operatorMode.includes('live-trading-readiness-spine')
     || !operatorMode.includes('Test Kraken Read Access')
     || !operatorMode.includes('Run Kraken Dry-Run Proof')
     || !operatorMode.includes('data-operator-training-toggle')
@@ -9340,6 +9367,13 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !dashboard.includes('dashboard-launch-pipeline-summary')
     || !dashboard.includes('/api/v1/token-launch-pipeline/state')
     || !dashboard.includes('renderLaunchPipelineSummary')
+    || !dashboard.includes('DEX Market Data')
+    || !dashboard.includes('DEX Quote Preview')
+    || !strategyLab.includes('live-trading-readiness-spine')
+    || !strategyLab.includes('Live Trading Readiness')
+    || !strategyLab.includes('DEX market data')
+    || !strategyLab.includes('DEX quote preview')
+    || !strategyLab.includes('/api/v1/api-connection-center/status')
     || !home.includes('community-showcase-band')
     || !dashboard.includes('community-showcase-panel')
     || !social.includes('Community Progress Art Pack')
@@ -9414,18 +9448,29 @@ function checkSimpleOperatorModeUsabilityRefactor() {
     || !apiConnectionCenter.includes('data-api-owner-click')
     || !apiConnectionCenter.includes('Kraken Safe Setup And Readiness')
     || !apiConnectionCenter.includes('Coinbase Advanced Read-Only Setup')
-    || !apiConnectionCenter.includes('DEX Read-Only Connector Lane')
+    || !apiConnectionCenter.includes('DEX Market Data')
+    || !apiConnectionCenter.includes('DEX Quote / Route Preview')
+    || !apiConnectionCenter.includes('DEX Execution: Locked')
     || !apiConnectionCenter.includes('/api/v1/api-connection-center/status')
+    || !apiConnectionCenter.includes('/api/v1/dex-connectors/read-only/status')
+    || !apiConnectionCenter.includes('/api/v1/dex-connectors/read-only/test')
+    || !apiConnectionCenter.includes('/api/v1/dex-connectors/quote-preview')
     || !apiConnectionCenter.includes('Test Kraken Read/Account Access')
     || !apiConnectionCenter.includes('Run Kraken Dry-Run Proof')
     || !apiConnectionCenter.includes('Coinbase Advanced')
-    || !apiConnectionCenter.includes('DEX Quote-Only')
+    || !apiConnectionCenter.includes('Test DexScreener Search')
+    || !apiConnectionCenter.includes('Preview LI.FI Route')
+    || !apiConnectionCenter.includes('Preview Jupiter Quote')
     || !apiConnectionCenter.includes('/js/operator-gates.js')
     || !apiConnectionCenter.includes('/js/operator-next-action.js')
     || !apiConnectionCenter.includes('/js/operator-training.js')
     || !apiConnectionCenter.includes('/js/operator-mode.js')
     || !apiConnectionCenterLib.includes('DEX_READONLY_PROVIDER_REGISTRY')
-    || !apiConnectionCenterLib.includes('DexScreener-style token and pair lookup')
+    || !apiConnectionCenterLib.includes('DEX_MARKET_DATA_PROVIDER_REGISTRY')
+    || !apiConnectionCenterLib.includes('DEX_QUOTE_PROVIDER_REGISTRY')
+    || !apiConnectionCenterLib.includes('DEX_EXECUTION_LOCKED_REGISTRY')
+    || !apiConnectionCenterLib.includes('DexScreener token and pair lookup')
+    || !apiConnectionCenterLib.includes('Jupiter Solana quote preview')
     || !apiConnectionCenterLib.includes('buildApiConnectionCenterStatus')
     || !apiConnectionCenterLib.includes('secretValuesReturnedToUi: false')
     || !exchangeMetadataRoutes.includes("app.get('/api/v1/api-connection-center/status'")

@@ -98,6 +98,28 @@
             </div>
         </section>
 
+        <section id="live-trading-readiness-spine" class="model-panel api-mission-control-card">
+            <div class="token-workbench-section-heading">
+                <span>Trading readiness spine</span>
+                <h2>Live Trading Readiness</h2>
+                <p>Use this panel to see what EtherealAI can safely test now and what remains locked. Read-only market data and DEX quote previews can improve strategy research; live execution still requires separate owner approval.</p>
+            </div>
+            <div id="strategy-live-readiness-grid" class="api-status-grid">
+                <article class="status-warning"><span>Kraken</span><strong>Loading</strong><small>Reading API center state.</small></article>
+                <article class="status-warning"><span>Coinbase</span><strong>Loading</strong><small>Reading API center state.</small></article>
+                <article class="status-info"><span>DEX Market Data</span><strong>Loading</strong><small>DexScreener / GeckoTerminal-style read-only checks.</small></article>
+                <article class="status-info"><span>DEX Quotes</span><strong>Loading</strong><small>Jupiter / LI.FI / 0x / 1inch / Rango quote-preview lanes.</small></article>
+                <article class="status-success"><span>Paper Trading</span><strong>Working</strong><small>Safe local simulation remains available.</small></article>
+                <article class="status-danger"><span>Live Execution</span><strong>Locked</strong><small>No order, swap, wallet signing, withdrawal, or transfer is enabled.</small></article>
+            </div>
+            <div id="strategy-live-readiness-next" class="phase3-results">Loading next safe action...</div>
+            <div class="button-row">
+                <button id="refresh-live-readiness-spine" type="button">Refresh Live Trading Readiness</button>
+                <a class="cta-button action-safe" href="/api-connection-center#dex-market-data">Open DEX Data / Quote Center</a>
+                <a class="cta-button action-review" href="/live-trading-launch">Open Locked Live Launch</a>
+            </div>
+        </section>
+
         <section class="model-panel" id="strategy-entry">
             <h2>Strategy Builder</h2>
             <p class="inline-status">What is this? A plain-English trading idea saved locally. Why it matters: paper trading needs a strategy before it can simulate. What to do next: fill the fields or use the safe paper example, then click Save Strategy.</p>
@@ -9821,6 +9843,86 @@
         }
 
         bootStrategyLab();
+    </script>
+    <script>
+        function tradingReadinessEscape(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function tradingReadinessTone(status = '') {
+            const text = String(status || '').toLowerCase();
+            if (text.includes('connected') || text.includes('ready') || text.includes('working')) return 'status-success';
+            if (text.includes('blocked') || text.includes('unsafe') || text.includes('error')) return 'status-danger';
+            if (text.includes('locked')) return 'status-info';
+            return 'status-warning';
+        }
+
+        function tradingReadinessCard(label, value, note, tone) {
+            return `
+                <article class="${tone || tradingReadinessTone(value)}">
+                    <span>${tradingReadinessEscape(label)}</span>
+                    <strong>${tradingReadinessEscape(value)}</strong>
+                    <small>${tradingReadinessEscape(note)}</small>
+                </article>
+            `;
+        }
+
+        async function loadTradingReadinessSpine() {
+            const grid = document.getElementById('strategy-live-readiness-grid');
+            const next = document.getElementById('strategy-live-readiness-next');
+            if (!grid || !next) return;
+
+            next.textContent = 'Refreshing API/data/risk/live-lock status...';
+            try {
+                const response = await fetch('/api/v1/api-connection-center/status');
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Unable to load API readiness.');
+                const apiCenter = data.apiCenter || {};
+                const providers = apiCenter.providers || [];
+                const providerById = id => providers.find(provider => provider.providerId === id) || {};
+                const kraken = providerById('kraken');
+                const coinbase = providerById('coinbase');
+                const summary = apiCenter.summary || {};
+                const readiness = apiCenter.liveTradingReadiness || {};
+                grid.innerHTML = [
+                    tradingReadinessCard('Kraken account read-only', kraken.currentStatus || readiness.krakenAccountReadOnly || 'not connected', kraken.nextRecommendedAction || 'Use API Connection Center for Kraken status.', tradingReadinessTone(kraken.currentStatus)),
+                    tradingReadinessCard('Coinbase read-only', coinbase.currentStatus || readiness.coinbaseAccountReadOnly || 'not connected', coinbase.nextRecommendedAction || 'Coinbase is the next safe CEX lane.', tradingReadinessTone(coinbase.currentStatus)),
+                    tradingReadinessCard('DEX market data', summary.dexMarketDataStatus || readiness.dexMarketData || 'planned', 'Token, pool, price, liquidity, and metadata only.', 'status-info'),
+                    tradingReadinessCard('DEX quote preview', summary.dexQuotePreviewStatus || readiness.dexQuotes || 'planned', 'Route previews only. No swaps or wallet signing.', 'status-info'),
+                    tradingReadinessCard('Paper trading', readiness.paperTrading || 'working', 'Paper simulation stays safe and local.', 'status-success'),
+                    tradingReadinessCard('Risk controls', 'review active profile', 'Max order, position, daily loss, open trades, and kill switch remain visible in Risk.', 'status-warning'),
+                    tradingReadinessCard('Live execution', readiness.liveExecution || 'locked', 'Live execution requires final owner approval in a separate path.', 'status-info'),
+                    tradingReadinessCard('DEX execution', readiness.dexExecution || 'wallet signing locked', 'No approval, swap, signature, or transaction broadcast is enabled.', 'status-info')
+                ].join('');
+                next.innerHTML = `
+                    <article class="operator-two-gate-card operator-two-gate-warning">
+                        <div class="operator-two-gate-card-header">
+                            <span>What can I safely test now?</span>
+                            <strong>${tradingReadinessEscape(readiness.nextRecommendedAction || summary.nextRecommendedAction || 'Open API Connection Center')}</strong>
+                        </div>
+                        <p>Safe now: paper strategies, read-only market data, DEX quote previews, and Kraken/Coinbase read-only checks. Locked: live orders, DEX swaps, wallet signing, withdrawals, transfers, and token approvals.</p>
+                    </article>
+                `;
+            } catch (error) {
+                next.innerHTML = `
+                    <article class="operator-two-gate-card operator-two-gate-warning">
+                        <div class="operator-two-gate-card-header">
+                            <span>Live readiness needs review</span>
+                            <strong>API state did not load</strong>
+                        </div>
+                        <p>${tradingReadinessEscape(error.message)}</p>
+                    </article>
+                `;
+            }
+        }
+
+        document.getElementById('refresh-live-readiness-spine')?.addEventListener('click', loadTradingReadinessSpine);
+        loadTradingReadinessSpine();
     </script>
     <script src="/js/operator-next-action.js"></script>
     <script src="/js/operator-training.js"></script>

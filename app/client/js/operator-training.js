@@ -151,7 +151,7 @@
             path: '/api-connection-center',
             title: 'Connect APIs Safely',
             libraryTitle: 'Connect API Connection Center',
-            purpose: 'API Connection Center is the CEO setup surface for Kraken first, Coinbase next, and DEX read-only research lanes. It keeps secrets in local encrypted vaults and keeps execution locked.',
+            purpose: 'API Connection Center is the CEO setup surface for Kraken first, Coinbase next, DEX market data, and DEX quote previews. It keeps secrets in local encrypted vaults, treats public DEX data as read-only, and keeps execution locked.',
             buttons: [
                 ['Refresh API Status', 'Loads Kraken, Coinbase, wallet metadata, and DEX read-only status.'],
                 ['Replace Kraken Key', 'Opens the safe local vault replacement form. This does not place orders.'],
@@ -159,6 +159,10 @@
                 ['Run Kraken Dry-Run Proof', 'Builds a no-order preview and confirms the production endpoint remains blocked.'],
                 ['Save Coinbase Key Safely', 'Saves a Coinbase read-only key to the encrypted read-only vault.'],
                 ['Test Coinbase Read-Only Connection', 'Checks Coinbase read/account access without trading.'],
+                ['Test DexScreener Search', 'Checks public token/pair data only. No wallet or swap.'],
+                ['Test GeckoTerminal Network/Pools', 'Checks public network/pool visibility only.'],
+                ['Preview Jupiter Quote', 'Previews a Solana route quote only. No transaction is built or signed.'],
+                ['Preview LI.FI Route', 'Previews a cross-chain route only. Transaction data stays locked from Simple Mode.'],
                 ['Run Read-Only Price Compare', 'Compares public market data without exchange orders, swaps, withdrawals, or wallet signing.']
             ],
             fields: [
@@ -171,31 +175,35 @@
             doNotEnter: [
                 'Do not enter seed phrases, wallet private keys, recovery phrases, bank passwords, or exchange withdrawal keys.',
                 'Do not create keys with withdrawals, transfers, margin, futures, leverage, admin, manage, or unrestricted trade permissions for this phase.',
-                'Do not treat DEX read-only as wallet connection. DEX swaps and approvals remain locked.'
+                'Do not treat DEX read-only as wallet connection. DEX swaps, token approvals, transaction building, and wallet signatures remain locked.'
             ],
             order: [
                 'Refresh API Status.',
                 'If Kraken needs repair, replace the key or test read/account access.',
                 'Run Kraken dry-run proof only after the saved key is verified.',
                 'Use Coinbase read-only setup after Kraken status is clear.',
-                'Use DEX lanes for token, pair, pool, liquidity, price, and quote research only.'
+                'Use DEX Market Data for token, pair, pool, liquidity, price, and metadata checks.',
+                'Use DEX Quote / Route Preview for route research only. Execution stays locked.'
             ],
             safeDefaults: [
                 'Kraken first.',
                 'Coinbase read-only next.',
-                'DEX public/read-only only.',
-                'Live order placement, swaps, wallet signing, withdrawals, deployments, and public submissions stay locked.'
+                'DEX market data public/read-only.',
+                'DEX quote preview only.',
+                'Live order placement, swaps, token approvals, wallet signing, withdrawals, deployments, and public submissions stay locked.'
             ],
             errors: [
                 ['Kraken key missing', 'Click Replace Kraken Key and save a restricted spot key in the encrypted local vault.'],
                 ['Unsafe permission detected', 'Delete the key and recreate it without withdrawals, transfers, margin, futures, leverage, or admin permissions.'],
                 ['Coinbase connector missing', 'Click Create Coinbase Connector or Save Coinbase Key Safely. The app will create the placeholder before saving.'],
-                ['DEX provider draft', 'This is normal. Draft means read-only provider planning is registered and execution is locked.']
+                ['DEX provider needs key', 'This is not a setup failure. Some quote providers need a safe local API-key reference before testing.'],
+                ['DEX provider degraded', 'This usually means the public API was unreachable or rate-limited. Live trading was not attempted.']
             ],
             success: [
                 'Kraken shows connected or ready without any production endpoint call.',
                 'Coinbase can be saved and tested as read-only.',
-                'DEX read-only lanes explain what is safe now and what remains locked.',
+                'DEX Market Data shows read-only providers and safe test buttons.',
+                'DEX Quote / Route Preview shows route preview providers and clearly states execution is locked.',
                 'Advanced raw JSON is hidden unless Advanced Mode is opened.'
             ],
             video: {
@@ -224,10 +232,17 @@
                         pause: 'Pause here and verify the confirmation statement before saving.'
                     },
                     {
-                        title: 'DEX lanes are research only',
-                        screen: 'DEX Read-Only Connector Lane',
-                        narration: 'DEX lanes help with token, pair, pool, price, liquidity, and quote research. They do not connect a wallet and cannot swap.',
-                        click: 'Click Run Read-Only Price Compare when you want a safe public-data check.',
+                        title: 'DEX market data is research only',
+                        screen: 'DEX Market Data',
+                        narration: 'DEX market-data lanes help with token, pair, pool, price, liquidity, and metadata research. They do not connect a wallet and cannot swap.',
+                        click: 'Click Test DexScreener Search or Test GeckoTerminal Network/Pools when you want a safe public-data check.',
+                        pause: 'Pause here and confirm no wallet signing was requested.'
+                    },
+                    {
+                        title: 'DEX quote preview is not execution',
+                        screen: 'DEX Quote / Route Preview',
+                        narration: 'Quote preview shows estimated route information. It is not a swap. Transaction data, approvals, signatures, and broadcasts stay locked.',
+                        click: 'Click Preview Jupiter Quote or Preview LI.FI Route to see a quote-only test.',
                         pause: 'Pause here and confirm no wallet signing was requested.'
                     }
                 ]

@@ -60,23 +60,25 @@
             summary: 'Use one CEO-level surface for Kraken first, Coinbase next, and DEX quote-only lanes later. Simple Mode shows preview/review, then final approval. Raw diagnostics stay behind Advanced Mode.',
             primaryAction: { label: 'Refresh API Status', selector: '#api-refresh-status' },
             keepIds: ['api-kraken-two-gate', 'api-kraken-operator-wizard', 'kraken-operator-setup', 'coinbase-readonly-setup'],
-            keepHeadings: ['DEX Read-Only Connector Lane', 'Next Connection Order'],
+            keepHeadings: ['DEX Market Data', 'DEX Quote / Route Preview', 'DEX Execution: Locked', 'Next Connection Order'],
             readyLabel: 'API Center Ready',
-            nextText: 'Refresh API Status first. Finish Kraken before adding Coinbase or DEX execution paths.',
+            nextText: 'Refresh API Status first. Finish Kraken, prepare Coinbase read-only, then use DEX market-data and quote-preview lanes. DEX execution remains wallet-signing locked.',
             cards: [
                 ['What this page does', 'It connects safe API lanes without terminal commands or developer route hunting.'],
                 ['Kraken First', 'Inspect saved key fingerprints, test read/account access, run dry-run proof, and review tiny-live eligibility without placing an order.'],
                 ['Coinbase Next', 'Create a read-only Coinbase setup, save the key to the encrypted vault, then test account-read access.'],
-                ['DEX Quote-Only', 'DEX integrations start with token info, pairs, pools, prices, liquidity, and quotes. No swaps or wallet signing.'],
-                ['What is locked', 'Live orders, withdrawals, swaps, wallet signing, deployment, public posting, and listing submissions remain locked.']
+                ['DEX Market Data', 'Use DexScreener and GeckoTerminal-style public data for token, pair, pool, price, liquidity, and metadata research.'],
+                ['DEX Quote Preview', 'Preview routes through Jupiter, LI.FI, 0x, 1inch, and Rango lanes without exposing swap execution.'],
+                ['What is locked', 'Live orders, withdrawals, swaps, token approvals, wallet signing, deployment, public posting, and listing submissions remain locked.']
             ],
             workflow: [
                 ['1. Review API state', 'Load saved Kraken status, read-only connector status, and tiny live gate state.', { label: 'Refresh API Status', selector: '#api-refresh-status' }],
                 ['2. Repair or verify Kraken', 'Use Replace Kraken Key only if needed, then Test Kraken Read/Account Access. Secret fields clear after save.', { label: 'Test Kraken Read Access', selector: '#api-test-kraken-access' }],
                 ['3. Run dry-run proof', 'Preview the tiny setup without calling the production order endpoint.', { label: 'Run Kraken Dry-Run Proof', selector: '#api-run-kraken-dryrun' }],
                 ['4. Prepare Coinbase read-only', 'Save a Coinbase View/read-only key only after confirming trade, transfer, manage, and withdrawal permissions are off.', { label: 'Save Coinbase Key Safely', selector: '#api-save-coinbase-key' }],
-                ['5. Review DEX quote-only lanes', 'Use DEX lanes for research data only. Swaps, approvals, and signatures stay locked.', { label: 'Run Read-Only Price Compare', selector: '#api-run-price-compare' }],
-                ['6. Final approval meaning', 'Final approval means leaving this page and using the dedicated live approval panel. API Connection Center itself cannot place a live order.', { label: 'Open Final Kraken Approval', href: '/live-trading-launch#kraken-tiny-live-test' }]
+                ['5. Test DEX market data', 'Run public token/pair/pool checks only. No wallet, swap, approval, signature, or transaction broadcast is available.', { label: 'Test DexScreener Search', selector: '#api-test-dexscreener-search' }],
+                ['6. Preview DEX quote route', 'Preview Jupiter or LI.FI quote data only. Transaction data stays hidden and execution stays locked.', { label: 'Preview Jupiter Quote', selector: '#api-preview-jupiter' }],
+                ['7. Final approval meaning', 'Final approval means leaving this page and using the dedicated live approval panel. API Connection Center itself cannot place a live order.', { label: 'Open Final Kraken Approval', href: '/live-trading-launch#kraken-tiny-live-test' }]
             ]
         },
         '/owner-setup': {
@@ -111,14 +113,16 @@
             cards: [
                 ['Strategy Builder', 'Describe the idea in plain English.'],
                 ['Safe Paper Test', 'One click creates, connects, verifies, and runs the local simulation.'],
+                ['Live Trading Readiness', 'Shows Kraken, Coinbase, DEX market data, quote preview, risk, kill switch, and live locks in one owner-readable list.'],
                 ['Results', 'Review simulated trades, P/L, spread/costs, entry/exit reasons, health, and warnings.'],
                 ['Live Lock', 'No wallet signing, no exchange order, and no live trading.']
             ],
             workflow: [
                 ['1. Create strategy', 'Open the plain-English strategy builder.', { label: 'Create Strategy', selector: '#strategy-entry' }],
-                ['2. Run safe paper test', 'Let EtherealAI create and connect all paper-only components automatically.', { label: 'Run This Strategy Safely', selector: '#run-this-strategy-safely' }],
-                ['3. Review results', 'Read simulated trades, P/L, costs, reasons, health, and warnings.', { label: 'Review Paper Results', selector: '#safe-paper-results' }],
-                ['4. Advanced records', 'Open only if you intentionally need raw plans, schedules, connectors, or IDs.', { label: 'Open Advanced Paper Records', selector: '#bot-automation' }]
+                ['2. Review live-readiness spine', 'See which API/data/risk/wallet gates are working, blocked, optional, or locked.', { label: 'Review Live Trading Readiness', selector: '#live-trading-readiness-spine' }],
+                ['3. Run safe paper test', 'Let EtherealAI create and connect all paper-only components automatically.', { label: 'Run This Strategy Safely', selector: '#run-this-strategy-safely' }],
+                ['4. Review results', 'Read simulated trades, P/L, costs, reasons, health, and warnings.', { label: 'Review Paper Results', selector: '#safe-paper-results' }],
+                ['5. Advanced records', 'Open only if you intentionally need raw plans, schedules, connectors, or IDs.', { label: 'Open Advanced Paper Records', selector: '#bot-automation' }]
             ]
         },
         '/live-trading-launch': {

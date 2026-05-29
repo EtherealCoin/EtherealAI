@@ -3,6 +3,10 @@ const {
   API_PROVIDER_CATEGORIES,
   API_PROVIDER_STATUSES,
   API_SAFETY_LEVELS,
+  API_CREDENTIAL_MODES,
+  DEX_MARKET_DATA_PROVIDER_REGISTRY,
+  DEX_QUOTE_PROVIDER_REGISTRY,
+  DEX_EXECUTION_LOCKED_REGISTRY,
   DEX_READONLY_PROVIDER_REGISTRY,
   buildApiConnectionCenterStatus
 } = require('../lib/api-connection-center');
@@ -30,8 +34,11 @@ function registerExchangeMetadataRoutes(app, {
   evaluateExchangeConnectorReadOnlyTest,
   exchangeReadOnlySetupGuides,
   dexQuoteOnlySetupGuides,
+  dexMarketDataSetupGuides,
   recommendedReadOnlyExchanges,
   quoteOnlyConnectors,
+  dexMarketDataConnectors,
+  dexQuotePreviewConnectors,
   expandedReadOnlyMarketVenues,
   sanitizeCredentialInput,
   sanitizePermissionsChecklist,
@@ -45,7 +52,11 @@ function registerExchangeMetadataRoutes(app, {
   scanReadOnlyArbitrageOpportunities,
   createPaperSimulationForOpportunity,
   buildLiveTradingLaunchRoadmap,
+  buildDexConnectorCenterStatus,
+  testDexMarketDataConnector,
+  previewDexQuoteRoute,
   buildReadOnlyConnectionSummary,
+  createPlainEnglishDexError,
   createPlainEnglishExchangeError,
   phase3RecommendedExchanges,
   universalOrderTypes,
@@ -2358,16 +2369,23 @@ function registerExchangeMetadataRoutes(app, {
       res.json({
         recommendedFirst: recommendedReadOnlyExchanges || [],
         quoteOnlyConnectors: quoteOnlyConnectors || [],
+        dexMarketDataConnectors: dexMarketDataConnectors || [],
+        dexQuotePreviewConnectors: dexQuotePreviewConnectors || [],
         expandedReadOnlyMarketVenues: expandedReadOnlyMarketVenues || [],
         cexGuides: Object.values(exchangeReadOnlySetupGuides || {}),
+        dexMarketDataGuides: Object.values(dexMarketDataSetupGuides || {}),
         quoteOnlyGuides: Object.values(dexQuoteOnlySetupGuides || {}),
         safetyModel: {
           browserLocalStorageUsed: false,
           uiStoresCredentialValues: false,
           encryptedLocalVault: true,
+          publicDexDataOnly: true,
+          quotePreviewOnly: true,
           liveTradingEnabled: false,
           withdrawalsEnabled: false,
           walletSigningEnabled: false,
+          swapsEnabled: false,
+          tokenApprovalsEnabled: false,
           orderEndpointEnabled: false,
           privateValuesReturnedToUi: false
         }
@@ -2389,13 +2407,17 @@ function registerExchangeMetadataRoutes(app, {
 
       res.json({
         summary: buildReadOnlyConnectionSummary(connectors),
+        dexConnectorCenter: buildDexConnectorCenterStatus(),
         vaultStatus,
         statuses: ['Not Connected', 'Read-Only Connected', 'Error'],
         safetyModel: {
           marketDataOnly: true,
+          quotePreviewOnly: true,
           liveTradingEnabled: false,
           withdrawalsEnabled: false,
           walletSigningEnabled: false,
+          swapsEnabled: false,
+          tokenApprovalsEnabled: false,
           orderEndpointEnabled: false,
           privateValuesReturnedToUi: false
         }
@@ -2434,6 +2456,9 @@ function registerExchangeMetadataRoutes(app, {
         kraken: krakenProvider,
         coinbase: coinbaseProvider,
         dexReadOnlyProviders: DEX_READONLY_PROVIDER_REGISTRY,
+        dexMarketDataProviders: DEX_MARKET_DATA_PROVIDER_REGISTRY,
+        dexQuoteProviders: DEX_QUOTE_PROVIDER_REGISTRY,
+        dexExecutionLockedProviders: DEX_EXECUTION_LOCKED_REGISTRY,
         walletMetadataCount: Number(walletCountRow?.count || 0)
       });
 
@@ -2442,15 +2467,20 @@ function registerExchangeMetadataRoutes(app, {
         statusModel: {
           categories: Object.values(API_PROVIDER_CATEGORIES),
           statuses: Object.values(API_PROVIDER_STATUSES),
-          safetyLevels: Object.values(API_SAFETY_LEVELS)
+          safetyLevels: Object.values(API_SAFETY_LEVELS),
+          credentialModes: Object.values(API_CREDENTIAL_MODES)
         },
         readOnlyConnectionSummary: buildReadOnlyConnectionSummary(connectors),
+        dexConnectorCenter: buildDexConnectorCenterStatus(),
         readOnlyVaultStatus,
         cexGuides: {
           kraken: exchangeReadOnlySetupGuides?.kraken || null,
           coinbase: exchangeReadOnlySetupGuides?.coinbase || null
         },
         dexReadOnlyRegistry: apiCenter.dexReadOnlyProviders,
+        dexMarketDataRegistry: apiCenter.dexMarketDataProviders,
+        dexQuotePreviewRegistry: apiCenter.dexQuoteProviders,
+        dexExecutionLockedRegistry: apiCenter.dexExecutionLockedProviders,
         twoGateModel: {
           gateOne: 'Preview / Review',
           gateTwo: 'Final Confirm / Execute',
@@ -2498,6 +2528,110 @@ function registerExchangeMetadataRoutes(app, {
         error: createPlainEnglishExchangeError
           ? createPlainEnglishExchangeError('Exchange price comparison', error)
           : error.message
+      });
+    }
+  });
+
+  app.get('/api/v1/dex-connectors/read-only/status', requireAuth, async (req, res) => {
+    try {
+      res.json({
+        dexConnectorCenter: buildDexConnectorCenterStatus(),
+        providerTypes: {
+          marketData: dexMarketDataConnectors || [],
+          quotePreview: dexQuotePreviewConnectors || [],
+          executionLocked: true
+        },
+        safetyBoundary: {
+          publicReadOnly: true,
+          quotePreviewOnly: true,
+          liveTradingEnabled: false,
+          walletSigningEnabled: false,
+          swapsEnabled: false,
+          tokenApprovalsEnabled: false,
+          withdrawalsEnabled: false,
+          transfersEnabled: false,
+          orderEndpointEnabled: false,
+          transactionBroadcastEnabled: false,
+          secretValuesReturnedToUi: false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishDexError
+          ? createPlainEnglishDexError('DEX connector status', error)
+          : error.message,
+        liveTradingEnabled: false,
+        walletSigningEnabled: false,
+        swapsEnabled: false,
+        tokenApprovalsEnabled: false
+      });
+    }
+  });
+
+  app.post('/api/v1/dex-connectors/read-only/test', requireAuth, async (req, res) => {
+    try {
+      const providerId = req.body?.providerId || 'dexscreener';
+      const action = req.body?.action || 'search';
+      const params = req.body?.params && typeof req.body.params === 'object' ? req.body.params : {};
+      const result = await testDexMarketDataConnector({ providerId, action, params });
+
+      res.json({
+        result,
+        dexConnectorCenter: buildDexConnectorCenterStatus({ latestMarketDataTest: result }),
+        safetyBoundary: result.safetyBoundary || {
+          publicReadOnly: true,
+          liveTradingEnabled: false,
+          walletSigningEnabled: false,
+          swapsEnabled: false,
+          tokenApprovalsEnabled: false,
+          orderEndpointEnabled: false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishDexError
+          ? createPlainEnglishDexError(req.body?.providerId || 'DEX market-data provider', error)
+          : error.message,
+        liveTradingEnabled: false,
+        walletSigningEnabled: false,
+        swapsEnabled: false,
+        tokenApprovalsEnabled: false,
+        orderEndpointEnabled: false
+      });
+    }
+  });
+
+  app.post('/api/v1/dex-connectors/quote-preview', requireAuth, async (req, res) => {
+    try {
+      const providerId = req.body?.providerId || 'jupiter';
+      const params = req.body?.params && typeof req.body.params === 'object' ? req.body.params : {};
+      const quotePreview = await previewDexQuoteRoute({ providerId, params });
+
+      res.json({
+        quotePreview,
+        dexConnectorCenter: buildDexConnectorCenterStatus({ latestQuotePreview: quotePreview }),
+        simpleModeNote: 'Quote preview only. No swap button, approval, wallet signature, transaction broadcast, order endpoint, or private key path is enabled.',
+        safetyBoundary: quotePreview.safetyBoundary || {
+          quotePreviewOnly: true,
+          liveTradingEnabled: false,
+          walletSigningEnabled: false,
+          swapsEnabled: false,
+          tokenApprovalsEnabled: false,
+          orderEndpointEnabled: false,
+          transactionBroadcastEnabled: false
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        error: createPlainEnglishDexError
+          ? createPlainEnglishDexError(req.body?.providerId || 'DEX quote provider', error)
+          : error.message,
+        liveTradingEnabled: false,
+        walletSigningEnabled: false,
+        swapsEnabled: false,
+        tokenApprovalsEnabled: false,
+        orderEndpointEnabled: false,
+        transactionBroadcastEnabled: false
       });
     }
   });

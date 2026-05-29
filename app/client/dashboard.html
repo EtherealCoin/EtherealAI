@@ -772,6 +772,9 @@
             const coinbase = providerById('coinbase');
             const wallet = providerById('metamask-wallet-metadata');
             const dexCount = apiCenter.dexReadOnlyProviders?.length || 0;
+            const dexMarketCount = apiCenter.dexMarketDataProviders?.length || 0;
+            const dexQuoteCount = apiCenter.dexQuoteProviders?.length || 0;
+            const readiness = apiCenter.liveTradingReadiness || {};
             const cards = [
                 {
                     label: 'Kraken',
@@ -786,9 +789,15 @@
                     tone: apiSummaryTone(coinbase.currentStatus || summary.coinbaseStatus)
                 },
                 {
-                    label: 'DEX Read-Only',
-                    value: dexCount ? `${dexCount} lanes` : summary.dexReadOnlyStatus || 'draft',
-                    note: 'Token, pair, pool, liquidity, price, and quote research only.',
+                    label: 'DEX Market Data',
+                    value: summary.dexMarketDataStatus || (dexMarketCount ? `${dexMarketCount} lanes` : 'planned'),
+                    note: 'Token, pair, pool, price, liquidity, and metadata only.',
+                    tone: 'status-info'
+                },
+                {
+                    label: 'DEX Quote Preview',
+                    value: summary.dexQuotePreviewStatus || (dexQuoteCount ? `${dexQuoteCount} lanes` : 'planned'),
+                    note: 'Route/quote preview only. No swaps or wallet signing.',
                     tone: 'status-info'
                 },
                 {
@@ -796,6 +805,12 @@
                     value: wallet.currentStatus || summary.walletMetadataStatus || 'draft',
                     note: wallet.lastCheckResult || 'Public wallet metadata only. No seed phrases.',
                     tone: apiSummaryTone(wallet.currentStatus || summary.walletMetadataStatus)
+                },
+                {
+                    label: 'Live Trading Readiness',
+                    value: readiness.status || 'live execution locked',
+                    note: readiness.nextRecommendedAction || 'Build read-only spine first; owner approval required before live execution.',
+                    tone: 'status-info'
                 }
             ];
 
