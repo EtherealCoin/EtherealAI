@@ -8792,6 +8792,57 @@ body.operator-advanced-mode .community-art-grid span {
     color: var(--theme-secondary-text);
 }
 
+.token-intelligence-card-grid,
+.token-social-kit-grid,
+.locked-action-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.token-intelligence-card-grid article,
+.token-social-kit-grid label {
+    background:
+        linear-gradient(135deg, color-mix(in srgb, var(--theme-purple) 9%, transparent), transparent 52%),
+        var(--theme-card-background-muted);
+    border: 1px solid var(--theme-border);
+    color: var(--theme-primary-text);
+    display: grid;
+    gap: 8px;
+    padding: 14px;
+}
+
+.token-intelligence-card-grid span {
+    color: var(--theme-cyan);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.token-intelligence-card-grid strong,
+.token-social-kit-grid label {
+    color: var(--theme-primary-text);
+}
+
+.token-intelligence-card-grid small,
+.token-social-kit-grid textarea {
+    color: var(--theme-secondary-text);
+}
+
+.token-intelligence-editor {
+    border-color: color-mix(in srgb, var(--theme-cyan) 42%, var(--theme-border));
+}
+
+.locked-action-grid {
+    margin-top: 14px;
+}
+
+.locked-action-grid button[disabled] {
+    cursor: not-allowed;
+    opacity: 0.82;
+}
+
 .token-launch-operator-grid,
 .token-launch-detail-grid {
     display: grid;
@@ -9007,6 +9058,9 @@ body.operator-simple-mode .api-connection-shell .advanced-operator-tools:not([op
     .launch-pipeline-summary-row,
     .launch-pipeline-status-grid,
     .launch-package-review-grid,
+    .token-intelligence-card-grid,
+    .token-social-kit-grid,
+    .locked-action-grid,
     .token-launch-draft-status,
     .logo-studio-choice-grid,
     .logo-studio-lock-grid,

@@ -1673,6 +1673,62 @@ function safeJsonParse(value, fallback = {}) {
   }
 }
 
+function normalizeTextRecord(value = {}, fallback = {}, keys = [], maxLength = 3200) {
+  const raw = value && typeof value === 'object'
+    ? value
+    : safeJsonParse(value, {});
+  const existing = fallback && typeof fallback === 'object'
+    ? fallback
+    : safeJsonParse(fallback, {});
+
+  return keys.reduce((record, key) => {
+    record[key] = cleanProjectText(raw[key] ?? existing[key] ?? '', '', maxLength);
+    return record;
+  }, {});
+}
+
+function normalizeRoadmapPhaseList(value = [], fallback = []) {
+  const raw = Array.isArray(value)
+    ? value
+    : safeJsonParse(value, []);
+  const existing = Array.isArray(fallback)
+    ? fallback
+    : safeJsonParse(fallback, []);
+  const source = raw.length ? raw : existing;
+
+  return source.slice(0, 12).map((phase, index) => ({
+    phaseName: cleanProjectText(phase.phaseName ?? phase.name ?? `Phase ${index + 1}`, `Phase ${index + 1}`, 160),
+    goal: cleanProjectText(phase.goal, '', 1200),
+    deliverables: cleanProjectText(phase.deliverables, '', 1600),
+    ownerDecisionsRequired: cleanProjectText(phase.ownerDecisionsRequired, '', 1200),
+    dependencies: cleanProjectText(phase.dependencies, '', 1200),
+    lockedExternalActions: cleanProjectText(phase.lockedExternalActions, 'Deployment, wallet signing, minting, liquidity, public posting, listings, and paid services stay locked.', 1400),
+    status: cleanProjectText(phase.status, 'draft', 80),
+    ownerNotes: cleanProjectText(phase.ownerNotes, '', 1200)
+  }));
+}
+
+function normalizePatternList(value = [], fallback = []) {
+  const raw = Array.isArray(value)
+    ? value
+    : safeJsonParse(value, []);
+  const existing = Array.isArray(fallback)
+    ? fallback
+    : safeJsonParse(fallback, []);
+  const source = raw.length ? raw : existing;
+
+  return source.slice(0, 12).map(pattern => ({
+    label: cleanProjectText(pattern.label, 'Website pattern', 120),
+    bestSuitedFor: cleanProjectText(pattern.bestSuitedFor, '', 500),
+    commonSectionOrder: cleanProjectText(pattern.commonSectionOrder, '', 900),
+    visualStyle: cleanProjectText(pattern.visualStyle, '', 500),
+    ctaStyle: cleanProjectText(pattern.ctaStyle, '', 500),
+    avoid: cleanProjectText(pattern.avoid, '', 500),
+    recommendedUse: cleanProjectText(pattern.recommendedUse, '', 900),
+    confidenceSource: cleanProjectText(pattern.confidenceSource, 'local curated pattern', 160)
+  }));
+}
+
 function rejectSecretLikeTokenProjectInput(payload = {}) {
   const text = JSON.stringify(payload);
 
@@ -1732,9 +1788,22 @@ function normalizeTokenOperatorDraft(value = {}, existing = {}) {
       liquidityAllocation: cleanProjectText(pipeline.liquidityAllocation, '', 80),
       teamAllocation: cleanProjectText(pipeline.teamAllocation, '', 120),
       communityAllocation: cleanProjectText(pipeline.communityAllocation, '', 120),
+      marketSupplyNotes: cleanProjectText(pipeline.marketSupplyNotes, '', 900),
+      multiChainPlan: cleanProjectText(pipeline.multiChainPlan, '', 1600),
+      utilitySummary: cleanProjectText(pipeline.utilitySummary, '', 900),
+      brandPersonality: cleanProjectText(pipeline.brandPersonality, '', 900),
       releasePlan: cleanProjectText(pipeline.releasePlan, '', 1800),
       detailedUseCase: cleanProjectText(pipeline.detailedUseCase, '', 2200),
-      dappModules: cleanProjectText(pipeline.dappModules, '', 2200)
+      dappModules: cleanProjectText(pipeline.dappModules, '', 2200),
+      launchTimeline: cleanProjectText(pipeline.launchTimeline, '', 900),
+      dappTimeline: cleanProjectText(pipeline.dappTimeline, '', 900),
+      communityTimeline: cleanProjectText(pipeline.communityTimeline, '', 900),
+      listingAmbition: cleanProjectText(pipeline.listingAmbition, '', 900),
+      utilityRollout: cleanProjectText(pipeline.utilityRollout, '', 900),
+      multichainTimeline: cleanProjectText(pipeline.multichainTimeline, '', 900),
+      marketingRollout: cleanProjectText(pipeline.marketingRollout, '', 900),
+      treasuryLiquidityPlan: cleanProjectText(pipeline.treasuryLiquidityPlan, '', 900),
+      ownerRoadmapNotes: cleanProjectText(pipeline.ownerRoadmapNotes, '', 1200)
     },
     logo: {
       style: cleanProjectText(logo.style, '', 240),
@@ -1763,7 +1832,85 @@ function normalizeTokenOperatorDraft(value = {}, existing = {}) {
       howToBuy: cleanProjectText(website.howToBuy, '', 2200),
       communityLinks: cleanProjectText(website.communityLinks, '', 1600),
       disclaimer: cleanProjectText(website.disclaimer, '', 2200),
+      marketSource: cleanProjectText(website.marketSource, 'local curated token website patterns', 180),
+      similarCategory: cleanProjectText(website.similarCategory, 'AI / automation token', 160),
+      structureStyle: cleanProjectText(website.structureStyle, 'premium utility launch site', 160),
+      tone: cleanProjectText(website.tone, 'premium protocol', 160),
+      primaryColor: cleanProjectText(website.primaryColor, '#00f5ff', 32),
+      secondaryColor: cleanProjectText(website.secondaryColor, '#ff4be1', 32),
+      accentColor: cleanProjectText(website.accentColor, '#9b5cff', 32),
+      useFourthColor: Boolean(website.useFourthColor),
+      fourthColor: cleanProjectText(website.fourthColor, '#31f081', 32),
+      useFifthColor: Boolean(website.useFifthColor),
+      fifthColor: cleanProjectText(website.fifthColor, '#f7b733', 32),
+      colorSystemNotes: cleanProjectText(website.colorSystemNotes, '', 1600),
+      marketInspiration: cleanProjectText(website.marketInspiration, '', 3000),
+      whitepaperQuality: cleanProjectText(website.whitepaperQuality, '', 1600),
+      roadmapInputs: cleanProjectText(website.roadmapInputs, '', 2000),
+      ecosystemRole: cleanProjectText(website.ecosystemRole, '', 1800),
       editInstructions: cleanProjectText(website.editInstructions, '', 2000),
+      generatedWhitepaperSections: normalizeTextRecord(
+        website.generatedWhitepaperSections,
+        fallback.websiteWhitepaperRoadmap?.generatedWhitepaperSections,
+        [
+          'executiveSummary',
+          'tokenOverview',
+          'marketPositioning',
+          'useCase',
+          'tokenUtility',
+          'tokenomics',
+          'supplyMechanics',
+          'technicalArchitecture',
+          'ecosystemProductSystem',
+          'roadmap',
+          'securityRisksLimitations',
+          'disclaimer'
+        ],
+        5000
+      ),
+      generatedWebsiteSections: normalizeTextRecord(
+        website.generatedWebsiteSections,
+        fallback.websiteWhitepaperRoadmap?.generatedWebsiteSections,
+        [
+          'hero',
+          'tokenUseCase',
+          'whyThisTokenExists',
+          'tokenomics',
+          'utility',
+          'ecosystemDappPreview',
+          'roadmap',
+          'whitepaperSummary',
+          'howToBuy',
+          'faq',
+          'socialCommunityLinks',
+          'riskDisclaimer'
+        ],
+        3600
+      ),
+      generatedRoadmapPhases: normalizeRoadmapPhaseList(
+        website.generatedRoadmapPhases,
+        fallback.websiteWhitepaperRoadmap?.generatedRoadmapPhases
+      ),
+      inspirationPatterns: normalizePatternList(
+        website.inspirationPatterns,
+        fallback.websiteWhitepaperRoadmap?.inspirationPatterns
+      ),
+      socialLaunchKit: normalizeTextRecord(
+        website.socialLaunchKit,
+        fallback.websiteWhitepaperRoadmap?.socialLaunchKit,
+        [
+          'tokenBio',
+          'xBio',
+          'communityDescription',
+          'firstAnnouncement',
+          'utilityExplainer',
+          'memeCommunityPost',
+          'roadmapAnnouncement',
+          'websiteLaunchCopy',
+          'whitepaperLaunchCopy'
+        ],
+        2600
+      ),
       status: cleanProjectText(website.status, 'editable local draft', 80)
     },
     completion: {
@@ -1827,12 +1974,19 @@ function buildTokenEcosystemProjectSpec(project = {}) {
     project.operatorDraft?.pipeline?.ticker ? `Ticker: ${project.operatorDraft.pipeline.ticker}` : '',
     project.operatorDraft?.pipeline?.category ? `Token category: ${project.operatorDraft.pipeline.category}` : '',
     project.operatorDraft?.pipeline?.totalSupply ? `Total supply: ${project.operatorDraft.pipeline.totalSupply}` : '',
+    project.operatorDraft?.pipeline?.initialSupply ? `Initial minted supply: ${project.operatorDraft.pipeline.initialSupply}` : '',
+    project.operatorDraft?.pipeline?.marketSupplyNotes ? `Market/circulating supply notes: ${project.operatorDraft.pipeline.marketSupplyNotes}` : '',
     project.operatorDraft?.pipeline?.supplyModel ? `Supply model: ${project.operatorDraft.pipeline.supplyModel}` : '',
+    project.operatorDraft?.pipeline?.utilitySummary ? `Utility summary: ${project.operatorDraft.pipeline.utilitySummary}` : '',
+    project.operatorDraft?.pipeline?.multiChainPlan ? `Multi-chain plan: ${project.operatorDraft.pipeline.multiChainPlan}` : '',
     project.operatorDraft?.pipeline?.dappMode ? `Dapp plan: ${project.operatorDraft.pipeline.dappMode}` : '',
+    project.operatorDraft?.pipeline?.ownerRoadmapNotes ? `Owner roadmap notes: ${project.operatorDraft.pipeline.ownerRoadmapNotes}` : '',
     project.operatorDraft?.logo?.direction ? `Logo direction: ${project.operatorDraft.logo.direction}` : '',
     project.operatorDraft?.websiteWhitepaperRoadmap?.hero ? `Website hero: ${project.operatorDraft.websiteWhitepaperRoadmap.hero}` : '',
     project.operatorDraft?.websiteWhitepaperRoadmap?.roadmap ? `Roadmap draft: ${project.operatorDraft.websiteWhitepaperRoadmap.roadmap}` : '',
     project.operatorDraft?.websiteWhitepaperRoadmap?.whitepaperNotes ? `Whitepaper notes: ${project.operatorDraft.websiteWhitepaperRoadmap.whitepaperNotes}` : '',
+    project.operatorDraft?.websiteWhitepaperRoadmap?.marketInspiration ? `Website inspiration: ${project.operatorDraft.websiteWhitepaperRoadmap.marketInspiration}` : '',
+    Object.values(project.operatorDraft?.websiteWhitepaperRoadmap?.socialLaunchKit || {}).some(hasDraftText) ? 'Social launch kit: local draft package generated; public posting disabled.' : '',
     project.nftUtilityNotes ? `NFT utility notes: ${project.nftUtilityNotes}` : '',
     project.ecosystemNotes ? `Ecosystem notes: ${project.ecosystemNotes}` : ''
   ].filter(Boolean).join('\n');
@@ -1952,6 +2106,15 @@ function buildWebsiteDraftCompletion(website = {}) {
     || hasDraftText(website.howToBuy)
     || hasDraftText(website.communityLinks)
     || hasDraftText(website.disclaimer)
+    || hasDraftText(website.marketInspiration)
+    || hasDraftText(website.whitepaperQuality)
+    || hasDraftText(website.roadmapInputs)
+    || hasDraftText(website.ecosystemRole)
+    || Object.values(website.generatedWhitepaperSections || {}).some(hasDraftText)
+    || Object.values(website.generatedWebsiteSections || {}).some(hasDraftText)
+    || (website.generatedRoadmapPhases || []).length > 0
+    || (website.inspirationPatterns || []).length > 0
+    || Object.values(website.socialLaunchKit || {}).some(hasDraftText)
   );
 }
 
@@ -2222,6 +2385,7 @@ function buildTokenLaunchPackageReview(project = {}, { apiReadiness = {}, artifa
     tokenomics: {
       totalSupply: pipeline.totalSupply || '',
       initialSupply: pipeline.initialSupply || '',
+      marketSupplyNotes: pipeline.marketSupplyNotes || '',
       supplyModel: pipeline.supplyModel || '',
       adminModel: pipeline.adminModel || '',
       burnModel: pipeline.burnModel || '',
@@ -2232,7 +2396,8 @@ function buildTokenLaunchPackageReview(project = {}, { apiReadiness = {}, artifa
       liquidityAllocation: pipeline.liquidityAllocation || '',
       teamAllocation: pipeline.teamAllocation || '',
       communityAllocation: pipeline.communityAllocation || '',
-      releasePlan: pipeline.releasePlan || ''
+      releasePlan: pipeline.releasePlan || '',
+      multiChainPlan: pipeline.multiChainPlan || ''
     },
     useCase: {
       plainEnglish: pipeline.detailedUseCase || project.ecosystemNotes || project.ecosystem_notes || '',
@@ -2268,17 +2433,44 @@ function buildTokenLaunchPackageReview(project = {}, { apiReadiness = {}, artifa
       hero: website.hero || '',
       useCase: website.useCase || '',
       tokenomics: website.tokenomics || '',
+      visualDirection: {
+        tone: website.structureStyle || '',
+        marketSource: website.marketSource || '',
+        palette: [
+          website.primaryColor,
+          website.secondaryColor,
+          website.accentColor,
+          website.useFourthColor ? website.fourthColor : '',
+          website.useFifthColor ? website.fifthColor : ''
+        ].filter(Boolean)
+      },
+      generatedSections: website.generatedWebsiteSections || {},
       faqStatus: hasDraftText(website.faq) ? 'locally generated' : 'draft',
       howToBuyStatus: hasDraftText(website.howToBuy) ? 'locally generated' : 'draft',
       disclaimerStatus: hasDraftText(website.disclaimer) ? 'locally generated' : 'draft'
     },
     whitepaperDraft: {
-      status: hasDraftText(website.whitepaperNotes) ? 'locally generated' : 'draft',
-      notes: website.whitepaperNotes || ''
+      status: hasDraftText(website.whitepaperNotes) || Object.values(website.generatedWhitepaperSections || {}).some(hasDraftText) ? 'locally generated' : 'draft',
+      notes: website.whitepaperNotes || '',
+      sections: website.generatedWhitepaperSections || {}
     },
     roadmapDraft: {
-      status: hasDraftText(website.roadmap) ? 'locally generated' : 'draft',
-      milestones: website.roadmap || ''
+      status: hasDraftText(website.roadmap) || (website.generatedRoadmapPhases || []).length ? 'locally generated' : 'draft',
+      milestones: website.roadmap || '',
+      phases: website.generatedRoadmapPhases || []
+    },
+    topTokenWebsiteInspiration: {
+      status: (website.inspirationPatterns || []).length ? 'local pattern brief generated' : 'planned/read-only',
+      source: website.marketSource || 'local curated token website patterns',
+      brief: website.marketInspiration || '',
+      patterns: website.inspirationPatterns || [],
+      liveTop200AnalysisPerformed: false,
+      note: 'CoinMarketCap Top 200 analysis requires an approved read-only API key or approved local dataset. No scraping, copying, listing submission, or public mutation is performed here.'
+    },
+    socialLaunchKit: {
+      status: Object.values(website.socialLaunchKit || {}).some(hasDraftText) ? 'local drafts generated' : 'draft',
+      drafts: website.socialLaunchKit || {},
+      publicPostingEnabled: false
     },
     localPreview: {
       status: buildWebsiteDraftCompletion(website) ? 'locally generated' : 'draft',
@@ -2294,6 +2486,9 @@ function buildTokenLaunchPackageReview(project = {}, { apiReadiness = {}, artifa
       { label: 'Edit Token Details', target: 'token-launch-operator-pipeline' },
       { label: 'Edit Logo', target: 'logo-blueprint' },
       { label: 'Edit Website', target: 'website-whitepaper-roadmap-builder' },
+      { label: 'Edit Whitepaper', target: 'token-whitepaper-builder-panel' },
+      { label: 'Edit Roadmap', target: 'token-roadmap-builder-panel' },
+      { label: 'Edit Social Launch Kit', target: 'token-social-launch-bridge' },
       { label: 'Preview Local Site', target: 'token-site-local-preview' },
       { label: 'Export Local Package', action: 'website-package', lockedExternal: false },
       { label: 'Advanced Diagnostics', target: 'advanced-token-launch-diagnostics' }

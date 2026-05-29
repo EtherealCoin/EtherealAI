@@ -768,6 +768,20 @@
                             <option value="community movement site">Community movement site</option>
                         </select>
                     </label>
+                    <label for="token-site-tone">
+                        Website tone
+                        <select id="token-site-tone">
+                            <option value="premium protocol">Premium protocol</option>
+                            <option value="meme/community">Meme/community</option>
+                            <option value="AI/utility">AI/utility</option>
+                            <option value="DeFi">DeFi</option>
+                            <option value="Infrastructure">Infrastructure</option>
+                            <option value="Gaming/community">Gaming/community</option>
+                            <option value="Security/trust">Security/trust</option>
+                            <option value="Minimal launch page">Minimal launch page</option>
+                            <option value="High-conversion launch page">High-conversion launch page</option>
+                        </select>
+                    </label>
                 </div>
                 <div class="token-color-grid" aria-label="Website color palette controls">
                     <label for="token-site-primary-color">
@@ -809,9 +823,13 @@
                 </label>
                 <div class="button-row">
                     <button id="build-market-inspiration-brief" type="button" class="action-safe">Build Local Website Inspiration Brief</button>
+                    <button id="refresh-inspiration-patterns" type="button" class="action-review">Show Pattern Categories</button>
                     <a class="cta-button action-review" href="/api-connection-center">Review Read-Only Data Sources</a>
                 </div>
                 <div id="token-market-inspiration-output" class="phase3-results">No live CoinMarketCap Top 200 analysis has been run. This lane is local/read-only planning until an approved data source is connected.</div>
+                <div id="token-site-inspiration-patterns" class="token-intelligence-card-grid">
+                    Local pattern cards will appear here. No live CoinMarketCap Top 200 analysis has been performed.
+                </div>
             </section>
             <div class="token-launch-wide-controls">
                 <label for="token-site-tokenomics">
@@ -819,6 +837,47 @@
                     <textarea id="token-site-tokenomics" rows="4" placeholder="Supply, allocations, fee model, release plan, airdrop, staking/rewards, treasury, liquidity, and owner-controlled safety notes."></textarea>
                 </label>
             </div>
+            <section id="token-website-section-editor-panel" class="token-workbench-subsection token-builder-surface token-intelligence-editor">
+                <div class="token-workbench-section-heading">
+                    <span>Website Intelligence</span>
+                    <h3>Generate section-by-section website copy from the token project.</h3>
+                    <p>These are local copy drafts only. They do not publish a website, mutate DNS, call Cloudflare, or push to GitHub.</p>
+                </div>
+                <div class="token-launch-detail-grid">
+                    <label for="token-site-section-select">
+                        Website section
+                        <select id="token-site-section-select">
+                            <option value="hero">Hero</option>
+                            <option value="tokenUseCase">Token use case</option>
+                            <option value="whyThisTokenExists">Why this token exists</option>
+                            <option value="tokenomics">Tokenomics</option>
+                            <option value="utility">Utility</option>
+                            <option value="ecosystemDappPreview">Ecosystem / dapp preview</option>
+                            <option value="roadmap">Roadmap</option>
+                            <option value="whitepaperSummary">Whitepaper summary</option>
+                            <option value="howToBuy">How to buy / participate</option>
+                            <option value="faq">FAQ</option>
+                            <option value="socialCommunityLinks">Social / community links</option>
+                            <option value="riskDisclaimer">Risk / disclaimer</option>
+                        </select>
+                    </label>
+                    <label for="token-site-section-instructions">
+                        Owner instruction
+                        <textarea id="token-site-section-instructions" rows="3" placeholder="Example: make this section more premium, more meme-focused, clearer for holders, or more technical."></textarea>
+                    </label>
+                    <label for="token-site-section-draft">
+                        Current section draft
+                        <textarea id="token-site-section-draft" rows="3" placeholder="Choose a section, generate the website intelligence draft, then edit here."></textarea>
+                    </label>
+                </div>
+                <div class="button-row">
+                    <button id="generate-website-intelligence-draft" type="button" class="action-safe">Generate Website Intelligence Draft</button>
+                    <button id="regenerate-website-section" type="button" class="action-review">Regenerate Selected Website Section</button>
+                    <button id="save-website-section-edit" type="button" class="action-continue">Save Website Section Edit</button>
+                </div>
+                <div id="token-website-section-status" class="inline-status">Website section intelligence is local draft copy only.</div>
+                <div id="token-website-section-output" class="token-intelligence-card-grid">No website sections generated yet.</div>
+            </section>
             <section id="token-roadmap-builder-panel" class="token-workbench-subsection token-builder-surface">
                 <div class="token-workbench-section-heading">
                     <span>05 · Roadmap Builder</span>
@@ -836,6 +895,69 @@
                     <textarea id="token-site-roadmap-inputs" rows="4" placeholder="Add realistic milestones, dependencies, community growth targets, dapp phases, audits, exchange/listing evidence steps, and what must happen before launch."></textarea>
                 </label>
             </div>
+            <section id="token-roadmap-phase-editor-panel" class="token-workbench-subsection token-builder-surface token-intelligence-editor">
+                <div class="token-workbench-section-heading">
+                    <span>Roadmap Intelligence</span>
+                    <h3>Edit roadmap phases with owner decisions, dependencies, and locked actions visible.</h3>
+                    <p>Roadmap generation stays local. Public announcements, listing submissions, deployment, and social posting remain locked.</p>
+                </div>
+                <div class="token-launch-detail-grid">
+                    <label for="token-roadmap-phase-select">
+                        Roadmap phase
+                        <select id="token-roadmap-phase-select"></select>
+                    </label>
+                    <label for="token-roadmap-phase-name">
+                        Phase name
+                        <input id="token-roadmap-phase-name" type="text" placeholder="Phase 1 - Local launch package">
+                    </label>
+                    <label for="token-roadmap-phase-status">
+                        Status
+                        <select id="token-roadmap-phase-status">
+                            <option value="draft">Draft</option>
+                            <option value="ready for review">Ready for review</option>
+                            <option value="blocked">Blocked</option>
+                            <option value="locked external action">Locked external action</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="token-launch-wide-controls">
+                    <label for="token-roadmap-phase-goal">
+                        Goal
+                        <textarea id="token-roadmap-phase-goal" rows="3" placeholder="What this phase proves or accomplishes."></textarea>
+                    </label>
+                    <label for="token-roadmap-phase-deliverables">
+                        Deliverables
+                        <textarea id="token-roadmap-phase-deliverables" rows="3" placeholder="Concrete outputs for this phase."></textarea>
+                    </label>
+                    <label for="token-roadmap-phase-owner-decisions">
+                        Owner decisions required
+                        <textarea id="token-roadmap-phase-owner-decisions" rows="3" placeholder="Decisions the owner must make before this phase can move forward."></textarea>
+                    </label>
+                </div>
+                <div class="token-launch-wide-controls">
+                    <label for="token-roadmap-phase-dependencies">
+                        Dependencies
+                        <textarea id="token-roadmap-phase-dependencies" rows="3" placeholder="Audit, code, website, liquidity, community, API, wallet, or legal dependencies."></textarea>
+                    </label>
+                    <label for="token-roadmap-phase-locked-actions">
+                        Locked external actions
+                        <textarea id="token-roadmap-phase-locked-actions" rows="3" placeholder="Deployment, signing, minting, liquidity, public posting, listings, DNS, GitHub, paid services."></textarea>
+                    </label>
+                    <label for="token-roadmap-phase-notes">
+                        Owner notes
+                        <textarea id="token-roadmap-phase-notes" rows="3" placeholder="Manual edits or assumptions."></textarea>
+                    </label>
+                </div>
+                <div class="button-row">
+                    <button id="regenerate-roadmap-phase" type="button" class="action-review">Regenerate Selected Phase</button>
+                    <button id="add-roadmap-phase" type="button" class="action-safe">Add Phase</button>
+                    <button id="move-roadmap-phase-up" type="button" class="action-review">Move Phase Up</button>
+                    <button id="move-roadmap-phase-down" type="button" class="action-review">Move Phase Down</button>
+                    <button id="remove-roadmap-phase" type="button" class="action-attention">Remove Phase</button>
+                    <button id="save-roadmap-phases" type="button" class="action-continue">Save Roadmap Phases</button>
+                </div>
+                <div id="token-roadmap-phase-output" class="token-intelligence-card-grid">No roadmap phases generated yet.</div>
+            </section>
             <section id="token-whitepaper-builder-panel" class="token-workbench-subsection token-builder-surface">
                 <div class="token-workbench-section-heading">
                     <span>04 · Whitepaper Builder</span>
@@ -857,6 +979,46 @@
                     <textarea id="token-site-ecosystem-role" rows="4" placeholder="Explain whether this token is standalone, part of an ecosystem, multi-chain, tied to a dapp, tied to NFTs, or connected to trading/treasury infrastructure."></textarea>
                 </label>
             </div>
+            <section id="token-whitepaper-section-editor-panel" class="token-workbench-subsection token-builder-surface token-intelligence-editor">
+                <div class="token-workbench-section-heading">
+                    <span>Whitepaper Intelligence</span>
+                    <h3>Edit the premium whitepaper by section instead of one giant raw text box.</h3>
+                    <p>Every section stays local/draft-only and includes no fake claims about listings, audits, partnerships, TVL, users, exchange support, or performance.</p>
+                </div>
+                <div class="token-launch-detail-grid">
+                    <label for="token-whitepaper-section-select">
+                        Whitepaper section
+                        <select id="token-whitepaper-section-select">
+                            <option value="executiveSummary">Executive Summary</option>
+                            <option value="tokenOverview">Token Overview</option>
+                            <option value="marketPositioning">Market / Community Positioning</option>
+                            <option value="useCase">Use Case</option>
+                            <option value="tokenUtility">Token Utility</option>
+                            <option value="tokenomics">Tokenomics</option>
+                            <option value="supplyMechanics">Supply Mechanics</option>
+                            <option value="technicalArchitecture">Technical Architecture</option>
+                            <option value="ecosystemProductSystem">Ecosystem / Product System</option>
+                            <option value="roadmap">Roadmap</option>
+                            <option value="securityRisksLimitations">Security, Risks, and Limitations</option>
+                            <option value="disclaimer">Disclaimer</option>
+                        </select>
+                    </label>
+                    <label for="token-whitepaper-section-instructions">
+                        Owner rewrite instruction
+                        <textarea id="token-whitepaper-section-instructions" rows="3" placeholder="Example: make this more founder-grade, add more tokenomics detail, or make it clearer for non-technical holders."></textarea>
+                    </label>
+                    <label for="token-whitepaper-section-draft">
+                        Current section draft
+                        <textarea id="token-whitepaper-section-draft" rows="3" placeholder="Generate the whitepaper, choose a section, then edit here."></textarea>
+                    </label>
+                </div>
+                <div class="button-row">
+                    <button id="regenerate-whitepaper-section" type="button" class="action-review">Regenerate Selected Whitepaper Section</button>
+                    <button id="save-whitepaper-section-edit" type="button" class="action-continue">Save Whitepaper Section Edit</button>
+                </div>
+                <div id="token-whitepaper-section-status" class="inline-status">Whitepaper sections are editable local drafts.</div>
+                <div id="token-whitepaper-section-output" class="token-intelligence-card-grid">No whitepaper sections generated yet.</div>
+            </section>
             <div class="token-launch-wide-controls">
                 <label for="token-site-dapp-preview">
                     Dapp preview
@@ -938,8 +1100,48 @@
                     </div>
                     <div class="button-row">
                         <a class="cta-button action-safe" href="/social-ops">Open Social Ops</a>
+                        <button id="generate-token-social-kit" type="button" class="action-safe">Generate Social Launch Kit Drafts</button>
                         <button id="token-copy-social-context" type="button" class="action-review">Copy Token Context To Social Plan</button>
                     </div>
+                    <div class="token-social-kit-grid">
+                        <label for="token-social-bio">
+                            Token bio
+                            <textarea id="token-social-bio" rows="3" placeholder="Local token bio draft."></textarea>
+                        </label>
+                        <label for="token-social-x-bio">
+                            X / Twitter bio
+                            <textarea id="token-social-x-bio" rows="3" placeholder="Short social profile bio."></textarea>
+                        </label>
+                        <label for="token-social-community">
+                            Telegram / Discord description
+                            <textarea id="token-social-community" rows="3" placeholder="Community description and rules tone."></textarea>
+                        </label>
+                        <label for="token-social-announcement">
+                            First announcement draft
+                            <textarea id="token-social-announcement" rows="3" placeholder="Draft announcement. No posting."></textarea>
+                        </label>
+                        <label for="token-social-utility-post">
+                            Utility explainer post
+                            <textarea id="token-social-utility-post" rows="3" placeholder="Explain utility without fake claims."></textarea>
+                        </label>
+                        <label for="token-social-meme-post">
+                            Meme / community post
+                            <textarea id="token-social-meme-post" rows="3" placeholder="Optional meme/community voice."></textarea>
+                        </label>
+                        <label for="token-social-roadmap-post">
+                            Roadmap announcement
+                            <textarea id="token-social-roadmap-post" rows="3" placeholder="Roadmap announcement based on draft phases."></textarea>
+                        </label>
+                        <label for="token-social-website-copy">
+                            Website launch copy
+                            <textarea id="token-social-website-copy" rows="3" placeholder="Website launch copy stays local."></textarea>
+                        </label>
+                        <label for="token-social-whitepaper-copy">
+                            Whitepaper launch copy
+                            <textarea id="token-social-whitepaper-copy" rows="3" placeholder="Whitepaper launch copy stays local."></textarea>
+                        </label>
+                    </div>
+                    <div id="token-social-kit-status" class="inline-status">Social Launch Kit is draft-only. No public posting or account automation is enabled.</div>
                 </section>
             </div>
         </section>
@@ -957,12 +1159,24 @@
                 <button id="launch-review-edit-website" type="button" class="action-review">Edit Website</button>
                 <button id="launch-review-edit-whitepaper" type="button" class="action-review">Edit Whitepaper</button>
                 <button id="launch-review-edit-roadmap" type="button" class="action-review">Edit Roadmap</button>
+                <button id="launch-review-edit-social-kit" type="button" class="action-review">Edit Social Launch Kit</button>
                 <button id="launch-review-preview-site" type="button" class="action-safe">Preview Local Site</button>
                 <button id="launch-review-export-package" type="button" class="action-attention">Export Local Package</button>
             </div>
             <div id="launch-package-review-status" class="inline-status">Save or load a token launch project, then open the package review.</div>
             <div id="launch-package-review-content" class="launch-package-review-grid">
                 No launch package loaded yet.
+            </div>
+            <div id="launch-package-locked-actions" class="locked-action-grid">
+                <button type="button" class="action-danger" disabled title="Future approval required">Deploy Contract · Locked</button>
+                <button type="button" class="action-danger" disabled title="Future approval required">Mint Token · Locked</button>
+                <button type="button" class="action-danger" disabled title="Future approval required">Connect Wallet For Signing · Locked</button>
+                <button type="button" class="action-danger" disabled title="Future approval required">Add Liquidity · Locked</button>
+                <button type="button" class="action-danger" disabled title="Future approval required">Submit To CoinMarketCap · Locked</button>
+                <button type="button" class="action-danger" disabled title="Future approval required">Submit To CoinGecko · Locked</button>
+                <button type="button" class="action-danger" disabled title="Future approval required">Submit To DexScreener · Locked</button>
+                <button type="button" class="action-danger" disabled title="Future approval required">Publish Website · Locked</button>
+                <button type="button" class="action-danger" disabled title="Future approval required">Post Socials · Locked</button>
             </div>
             <details id="advanced-token-launch-diagnostics" class="compact-details advanced-operator-tools">
                 <summary>Advanced Diagnostics</summary>
@@ -992,6 +1206,11 @@
         let selectedLogoChoiceId = null;
         let latestLaunchPipelineState = null;
         let latestLaunchPackageReview = null;
+        let latestWhitepaperSections = {};
+        let latestWebsiteSections = {};
+        let latestRoadmapPhases = [];
+        let latestInspirationPatterns = [];
+        let latestSocialLaunchKit = {};
         const TOKEN_DRAFT_FIELD_IDS = {
             category: 'token-launch-category',
             ticker: 'token-launch-ticker',
@@ -1041,6 +1260,7 @@
             marketSource: 'token-site-market-source',
             similarCategory: 'token-site-similar-category',
             structureStyle: 'token-site-structure-style',
+            tone: 'token-site-tone',
             primaryColor: 'token-site-primary-color',
             secondaryColor: 'token-site-secondary-color',
             accentColor: 'token-site-accent-color',
@@ -1054,6 +1274,17 @@
             roadmapInputs: 'token-site-roadmap-inputs',
             ecosystemRole: 'token-site-ecosystem-role',
             editInstructions: 'token-site-edit-instructions'
+        };
+        const SOCIAL_LAUNCH_FIELD_IDS = {
+            tokenBio: 'token-social-bio',
+            xBio: 'token-social-x-bio',
+            communityDescription: 'token-social-community',
+            firstAnnouncement: 'token-social-announcement',
+            utilityExplainer: 'token-social-utility-post',
+            memeCommunityPost: 'token-social-meme-post',
+            roadmapAnnouncement: 'token-social-roadmap-post',
+            websiteLaunchCopy: 'token-social-website-copy',
+            whitepaperLaunchCopy: 'token-social-whitepaper-copy'
         };
 
         function escapeHtml(value) {
@@ -1891,6 +2122,7 @@
                 marketSource: document.getElementById('token-site-market-source')?.value || 'local curated token website patterns',
                 similarCategory: document.getElementById('token-site-similar-category')?.value || 'AI / automation token',
                 structureStyle: document.getElementById('token-site-structure-style')?.value || 'premium utility launch site',
+                tone: document.getElementById('token-site-tone')?.value || 'premium protocol',
                 primaryColor: document.getElementById('token-site-primary-color')?.value || '#00f5ff',
                 secondaryColor: document.getElementById('token-site-secondary-color')?.value || '#ff4be1',
                 accentColor: document.getElementById('token-site-accent-color')?.value || '#9b5cff',
@@ -1904,8 +2136,27 @@
                 roadmapInputs: document.getElementById('token-site-roadmap-inputs')?.value.trim() || '',
                 ecosystemRole: document.getElementById('token-site-ecosystem-role')?.value.trim() || '',
                 editInstructions: document.getElementById('token-site-edit-instructions')?.value.trim() || '',
+                generatedWhitepaperSections: latestWhitepaperSections,
+                generatedWebsiteSections: latestWebsiteSections,
+                generatedRoadmapPhases: latestRoadmapPhases,
+                inspirationPatterns: latestInspirationPatterns,
+                socialLaunchKit: getSocialLaunchKitInputs(),
                 status: 'editable local draft'
             };
+        }
+
+        function getSocialLaunchKitInputs() {
+            return Object.entries(SOCIAL_LAUNCH_FIELD_IDS).reduce((kit, [key, id]) => {
+                kit[key] = document.getElementById(id)?.value.trim() || '';
+                return kit;
+            }, {});
+        }
+
+        function applySocialLaunchKitDraft(kit = {}) {
+            latestSocialLaunchKit = kit && typeof kit === 'object' ? kit : {};
+            Object.entries(SOCIAL_LAUNCH_FIELD_IDS).forEach(([key, id]) => {
+                setTokenDraftField(id, latestSocialLaunchKit[key], { allowEmpty: true });
+            });
         }
 
         function applyWebsiteWhitepaperDraft(project = {}) {
@@ -1914,11 +2165,20 @@
             Object.entries(WEBSITE_DRAFT_FIELD_IDS).forEach(([key, id]) => {
                 setTokenDraftField(id, draft[key], { allowEmpty: true });
             });
+            latestWhitepaperSections = draft.generatedWhitepaperSections || {};
+            latestWebsiteSections = draft.generatedWebsiteSections || {};
+            latestRoadmapPhases = Array.isArray(draft.generatedRoadmapPhases) ? draft.generatedRoadmapPhases : [];
+            latestInspirationPatterns = Array.isArray(draft.inspirationPatterns) ? draft.inspirationPatterns : [];
+            applySocialLaunchKitDraft(draft.socialLaunchKit || {});
+            renderWhitepaperSectionCards();
+            renderWebsiteSectionCards();
+            renderRoadmapPhaseCards();
+            renderInspirationPatternCards();
             renderTokenSiteLocalPreview();
         }
 
         function buildWebsiteWhitepaperCompletion(website = getWebsiteWhitepaperInputs()) {
-            return Boolean(website.hero || website.useCase || website.tokenomics || website.roadmap || website.whitepaperNotes || website.dappPreview || website.faq || website.howToBuy || website.communityLinks || website.disclaimer || website.marketInspiration || website.whitepaperQuality || website.roadmapInputs || website.ecosystemRole);
+            return Boolean(website.hero || website.useCase || website.tokenomics || website.roadmap || website.whitepaperNotes || website.dappPreview || website.faq || website.howToBuy || website.communityLinks || website.disclaimer || website.marketInspiration || website.whitepaperQuality || website.roadmapInputs || website.ecosystemRole || Object.values(latestWhitepaperSections).some(Boolean) || Object.values(latestWebsiteSections).some(Boolean) || latestRoadmapPhases.length || latestInspirationPatterns.length || Object.values(getSocialLaunchKitInputs()).some(Boolean));
         }
 
         function getWebsitePaletteSummary(website = getWebsiteWhitepaperInputs()) {
@@ -1945,7 +2205,7 @@
             const sourceNeedsApproval = /CoinMarketCap|CoinGecko|dataset/i.test(website.marketSource);
             const tokenName = token.name || 'the token';
             const category = website.similarCategory || token.category || 'token category';
-            const structure = website.structureStyle || 'premium utility launch site';
+            const structure = website.tone || website.structureStyle || 'premium utility launch site';
             const palette = getWebsitePaletteSummary(website);
             const topTokenBoundary = sourceNeedsApproval
                 ? 'Live Top 200 analysis is not connected yet. Use this as a local planning brief until an approved read-only API key or local dataset is added.'
@@ -1981,10 +2241,402 @@
             ].join('\n');
         }
 
+        function getWhitepaperSectionLabels() {
+            return {
+                executiveSummary: 'Executive Summary',
+                tokenOverview: 'Token Overview',
+                marketPositioning: 'Market / Community Positioning',
+                useCase: 'Use Case',
+                tokenUtility: 'Token Utility',
+                tokenomics: 'Tokenomics',
+                supplyMechanics: 'Supply Mechanics',
+                technicalArchitecture: 'Technical Architecture',
+                ecosystemProductSystem: 'Ecosystem / Product System',
+                roadmap: 'Roadmap',
+                securityRisksLimitations: 'Security, Risks, and Limitations',
+                disclaimer: 'Disclaimer'
+            };
+        }
+
+        function getWebsiteSectionLabels() {
+            return {
+                hero: 'Hero',
+                tokenUseCase: 'Token use case',
+                whyThisTokenExists: 'Why this token exists',
+                tokenomics: 'Tokenomics',
+                utility: 'Utility',
+                ecosystemDappPreview: 'Ecosystem / dapp preview',
+                roadmap: 'Roadmap',
+                whitepaperSummary: 'Whitepaper summary',
+                howToBuy: 'How to buy / participate',
+                faq: 'FAQ',
+                socialCommunityLinks: 'Social / community links',
+                riskDisclaimer: 'Risk / disclaimer'
+            };
+        }
+
+        function paragraph(value, fallback) {
+            return String(value || fallback || '').trim();
+        }
+
+        function buildPremiumWhitepaperSections(token = readTokenLaunchPipelineInput(), website = getWebsiteWhitepaperInputs()) {
+            const tokenName = token.name || 'Token Project';
+            const ticker = token.ticker || 'TICKER';
+            const chain = token.chain || 'selected chain';
+            const category = token.category || 'use-case token';
+            const utility = paragraph(token.utilitySummary || token.detailedUseCase || token.useCase, 'Utility is pending owner input.');
+            const roadmapText = latestRoadmapPhases.length
+                ? latestRoadmapPhases.map(phase => `${phase.phaseName}: ${phase.goal}`).join('\n')
+                : buildRoadmapDraftLines(token).join('\n');
+
+            return {
+                executiveSummary: `${tokenName} (${ticker}) is a ${category} planned for ${chain}. It is being developed as a local draft launch package that can explain the project, tokenomics, website, whitepaper, roadmap, dapp plan, and social launch narrative before any external action. Deployment, minting, wallet signing, liquidity, listing submissions, public posting, and paid services remain locked until a later owner-approved phase.`,
+                tokenOverview: `Token name: ${tokenName}. Ticker: ${ticker}. Category: ${category}. Primary chain: ${chain}. Multi-chain plan: ${paragraph(token.multiChainPlan || token.multichainTimeline, 'Not selected yet')}. Ecosystem role: ${paragraph(website.ecosystemRole || token.multiChainPlan, 'Standalone or ecosystem role pending owner input')}.`,
+                marketPositioning: `Target community: ${paragraph(token.community, 'Target community pending owner input')}. Meme/brand personality: ${paragraph(token.brandPersonality, 'No meme personality selected yet')}. Utility positioning: ${paragraph(token.utilitySummary, utility)}. This section should stay honest: no fake partnerships, audits, exchange support, TVL, users, or performance claims are included.`,
+                useCase: `Owner use case: ${utility}. Professional interpretation: ${tokenName} should make the use case understandable through token roles, dapp modules, user actions, utility boundaries, and a clear explanation of what is built, planned, and locked.`,
+                tokenUtility: `Users interact with ${ticker} through the planned utility layer, community layer, and dapp modules. Dapp plan: ${paragraph(token.dappMode, 'add dapp later')}. Module details: ${paragraph(token.dappModules, 'No dapp module detail entered yet')}. Demand drivers must be based on real product utility, community participation, access, rewards, governance, fee discounts, NFT utility, or other owner-approved mechanics, not guaranteed returns.`,
+                tokenomics: `Total supply: ${paragraph(token.totalSupply, 'pending')}. Initial minted supply: ${paragraph(token.initialSupply, 'pending')}. Circulating/market supply notes: ${paragraph(token.marketSupplyNotes, 'pending')}. Treasury allocation: ${paragraph(token.treasuryAllocation, 'pending')}. Liquidity allocation: ${paragraph(token.liquidityAllocation, 'pending')}. Team allocation: ${paragraph(token.teamAllocation, 'pending')}. Community/airdrop allocation: ${paragraph(token.communityAllocation, 'pending')}. Vesting/release schedule: ${paragraph(token.releasePlan, 'pending')}. Staking/rewards: ${paragraph(token.stakingRewards, 'not selected')}. Transfer fee/tax: ${paragraph(token.transferFee, 'not selected')}.`,
+                supplyMechanics: `Supply model: ${paragraph(token.supplyModel, 'pending')}. Mining/non-mining and future release model: ${paragraph(token.releasePlan, 'pending')}. Burn function: ${paragraph(token.burnModel, 'pending')}. Admin/owner functions: ${paragraph(token.adminModel, 'pending')}. Pausable setting: ${paragraph(token.pauseModel, 'pending')}. These mechanics must be tested locally and reviewed before deployment.`,
+                technicalArchitecture: `Chain-specific plan: ${chain}. Contract feature plan comes from the selected token options, tokenomics, utility summary, dapp modules, NFT utility notes, and safety controls. Wallet requirements: metadata only in this phase; no seed phrases, private keys, or signing. API/data requirements: ${paragraph(token.dappModules, 'pending by module')}. Testing requirements: local compile/test, tokenomics review, security review, and owner approval before any external transaction.`,
+                ecosystemProductSystem: `${tokenName} can be positioned as ${paragraph(website.ecosystemRole || token.multiChainPlan, 'a local token ecosystem draft')} with website, whitepaper, roadmap, dapp preview, social launch kit, listing evidence preparation, and future gated deployment paths. Website tone: ${website.tone || website.structureStyle}. Palette: ${getWebsitePaletteSummary(website)}.`,
+                roadmap: roadmapText,
+                securityRisksLimitations: 'Risks include smart contract defects, liquidity fragmentation, market volatility, regulatory uncertainty, bridge risk, wallet/signing risk, social account risk, listing uncertainty, dependency risk, and execution risk. This draft must not imply profit guarantees or completed external milestones.',
+                disclaimer: 'Draft / Local Only. This document is not investment advice. It does not confirm a deployed token, public website, exchange listing, audit, partnership, liquidity pool, TVL, user count, public posting, or wallet transaction unless those facts are later verified and explicitly marked as complete.'
+            };
+        }
+
+        function composeWhitepaperText(sections = latestWhitepaperSections) {
+            const labels = getWhitepaperSectionLabels();
+            return Object.entries(labels).map(([key, label], index) => [
+                `${index + 1}. ${label}`,
+                sections[key] || 'Draft pending owner input.'
+            ].join('\n')).join('\n\n');
+        }
+
+        function renderWhitepaperSectionCards() {
+            const output = document.getElementById('token-whitepaper-section-output');
+            const select = document.getElementById('token-whitepaper-section-select');
+            const draft = document.getElementById('token-whitepaper-section-draft');
+            const labels = getWhitepaperSectionLabels();
+
+            if (select && draft) {
+                draft.value = latestWhitepaperSections[select.value] || '';
+            }
+
+            if (!output) {
+                return;
+            }
+
+            output.innerHTML = Object.entries(labels).map(([key, label]) => `
+                <article>
+                    <span>${escapeHtml(label)}</span>
+                    <strong>${latestWhitepaperSections[key] ? 'Draft ready' : 'Draft missing'}</strong>
+                    <small>${escapeHtml((latestWhitepaperSections[key] || 'Generate the premium whitepaper draft to fill this section.').slice(0, 220))}</small>
+                </article>
+            `).join('');
+        }
+
+        function regenerateWhitepaperSection() {
+            const select = document.getElementById('token-whitepaper-section-select');
+            const instructions = document.getElementById('token-whitepaper-section-instructions')?.value.trim() || '';
+            const generated = buildPremiumWhitepaperSections();
+            const key = select?.value || 'executiveSummary';
+            latestWhitepaperSections[key] = [
+                generated[key],
+                instructions ? `Owner rewrite instruction honored: ${instructions}` : ''
+            ].filter(Boolean).join('\n\n');
+            document.getElementById('token-site-whitepaper').value = composeWhitepaperText(latestWhitepaperSections);
+            document.getElementById('token-whitepaper-section-status').textContent = 'Selected whitepaper section regenerated locally. No public publishing happened.';
+            renderWhitepaperSectionCards();
+            renderTokenSiteLocalPreview();
+        }
+
+        function saveWhitepaperSectionEdit() {
+            const key = document.getElementById('token-whitepaper-section-select')?.value || 'executiveSummary';
+            latestWhitepaperSections[key] = document.getElementById('token-whitepaper-section-draft')?.value.trim() || '';
+            document.getElementById('token-site-whitepaper').value = composeWhitepaperText(latestWhitepaperSections);
+            document.getElementById('token-whitepaper-section-status').textContent = 'Whitepaper section edit saved locally in the current draft state. Save the token project to persist it.';
+            renderWhitepaperSectionCards();
+            renderTokenSiteLocalPreview();
+        }
+
+        function buildRoadmapPhases(token = readTokenLaunchPipelineInput()) {
+            const category = String(token.category || '').toLowerCase();
+            const meme = category.includes('meme');
+            const utility = category.includes('utility') || category.includes('use-case');
+            const hybrid = meme && utility;
+            const base = hybrid
+                ? [
+                    ['Phase 1 - Identity And Community Thesis', token.launchTimeline || 'Define meme identity, utility promise, website direction, logo, tokenomics, and local launch package.'],
+                    ['Phase 2 - Utility Architecture', token.utilityRollout || token.dappTimeline || 'Plan dapp modules, user roles, contract features, frontend requirements, and safety review.'],
+                    ['Phase 3 - Community Launch Preparation', token.communityTimeline || token.marketingRollout || 'Draft social channels, announcement copy, community rules, roadmap content, and whitepaper release copy.'],
+                    ['Phase 4 - Owner-Approved Deployment Readiness', token.treasuryLiquidityPlan || 'Review wallet/funding, audit needs, liquidity plan, treasury controls, and deployment blockers.'],
+                    ['Phase 5 - Listing Evidence Path', token.listingAmbition || 'Prepare DexScreener, CoinGecko, CoinMarketCap, and official-link evidence only after real public data exists.'],
+                    ['Phase 6 - Ecosystem Expansion', token.multiChainPlan || token.multichainTimeline || 'Evaluate multi-chain expansion after security, liquidity, community, and owner approval gates are satisfied.']
+                ]
+                : meme
+                    ? [
+                        ['Phase 1 - Brand Formation', token.launchTimeline || 'Lock meme identity, logo direction, community voice, website copy, and draft tokenomics.'],
+                        ['Phase 2 - Community Launch Prep', token.communityTimeline || token.marketingRollout || 'Prepare X, Discord, Telegram, Medium, YouTube, meme assets, and moderation rules locally.'],
+                        ['Phase 3 - Initial Token Readiness', token.treasuryLiquidityPlan || 'Review contract plan, supply, burn/tax settings, launch float, and liquidity assumptions.'],
+                        ['Phase 4 - Campaigns And Evidence', token.listingAmbition || 'Build transparent progress posts, official links, launch package review, and listing evidence after public data exists.'],
+                        ['Phase 5 - Utility Expansion', token.utilityRollout || token.dappTimeline || 'Add dapp or holder utility only after the community thesis and safety checks are clear.']
+                    ]
+                    : [
+                        ['Phase 1 - Concept Validation', token.launchTimeline || 'Complete token plan, use case, tokenomics, logo, website, whitepaper, roadmap, and local package review.'],
+                        ['Phase 2 - Dapp MVP Planning', token.dappTimeline || token.utilityRollout || 'Define dapp modules, contract requirements, frontend requirements, API/data needs, and tests.'],
+                        ['Phase 3 - Local Testing And Security Review', token.treasuryLiquidityPlan || 'Prepare local compile/test, economic review, wallet/funding review, and security tasks.'],
+                        ['Phase 4 - Community Onboarding', token.communityTimeline || token.marketingRollout || 'Prepare community content, docs, FAQ, support plan, and owner-approved public messaging.'],
+                        ['Phase 5 - Launch Preparation', token.listingAmbition || 'Prepare deployment readiness, liquidity plan, listing evidence, explorer evidence, official links, and owner approvals.'],
+                        ['Phase 6 - Ecosystem Integrations', token.multiChainPlan || token.multichainTimeline || 'Evaluate multi-chain, dapp, partner, and integration expansion after launch proof exists.']
+                    ];
+
+            return base.map(([phaseName, goal], index) => ({
+                phaseName,
+                goal,
+                deliverables: [
+                    index === 0 ? 'Token identity, tokenomics, logo direction, website draft, whitepaper draft, roadmap draft, launch package review.' : '',
+                    index === 1 ? 'Dapp/module requirements, owner decisions, user action model, smart contract requirements, frontend requirements.' : '',
+                    index === 2 ? 'Community/social drafts, review checklist, security notes, local proof package.' : '',
+                    index >= 3 ? 'Owner review, blocker list, locked action checklist, and verified prerequisites before any public action.' : ''
+                ].filter(Boolean).join(' '),
+                ownerDecisionsRequired: token.ownerRoadmapNotes || 'Owner must review timing, budget, legal/compliance assumptions, chain choice, public claims, and external-action approvals.',
+                dependencies: 'Saved token draft, selected logo, local website/whitepaper/roadmap drafts, security review, and owner-approved external phase if public action is required.',
+                lockedExternalActions: 'Deployment, wallet signing, minting, liquidity, public posting, listings, DNS/GitHub/Cloudflare changes, swaps, withdrawals, and paid services stay locked.',
+                status: index <= 1 ? 'ready for review' : 'draft',
+                ownerNotes: token.ownerRoadmapNotes || ''
+            }));
+        }
+
+        function syncRoadmapTextareaFromPhases() {
+            document.getElementById('token-site-roadmap').value = latestRoadmapPhases.map(phase => `${phase.phaseName}: ${phase.goal}`).join('\n');
+        }
+
+        function renderRoadmapPhaseCards() {
+            const output = document.getElementById('token-roadmap-phase-output');
+            const select = document.getElementById('token-roadmap-phase-select');
+            if (select) {
+                select.innerHTML = latestRoadmapPhases.map((phase, index) => `<option value="${index}">${escapeHtml(phase.phaseName || `Phase ${index + 1}`)}</option>`).join('');
+            }
+            loadRoadmapPhaseIntoEditor();
+            if (!output) {
+                return;
+            }
+            output.innerHTML = latestRoadmapPhases.length
+                ? latestRoadmapPhases.map((phase, index) => `
+                    <article>
+                        <span>${escapeHtml(phase.status || 'draft')}</span>
+                        <strong>${escapeHtml(phase.phaseName || `Phase ${index + 1}`)}</strong>
+                        <small>${escapeHtml(phase.goal || 'Goal pending.')}</small>
+                    </article>
+                `).join('')
+                : 'No roadmap phases generated yet.';
+        }
+
+        function loadRoadmapPhaseIntoEditor() {
+            const index = Number(document.getElementById('token-roadmap-phase-select')?.value || 0);
+            const phase = latestRoadmapPhases[index] || {};
+            setTokenDraftField('token-roadmap-phase-name', phase.phaseName, { allowEmpty: true });
+            setTokenDraftField('token-roadmap-phase-goal', phase.goal, { allowEmpty: true });
+            setTokenDraftField('token-roadmap-phase-deliverables', phase.deliverables, { allowEmpty: true });
+            setTokenDraftField('token-roadmap-phase-owner-decisions', phase.ownerDecisionsRequired, { allowEmpty: true });
+            setTokenDraftField('token-roadmap-phase-dependencies', phase.dependencies, { allowEmpty: true });
+            setTokenDraftField('token-roadmap-phase-locked-actions', phase.lockedExternalActions, { allowEmpty: true });
+            setTokenDraftField('token-roadmap-phase-status', phase.status || 'draft', { allowEmpty: true });
+            setTokenDraftField('token-roadmap-phase-notes', phase.ownerNotes, { allowEmpty: true });
+        }
+
+        function readRoadmapPhaseEditor() {
+            return {
+                phaseName: document.getElementById('token-roadmap-phase-name')?.value.trim() || 'New roadmap phase',
+                goal: document.getElementById('token-roadmap-phase-goal')?.value.trim() || '',
+                deliverables: document.getElementById('token-roadmap-phase-deliverables')?.value.trim() || '',
+                ownerDecisionsRequired: document.getElementById('token-roadmap-phase-owner-decisions')?.value.trim() || '',
+                dependencies: document.getElementById('token-roadmap-phase-dependencies')?.value.trim() || '',
+                lockedExternalActions: document.getElementById('token-roadmap-phase-locked-actions')?.value.trim() || 'External/public actions stay locked.',
+                status: document.getElementById('token-roadmap-phase-status')?.value || 'draft',
+                ownerNotes: document.getElementById('token-roadmap-phase-notes')?.value.trim() || ''
+            };
+        }
+
+        function saveRoadmapPhaseEdit() {
+            const index = Number(document.getElementById('token-roadmap-phase-select')?.value || 0);
+            if (!latestRoadmapPhases.length) {
+                latestRoadmapPhases = buildRoadmapPhases();
+            }
+            latestRoadmapPhases[index] = readRoadmapPhaseEditor();
+            syncRoadmapTextareaFromPhases();
+            renderRoadmapPhaseCards();
+            renderTokenSiteLocalPreview();
+        }
+
+        function regenerateRoadmapPhase() {
+            const index = Number(document.getElementById('token-roadmap-phase-select')?.value || 0);
+            const regenerated = buildRoadmapPhases()[index] || buildRoadmapPhases()[0];
+            latestRoadmapPhases[index] = regenerated;
+            syncRoadmapTextareaFromPhases();
+            renderRoadmapPhaseCards();
+            renderTokenSiteLocalPreview();
+        }
+
+        function moveRoadmapPhase(direction) {
+            const select = document.getElementById('token-roadmap-phase-select');
+            const index = Number(select?.value || 0);
+            const target = index + direction;
+            if (target < 0 || target >= latestRoadmapPhases.length) {
+                return;
+            }
+            const [phase] = latestRoadmapPhases.splice(index, 1);
+            latestRoadmapPhases.splice(target, 0, phase);
+            syncRoadmapTextareaFromPhases();
+            renderRoadmapPhaseCards();
+            if (select) {
+                select.value = String(target);
+            }
+            loadRoadmapPhaseIntoEditor();
+        }
+
+        function buildWebsiteSections(token = readTokenLaunchPipelineInput(), website = getWebsiteWhitepaperInputs()) {
+            const tokenName = token.name || 'Token Project';
+            const ticker = token.ticker || 'TICKER';
+            const utility = token.utilitySummary || token.detailedUseCase || token.useCase || 'owner-defined utility';
+            const roadmap = latestRoadmapPhases.length
+                ? latestRoadmapPhases.map(phase => `${phase.phaseName}: ${phase.goal}`).join('\n')
+                : website.roadmap || buildRoadmapDraftLines(token).join('\n');
+            return {
+                hero: `${tokenName} (${ticker}) is a ${token.category} for ${utility}. Built as a local launch package first, with deployment, signing, liquidity, listings, and public posting locked until owner approval.`,
+                tokenUseCase: website.useCase || `${tokenName} turns the owner use case into token roles, dapp modules, community participation, and clear utility boundaries.`,
+                whyThisTokenExists: `${tokenName} exists to make ${utility} easier to understand, operate, and expand through a token ecosystem. The current package is local/draft-only.`,
+                tokenomics: website.tokenomics || `Total supply ${token.totalSupply || 'pending'}, initial minted supply ${token.initialSupply || 'pending'}, treasury ${token.treasuryAllocation || 'pending'}, liquidity ${token.liquidityAllocation || 'pending'}, team ${token.teamAllocation || 'pending'}, community ${token.communityAllocation || 'pending'}.`,
+                utility: token.utilitySummary || token.detailedUseCase || 'Utility pending owner input.',
+                ecosystemDappPreview: website.dappPreview || token.dappModules || `Dapp mode: ${token.dappMode || 'add dapp later'}.`,
+                roadmap,
+                whitepaperSummary: (latestWhitepaperSections.executiveSummary || website.whitepaperNotes || 'Whitepaper summary pending.').slice(0, 1200),
+                howToBuy: website.howToBuy || 'How-to-buy instructions remain draft-only until contract deployment, liquidity, official links, and owner-approved public launch are complete.',
+                faq: website.faq || 'Q: Is this live? A: No. This is a local draft launch package until owner-approved external phases are complete.',
+                socialCommunityLinks: website.communityLinks || 'Social links and community channels are draft-only until public posting/account automation is owner-approved.',
+                riskDisclaimer: website.disclaimer || 'No guaranteed profit. Draft/local status. Deployment, minting, wallet signing, liquidity, public posting, listing submissions, DNS changes, and paid services remain locked.'
+            };
+        }
+
+        function composeWebsiteSectionText(sections = latestWebsiteSections) {
+            const labels = getWebsiteSectionLabels();
+            return Object.entries(labels).map(([key, label]) => `${label}\n${sections[key] || 'Draft pending.'}`).join('\n\n');
+        }
+
+        function renderWebsiteSectionCards() {
+            const output = document.getElementById('token-website-section-output');
+            const select = document.getElementById('token-site-section-select');
+            const draft = document.getElementById('token-site-section-draft');
+            const labels = getWebsiteSectionLabels();
+            if (select && draft) {
+                draft.value = latestWebsiteSections[select.value] || '';
+            }
+            if (!output) {
+                return;
+            }
+            output.innerHTML = Object.entries(labels).map(([key, label]) => `
+                <article>
+                    <span>${escapeHtml(label)}</span>
+                    <strong>${latestWebsiteSections[key] ? 'Draft ready' : 'Draft missing'}</strong>
+                    <small>${escapeHtml((latestWebsiteSections[key] || 'Generate the website intelligence draft to fill this section.').slice(0, 220))}</small>
+                </article>
+            `).join('');
+        }
+
+        function applyWebsiteSectionsToForm() {
+            setTokenDraftField('token-site-hero', latestWebsiteSections.hero, { allowEmpty: true });
+            setTokenDraftField('token-site-use-case', latestWebsiteSections.tokenUseCase, { allowEmpty: true });
+            setTokenDraftField('token-site-tokenomics', latestWebsiteSections.tokenomics, { allowEmpty: true });
+            setTokenDraftField('token-site-roadmap', latestWebsiteSections.roadmap, { allowEmpty: true });
+            setTokenDraftField('token-site-dapp-preview', latestWebsiteSections.ecosystemDappPreview, { allowEmpty: true });
+            setTokenDraftField('token-site-faq', latestWebsiteSections.faq, { allowEmpty: true });
+            setTokenDraftField('token-site-how-to-buy', latestWebsiteSections.howToBuy, { allowEmpty: true });
+            setTokenDraftField('token-site-community-links', latestWebsiteSections.socialCommunityLinks, { allowEmpty: true });
+            setTokenDraftField('token-site-disclaimer', latestWebsiteSections.riskDisclaimer, { allowEmpty: true });
+        }
+
+        function generateWebsiteIntelligenceDraft() {
+            latestWebsiteSections = buildWebsiteSections();
+            applyWebsiteSectionsToForm();
+            renderWebsiteSectionCards();
+            renderTokenSiteLocalPreview();
+            document.getElementById('token-website-section-status').textContent = 'Website intelligence draft generated locally. No website was published.';
+        }
+
+        function regenerateWebsiteSection() {
+            const key = document.getElementById('token-site-section-select')?.value || 'hero';
+            const instructions = document.getElementById('token-site-section-instructions')?.value.trim() || '';
+            latestWebsiteSections[key] = [
+                buildWebsiteSections()[key] || '',
+                instructions ? `Owner edit direction: ${instructions}` : ''
+            ].filter(Boolean).join('\n\n');
+            applyWebsiteSectionsToForm();
+            renderWebsiteSectionCards();
+            renderTokenSiteLocalPreview();
+        }
+
+        function saveWebsiteSectionEdit() {
+            const key = document.getElementById('token-site-section-select')?.value || 'hero';
+            latestWebsiteSections[key] = document.getElementById('token-site-section-draft')?.value.trim() || '';
+            applyWebsiteSectionsToForm();
+            renderWebsiteSectionCards();
+            renderTokenSiteLocalPreview();
+            document.getElementById('token-website-section-status').textContent = 'Website section edit saved locally in the current draft state. Save the token project to persist it.';
+        }
+
+        function buildTopTokenPatternCards() {
+            const website = getWebsiteWhitepaperInputs();
+            const sourceNeedsApproval = /CoinMarketCap|CoinGecko|dataset/i.test(website.marketSource);
+            const confidence = sourceNeedsApproval
+                ? 'planned - requires approved read-only API key or local dataset'
+                : 'local curated pattern - no live Top 200 pull';
+            return [
+                ['Premium protocol site', 'Utility, infrastructure, AI, serious token ecosystems', 'Hero, proof, product/use case, tokenomics, roadmap, docs/whitepaper, risks', 'Dark or clean technical, strong typography, measured animations', 'Build / read whitepaper / join community', 'Fake institutional claims', 'Use when the owner wants credibility and technical depth.'],
+                ['Meme/community launch site', 'Meme tokens, social-first communities, playful culture', 'Hero meme thesis, community, tokenomics, memes, roadmap, how to buy, risk', 'Bold art, fast sections, simple copy, shareable visuals', 'Join / follow / create memes', 'Unclear risks or fake hype', 'Use if meme personality is central.'],
+                ['AI/utility product site', 'AI agents, automation, local tooling, token-gated products', 'Hero product promise, modules, workflow, token role, roadmap, whitepaper', 'Premium cyber UI, system diagrams, product proof', 'Try demo / read docs', 'Overclaiming model capability', 'Use for EtherealAI-style utility narratives.'],
+                ['DeFi dashboard style', 'Trading, arbitrage, liquidity, treasury, staking', 'Stats, strategy, risk controls, tokenomics, liquidity, docs, roadmap', 'Dashboard panels, metrics, charts, safety states', 'View dashboard / read risk', 'Promising yield or profit', 'Use if the token utility is trading or treasury-heavy.'],
+                ['Infrastructure/L1/L2 style', 'Chains, protocols, validators, nodes, developer ecosystems', 'Network thesis, architecture, validators/nodes, ecosystem, roadmap, docs', 'Technical diagrams, restrained palette, proof language', 'Build / run node / read docs', 'Copying chain branding', 'Use for node, chain, or protocol plans.'],
+                ['Gaming/community style', 'Game, NFT, collectibles, community access', 'World, gameplay/utility, assets, token role, roadmap, community', 'Immersive art, modular sections, asset previews', 'Enter / join / mint later', 'Making gameplay claims before built', 'Use for NFT utility or game-like dapp modules.'],
+                ['Security/trust style', 'Security, privacy, custody, compliance-sensitive utility', 'Threat model, controls, audits planned, token role, risks, docs', 'High contrast, calm UI, explicit safety gates', 'Review controls / read risks', 'Implying audit completion', 'Use when trust and risk control are the product.'],
+                ['Minimal token landing page', 'Simple launch, early community, pre-product draft', 'Hero, mission, tokenomics, roadmap, links, disclaimer', 'Fast, clean, low clutter', 'Join / read whitepaper', 'Missing substance', 'Use for early-stage local previews.'],
+                ['High-conversion launch page', 'Clear launch package with strong community CTA', 'Hero, benefits, proof, tokenomics, roadmap, FAQ, CTA', 'Crisp sections, obvious buttons, strong contrast', 'Join / follow / review package', 'Artificial urgency', 'Use when ready to present progress to a community.']
+            ].map(([label, bestSuitedFor, commonSectionOrder, visualStyle, ctaStyle, avoid, recommendedUse]) => ({
+                label,
+                bestSuitedFor,
+                commonSectionOrder,
+                visualStyle,
+                ctaStyle,
+                avoid,
+                recommendedUse,
+                confidenceSource: confidence
+            }));
+        }
+
+        function renderInspirationPatternCards() {
+            const output = document.getElementById('token-site-inspiration-patterns');
+            if (!output) {
+                return;
+            }
+            output.innerHTML = latestInspirationPatterns.length
+                ? latestInspirationPatterns.map(pattern => `
+                    <article>
+                        <span>${escapeHtml(pattern.confidenceSource || 'local pattern')}</span>
+                        <strong>${escapeHtml(pattern.label)}</strong>
+                        <small><b>Best for:</b> ${escapeHtml(pattern.bestSuitedFor || '-')}</small>
+                        <small><b>Order:</b> ${escapeHtml(pattern.commonSectionOrder || '-')}</small>
+                        <small><b>Avoid:</b> ${escapeHtml(pattern.avoid || '-')}</small>
+                        <small><b>Use here:</b> ${escapeHtml(pattern.recommendedUse || '-')}</small>
+                    </article>
+                `).join('')
+                : 'Local pattern cards will appear here. No live CoinMarketCap Top 200 analysis has been performed.';
+        }
+
         function renderMarketInspirationBrief() {
             const brief = buildMarketInspirationBrief();
             const textarea = document.getElementById('token-site-market-inspiration');
             const output = document.getElementById('token-market-inspiration-output');
+            latestInspirationPatterns = buildTopTokenPatternCards();
 
             if (textarea) {
                 textarea.value = brief;
@@ -1998,6 +2650,7 @@
                 `;
             }
 
+            renderInspirationPatternCards();
             renderTokenLaunchTwoGate();
             renderTokenSiteLocalPreview();
         }
@@ -2065,42 +2718,12 @@
         function generatePremiumWhitepaperDraft() {
             const token = readTokenLaunchPipelineInput();
             const website = getWebsiteWhitepaperInputs();
-            const lines = [
-                `${token.name || 'Token Project'} ${token.ticker ? `(${token.ticker})` : ''} Whitepaper Draft`,
-                '',
-                '1. Executive Summary',
-                `${token.name || 'This token'} is planned as a ${token.category} on ${token.chain || 'the selected chain'}. The current package is local draft work only; deployment, minting, wallet signing, liquidity creation, public posting, and listing submissions remain locked until a later owner-approved phase.`,
-                '',
-                '2. Utility And Demand Logic',
-                token.utilitySummary || token.detailedUseCase || token.useCase || 'Utility is pending owner input.',
-                token.brandPersonality ? `Brand/community personality: ${token.brandPersonality}.` : '',
-                '',
-                '3. Supply And Tokenomics',
-                `Total supply: ${token.totalSupply || 'pending'}. Initial minted supply: ${token.initialSupply || 'pending'}. Circulating/market supply notes: ${token.marketSupplyNotes || 'pending'}.`,
-                `Treasury: ${token.treasuryAllocation || 'pending'}. Liquidity: ${token.liquidityAllocation || 'pending'}. Team: ${token.teamAllocation || 'pending'}. Community/airdrop: ${token.communityAllocation || 'pending'}.`,
-                `Supply model: ${token.supplyModel || 'pending'}. Release mechanics: ${token.releasePlan || 'pending'}. Burn: ${token.burnModel || 'pending'}. Transfer fee/tax: ${token.transferFee || 'pending'}. Staking/rewards: ${token.stakingRewards || 'pending'}.`,
-                '',
-                '4. Chain And Multi-Chain Plan',
-                `Primary target: ${token.chain || 'pending'}. Multi-chain plan: ${token.multiChainPlan || token.multichainTimeline || 'pending owner input'}.`,
-                '',
-                '5. Dapp And Ecosystem Modules',
-                token.dappModules || token.dappMode || 'Dapp modules are not defined yet.',
-                `Ecosystem role: ${website.ecosystemRole || token.multiChainPlan || 'pending'}.`,
-                '',
-                '6. Roadmap',
-                buildRoadmapDraftLines(token).join('\n'),
-                '',
-                '7. Risks And Limitations',
-                'This draft must avoid guaranteed-profit language. Smart contracts, tokenomics, dapp modules, liquidity, listings, bridge routes, and public content require audit/review and explicit owner approval before any external action.',
-                '',
-                '8. Locked External Actions',
-                'No deployment, minting, wallet signing, swaps, liquidity creation, withdrawals, Cloudflare/GitHub/DNS mutation, public posting, listing submission, paid service, or live trading is enabled from this builder.'
-            ].filter(line => line !== '').join('\n');
-
-            document.getElementById('token-site-whitepaper').value = lines;
+            latestWhitepaperSections = buildPremiumWhitepaperSections(token, website);
+            document.getElementById('token-site-whitepaper').value = composeWhitepaperText(latestWhitepaperSections);
             if (!document.getElementById('token-site-whitepaper-quality').value.trim()) {
                 document.getElementById('token-site-whitepaper-quality').value = 'Premium investor/community-ready whitepaper, technical where needed, honest about draft/planned/locked states, and grounded in the token creation fields.';
             }
+            renderWhitepaperSectionCards();
             renderTokenLaunchTwoGate();
             renderTokenSiteLocalPreview();
             document.getElementById('website-whitepaper-status').textContent = 'Premium local whitepaper draft generated from token creation data. No public publishing happened.';
@@ -2119,8 +2742,8 @@
 
         function generateRealisticRoadmapDraft() {
             const token = readTokenLaunchPipelineInput();
-            const lines = buildRoadmapDraftLines(token);
-            document.getElementById('token-site-roadmap').value = lines.join('\n');
+            latestRoadmapPhases = buildRoadmapPhases(token);
+            syncRoadmapTextareaFromPhases();
             document.getElementById('token-site-roadmap-inputs').value = [
                 token.launchTimeline,
                 token.dappTimeline,
@@ -2132,9 +2755,38 @@
                 token.treasuryLiquidityPlan,
                 token.ownerRoadmapNotes
             ].filter(Boolean).join('\n') || 'Roadmap generated from current token creation fields. Add dates only when the owner provides timing assumptions.';
+            renderRoadmapPhaseCards();
             renderTokenLaunchTwoGate();
             renderTokenSiteLocalPreview();
             document.getElementById('website-whitepaper-status').textContent = 'Realistic local roadmap draft generated. No schedule, posting, deployment, listing, or external action happened.';
+        }
+
+        function buildSocialLaunchKitDraft() {
+            const token = readTokenLaunchPipelineInput();
+            const website = getWebsiteWhitepaperInputs();
+            const tokenName = token.name || 'Token Project';
+            const ticker = token.ticker || 'TICKER';
+            const utility = token.utilitySummary || token.detailedUseCase || token.useCase || 'owner-defined utility';
+            const roadmap = latestRoadmapPhases[0]?.phaseName || 'local launch package review';
+
+            return {
+                tokenBio: `${tokenName} (${ticker}) is a ${token.category} being built as a local launch package around ${utility}. Draft status: local only; deployment, minting, listings, and public posting are locked until owner approval.`,
+                xBio: `${tokenName} (${ticker}) | ${token.category} | ${token.chain || 'chain pending'} | Local launch package in progress | No public token live until owner approval.`,
+                communityDescription: `Official community draft for ${tokenName}. Discuss the use case, roadmap, website, whitepaper, and dapp plan. No links, contract addresses, listings, or launch claims are official until owner-approved and verified.`,
+                firstAnnouncement: `${tokenName} is being prepared as a local token launch package. Current work: tokenomics, logo direction, website, whitepaper, roadmap, dapp plan, and review package. Public launch actions remain locked until reviewed.`,
+                utilityExplainer: `${tokenName} utility draft: ${utility}. The whitepaper and website explain user roles, token roles, dapp modules, risks, and what is planned versus complete.`,
+                memeCommunityPost: token.brandPersonality ? `${token.brandPersonality}: ${tokenName} is shaping its community voice while the serious launch package stays verifiable and local.` : `${tokenName} community voice is still being shaped. Add meme personality if the launch should lean more culture-first.`,
+                roadmapAnnouncement: `Roadmap draft starts with ${roadmap}. Future phases require owner review before deployment, liquidity, listings, or public posting.`,
+                websiteLaunchCopy: `${tokenName} website draft is local and uses the selected palette, use case, tokenomics, roadmap, FAQ, risk section, and social kit. It is not public yet.`,
+                whitepaperLaunchCopy: `${tokenName} whitepaper draft explains token overview, utility, tokenomics, supply mechanics, architecture, ecosystem plan, roadmap, risks, and disclaimer. It is draft/local-only.`
+            };
+        }
+
+        function generateTokenSocialKit() {
+            latestSocialLaunchKit = buildSocialLaunchKitDraft();
+            applySocialLaunchKitDraft(latestSocialLaunchKit);
+            document.getElementById('token-social-kit-status').textContent = 'Social Launch Kit drafts generated locally. No X, Discord, Telegram, YouTube, Medium, or docs posting happened.';
+            renderTokenLaunchTwoGate();
         }
 
         function formatLogoBriefForNotes() {
@@ -2660,6 +3312,10 @@
             const tokenomics = launchPackage.tokenomics || {};
             const logo = launchPackage.selectedLogo || {};
             const website = launchPackage.websiteDraft || {};
+            const whitepaper = launchPackage.whitepaperDraft || {};
+            const roadmap = launchPackage.roadmapDraft || {};
+            const inspiration = launchPackage.topTokenWebsiteInspiration || {};
+            const socialKit = launchPackage.socialLaunchKit || {};
             const api = launchPackage.apiReadiness || {};
             const blockers = launchPackage.blockers || [];
 
@@ -2685,7 +3341,7 @@
                 <article>
                     <span>Tokenomics</span>
                     <strong>${escapeHtml(tokenomics.totalSupply || 'Supply pending')}</strong>
-                    <small>Treasury ${escapeHtml(tokenomics.treasuryAllocation || 'pending')} · Liquidity ${escapeHtml(tokenomics.liquidityAllocation || 'pending')} · Community ${escapeHtml(tokenomics.communityAllocation || 'pending')}</small>
+                    <small>Treasury ${escapeHtml(tokenomics.treasuryAllocation || 'pending')} · Liquidity ${escapeHtml(tokenomics.liquidityAllocation || 'pending')} · Community ${escapeHtml(tokenomics.communityAllocation || 'pending')} · Market supply ${escapeHtml(tokenomics.marketSupplyNotes || 'pending')}</small>
                 </article>
                 <article>
                     <span>Use case</span>
@@ -2710,7 +3366,17 @@
                 <article>
                     <span>Website / whitepaper / roadmap</span>
                     <strong>${escapeHtml(website.status || 'draft')}</strong>
-                    <small>Whitepaper ${escapeHtml(launchPackage.whitepaperDraft?.status || 'draft')} · Roadmap ${escapeHtml(launchPackage.roadmapDraft?.status || 'draft')}</small>
+                    <small>Whitepaper ${escapeHtml(whitepaper.status || 'draft')} · Roadmap ${escapeHtml(roadmap.status || 'draft')} · Site tone ${escapeHtml(website.visualDirection?.tone || 'pending')}</small>
+                </article>
+                <article>
+                    <span>Top Token Website Inspiration</span>
+                    <strong>${escapeHtml(inspiration.status || 'planned/read-only')}</strong>
+                    <small>${escapeHtml(inspiration.note || 'No live Top 200 analysis has been performed.')}</small>
+                </article>
+                <article>
+                    <span>Social Launch Kit</span>
+                    <strong>${escapeHtml(socialKit.status || 'draft')}</strong>
+                    <small>Public posting disabled · ${(Object.values(socialKit.drafts || {}).filter(Boolean).length)} local draft(s)</small>
                 </article>
                 <article>
                     <span>Local preview</span>
@@ -2733,6 +3399,20 @@
                     <small>${blockers.length ? escapeHtml(blockers.map(blocker => blocker.title).join('; ')) : 'Ready for local review.'}</small>
                 </article>
             `;
+            const lockedHost = document.getElementById('launch-package-locked-actions');
+            if (lockedHost) {
+                lockedHost.innerHTML = [
+                    ['Deploy Contract', 'Future deployment approval phase required.'],
+                    ['Mint Token', 'Future mint/signing approval phase required.'],
+                    ['Connect Wallet For Signing', 'Future wallet-signing boundary required.'],
+                    ['Add Liquidity', 'Future liquidity approval and wallet signing required.'],
+                    ['Submit To CoinMarketCap', 'Future listing evidence and owner submission approval required.'],
+                    ['Submit To CoinGecko', 'Future listing evidence and owner submission approval required.'],
+                    ['Submit To DexScreener', 'Future public token/pair evidence required.'],
+                    ['Publish Website', 'Future Cloudflare/GitHub/DNS approval phase required.'],
+                    ['Post Socials', 'Future social account/API approval phase required.']
+                ].map(([label, reason]) => `<button type="button" class="action-danger" disabled title="${escapeHtml(reason)}">${escapeHtml(label)} · Locked</button>`).join('');
+            }
 
             if (advanced) {
                 advanced.textContent = JSON.stringify(launchPackage, null, 2);
@@ -3056,9 +3736,47 @@
         document.getElementById('open-website-blueprint').addEventListener('click', () => document.getElementById('website-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' }));
         document.getElementById('open-whitepaper-blueprint').addEventListener('click', () => document.getElementById('whitepaper-blueprint').scrollIntoView({ behavior: 'smooth', block: 'center' }));
         document.getElementById('build-market-inspiration-brief').addEventListener('click', renderMarketInspirationBrief);
+        document.getElementById('refresh-inspiration-patterns').addEventListener('click', () => {
+            latestInspirationPatterns = buildTopTokenPatternCards();
+            renderInspirationPatternCards();
+        });
         document.getElementById('apply-token-data-to-site').addEventListener('click', applyTokenDataToWebsiteDraft);
+        document.getElementById('generate-website-intelligence-draft').addEventListener('click', generateWebsiteIntelligenceDraft);
+        document.getElementById('regenerate-website-section').addEventListener('click', regenerateWebsiteSection);
+        document.getElementById('save-website-section-edit').addEventListener('click', saveWebsiteSectionEdit);
+        document.getElementById('token-site-section-select').addEventListener('change', renderWebsiteSectionCards);
         document.getElementById('generate-premium-whitepaper-draft').addEventListener('click', generatePremiumWhitepaperDraft);
+        document.getElementById('regenerate-whitepaper-section').addEventListener('click', regenerateWhitepaperSection);
+        document.getElementById('save-whitepaper-section-edit').addEventListener('click', saveWhitepaperSectionEdit);
+        document.getElementById('token-whitepaper-section-select').addEventListener('change', renderWhitepaperSectionCards);
         document.getElementById('generate-realistic-roadmap-draft').addEventListener('click', generateRealisticRoadmapDraft);
+        document.getElementById('regenerate-roadmap-phase').addEventListener('click', regenerateRoadmapPhase);
+        document.getElementById('add-roadmap-phase').addEventListener('click', () => {
+            latestRoadmapPhases.push({
+                phaseName: 'New roadmap phase',
+                goal: 'Define this phase goal.',
+                deliverables: 'Add deliverables.',
+                ownerDecisionsRequired: 'Owner review required.',
+                dependencies: 'Dependencies pending.',
+                lockedExternalActions: 'External/public actions stay locked.',
+                status: 'draft',
+                ownerNotes: ''
+            });
+            syncRoadmapTextareaFromPhases();
+            renderRoadmapPhaseCards();
+        });
+        document.getElementById('move-roadmap-phase-up').addEventListener('click', () => moveRoadmapPhase(-1));
+        document.getElementById('move-roadmap-phase-down').addEventListener('click', () => moveRoadmapPhase(1));
+        document.getElementById('remove-roadmap-phase').addEventListener('click', () => {
+            const index = Number(document.getElementById('token-roadmap-phase-select')?.value || 0);
+            latestRoadmapPhases.splice(index, 1);
+            syncRoadmapTextareaFromPhases();
+            renderRoadmapPhaseCards();
+            renderTokenSiteLocalPreview();
+        });
+        document.getElementById('save-roadmap-phases').addEventListener('click', saveRoadmapPhaseEdit);
+        document.getElementById('token-roadmap-phase-select').addEventListener('change', loadRoadmapPhaseIntoEditor);
+        document.getElementById('generate-token-social-kit').addEventListener('click', generateTokenSocialKit);
         document.getElementById('token-copy-social-context').addEventListener('click', copyTokenContextToSocialPlan);
         document.getElementById('continue-launch-project').addEventListener('click', continueLaunchProject);
         document.getElementById('review-launch-package').addEventListener('click', loadLaunchPackageReview);
@@ -3069,6 +3787,7 @@
         document.getElementById('launch-review-edit-website').addEventListener('click', () => document.getElementById('website-whitepaper-roadmap-builder').scrollIntoView({ behavior: 'smooth', block: 'start' }));
         document.getElementById('launch-review-edit-whitepaper').addEventListener('click', () => document.getElementById('token-whitepaper-builder-panel').scrollIntoView({ behavior: 'smooth', block: 'start' }));
         document.getElementById('launch-review-edit-roadmap').addEventListener('click', () => document.getElementById('token-roadmap-builder-panel').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+        document.getElementById('launch-review-edit-social-kit').addEventListener('click', () => document.getElementById('token-social-launch-bridge').scrollIntoView({ behavior: 'smooth', block: 'center' }));
         document.getElementById('launch-review-preview-site').addEventListener('click', () => {
             renderTokenSiteLocalPreview();
             document.getElementById('token-site-local-preview').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -3092,7 +3811,7 @@
                 handleTokenLaunchGateAction(action);
             }
         });
-        ['token-launch-category', 'token-launch-ticker', 'token-launch-community', 'token-launch-dapp-mode', 'token-launch-total-supply', 'token-launch-initial-supply', 'token-launch-supply-model', 'token-launch-admin-model', 'token-launch-burn', 'token-launch-pausable', 'token-launch-transfer-fee', 'token-launch-staking-rewards', 'token-launch-treasury-allocation', 'token-launch-liquidity-allocation', 'token-launch-team-allocation', 'token-launch-community-allocation', 'token-launch-market-supply-notes', 'token-launch-multi-chain-plan', 'token-launch-utility-summary', 'token-launch-brand-personality', 'token-launch-release-plan', 'token-launch-use-case', 'token-launch-dapp-modules', 'token-launch-launch-timeline', 'token-launch-dapp-timeline', 'token-launch-community-timeline', 'token-launch-listing-ambition', 'token-launch-utility-rollout', 'token-launch-multichain-timeline', 'token-launch-marketing-rollout', 'token-launch-treasury-liquidity-plan', 'token-launch-owner-roadmap-notes', 'contract-name', 'contract-network', 'contract-type', 'token-ecosystem-notes', 'nft-utility-notes', 'token-logo-style', 'token-logo-palette', 'token-logo-direction', 'token-logo-existing', 'token-logo-inspiration', 'token-logo-shape', 'token-logo-background', 'token-logo-text-influence', 'token-logo-image-influence', 'token-logo-style-influence', 'token-site-template', 'token-site-hero', 'token-site-use-case', 'token-site-tokenomics', 'token-site-roadmap', 'token-site-whitepaper', 'token-site-dapp-preview', 'token-site-faq', 'token-site-how-to-buy', 'token-site-community-links', 'token-site-disclaimer', 'token-site-market-source', 'token-site-similar-category', 'token-site-structure-style', 'token-site-primary-color', 'token-site-secondary-color', 'token-site-accent-color', 'token-site-use-fourth-color', 'token-site-fourth-color', 'token-site-use-fifth-color', 'token-site-fifth-color', 'token-site-color-system-notes', 'token-site-market-inspiration', 'token-site-whitepaper-quality', 'token-site-roadmap-inputs', 'token-site-ecosystem-role', 'token-site-edit-instructions'].forEach(id => {
+        ['token-launch-category', 'token-launch-ticker', 'token-launch-community', 'token-launch-dapp-mode', 'token-launch-total-supply', 'token-launch-initial-supply', 'token-launch-supply-model', 'token-launch-admin-model', 'token-launch-burn', 'token-launch-pausable', 'token-launch-transfer-fee', 'token-launch-staking-rewards', 'token-launch-treasury-allocation', 'token-launch-liquidity-allocation', 'token-launch-team-allocation', 'token-launch-community-allocation', 'token-launch-market-supply-notes', 'token-launch-multi-chain-plan', 'token-launch-utility-summary', 'token-launch-brand-personality', 'token-launch-release-plan', 'token-launch-use-case', 'token-launch-dapp-modules', 'token-launch-launch-timeline', 'token-launch-dapp-timeline', 'token-launch-community-timeline', 'token-launch-listing-ambition', 'token-launch-utility-rollout', 'token-launch-multichain-timeline', 'token-launch-marketing-rollout', 'token-launch-treasury-liquidity-plan', 'token-launch-owner-roadmap-notes', 'contract-name', 'contract-network', 'contract-type', 'token-ecosystem-notes', 'nft-utility-notes', 'token-logo-style', 'token-logo-palette', 'token-logo-direction', 'token-logo-existing', 'token-logo-inspiration', 'token-logo-shape', 'token-logo-background', 'token-logo-text-influence', 'token-logo-image-influence', 'token-logo-style-influence', 'token-site-template', 'token-site-hero', 'token-site-use-case', 'token-site-tokenomics', 'token-site-roadmap', 'token-site-whitepaper', 'token-site-dapp-preview', 'token-site-faq', 'token-site-how-to-buy', 'token-site-community-links', 'token-site-disclaimer', 'token-site-market-source', 'token-site-similar-category', 'token-site-structure-style', 'token-site-tone', 'token-site-primary-color', 'token-site-secondary-color', 'token-site-accent-color', 'token-site-use-fourth-color', 'token-site-fourth-color', 'token-site-use-fifth-color', 'token-site-fifth-color', 'token-site-color-system-notes', 'token-site-market-inspiration', 'token-site-whitepaper-quality', 'token-site-roadmap-inputs', 'token-site-ecosystem-role', 'token-site-edit-instructions', 'token-social-bio', 'token-social-x-bio', 'token-social-community', 'token-social-announcement', 'token-social-utility-post', 'token-social-meme-post', 'token-social-roadmap-post', 'token-social-website-copy', 'token-social-whitepaper-copy'].forEach(id => {
             document.getElementById(id)?.addEventListener('input', renderTokenLaunchTwoGate);
             document.getElementById(id)?.addEventListener('change', renderTokenLaunchTwoGate);
             document.getElementById(id)?.addEventListener('input', renderTokenSiteLocalPreview);
@@ -3111,6 +3830,10 @@
         renderTokenDraftStatus();
         renderTokenLaunchTwoGate();
         renderTokenSiteLocalPreview();
+        renderWhitepaperSectionCards();
+        renderWebsiteSectionCards();
+        renderRoadmapPhaseCards();
+        renderInspirationPatternCards();
         updateLogoSliderLabels();
         loadContracts().then(openArtifactFromHash);
         loadEcosystemCatalog();
